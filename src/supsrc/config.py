@@ -1,281 +1,462 @@
 # supsrc/config.py
 # -*- coding: utf-8 -*-
 """
-Configuration loading and validation for supsrc.
-
-Uses the centralized logger from supsrc.telemetry.
+Configuration loading and validation for supsrc. Uses structlog.
 """
 
-import logging
+import argparse
+import logging  # Still needed for level names in setup/validation
+import re
 import sys
 import tomllib
-import argparse
-import re
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional, Union, TypeAlias
+from typing import Any, Dict, Literal, Optional, TypeAlias, Union
 
 # --- Third-party Libraries ---
 try:
-    # Still need rich for pretty printing the config object
     import rich.pretty
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
 
 import cattrs
-from attrs import define, field, validators, mutable
+import structlog  # Import structlog
+from attrs import define, field, mutable, validators
 
 # --- Custom Exceptions Import ---
 try:
     from .exceptions import (
-        ConfigurationError, ConfigFileNotFoundError, ConfigParsingError,
-        ConfigValidationError, DurationValidationError
-        # PathValidationError is no longer raised fatally by load_config
+        ConfigurationError,
+        ConfigFileNotFoundError,
+        ConfigParsingError,
+        ConfigValidationError,
+        DurationValidationError,
     )
 except ImportError:
+    # Fallback for direct execution
     from exceptions import (
-        ConfigurationError, ConfigFileNotFoundError, ConfigParsingError,
-        ConfigValidationError, DurationValidationError
+        ConfigurationError,
+        ConfigFileNotFoundError,
+        ConfigParsingError,
+        ConfigValidationError,
+        DurationValidationError,
     )
 
 # --- Centralized Logger ---
-# Get a logger specific to this module, inheriting config from the base 'supsrc' logger
-log = logging.getLogger("supsrc.cfg") # Or use: from supsrc.telemetry import logger as log
+log: structlog.stdlib.BoundLogger = structlog.get_logger("cfg")
 
-# --- Rich Markup Styles (Keep for log messages in this module) ---
+# --- Rich Markup Styles ---
 PATH_STYLE = "bold cyan"
 VALUE_STYLE = "bold magenta"
 ERROR_DETAIL_STYLE = "italic red"
 TIME_STYLE = "bold green"
 WARN_STYLE = "yellow"
 
-# --- Helper Functions & Validators (Log calls use 'log' instance) ---
+# --- Helper Functions & Validators ---
 
-def _parse_duration(duration_str: str, config_path_context: Path | None = None) -> timedelta:
+def _parse_duration(
+    duration_str: str, config_path_context: Path | None = None
+) -> timedelta:
     """Parses duration string. Raises DurationValidationError."""
-    log.debug(f"Parsing duration string: [{VALUE_STYLE}]{duration_str}[/]", extra={"emoji_key": "time"})
-    pattern = re.compile(r"^\s*(?:(?P<hours>\d+)\s*h)?\s*(?:(?P<minutes>\d+)\s*m)?\s*(?:(?P<seconds>\d+)\s*s)?\s*$")
+    log.debug(
+        "Parsing duration string", duration_str=duration_str, emoji_key="time"
+    )
+    pattern = re.compile(
+        r"^\s*(?:(?P<hours>\d+)\s*h)?\s*(?:(?P<minutes>\d+)\s*m)?\s*(?:(?P<seconds>\d+)\s*s)?\s*$"
+    )
     match = pattern.match(duration_str)
     if not match or not duration_str.strip():
-        msg = f"Invalid duration format. Use '1h', '30m', '15s'. Got: [{ERROR_DETAIL_STYLE}]{duration_str}[/]"
-        log.error(msg, extra={"emoji_key": "fail"})
-        raise DurationValidationError("Invalid duration format", duration_str, str(config_path_context))
-    parts = match.groupdict(); time_params = {k: int(v) for k, v in parts.items() if v}
+        msg = "Invalid duration format. Use '1h', '30m', '15s'."
+        log.error(msg, received=duration_str, emoji_key="fail")
+        raise DurationValidationError(
+            msg, duration_str, str(config_path_context)
+        )
+
+    parts = match.groupdict()
+    time_params = {k: int(v) for k, v in parts.items() if v}
+
     if not time_params:
-        msg = f"Empty duration string: [{ERROR_DETAIL_STYLE}]{duration_str}[/]"
-        log.error(msg, extra={"emoji_key": "fail"})
-        raise DurationValidationError("Empty duration string", duration_str, str(config_path_context))
-    try: duration = timedelta(**time_params)
+        msg = "Empty duration string provided"
+        log.error(msg, received=duration_str, emoji_key="fail")
+        raise DurationValidationError(
+            msg, duration_str, str(config_path_context)
+        )
+
+    try:
+        duration = timedelta(**time_params)
     except ValueError as e:
-         msg = f"Invalid time values ([{ERROR_DETAIL_STYLE}]{e}[/]) from '[{VALUE_STYLE}]{duration_str}[/]'"
-         log.error(msg, exc_info=True, extra={"emoji_key": "fail"})
-         raise DurationValidationError(f"Invalid time values: {e}", duration_str, str(config_path_context)) from e
+        msg = "Invalid time values for timedelta"
+        log.error(
+            msg,
+            error=str(e),
+            duration_str=duration_str,
+            exc_info=True,
+            emoji_key="fail",
+        )
+        raise DurationValidationError(
+            f"{msg}: {e}", duration_str, str(config_path_context)
+        ) from e
+
     if duration <= timedelta(0):
-        msg = f"Duration must be positive: [{TIME_STYLE}]{duration}[/] from '[{VALUE_STYLE}]{duration_str}[/]'"
-        log.error(msg, extra={"emoji_key": "fail"})
-        raise DurationValidationError(f"Duration must be positive: {duration}", duration_str, str(config_path_context))
-    log.debug(f"Parsed '[{VALUE_STYLE}]{duration_str}[/]' to timedelta: [{TIME_STYLE}]{duration}[/]", extra={"emoji_key": "time"})
+        msg = "Duration must be positive"
+        log.error(
+            msg,
+            result=str(duration),
+            duration_str=duration_str,
+            emoji_key="fail",
+        )
+        raise DurationValidationError(
+            f"{msg}: {duration}", duration_str, str(config_path_context)
+        )
+
+    log.debug(
+        "Parsed duration",
+        duration_str=duration_str,
+        result=str(duration),
+        emoji_key="time",
+    )
     return duration
 
-def _validate_log_level(inst, attr, value: str):
+
+def _validate_log_level(inst: Any, attr: Any, value: str) -> None:
+    """Validator for standard logging level names."""
+    # Still use stdlib level names for validation consistency
     valid = logging._nameToLevel.keys()
     if value.upper() not in valid:
-        msg = f"Invalid log_level '[{VALUE_STYLE}]{value}[/]'. Must be one of [{VALUE_STYLE}]{list(valid)}[/]."
-        log.error(msg, extra={"emoji_key": "fail"})
-        raise ConfigValidationError(f"Invalid log_level '{value}'")
-    log.debug(f"Log level '[{VALUE_STYLE}]{value}[/]' is valid")
+        msg = "Invalid log_level"
+        log.error(
+            msg, value=value, valid_levels=list(valid), emoji_key="fail"
+        )
+        raise ConfigValidationError(f"{msg}: '{value}'")
+    log.debug("Log level valid", value=value)
 
-def _validate_positive_int(inst, attr, value: int):
+
+def _validate_positive_int(inst: Any, attr: Any, value: int) -> None:
+    """Validator ensures integer is positive."""
     if not isinstance(value, int) or value <= 0:
-        msg = f"Field '[{VALUE_STYLE}]{attr.name}[/]' must be positive integer, got: [{ERROR_DETAIL_STYLE}]{value}[/]"
-        log.error(msg, extra={"emoji_key": "fail"})
-        raise ConfigValidationError(f"Field '{attr.name}' must be positive integer, got {value}")
-    log.debug(f"Field '[{VALUE_STYLE}]{attr.name}[/]' validated positive: [{VALUE_STYLE}]{value}[/]")
+        msg = f"Field '{attr.name}' must be positive integer"
+        log.error(
+            msg, field_name=attr.name, value=value, emoji_key="fail"
+        )
+        raise ConfigValidationError(f"{msg}, got {value}")
+    log.debug(
+        f"Field '{attr.name}' validated positive",
+        field_name=attr.name,
+        value=value,
+    )
 
 
-# --- attrs Data Classes (No changes needed here) ---
+# --- attrs Data Classes ---
 
 @define(slots=True)
 class InactivityTrigger:
+    """Commit trigger based on inactivity period."""
     type: Literal["inactivity"] = field(default="inactivity", init=False)
     period: timedelta = field()
 
+
 @define(slots=True)
 class SaveCountTrigger:
+    """Commit trigger based on number of save events."""
     type: Literal["save_count"] = field(default="save_count", init=False)
     count: int = field(validator=_validate_positive_int)
 
+
 @define(slots=True)
 class ManualTrigger:
+    """Commit trigger requiring manual intervention."""
     type: Literal["manual"] = field(default="manual", init=False)
 
+
+# Type alias for the union of trigger types
 TriggerConfig: TypeAlias = Union[InactivityTrigger, SaveCountTrigger, ManualTrigger]
+
 
 @mutable(slots=True)
 class RepositoryConfig:
+    """
+    Configuration for a repository. Mutable to allow disabling on load if path invalid.
+    """
+    # Mandatory fields first
     path: Path = field()
     trigger: TriggerConfig = field()
+    # Optional fields after
     enabled: bool = field(default=True)
     commit_message: Optional[str] = field(default=None)
     auto_push: Optional[bool] = field(default=None)
+    # Internal state flag
     _path_valid: bool = field(default=True, repr=False, init=False)
+
 
 @define(frozen=True, slots=True)
 class GlobalConfig:
+    """Global default settings for supsrc."""
     log_level: str = field(default="INFO", validator=_validate_log_level)
-    default_commit_message: str = field(default="supsrc auto-commit: {{timestamp}}")
+    default_commit_message: str = field(
+        default="supsrc auto-commit: {{timestamp}}"
+    )
     default_auto_push: bool = field(default=True)
+
     @property
-    def numeric_log_level(self) -> int: return logging.getLevelName(self.log_level.upper())
+    def numeric_log_level(self) -> int:
+        """Return the numeric logging level."""
+        # Still useful for passing to setup_logging
+        return logging.getLevelName(self.log_level.upper())
+
 
 @define(frozen=True, slots=True)
 class SupsrcConfig:
+    """Root configuration object for the supsrc application."""
     repositories: Dict[str, RepositoryConfig] = field(factory=dict)
-    global_config: GlobalConfig = field(factory=GlobalConfig, metadata={'toml_name': 'global'})
+    global_config: GlobalConfig = field(
+        factory=GlobalConfig, metadata={"toml_name": "global"}
+    )
 
 
 # --- Cattrs Converter and Hooks ---
 
 converter = cattrs.Converter()
-_CURRENT_CONFIG_PATH_CONTEXT: Path | None = None
+_CURRENT_CONFIG_PATH_CONTEXT: Path | None = None  # Context for hooks
+
 
 def _structure_path_simple(path_str: str, type_hint: type[Path]) -> Path:
     """Cattrs structure hook for Path: Expands/resolves ONLY."""
     if not isinstance(path_str, str):
-        raise ConfigValidationError(f"Path must be a string, got: {type(path_str).__name__}")
-    log.debug(f"Structuring path string: [{PATH_STYLE}]{path_str}[/]", extra={"emoji_key": "path"})
+        raise ConfigValidationError(
+            f"Path must be string, got: {type(path_str).__name__}"
+        )
+    log.debug("Structuring path string", path_str=path_str, emoji_key="path")
     try:
         p = Path(path_str).expanduser().resolve()
-        log.debug(f"Expanded/resolved path: [{PATH_STYLE}]{p}[/]", extra={"emoji_key": "path"})
+        log.debug("Expanded/resolved path", path=str(p), emoji_key="path")
         return p
     except Exception as e:
-        msg = f"Error processing path string [{PATH_STYLE}]{path_str}[/]: [{ERROR_DETAIL_STYLE}]{e}[/]"
-        log.error(msg, exc_info=True, extra={"emoji_key": "fail"})
-        raise ConfigValidationError(f"Error processing path string '{path_str}': {e}") from e
+        msg = "Error processing path string"
+        log.error(
+            msg, path_str=path_str, error=str(e), exc_info=True, emoji_key="fail"
+        )
+        raise ConfigValidationError(
+            f"{msg} '{path_str}': {e}"
+        ) from e
 
+
+# Register hooks with the converter
 converter.register_structure_hook(Path, _structure_path_simple)
 converter.register_structure_hook(
     timedelta,
-    lambda d, t: _parse_duration(d, config_path_context=_CURRENT_CONFIG_PATH_CONTEXT)
+    lambda d, t: _parse_duration(d, _CURRENT_CONFIG_PATH_CONTEXT),
 )
 
 
-# --- Core Loading Function (No changes needed here) ---
+# --- Core Loading Function ---
 
 def load_config(config_path: Path) -> SupsrcConfig:
-    """Loads, validates, and structures config. Handles invalid paths gracefully."""
+    """Loads, validates, structures config. Handles invalid paths gracefully."""
     global _CURRENT_CONFIG_PATH_CONTEXT
     _CURRENT_CONFIG_PATH_CONTEXT = config_path
 
-    log.info(f"Attempting load from: [{PATH_STYLE}]{config_path}[/]", extra={"emoji_key": "load"})
+    log.info(
+        "Attempting config load", path=str(config_path), emoji_key="load"
+    )
     if not config_path.is_file():
         msg = "Config file not found"
-        log.error(f"{msg}: [{PATH_STYLE}]{config_path}[/]", extra={"emoji_key": "fail"})
+        log.error(msg, path=str(config_path), emoji_key="fail")
         raise ConfigFileNotFoundError(path=str(config_path))
 
     try:
         log.debug("Reading TOML...")
-        with open(config_path, "rb") as f: toml_data = tomllib.load(f)
+        with open(config_path, "rb") as f:
+            toml_data = tomllib.load(f)
         log.debug("TOML read OK.")
     except tomllib.TOMLDecodeError as e:
-        msg = f"Invalid TOML syntax: [{ERROR_DETAIL_STYLE}]{e}[/]"
-        log.error(f"Failed TOML parse: [{PATH_STYLE}]{config_path}[/]\n{msg}", exc_info=True, extra={"emoji_key": "fail"})
-        raise ConfigParsingError(str(e), path=str(config_path), details=e) from e
+        msg = "Invalid TOML syntax"
+        log.error(
+            msg,
+            path=str(config_path),
+            error=str(e),
+            exc_info=True,
+            emoji_key="fail",
+        )
+        raise ConfigParsingError(
+            str(e), path=str(config_path), details=e
+        ) from e
 
     try:
         log.debug("Structuring TOML data...")
         config_object = converter.structure(toml_data, SupsrcConfig)
         log.debug("Initial structuring complete.")
 
+        # --- Post-Structuring Path Validation ---
         log.debug("Performing post-structuring path validation...")
         repos_to_process = list(config_object.repositories.items())
         for repo_id, repo_config in repos_to_process:
-            p = repo_config.path; path_valid = True
+            p = repo_config.path
+            path_valid = True
             if not p.exists():
                 path_valid = False
-                log.warning(f"Path does not exist for repo '[{VALUE_STYLE}]{repo_id}[/]', disabling: [{PATH_STYLE}]{p}[/]", extra={"emoji_key": "fail"})
+                log.warning(
+                    "Path does not exist, disabling repo",
+                    repo_id=repo_id,
+                    path=str(p),
+                    emoji_key="fail",
+                )
             elif not p.is_dir():
                 path_valid = False
-                log.warning(f"Path is not a directory for repo '[{VALUE_STYLE}]{repo_id}[/]', disabling: [{PATH_STYLE}]{p}[/]", extra={"emoji_key": "fail"})
-            if not path_valid:
-                repo_config.enabled = False; repo_config._path_valid = False
+                log.warning(
+                    "Path is not a directory, disabling repo",
+                    repo_id=repo_id,
+                    path=str(p),
+                    emoji_key="fail",
+                )
 
-        log.info("Config loaded (potential warnings for invalid paths).", extra={"emoji_key": "validate"})
+            if not path_valid:
+                # Modify the mutable RepositoryConfig object
+                repo_config.enabled = False
+                repo_config._path_valid = False
+
+        log.info(
+            "Config loaded (potential warnings for invalid paths).",
+            emoji_key="validate",
+        )
         return config_object
 
     except (cattrs.BaseValidationError, ConfigValidationError) as e:
-        log.error(f"Config validation failed: [{PATH_STYLE}]{config_path}[/]\n[{ERROR_DETAIL_STYLE}]{e}[/]", exc_info=True, extra={"emoji_key": "fail"})
-        details_str = ""; notes = getattr(e, "__notes__", None)
-        if notes: details_str = "\nDetails:\n" + "\n".join(notes)
-        raise ConfigValidationError(f"{e}{details_str}", path=str(config_path), details=e) from e
+        log.error(
+            "Config validation failed",
+            path=str(config_path),
+            error=str(e),
+            exc_info=True,
+            emoji_key="fail",
+        )
+        # Add details if available (Python 3.11+)
+        details_str = ""
+        notes = getattr(e, "__notes__", None)
+        if notes:
+            details_str = "\nDetails:\n" + "\n".join(notes)
+        raise ConfigValidationError(
+            f"{e}{details_str}", path=str(config_path), details=e
+        ) from e
     except Exception as e:
-        log.critical(f"Unexpected error during config structuring: [{ERROR_DETAIL_STYLE}]{e}[/]", exc_info=True, extra={"emoji_key": "fail"})
-        raise ConfigurationError(f"Unexpected error processing config: {e}", path=str(config_path)) from e
+        log.critical(
+            "Unexpected error during config structuring",
+            error=str(e),
+            exc_info=True,
+            emoji_key="fail",
+        )
+        raise ConfigurationError(
+            f"Unexpected error processing config: {e}", path=str(config_path)
+        ) from e
     finally:
         _CURRENT_CONFIG_PATH_CONTEXT = None
 
 
 # --- Main Function for Demo/Testing ---
 
-# IMPORTANT: Import the setup function from its new location
 try:
-    from .telemetry.logger.base import setup_logging
+    # Import setup function from its new location
+    from .telemetry.logger import setup_logging, StructLogger
 except ImportError:
     # Fallback if running config.py directly
     try:
-        from telemetry.logger.base import setup_logging
+        from telemetry.logger import setup_logging, StructLogger
     except ImportError as e:
-        print(f"ERROR: Could not import setup_logging. Ensure supsrc is installed or paths correct.\n{e}", file=sys.stderr)
+        print(
+            f"ERROR: Could not import setup_logging. Ensure supsrc is installed"
+            f" or paths correct.\n{e}",
+            file=sys.stderr,
+        )
         sys.exit(99)
+
 
 def main() -> None:
     """Parses arguments, sets up logging, loads config, prints result."""
-    parser = argparse.ArgumentParser(description="Load/validate supsrc config.")
-    parser.add_argument("-c", "--config", type=Path, default=Path("supsrc.conf"), help="Config file path")
-    parser.add_argument("--log-level", choices=logging._nameToLevel.keys(), default="DEBUG", help="Logging level")
-    # Add optional log file argument
-    parser.add_argument("--log-file", type=str, default=None, help="Optional path to write logs to a file.")
+    parser = argparse.ArgumentParser(
+        description="Load/validate supsrc config."
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=Path,
+        default=Path("supsrc.conf"),
+        help="Config file path",
+    )
+    parser.add_argument(
+        "--log-level",
+        choices=logging._nameToLevel.keys(),
+        default="DEBUG",
+        help="Logging level",
+    )
+    parser.add_argument(
+        "--log-file",
+        type=str,
+        default=None,
+        help="Optional path for JSON log file.",
+    )
+    parser.add_argument(
+        "--json-logs", action="store_true", help="Output console logs as JSON."
+    )
     args = parser.parse_args()
 
     log_level_numeric = logging.getLevelName(args.log_level.upper())
-    # Call the centralized setup function
-    setup_logging(level=log_level_numeric, log_file=args.log_file)
+    # Call the centralized structlog setup function
+    setup_logging(
+        level=log_level_numeric,
+        json_logs=args.json_logs,
+        log_file=args.log_file,
+    )
 
-    # Now use the 'log' instance obtained via getLogger("supsrc.cfg")
-    log.info(f"Starting config load process via main (Log Level: {args.log_level})...")
+    # Get logger *after* setup (though configured globally)
+    slog = structlog.get_logger("cfg") # Use same name as module logger
+    slog.info(
+        "Starting config load process via main", log_level=args.log_level
+    )
 
     exit_code = 0
     try:
         config = load_config(args.config)
 
+        # Pretty print the final config object if rich is available
         if RICH_AVAILABLE:
-            log.debug("Final configuration object (invalid paths auto-disabled):")
+            slog.debug("Final configuration object (invalid paths auto-disabled):")
+            # Use rich.pretty.pretty_repr for potentially better control if needed
             rich.pretty.pprint(config, expand_all=True)
-        else:
-            import pprint
-            log.debug("Final configuration object (invalid paths auto-disabled):")
-            pprint.pprint(config, indent=2)
+        # else: Structlog handles logging the object if needed at DEBUG
 
-        disabled_count = sum(1 for repo in config.repositories.values() if not repo._path_valid)
+        disabled_count = sum(
+            1 for repo in config.repositories.values() if not repo._path_valid
+        )
         if disabled_count > 0:
-            log.warning(f"✅ Config processed, [{WARN_STYLE}]{disabled_count}[/] repo(s) disabled due to invalid paths.", extra={"emoji_key": "validate"})
+            slog.warning(
+                "Config processed, repos disabled due to invalid paths.",
+                count=disabled_count,
+                emoji_key="validate", # Still validation context
+            )
         else:
-            log.info("✅ Config loading finished successfully!", extra={"emoji_key": "validate"})
+            slog.info(
+                "Config loading finished successfully!", emoji_key="success"
+            )
 
-    except ConfigFileNotFoundError as e: exit_code = 1
-    except ConfigParsingError as e: exit_code = 2
-    except ConfigValidationError as e: exit_code = 3
+    except ConfigFileNotFoundError:
+        exit_code = 1  # Logged in load_config
+    except ConfigParsingError:
+        exit_code = 2  # Logged in load_config
+    except ConfigValidationError:
+        exit_code = 3  # Logged in load_config
     except ConfigurationError as e:
-        log.error(f"🚫 Config error: [{ERROR_DETAIL_STYLE}]{e}[/]", extra={"emoji_key": "fail"})
+        slog.error("Config error", error=str(e), emoji_key="fail")
         exit_code = 4
     except Exception as e:
-        log.critical(f"💥 Unexpected critical error: [{ERROR_DETAIL_STYLE}]{e}[/]", exc_info=True)
+        # structlog automatically handles exc_info with critical/error
+        slog.critical("Unexpected critical error", error=str(e), exc_info=True)
         exit_code = 5
     finally:
-        if exit_code == 0: log.debug(f"Exiting code {exit_code} (Success)")
-        else: log.warning(f"Exiting code {exit_code} (Error)")
+        if exit_code == 0:
+            slog.debug("Exiting", exit_code=exit_code)
+        else:
+            slog.warning("Exiting with error", exit_code=exit_code)
         sys.exit(exit_code)
+
 
 if __name__ == "__main__":
     main()

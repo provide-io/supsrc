@@ -1,16 +1,12 @@
+#
 # supsrc/telemetry/logger/__init__.py
 # -*- coding: utf-8 -*-
 """
-Exposes the configured logger instance for the supsrc application.
-
-Usage: from supsrc.telemetry import logger
-       logger.info("...")
-
-Requires setup_logging() from .base to be called first.
+Logging setup for supsrc using structlog.
 """
 
-import logging
-from .base import BASE_LOGGER_NAME
+from supsrc.telemetry.logger.base import setup_logging, StructLogger # Expose setup and type hint
 
-# Retrieve the logger instance configured by setup_logging in base.py
-logger = logging.getLogger(BASE_LOGGER_NAME)
+__all__ = ["setup_logging", "StructLogger"]
+
+#
