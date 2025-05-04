@@ -312,3 +312,6 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/python,venv,compressed,compression,linux,macos,windows
+
+# bfiles
+*.bf.txt

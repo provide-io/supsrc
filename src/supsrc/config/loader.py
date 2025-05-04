@@ -1,23 +1,25 @@
 #
 # supsrc/config/loader.py
-# -*- coding: utf-8 -*-
+#
 """
 Handles loading, validation, and structuring of supsrc configuration files.
+Applies environment variable overrides for global defaults.
 """
 
 import logging
 import re
 import sys
+import os # <<< Added for os.getenv
 import tomllib
 from datetime import timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 import cattrs
 import structlog
+import attrs # <<< Added for attrs.evolve
 
 # --- Custom Exceptions Import ---
-# Use relative imports within the same package
 from ..exceptions import (
     ConfigurationError,
     ConfigFileNotFoundError,
@@ -26,13 +28,12 @@ from ..exceptions import (
     DurationValidationError,
 )
 # Import models from sibling module
-from .models import SupsrcConfig, RepositoryConfig
+from .models import SupsrcConfig, RepositoryConfig, GlobalConfig # Import GlobalConfig
+from ..telemetry import StructLogger # Import type hint
 
-log: structlog.stdlib.BoundLogger = structlog.get_logger("config.loader")
+log: StructLogger = structlog.get_logger("config.loader")
 
 # --- Rich Markup Styles ---
-# These are used by the logger configured elsewhere, but defining them here
-# helps if we construct messages with markup within this module.
 PATH_STYLE = "bold cyan"
 VALUE_STYLE = "bold magenta"
 ERROR_DETAIL_STYLE = "italic red"
@@ -41,7 +42,6 @@ WARN_STYLE = "yellow"
 
 # --- Helper Functions & Validators ---
 
-# Context variable for hooks - consider alternatives for complex apps
 _CURRENT_CONFIG_PATH_CONTEXT: Path | None = None
 
 def _parse_duration(
@@ -97,9 +97,13 @@ converter.register_structure_hook(
 # --- Core Loading Function ---
 
 def load_config(config_path: Path) -> SupsrcConfig:
-    """Loads, validates, structures config. Handles invalid paths gracefully."""
+    """
+    Loads, validates, structures config. Handles invalid paths gracefully.
+    Applies environment variable overrides for global settings.
+    """
     global _CURRENT_CONFIG_PATH_CONTEXT
     _CURRENT_CONFIG_PATH_CONTEXT = config_path
+    final_config_object: SupsrcConfig | None = None # Define outside try
 
     log.info("Attempting config load", path=str(config_path), emoji_key="load")
     if not config_path.is_file():
@@ -116,11 +120,49 @@ def load_config(config_path: Path) -> SupsrcConfig:
 
     try:
         log.debug("Structuring TOML data...")
+        # Initial structure from TOML + attrs defaults
         config_object = converter.structure(toml_data, SupsrcConfig)
         log.debug("Initial structuring complete.")
 
+        # --- Apply Environment Variable Overrides for Global Config ---
+        global_config = config_object.global_config
+        global_overrides: dict[str, Any] = {}
+
+        # Check SUPSRC_DEFAULT_AUTO_PUSH
+        env_auto_push = os.getenv('SUPSRC_DEFAULT_AUTO_PUSH')
+        if env_auto_push is not None:
+            parsed_auto_push = env_auto_push.lower() in ('true', '1', 'yes', 'on')
+            if parsed_auto_push != global_config.default_auto_push:
+                log.debug("Overriding global.default_auto_push from env var", value=parsed_auto_push)
+                global_overrides['default_auto_push'] = parsed_auto_push
+
+        # Check SUPSRC_DEFAULT_COMMIT_MESSAGE
+        env_commit_msg = os.getenv('SUPSRC_DEFAULT_COMMIT_MESSAGE')
+        if env_commit_msg is not None:
+             # Allow empty string from env var if needed, otherwise check difference
+             if env_commit_msg != global_config.default_commit_message:
+                log.debug("Overriding global.default_commit_message from env var", value=env_commit_msg)
+                global_overrides['default_commit_message'] = env_commit_msg
+
+        # Apply overrides if any were found
+        if global_overrides:
+            log.info("Applying global config overrides from environment variables", overrides=list(global_overrides.keys()))
+            try:
+                # Create a new GlobalConfig with the overrides applied
+                new_global_config = attrs.evolve(global_config, **global_overrides)
+                # Create a new SupsrcConfig replacing the global_config part
+                final_config_object = attrs.evolve(config_object, global_config=new_global_config)
+            except Exception as evolve_exc:
+                 # Should be unlikely if types match, but catch just in case
+                 log.error("Failed to apply environment variable overrides", error=str(evolve_exc), exc_info=True)
+                 final_config_object = config_object # Fallback to original
+        else:
+            final_config_object = config_object # No overrides needed
+
+        # --- Post-Structuring Path Validation ---
         log.debug("Performing post-structuring path validation...")
-        repos_to_process = list(config_object.repositories.items())
+        # Operate on the potentially modified final_config_object
+        repos_to_process = list(final_config_object.repositories.items())
         for repo_id, repo_config in repos_to_process:
             p = repo_config.path; path_valid = True
             try:
@@ -132,10 +174,11 @@ def load_config(config_path: Path) -> SupsrcConfig:
                  path_valid = False; log.warning("Cannot access path, disabling repo", repo_id=repo_id, path=str(p), error=str(e), emoji_key="fail")
 
             if not path_valid:
+                # Modify the mutable RepositoryConfig object (this is okay even if SupsrcConfig is frozen)
                 repo_config.enabled = False; repo_config._path_valid = False
 
-        log.info("Config loaded (potential warnings for invalid paths).", emoji_key="validate")
-        return config_object
+        log.info("Config loaded (env overrides applied, potential warnings for invalid paths).", emoji_key="validate")
+        return final_config_object # Return the final version
 
     except (cattrs.BaseValidationError, ConfigValidationError) as e:
         log.error("Config validation failed", path=str(config_path), error=str(e), exc_info=True, emoji_key="fail")
@@ -145,6 +188,7 @@ def load_config(config_path: Path) -> SupsrcConfig:
     except Exception as e:
         log.critical("Unexpected error during config structuring", error=str(e), exc_info=True, emoji_key="fail")
         raise ConfigurationError(f"Unexpected error processing config: {e}", path=str(config_path)) from e
-    finally: _CURRENT_CONFIG_PATH_CONTEXT = None
+    finally:
+        _CURRENT_CONFIG_PATH_CONTEXT = None
 
 # 🔼⚙️
