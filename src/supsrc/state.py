@@ -1,6 +1,7 @@
 #
-# supsrc/state.py
+# src/supsrc/state.py
 #
+
 """
 Defines the dynamic state management models for monitored repositories in supsrc.
 """
@@ -60,39 +61,46 @@ class RepositoryState:
         )
 
     def update_status(self, new_status: RepositoryStatus, error_msg: Optional[str] = None) -> None:
-        """ Safely updates the status and optionally logs errors. """
+        """ Safely updates the status and optionally logs errors or recovery. """
         old_status = self.status
+        if old_status == new_status:
+            # No actual change, maybe log at debug if needed, but often noisy
+            # log.debug("Status update requested but unchanged", repo_id=self.repo_id, status=new_status.name)
+            return
+
         self.status = new_status
+        log_func = log.debug # Default log level for status changes
+
         if new_status == RepositoryStatus.ERROR:
             self.error_message = error_msg or "Unknown error"
+            log_func = log.warning # Elevate log level for errors
             # Optionally set last_error_time here
-            log.warning(
-                "Repository status changed to ERROR",
-                repo_id=self.repo_id,
-                previous_status=old_status.name,
-                error=self.error_message,
-            )
         elif old_status == RepositoryStatus.ERROR and new_status != RepositoryStatus.ERROR:
-             log.info(
+             log.info( # Log recovery specifically at INFO level
                  "Repository status recovered from ERROR",
                  repo_id=self.repo_id,
                  new_status=new_status.name,
              )
              self.error_message = None # Clear previous error on recovery
-        else:
-            log.debug(
-                "Repository status changed",
-                repo_id=self.repo_id,
-                old_status=old_status.name,
-                new_status=new_status.name,
-            )
+             # Fall through to log the specific transition below if desired,
+             # or return here if the recovery message is sufficient.
+
+        # Log the specific transition details
+        log_func(
+            "Repository status changed",
+            repo_id=self.repo_id,
+            old_status=old_status.name,
+            new_status=new_status.name,
+            **(dict(error=self.error_message) if new_status == RepositoryStatus.ERROR else {})
+        )
+
         # Reset relevant fields on transition back to IDLE or CHANGED?
         if new_status in (RepositoryStatus.IDLE, RepositoryStatus.CHANGED):
              self.cancel_inactivity_timer() # Ensure timer is cleared if we reset state
-             # Consider resetting save_count only after successful commit/push?
+             # Save count is typically reset only after successful commit/push in reset_after_action
 
     def record_change(self) -> None:
-        """Records a file change event, updating time and count."""
+        """Records a file change event, updating time and count, and sets status to CHANGED."""
         now_utc = datetime.now(timezone.utc)
         self.last_change_time = now_utc
         self.save_count += 1
@@ -102,34 +110,44 @@ class RepositoryState:
             repo_id=self.repo_id,
             change_time_utc=now_utc.isoformat(),
             new_save_count=self.save_count,
+            current_status=self.status.name,
         )
         # Cancel any pending inactivity timer, as a new change just arrived.
         self.cancel_inactivity_timer()
 
     def reset_after_action(self) -> None:
-        """ Resets state after a successful commit/push sequence. """
-        log.debug("Resetting state after successful action", repo_id=self.repo_id)
+        """ Resets state fields typically after a successful commit/push sequence. """
+        log.debug("Resetting state after action", repo_id=self.repo_id)
         self.save_count = 0
-        self.last_change_time = None # Or keep last successful action time?
-        self.cancel_inactivity_timer()
-        self.update_status(RepositoryStatus.IDLE)
+        # Keep last_change_time as the time of the action, or clear it?
+        # Clearing might be simpler for inactivity logic.
+        self.last_change_time = None
+        self.cancel_inactivity_timer() # Ensure timer is gone
+        self.update_status(RepositoryStatus.IDLE) # Back to idle state
 
 
     def set_inactivity_timer(self, handle: asyncio.TimerHandle) -> None:
-        """Stores the handle for a scheduled inactivity timer."""
+        """Stores the handle for a scheduled inactivity timer, cancelling any previous one."""
         # Cancel any previous timer before setting a new one
         self.cancel_inactivity_timer()
         self.inactivity_timer_handle = handle
-        log.debug("Inactivity timer set", repo_id=self.repo_id)
+        log.debug("Inactivity timer set", repo_id=self.repo_id, timer_handle=repr(handle))
 
     def cancel_inactivity_timer(self) -> None:
         """Cancels the pending inactivity timer, if one exists."""
         if self.inactivity_timer_handle:
-            log.debug("Cancelling existing inactivity timer", repo_id=self.repo_id)
-            self.inactivity_timer_handle.cancel()
-            self.inactivity_timer_handle = None
+            timer_repr = repr(self.inactivity_timer_handle) # Capture before cancelling
+            log.debug("Cancelling existing inactivity timer", repo_id=self.repo_id, timer_handle=timer_repr)
+            try:
+                 self.inactivity_timer_handle.cancel()
+            except Exception as e:
+                 # Log potential errors during cancellation, though usually straightforward
+                 log.warning("Error cancelling timer handle", repo_id=self.repo_id, timer_handle=timer_repr, error=str(e))
+            finally:
+                 self.inactivity_timer_handle = None
         else:
-            log.debug("No active inactivity timer to cancel", repo_id=self.repo_id)
-
+             # This is normal operation, no need to log unless debugging timing issues
+             # log.debug("No active inactivity timer to cancel", repo_id=self.repo_id)
+             pass
 
 # 🔼⚙️
