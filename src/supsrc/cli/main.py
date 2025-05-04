@@ -8,22 +8,27 @@ Handles global options like logging level.
 
 import logging
 import sys
+import os # <<< Added for potential future use, good practice
 
 from importlib.metadata import version, PackageNotFoundError
 
 import click
 import structlog
 
+# Use absolute imports
 from supsrc.telemetry.logger import setup_logging
 from supsrc.cli.config_cmds import config_cli
 from supsrc.cli.watch_cmds import watch_cli
+from supsrc.telemetry import StructLogger # Import type hint
+
 
 try:
     __version__ = version("supsrc")
 except PackageNotFoundError:
     __version__ = "0.0.0-dev"
 
-log = structlog.get_logger("cli.main")
+# Logger for this specific module
+log: StructLogger = structlog.get_logger("cli.main")
 
 # Define choices based on standard logging levels
 LOG_LEVEL_CHOICES = click.Choice(
@@ -37,22 +42,25 @@ LOG_LEVEL_CHOICES = click.Choice(
     type=LOG_LEVEL_CHOICES,
     default='INFO',
     show_default=True,
-    envvar='SUPSRC_LOG_LEVEL', # Allow setting via env var
-    help='Set the logging level.',
+    envvar='SUPSRC_LOG_LEVEL', # <<< Added Environment Variable Support
+    help='Set the logging level (overrides config file, env var SUPSRC_LOG_LEVEL).',
+    show_envvar=True, # <<< Show env var in help message
 )
 @click.option(
     '--log-file',
     type=click.Path(dir_okay=False, writable=True, resolve_path=True),
     default=None,
-    envvar='SUPSRC_LOG_FILE',
-    help='Path to write logs to a file (JSON format).',
+    envvar='SUPSRC_LOG_FILE', # <<< Added Environment Variable Support
+    help='Path to write logs to a file (JSON format) (env var SUPSRC_LOG_FILE).',
+    show_envvar=True, # <<< Show env var in help message
 )
 @click.option(
     '--json-logs',
     is_flag=True,
     default=False,
-    envvar='SUPSRC_JSON_LOGS',
-    help='Output console logs as JSON.',
+    envvar='SUPSRC_JSON_LOGS', # <<< Added Environment Variable Support
+    help='Output console logs as JSON (env var SUPSRC_JSON_LOGS).',
+    show_envvar=True, # <<< Show env var in help message
 )
 @click.pass_context # Pass context to store/retrieve shared options
 def cli(ctx: click.Context, log_level: str, log_file: str | None, json_logs: bool):
@@ -60,10 +68,12 @@ def cli(ctx: click.Context, log_level: str, log_file: str | None, json_logs: boo
     Supsrc: Automated Git commit/push utility.
 
     Monitors repositories and performs Git actions based on rules.
+    Configuration precedence: CLI options > Environment Variables > Config File > Defaults.
     """
     # Ensure context object exists
     ctx.ensure_object(dict)
     # Store options in context for subcommands to access
+    # These values already reflect Click's precedence (CLI > Env Var > Default)
     ctx.obj['LOG_LEVEL'] = log_level
     ctx.obj['LOG_FILE'] = log_file
     ctx.obj['JSON_LOGS'] = json_logs

@@ -1,28 +1,20 @@
 #
 # supsrc/cli/config_cmds.py
-# -*- coding: utf-8 -*-
+#
 """
 CLI commands related to configuration management for supsrc.
 """
 
+import os # <<< Added for potential future use
 from pathlib import Path
 
 import click
 import structlog
 
-# Use relative imports
-try:
-    from ..config import load_config
-    from ..exceptions import ConfigurationError
-except ImportError:
-     # Fallback for development if needed
-    try:
-        from supsrc.config import load_config
-        from supsrc.exceptions import ConfigurationError
-    except ImportError:
-        def load_config(*args, **kwargs): raise RuntimeError("Cannot load config loader.")
-        class ConfigurationError(Exception): pass
-
+# Use relative imports within the package
+from ..config import load_config
+from ..exceptions import ConfigurationError
+from ..telemetry import StructLogger # Import type hint
 
 # Import rich if available for pretty printing
 try:
@@ -31,7 +23,7 @@ try:
 except ImportError:
     RICH_AVAILABLE = False
 
-log = structlog.get_logger("cli.config")
+log: StructLogger = structlog.get_logger("cli.config")
 
 # Create a command group for config-related commands
 @click.group(name="config")
@@ -44,9 +36,11 @@ def config_cli():
 @click.option(
     '-c', '--config-path',
     type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path),
-    default=Path("supsrc.conf"), # Sensible default
+    default=Path("supsrc.conf"),
     show_default=True,
-    help="Path to the supsrc configuration file."
+    envvar='SUPSRC_CONF', # <<< Added Environment Variable Support
+    help="Path to the supsrc configuration file (env var SUPSRC_CONF).",
+    show_envvar=True, # <<< Show env var in help message
 )
 @click.pass_context # Get context from the parent group (for log level etc)
 def show_config(ctx: click.Context, config_path: Path):
@@ -54,10 +48,11 @@ def show_config(ctx: click.Context, config_path: Path):
     log.info("Executing 'config show' command", config_path=str(config_path))
 
     try:
+        # load_config now handles env var overrides for global defaults internally
         config = load_config(config_path)
         log.debug("Configuration loaded successfully by 'show' command.")
 
-        print("\n--- Loaded Supsrc Configuration ---")
+        print("\n--- Loaded Supsrc Configuration (CLI/Env overrides applied) ---")
         if RICH_AVAILABLE:
             rich.pretty.pprint(config, expand_all=True)
         else:
