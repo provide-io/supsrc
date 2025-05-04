@@ -1,6 +1,7 @@
 #
 # src/supsrc/rules.py
 #
+
 """
 Implements the rule engine logic for supsrc triggers.
 
@@ -9,7 +10,7 @@ based on the current state of a repository.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import TypeAlias  # Import TypeAlias explicitly
+from typing import TypeAlias # Import TypeAlias explicitly
 
 import structlog
 
@@ -112,6 +113,10 @@ def check_inactivity(
         required_period_seconds=required_period.total_seconds(),
     )
 
+    # Use a small tolerance to avoid floating point precision issues if necessary,
+    # although direct comparison is usually fine for timedeltas.
+    # tolerance = timedelta(milliseconds=10)
+    # return elapsed_time >= (required_period - tolerance)
     return elapsed_time >= required_period
 
 
