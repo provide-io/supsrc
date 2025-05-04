@@ -1,7 +1,6 @@
 #
 # supsrc/exceptions.py
 #
-
 """
 Custom Exception types for the supsrc application.
 
@@ -28,8 +27,6 @@ class ConfigurationError(SupsrcError):
 class ConfigFileNotFoundError(ConfigurationError, FileNotFoundError):
     """Raised when the specified configuration file cannot be found."""
     def __init__(self, message: str = "Configuration file not found", path: str | None = None):
-        # Ensure FileNotFoundError's __init__ is called correctly if needed,
-        # though composing the message here is sufficient.
         super().__init__(message, path=path)
 
 
@@ -40,7 +37,6 @@ class ConfigParsingError(ConfigurationError):
         full_message = f"Failed to parse configuration file: {message}"
         super().__init__(full_message, path=path)
         if details:
-            # Add original exception details as a note (Python 3.11+)
             if hasattr(self, "add_note"):
                  self.add_note(f"Original parsing error: {type(details).__name__}: {details}")
 
@@ -72,14 +68,22 @@ class DurationValidationError(ConfigValidationError):
         full_message = f"{message}: '{duration_str}'"
         super().__init__(full_message, path=config_path)
 
-# --- Operational Exceptions (Example Placeholders - Add more as needed) ---
+# --- Monitoring Related Exceptions (NEW for Phase 2) ---
 
-# class GitOperationError(SupsrcError):
-#     """Raised when a Git command fails."""
-#     pass
+class MonitoringError(SupsrcError):
+    """Base class for errors related to file system monitoring."""
+    def __init__(self, message: str, repo_id: str | None = None, path: str | None = None):
+        self.repo_id = repo_id
+        self.path = path
+        full_message = f"{message}"
+        if repo_id:
+            full_message += f" (Repo: {repo_id})"
+        if path:
+            full_message += f" (Path: '{path}')"
+        super().__init__(full_message)
 
-# class MonitoringError(SupsrcError):
-#     """Raised during file system monitoring issues."""
-#     pass
+class MonitoringSetupError(MonitoringError):
+    """Raised when setting up monitoring for a specific repository fails."""
+    pass
 
-#
+# 🔼⚙️

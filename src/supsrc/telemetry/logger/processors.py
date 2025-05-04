@@ -1,13 +1,14 @@
+#
 # supsrc/telemetry/logger/processors.py
-# -*- coding: utf-8 -*-
+#
 """
 Custom structlog processors for supsrc.
 """
 import logging
-from .base import LOG_EMOJIS, BASE_LOGGER_NAME # Import from base
 
 # --- Helper ---
 def get_emoji(event_dict: dict) -> str:
+    from supsrc.telemetry.logger.base import LOG_EMOJIS
     """Gets appropriate emoji based on level or extra key in event_dict."""
     # Check for explicit emoji_key passed in log call
     if event_dict.get("emoji_key") in LOG_EMOJIS:
@@ -27,6 +28,7 @@ def add_emoji_processor(logger, method_name: str, event_dict: dict) -> dict:
     return event_dict
 
 def add_padded_logger_processor(logger, method_name: str, event_dict: dict) -> dict:
+    from supsrc.telemetry.logger.base import BASE_LOGGER_NAME
     """Adds a 'padded_logger' field, truncating/padding the original logger name."""
     logger_name = event_dict.get("logger", "unknown")
     # Make relative to base if possible

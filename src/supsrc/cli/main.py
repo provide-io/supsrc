@@ -1,6 +1,6 @@
 #
 # supsrc/cli/main.py
-# -*- coding: utf-8 -*-
+#
 """
 Main CLI entry point for supsrc using Click.
 Handles global options like logging level.
@@ -9,28 +9,19 @@ Handles global options like logging level.
 import logging
 import sys
 
+from importlib.metadata import version, PackageNotFoundError
+
 import click
 import structlog
 
-# Import setup_logging from its location
-# Use relative imports assuming standard package structure
-try:
-    from ..telemetry.logger import setup_logging
-    from .. import __version__
-except ImportError:
-    # Allow running directly for development? Less ideal.
-    print("ERROR: Cannot perform relative imports. Ensure supsrc is installed correctly.", file=sys.stderr)
-    # Attempt absolute import as fallback (might work if PYTHONPATH is set)
-    try:
-        from supsrc.telemetry.logger import setup_logging
-        from supsrc import __version__
-    except ImportError:
-        __version__ = "unknown"
-        def setup_logging(*args, **kwargs):
-            print("ERROR: Logging setup failed.", file=sys.stderr)
+from supsrc.telemetry.logger import setup_logging
+from supsrc.cli.config_cmds import config_cli
+from supsrc.cli.watch_cmds import watch_cli
 
-# Import command groups
-from .config_cmds import config_cli
+try:
+    __version__ = version("supsrc")
+except PackageNotFoundError:
+    __version__ = "0.0.0-dev"
 
 log = structlog.get_logger("cli.main")
 
@@ -90,7 +81,7 @@ def cli(ctx: click.Context, log_level: str, log_file: str | None, json_logs: boo
 
 # Add command groups to the main CLI group
 cli.add_command(config_cli)
-# Add other command groups here later (e.g., watch_cli)
+cli.add_command(watch_cli)
 
 
 if __name__ == '__main__':
