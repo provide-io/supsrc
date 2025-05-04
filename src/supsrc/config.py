@@ -1,5 +1,6 @@
+#
 # supsrc/config.py
-# -*- coding: utf-8 -*-
+#
 """
 Configuration loading and validation for supsrc. Uses structlog.
 """
@@ -460,3 +461,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# 🔼⚙️
