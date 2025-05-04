@@ -1,15 +1,10 @@
 #
 # supsrc/telemetry/__init__.py
 # -*- coding: utf-8 -*-
-
 """
 Telemetry package for supsrc.
-
-Exports common telemetry components like the logger.
 """
 
-from .logger import logger
+from supsrc.telemetry.logger import setup_logging, StructLogger
 
-__all__ = ["logger"]
-
-#
+__all__ = ["setup_logging", "StructLogger"] # Export setup function and type hint
