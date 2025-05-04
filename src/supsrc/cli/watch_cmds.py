@@ -29,34 +29,22 @@ _shutdown_requested = asyncio.Event()
 _running_tasks: Set[asyncio.Task[Any]] = set()
 
 # --- Async Signal Handler ---
-async def _handle_signal_async(sig: int): # Removed loop parameter, get it if needed
+async def _handle_signal_async(sig: int):
     """Async wrapper for signal handling logic."""
-    timestamp = time.time()
     signame = signal.Signals(sig).name
-    print(f"[{timestamp:.3f}] !!! Signal handler _handle_signal_async started for {signame} !!!", file=sys.stderr)
-    log.warning("!!! Received shutdown signal !!!", signal=signame, signal_num=sig)
-
+    log.warning("Received shutdown signal", signal=signame, signal_num=sig)
     if _shutdown_requested.is_set():
-        print(f"[{timestamp:.3f}] !!! Shutdown already requested !!!", file=sys.stderr)
         log.warning("Shutdown already requested, signal ignored.")
         return
-
-    print(f"[{timestamp:.3f}] !!! Setting shutdown_requested event... !!!", file=sys.stderr)
+    log.info("Setting shutdown requested event.")
     _shutdown_requested.set()
-    print(f"[{timestamp:.3f}] !!! Shutdown_requested event set. !!!", file=sys.stderr)
-    log.info("Shutdown requested event set.")
-    # Optional: Cancel tasks immediately here? Often better done in finally block
-    # loop = asyncio.get_running_loop() # Get current loop if needed
-    # for task in _running_tasks:
-    #     task.cancel()
 
 # --- Core Async Functions ---
-
 async def consume_events(
     event_queue: asyncio.Queue[MonitoredEvent],
     monitor_service: MonitoringService
 ) -> None:
-    # ... (No changes needed in consume_events itself) ...
+    # ... (No changes from previous version) ...
     log.info("Event consumer started, waiting for file events...")
     while True:
         try:
@@ -68,19 +56,14 @@ async def consume_events(
             )
             log.debug("Consumer woke up.", done_tasks=len(done), pending_tasks=len(pending))
             if shutdown_task in done or _shutdown_requested.is_set():
-                log.warning(">>> Consumer detected shutdown request <<<")
-                print(f"[{time.time():.3f}] >>> Consumer detected shutdown request <<<", file=sys.stderr)
-                if not get_task.done():
-                    log.debug("Cancelling pending event get task...")
-                    get_task.cancel()
+                log.info("Consumer detected shutdown request.")
+                if not get_task.done(): log.debug("Cancelling pending event get task..."); get_task.cancel()
                 else:
                      log.debug("Checking potentially completed event task during shutdown...")
                      try: await get_task
                      except asyncio.CancelledError: log.debug("Event task was cancelled.")
                      except Exception as e: log.warning("Exception during final event get on shutdown", error=str(e), exc_info=True)
-                log.info("Exiting event consumer loop.")
-                print(f"[{time.time():.3f}] >>> Consumer exiting loop <<<", file=sys.stderr)
-                break
+                log.info("Exiting event consumer loop."); break
             if get_task in done:
                 event = get_task.result()
                 log.debug(
@@ -88,25 +71,18 @@ async def consume_events(
                     path=str(event.src_path), is_dir=event.is_directory,
                     dest=str(event.dest_path) if event.dest_path else None
                 )
-                # --- Placeholder for Phase 3: Dispatch Event ---
                 event_queue.task_done()
             else:
                  log.warning("Consumer loop woke up unexpectedly.")
                  if get_task in pending: get_task.cancel()
                  if shutdown_task in pending: shutdown_task.cancel()
-        except asyncio.CancelledError:
-             log.info("Event consumer task explicitly cancelled.")
-             print(f"[{time.time():.3f}] >>> Consumer task cancelled <<<", file=sys.stderr)
-             break
-        except Exception as e:
-            log.error("Error in event consumer loop", error=str(e), exc_info=True)
-            await asyncio.sleep(1)
+        except asyncio.CancelledError: log.info("Event consumer task explicitly cancelled."); break
+        except Exception as e: log.error("Error in event consumer loop", error=str(e), exc_info=True); await asyncio.sleep(1)
 
 
 async def run_watch(config_path: Path) -> None:
-    # ... (No changes needed in run_watch itself, keep the debugging prints) ...
+    # ... (No changes from previous version) ...
     global _running_tasks
-    print(f"[{time.time():.3f}] --- run_watch started ---", file=sys.stderr)
     log.info("Starting 'watch' command execution", config_path=str(config_path))
     monitor_service: MonitoringService | None = None
     event_queue: asyncio.Queue[MonitoredEvent] | None = None
@@ -117,9 +93,7 @@ async def run_watch(config_path: Path) -> None:
             log.info("Configuration loaded successfully for watch command.")
             enabled_repos = [rid for rid, rcfg in config.repositories.items() if rcfg.enabled]
             log.info("Enabled repositories found", count=len(enabled_repos), repos=enabled_repos)
-            if not enabled_repos:
-                 log.warning("No enabled repositories found in configuration. Exiting.")
-                 return
+            if not enabled_repos: log.warning("No enabled repositories found in configuration. Exiting."); return
         except ConfigurationError as e: log.error("Failed to load configuration", error=str(e), path=str(config_path)); sys.exit(1)
         log.debug("run_watch: Setting up monitoring service...")
         event_queue = asyncio.Queue()
@@ -144,41 +118,32 @@ async def run_watch(config_path: Path) -> None:
         consumer_task.add_done_callback(_running_tasks.discard)
         # --- Placeholder Tasks ---
         log.info("Monitoring active. Press Ctrl+C to stop.")
-        print(f"[{time.time():.3f}] --- run_watch entering await _shutdown_requested.wait() ---", file=sys.stderr)
         await _shutdown_requested.wait()
-        print(f"[{time.time():.3f}] --- run_watch passed await _shutdown_requested.wait() ---", file=sys.stderr)
         log.info("Shutdown initiated...")
     except SupsrcError as e: log.critical("A critical supsrc error occurred during watch", error=str(e), exc_info=True)
     except asyncio.CancelledError:
          log.warning("run_watch task was cancelled.")
-         print(f"[{time.time():.3f}] --- run_watch task cancelled ---", file=sys.stderr)
          if not _shutdown_requested.is_set(): _shutdown_requested.set()
     except Exception as e: log.critical("An unexpected error occurred during watch", error=str(e), exc_info=True)
     finally:
-        print(f"[{time.time():.3f}] --- run_watch entering finally block ---", file=sys.stderr)
         log.info("Starting cleanup...")
         if _running_tasks:
             log.debug(f"Cancelling {len(_running_tasks)} running task(s)...", tasks=[t.get_name() for t in _running_tasks])
-            print(f"[{time.time():.3f}] --- Cancelling {len(_running_tasks)} tasks ---", file=sys.stderr)
             tasks_to_cancel = list(_running_tasks)
             for task in tasks_to_cancel:
                 if not task.done(): log.debug(f"Cancelling task: {task.get_name()}"); task.cancel()
             log.debug("Gathering cancelled tasks...")
             gathered_results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
             log.debug("Running tasks cancelled.", results=gathered_results)
-            print(f"[{time.time():.3f}] --- Tasks cancelled/gathered ---", file=sys.stderr)
-        else: log.debug("No running tasks found to cancel."); print(f"[{time.time():.3f}] --- No tasks to cancel ---", file=sys.stderr)
+        else: log.debug("No running tasks found to cancel.")
         if monitor_service is not None:
             if monitor_service.is_running:
                  log.debug("Stopping monitoring service (includes joining observer thread)...")
-                 print(f"[{time.time():.3f}] --- Calling await monitor_service.stop() ---", file=sys.stderr)
                  await monitor_service.stop()
                  log.debug("Monitoring service stop completed.")
-                 print(f"[{time.time():.3f}] --- Finished await monitor_service.stop() ---", file=sys.stderr)
-            else: log.debug("Monitoring service was not running or already stopped."); print(f"[{time.time():.3f}] --- Monitor service not running ---", file=sys.stderr)
-        else: log.debug("Monitoring service was not initialized."); print(f"[{time.time():.3f}] --- Monitor service not initialized ---", file=sys.stderr)
+            else: log.debug("Monitoring service was not running or already stopped.")
+        else: log.debug("Monitoring service was not initialized.")
         log.info("supsrc watch finished.")
-        print(f"[{time.time():.3f}] --- run_watch finally block finished ---", file=sys.stderr)
 
 
 # --- Click Command Definition ---
@@ -197,106 +162,98 @@ def watch_cli(ctx: click.Context, config_path: Path):
     Monitor configured repositories for changes and trigger actions.
     """
     log.info("Initializing 'watch' command")
-    print(f"[{time.time():.3f}] +++ watch_cli started +++", file=sys.stderr)
 
-    # --- MODIFIED SECTION START ---
-    loop = asyncio.new_event_loop() # Create a new loop explicitly
-    asyncio.set_event_loop(loop)    # Set it as the current loop for this thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     signals_to_handle = (signal.SIGINT, signal.SIGTERM)
     handlers_added = True
 
-    print(f"[{time.time():.3f}] +++ Adding signal handlers to loop {id(loop)} +++", file=sys.stderr)
+    log.debug(f"Adding signal handlers to loop {id(loop)}")
     try:
         for sig in signals_to_handle:
             current_sig = sig
             loop.add_signal_handler(
                 current_sig,
-                # The lambda now calls the async handler using loop.create_task
                 lambda s=current_sig: asyncio.create_task(_handle_signal_async(s))
             )
             log.debug(f"Added signal handler for {signal.Signals(sig).name}")
-            print(f"[{time.time():.3f}] +++ Added handler for {signal.Signals(sig).name} +++", file=sys.stderr)
     except NotImplementedError:
          handlers_added = False
          log.warning("Signal handlers for SIGTERM/SIGINT could not be added (possibly on Windows). Ctrl+C might not guarantee graceful shutdown.")
-         print(f"[{time.time():.3f}] +++ Failed to add signal handlers (NotImplementedError) +++", file=sys.stderr)
-    except Exception as e: # Catch other potential errors like RuntimeError if loop is closed
+    except Exception as e:
          handlers_added = False
          log.error("Failed to add signal handlers", error=str(e), exc_info=True)
-         print(f"[{time.time():.3f}] +++ Failed to add signal handlers ({type(e).__name__}: {e}) +++", file=sys.stderr)
-
 
     main_task = None
     try:
-        print(f"[{time.time():.3f}] +++ Calling loop.run_until_complete(run_watch(...)) +++", file=sys.stderr)
+        log.debug(f"Calling loop.run_until_complete(run_watch(config_path='{config_path}'))")
         main_task = loop.create_task(run_watch(config_path), name="MainRunWatch")
-        loop.run_until_complete(main_task) # Run the main coroutine
-        print(f"[{time.time():.3f}] +++ loop.run_until_complete finished normally +++", file=sys.stderr)
+        loop.run_until_complete(main_task)
+        log.debug("loop.run_until_complete finished normally")
 
     except KeyboardInterrupt:
-         # This might still occur if the signal is delivered before the handler is fully effective
          log.warning("KeyboardInterrupt caught directly in watch_cli. Attempting graceful shutdown.")
-         print(f"[{time.time():.3f}] +++ KeyboardInterrupt caught in watch_cli +++", file=sys.stderr)
          if not _shutdown_requested.is_set():
               _shutdown_requested.set()
-              # Give the event loop a chance to process the shutdown event if needed
-              # loop.run_until_complete(asyncio.sleep(0.1))
     except asyncio.CancelledError:
          log.warning("Main run_watch task was cancelled.")
-         print(f"[{time.time():.3f}] +++ Main run_watch task cancelled +++", file=sys.stderr)
     finally:
-         print(f"[{time.time():.3f}] +++ watch_cli finally block entered +++", file=sys.stderr)
+         log.debug("watch_cli finally block entered")
 
-         # Ensure main task is cancelled if it's still around and not done
          if main_task and not main_task.done():
-             print(f"[{time.time():.3f}] +++ Explicitly cancelling main task in finally +++", file=sys.stderr)
+             log.debug("Explicitly cancelling main task in finally")
              main_task.cancel()
              try:
-                 # Give cancellation a chance to propagate
-                 loop.run_until_complete(main_task)
+                 # Still attempt to run gather on the main task to process cancellation
+                 loop.run_until_complete(asyncio.gather(main_task, return_exceptions=True))
              except asyncio.CancelledError:
-                 print(f"[{time.time():.3f}] +++ Main task cancellation processed +++", file=sys.stderr)
+                 log.debug("Main task cancellation processed during final gather")
              except Exception as e:
-                 print(f"[{time.time():.3f}] +++ Error during final main task wait: {e} +++", file=sys.stderr)
+                 log.error(f"Error during final main task gather: {e}", exc_info=True)
 
-
-         # Clean up signal handlers
          if handlers_added:
-             log.debug("Removing signal handlers...")
-             print(f"[{time.time():.3f}] +++ Removing signal handlers from loop {id(loop)} +++", file=sys.stderr)
+             log.debug(f"Removing signal handlers from loop {id(loop)}")
              for sig in signals_to_handle:
-                 removed = loop.remove_signal_handler(sig)
-                 log.debug(f"Removed signal handler for {signal.Signals(sig).name} (found: {removed})")
-                 print(f"[{time.time():.3f}] +++ Removed handler for {signal.Signals(sig).name} (found: {removed}) +++", file=sys.stderr)
+                 try:
+                    # remove_signal_handler might fail if loop is closing/closed
+                    if not loop.is_closed():
+                        removed = loop.remove_signal_handler(sig)
+                        log.debug(f"Removed signal handler for {signal.Signals(sig).name} (found: {removed})")
+                 except ValueError:
+                     log.debug(f"Signal handler for {signal.Signals(sig).name} not found (may be expected).")
+                 except Exception as e:
+                     log.error(f"Error removing signal handler for {signal.Signals(sig).name}", error=str(e), exc_info=True)
 
-         # Important: Close the loop properly
-         print(f"[{time.time():.3f}] +++ Closing event loop {id(loop)} +++", file=sys.stderr)
-         # Cancel remaining tasks before closing loop
+         log.debug(f"Closing event loop {id(loop)}")
          try:
+              # --- MODIFIED FINAL CLEANUP START ---
               tasks = asyncio.all_tasks(loop=loop)
+              # No longer filter asyncio.current_task()
               if tasks:
-                   print(f"[{time.time():.3f}] +++ Cancelling {len(tasks)} remaining tasks before loop close +++", file=sys.stderr)
+                   log.debug(f"Cancelling {len(tasks)} remaining tasks before loop close: {[t.get_name() for t in tasks]}")
                    for task in tasks:
                         task.cancel()
+                   # Wait for cancellation to complete *by running the loop again briefly*
+                   log.debug("Gathering remaining tasks after cancellation...")
                    loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
-                   print(f"[{time.time():.3f}] +++ Remaining tasks gathered/cancelled +++", file=sys.stderr)
-         except Exception as e: # Catch errors during final task cleanup
-             print(f"[{time.time():.3f}] +++ Error cancelling remaining tasks: {e} +++", file=sys.stderr)
+                   log.debug("Remaining tasks gathered/cancelled")
+              else:
+                  log.debug("No remaining tasks found before loop close.")
 
-         try:
-              loop.close()
-              print(f"[{time.time():.3f}] +++ Event loop {id(loop)} closed +++", file=sys.stderr)
-              log.info("Event loop closed.")
+              if not loop.is_closed():
+                 log.debug("Closing the loop object.")
+                 loop.close()
+                 log.info("Event loop closed.")
+              else:
+                 log.warning("Event loop was already closed.")
+              # --- MODIFIED FINAL CLEANUP END ---
+
          except Exception as e:
-             log.error("Error closing event loop", error=str(e), exc_info=True)
-             print(f"[{time.time():.3f}] +++ Error closing loop {id(loop)}: {e} +++", file=sys.stderr)
-
+             # Catch potential RuntimeErrors if loop state is unexpected
+             log.error("Error during final task cancellation or loop closing", error=str(e), exc_info=True)
 
     log.info("'watch' command finished.")
-    print(f"[{time.time():.3f}] +++ watch_cli finished +++", file=sys.stderr)
-
-    # --- MODIFIED SECTION END ---
 
 
 # 🔼⚙️
