@@ -1,5 +1,5 @@
 # file: src/supsrc/tui/app.py
-# Removed setting 'table.focusable = True' in on_mount
+# Corrected action_quit to stop the scheduled timer
 
 import asyncio
 from datetime import datetime
@@ -13,6 +13,7 @@ from textual.widgets import Header, Footer, DataTable, Log as TextualLog
 from textual.worker import Worker
 from textual.message import Message
 from textual.reactive import var
+from textual.timer import Timer # <<< Import Timer
 
 if TYPE_CHECKING:
     Var = var
@@ -28,7 +29,7 @@ from supsrc.config import SupsrcConfig
 
 log = structlog.get_logger("tui.app")
 
-# --- Custom Messages ---
+# --- Custom Messages (Unchanged) ---
 class StateUpdate(Message):
     ALLOW_BUBBLE = True
     def __init__(self, repo_states: RepositoryStatesMap) -> None:
@@ -91,7 +92,7 @@ class SupsrcTuiApp(App):
         repo_states_data: Var[Dict[str, Any]]
     repo_states_data = var({})
 
-    # __init__ remains the same
+    # __init__ - Add timer attribute
     def __init__(
         self,
         config_path: Path,
@@ -104,9 +105,10 @@ class SupsrcTuiApp(App):
         self._shutdown_event = asyncio.Event()
         self._cli_shutdown_event = cli_shutdown_event
         self._worker: Optional[Worker] = None
+        self._shutdown_check_timer: Optional[Timer] = None # <<< Store timer object
 
     def compose(self) -> ComposeResult:
-        """Create child widgets for the app."""
+        # (Implementation unchanged)
         yield Header()
         with Container(id="main-container"):
             yield DataTable(id="repo-table", zebra_stripes=True)
@@ -114,33 +116,25 @@ class SupsrcTuiApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        """Called when the app is mounted."""
+        # (Implementation unchanged from last correction)
         log.info("TUI Mounted. Initializing UI components.")
         self._update_sub_title("Initializing...")
-
-        # --- Setup Table ---
         table = self.query_one(DataTable)
         table.cursor_type = "row"
-        # --- FIX HERE: Removed table.focusable = True ---
-        # table.focusable = True # This line caused the AttributeError
-        # ---------------------------------------------
         table.add_columns("ID", "Status", "Last Change", "Saves", "Error / Last Action")
-
-        # --- Setup Log Widget ---
         log_widget = self.query_one(TextualLog)
         log_widget.wrap = True
         log_widget.markup = True
-
-        # --- Start Worker ---
         log.info("Starting orchestrator worker...")
         self._worker = self.run_worker(self._run_orchestrator, thread=True, group="orchestrator")
-
-        # --- Start Shutdown Check ---
-        self.set_interval(0.5, self._check_external_shutdown, name="ExternalShutdownCheck")
+        # --- FIX HERE: Store the timer object ---
+        self._shutdown_check_timer = self.set_interval(0.5, self._check_external_shutdown, name="ExternalShutdownCheck")
+        # --------------------------------------
         self._update_sub_title("Monitoring...")
 
     # _run_orchestrator remains the same
     async def _run_orchestrator(self) -> None:
+        # (Implementation unchanged)
         log.info("Orchestrator worker started.")
         self._orchestrator = WatchOrchestrator(self._config_path, self._shutdown_event, app=self)
         try: await self._orchestrator.run()
@@ -157,6 +151,7 @@ class SupsrcTuiApp(App):
 
     # _check_external_shutdown remains the same
     async def _check_external_shutdown(self) -> None:
+         # (Implementation unchanged)
          if self._cli_shutdown_event.is_set() and not self._shutdown_event.is_set():
               log.warning("External shutdown detected (CLI signal), stopping TUI and orchestrator.")
               self._update_sub_title("Shutdown requested...")
@@ -164,27 +159,44 @@ class SupsrcTuiApp(App):
 
     # on_worker_state_changed remains the same
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
+        # (Implementation unchanged)
         log.debug(f"Worker {event.worker.name!r} state changed to {event.state!r}")
         if event.worker == self._worker and event.state in ("SUCCESS", "ERROR"):
              log.info(f"Orchestrator worker stopped with state: {event.state!r}")
              if not self._shutdown_event.is_set() and not self._cli_shutdown_event.is_set():
                  self.call_later(self.action_quit)
 
-    # --- Action Methods (remain the same) ---
-    def action_toggle_dark(self) -> None: self.dark = not self.dark
+    # --- Action Methods ---
+    def action_toggle_dark(self) -> None:
+        # (Implementation unchanged)
+        try: self.screen.dark = not self.screen.dark
+        except Exception as e: log.error("Failed to toggle dark mode", error=str(e))
     def action_clear_log(self) -> None:
+        # (Implementation unchanged)
         try: self.query_one(TextualLog).clear(); self.post_message(LogMessageUpdate(None, "INFO", "Log cleared."))
         except Exception as e: log.error("Failed to clear TUI log", error=str(e))
+
     async def action_quit(self) -> None:
+        """Action to quit the application."""
         log.info("Quit action triggered."); self._update_sub_title("Quitting...")
-        if not self._shutdown_event.is_set(): self._shutdown_event.set()
-        self.cancel_scheduled("ExternalShutdownCheck")
-        await asyncio.sleep(0.3)
+        if not self._shutdown_event.is_set(): self._shutdown_event.set() # Signal orchestrator
+
+        # --- FIX HERE: Stop the timer object ---
+        if self._shutdown_check_timer:
+            try:
+                self._shutdown_check_timer.stop()
+                log.debug("Stopped external shutdown check timer.")
+            except Exception as e:
+                log.error("Error stopping shutdown check timer", error=str(e))
+        # --------------------------------------
+
+        await asyncio.sleep(0.3) # Give worker time to react
         if self._worker and self._worker.is_running:
              log.info("Attempting to cancel orchestrator worker...")
              try: await self._worker.cancel()
              except Exception: log.exception("Error during worker cancel")
         log.info("Exiting TUI application."); self.exit(0)
+
 
     # --- Message Handlers (remain the same) ---
     def on_state_update(self, message: StateUpdate) -> None:

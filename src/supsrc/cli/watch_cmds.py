@@ -6,7 +6,8 @@ import sys
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Set, Optional # <<< Added Optional
+from contextlib import suppress
 
 import click
 import structlog
@@ -15,16 +16,15 @@ from supsrc.telemetry import StructLogger
 from supsrc.runtime.orchestrator import WatchOrchestrator
 
 # --- Try importing TUI App Class ---
-# This will fail if 'textual' is not installed OR if app.py has errors.
+# (TUI import logic remains the same)
 try:
     from supsrc.tui.app import SupsrcTuiApp
     TEXTUAL_AVAILABLE = True
     log_tui = structlog.get_logger("cli.watch.tui_check")
     log_tui.debug("Successfully imported supsrc.tui.app.SupsrcTuiApp.")
 except ImportError as e:
-    # Catch the ImportError if textual is missing or app.py fails to import
     TEXTUAL_AVAILABLE = False
-    SupsrcTuiApp = None # Define as None for type checker clarity below
+    SupsrcTuiApp = None
     log_tui = structlog.get_logger("cli.watch.tui_check")
     log_tui.debug("Failed to import supsrc.tui.app. Possible missing 'supsrc[tui]' install or error in tui module.", error=str(e))
 
@@ -34,6 +34,7 @@ log: StructLogger = structlog.get_logger("cli.watch")
 # --- Global Shutdown Event & Signal Handler (remains the same) ---
 _shutdown_requested = asyncio.Event()
 async def _handle_signal_async(sig: int):
+    # (Implementation remains the same)
     signame = signal.Signals(sig).name
     base_log = structlog.get_logger("cli.watch.signal")
     base_log.warning("Received shutdown signal", signal=signame, signal_num=sig)
@@ -65,29 +66,34 @@ def watch_cli(ctx: click.Context, config_path: Path, tui: bool):
         except Exception: print(f"LOGGING ERROR: {msg} {kwargs}", file=sys.stderr)
 
     if tui:
-        if not TEXTUAL_AVAILABLE or SupsrcTuiApp is None: # Check the flag and that the class symbol exists
+        # (TUI logic remains the same)
+        if not TEXTUAL_AVAILABLE or SupsrcTuiApp is None:
             click.echo("Error: TUI mode requires 'supsrc[tui]' to be installed and importable.", err=True)
             click.echo("Hint: pip install 'supsrc[tui]' or check for errors in src/supsrc/tui/app.py", err=True)
             ctx.exit(1)
-
         _cli_safe_log("info", "Initializing TUI mode...")
         app = SupsrcTuiApp(config_path=config_path, cli_shutdown_event=_shutdown_requested)
         app.run()
         _cli_safe_log("info", "TUI application finished.")
 
     else:
-        # --- Standard Mode Logic (remains the same) ---
+        # --- Standard Mode Logic ---
         _cli_safe_log("info", "Initializing standard 'watch' command (non-TUI)")
-        loop = asyncio.new_event_loop(); asyncio.set_event_loop(loop)
+        try:
+            loop = asyncio.get_event_loop_policy().get_event_loop()
+            if loop.is_closed(): loop = asyncio.new_event_loop(); asyncio.set_event_loop(loop)
+        except RuntimeError: loop = asyncio.new_event_loop(); asyncio.set_event_loop(loop)
+
         signals_to_handle = (signal.SIGINT, signal.SIGTERM); handlers_added = False
         _cli_safe_log("debug", f"Adding signal handlers to loop {id(loop)}")
         try:
             for sig in signals_to_handle: loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(_handle_signal_async(s))); handlers_added = True
-            _cli_safe_log("debug", f"Added signal handlers")
+            _cli_safe_log("debug", "Added signal handlers")
         except Exception as e: _cli_safe_log("error", "Failed to add signal handlers", error=str(e), exc_info=True)
 
         orchestrator = WatchOrchestrator(config_path=config_path, shutdown_event=_shutdown_requested, app=None)
         exit_code = 0
+        main_task: Optional[asyncio.Task] = None
         try:
             _cli_safe_log("debug", "Creating main orchestrator task...")
             main_task = loop.create_task(orchestrator.run(), name="OrchestratorRun")
@@ -98,19 +104,73 @@ def watch_cli(ctx: click.Context, config_path: Path, tui: bool):
         except asyncio.CancelledError: _cli_safe_log("warning", "Main orchestrator task cancelled."); _shutdown_requested.set(); exit_code = 1
         except Exception as e: _cli_safe_log("critical", "Orchestrator run failed", error=str(e), exc_info=True); _shutdown_requested.set(); exit_code = 1
         finally:
-            _cli_safe_log("debug", f"watch_cli (non-TUI) finally block. Loop closed: {loop.is_closed()}")
+            _cli_safe_log("debug", f"watch_cli (non-TUI) finally block starting. Loop closed: {loop.is_closed()}")
+
+            # --- FIX: Graceful Task Cleanup using loop.run_until_complete ---
+            if not loop.is_closed():
+                try:
+                    # Ensure main task cancellation propagates if needed
+                    if main_task and not main_task.done():
+                        _cli_safe_log("debug", "Waiting briefly for main task cancellation...")
+                        main_task.cancel() # Explicitly cancel if not done
+                        with suppress(asyncio.CancelledError, asyncio.TimeoutError):
+                             # Run within loop until complete
+                             loop.run_until_complete(asyncio.wait_for(main_task, timeout=1.0))
+
+                    # Gather all *other* remaining tasks
+                    tasks = asyncio.all_tasks(loop=loop)
+                    current_task = asyncio.current_task(loop=loop) # May be None if outside run_until_complete
+                    tasks_to_wait_for = {t for t in tasks if t is not current_task and t is not main_task and not t.done()}
+
+                    if tasks_to_wait_for:
+                        _cli_safe_log("debug", f"Gathering results for {len(tasks_to_wait_for)} remaining background tasks...",
+                                      task_names=[t.get_name() for t in tasks_to_wait_for])
+                        for task in tasks_to_wait_for:
+                            if not task.cancelled():
+                                task.cancel()
+                        # Use loop.run_until_complete to run the final gather
+                        loop.run_until_complete(
+                            asyncio.gather(*tasks_to_wait_for, return_exceptions=True)
+                        )
+                        _cli_safe_log("debug", "Remaining background tasks gathered after potential cancellation.")
+                    else:
+                        _cli_safe_log("debug", "No remaining background tasks needed gathering.")
+                except Exception as task_cleanup_exc:
+                    _cli_safe_log("error", "Error during final task gathering/cleanup", error=str(task_cleanup_exc))
+            # --- End FIX ---
+
+            # --- Existing Cleanup ---
             if handlers_added and not loop.is_closed():
                  _cli_safe_log("debug", "Removing signal handlers")
                  for sig in signals_to_handle:
-                      try: loop.remove_signal_handler(sig)
-                      except (ValueError, RuntimeError, Exception) as e: _cli_safe_log("debug", f"Error removing signal handler for {signal.Signals(sig).name}", error=str(e))
-            _cli_safe_log("debug", "Shutting down standard logging..."); logging.shutdown()
+                      with suppress(ValueError, RuntimeError, Exception):
+                           loop.remove_signal_handler(sig)
+                           _cli_safe_log("debug", f"Removed signal handler for {signal.Signals(sig).name}")
+
+            _cli_safe_log("debug", "Shutting down standard logging...");
+            with suppress(Exception): logging.shutdown()
+
             _cli_safe_log("debug", f"Closing event loop {id(loop)}")
-            try:
-                 if not loop.is_closed(): loop.run_until_complete(loop.shutdown_asyncgens()); loop.close(); _cli_safe_log("info", "Event loop closed.")
-                 else: _cli_safe_log("warning", "Event loop already closed.")
-            except Exception as e: _cli_safe_log("error", "Error closing event loop", error=str(e), exc_info=True)
+            if not loop.is_closed():
+                try:
+                    # Shutdown async generators FIRST
+                    loop.run_until_complete(loop.shutdown_asyncgens())
+                    _cli_safe_log("debug", "Async generators shut down.")
+                    # THEN close the loop
+                    loop.close()
+                    _cli_safe_log("info", "Event loop closed.")
+                except RuntimeError as e:
+                    if "cannot schedule new futures after shutdown" in str(e):
+                        _cli_safe_log("warning", "Loop shutdown encountered scheduling issue, likely benign after cleanup.")
+                    else:
+                        _cli_safe_log("error", "Error during final event loop close", error=str(e), exc_info=True)
+                except Exception as e:
+                     _cli_safe_log("error", "Error during final event loop close", error=str(e), exc_info=True)
+            else:
+                 _cli_safe_log("warning", "Event loop was already closed before final cleanup.")
+
         _cli_safe_log("info", "'watch' command finished (non-TUI mode).")
-        if exit_code != 0: sys.exit(exit_code)
+        if exit_code != 0:
+            sys.exit(exit_code)
 
 # 🔼⚙️

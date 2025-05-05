@@ -12,7 +12,7 @@ import structlog
 
 from supsrc.protocols import CommitResult
 from supsrc.state import RepositoryState # Needed for potential template vars
-from .runner import run_pygit2_async
+from .runner import run_pygit2_func
 from .errors import GitCommitError
 
 log = structlog.get_logger("engines.git.commit")
@@ -61,7 +61,7 @@ async def perform_git_commit(
         # pygit2 uses the config from the repository by default if available
         # You might want explicit config options for author/committer name/email
         try:
-            author = await run_pygit2_async(repo.default_signature)
+            author = await run_pygit2_func(repo.default_signature)
             committer = author # Use same by default
             log.debug("Using default signature from git config", author=f"{author.name} <{author.email}>")
         except KeyError:
@@ -77,14 +77,14 @@ async def perform_git_commit(
         log.debug("Rendered commit message", template=message_template, result=message)
 
         # Get necessary references
-        index = await run_pygit2_async(repo.index)
-        tree_oid = await run_pygit2_async(index.write_tree) # Create tree object from index
+        index = await run_pygit2_func(repo.index)
+        tree_oid = await run_pygit2_func(index.write_tree) # Create tree object from index
         log.debug("Created tree for commit", oid=str(tree_oid))
 
         try:
             # Check if HEAD exists and get parent commit
-            head_ref = await run_pygit2_async(repo.head.name) # e.g., 'refs/heads/main'
-            parent_commit_oid = await run_pygit2_async(repo.head.target) # OID of the commit HEAD points to
+            head_ref = await run_pygit2_func(repo.head.name) # e.g., 'refs/heads/main'
+            parent_commit_oid = await run_pygit2_func(repo.head.target) # OID of the commit HEAD points to
             parents = [parent_commit_oid]
             log.debug("Found parent commit", oid=str(parent_commit_oid), ref=head_ref)
         except pygit2.GitError as head_error:
@@ -98,7 +98,7 @@ async def perform_git_commit(
 
         # Check if tree differs from parent to avoid empty commits (optional but good practice)
         if parents:
-             parent_commit = await run_pygit2_async(repo.get, parents[0])
+             parent_commit = await run_pygit2_func(repo.get, parents[0])
              parent_tree_oid = parent_commit.tree_id
              if tree_oid == parent_tree_oid:
                  log.info("No changes detected between index and parent commit, skipping empty commit.", repo_path=str(working_dir))
@@ -106,7 +106,7 @@ async def perform_git_commit(
 
 
         # Create the commit object
-        commit_oid = await run_pygit2_async(
+        commit_oid = await run_pygit2_func(
             repo.create_commit,
             head_ref, # The reference to update (e.g., refs/heads/main)
             author,
