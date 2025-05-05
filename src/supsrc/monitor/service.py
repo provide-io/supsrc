@@ -1,12 +1,10 @@
-#
-# src/supsrc/monitor/service.py
-#
+# file: src/supsrc/monitor/service.py
 """
 Manages the watchdog observer thread and repository event handlers.
 """
 
 import asyncio
-import time # Keep for potential future use
+import time
 from pathlib import Path
 from typing import Dict
 
@@ -46,7 +44,7 @@ class MonitoringService:
 
 
     def add_repository(
-        self, repo_id: str, repo_config: RepositoryConfig
+        self, repo_id: str, repo_config: RepositoryConfig, loop: asyncio.AbstractEventLoop # <<< Added loop
     ) -> None:
         """ Adds a repository to be monitored. """
         if not repo_config.enabled or not repo_config._path_valid:
@@ -60,7 +58,14 @@ class MonitoringService:
             raise MonitoringSetupError(f"Repository path is not a valid directory", repo_id=repo_id, path=str(repo_path))
 
         self._logger.info("Adding repository to monitor", repo_id=repo_id, path=str(repo_path))
-        handler = SupsrcEventHandler(repo_id=repo_id, repo_path=repo_path, event_queue=self._event_queue)
+        # --- FIX: Pass the loop to the handler ---
+        handler = SupsrcEventHandler(
+            repo_id=repo_id,
+            repo_path=repo_path,
+            event_queue=self._event_queue,
+            loop=loop # Pass the main event loop
+        )
+        # ---------------------------------------
         self._handlers[repo_id] = handler
         try:
             self._observer.schedule(handler, str(repo_path), recursive=True)
@@ -75,14 +80,13 @@ class MonitoringService:
 
     def start(self) -> None:
         """Starts the watchdog observer thread."""
+        # (Implementation remains the same)
         if not self._handlers:
              self._logger.warning("No repositories configured or added for monitoring. Observer not started.")
              return
-
         if self._is_running:
             self._logger.warning("Monitoring service already running.")
             return
-
         try:
             log.debug("Calling observer.start()")
             self._observer.start()
@@ -96,10 +100,10 @@ class MonitoringService:
 
     async def stop(self) -> None:
         """Stops the watchdog observer thread gracefully."""
+        # (Implementation remains the same)
         if not self._is_running:
             self._logger.info("Monitoring service already stopped.")
             return
-
         self._logger.info("Stopping monitoring service...")
         thread_stopped = False
         join_success = False
@@ -107,7 +111,6 @@ class MonitoringService:
             log.debug("Calling observer.stop()")
             self._observer.stop()
             log.debug("observer.stop() returned")
-
             self._logger.debug("Waiting for observer thread to join via asyncio.to_thread...")
             try:
                 await asyncio.to_thread(self._observer.join, timeout=5.0)
@@ -115,7 +118,6 @@ class MonitoringService:
                 log.debug("asyncio.to_thread(observer.join) finished successfully")
             except Exception as join_exc:
                 log.error("Exception during observer join", error=str(join_exc), exc_info=True)
-
             if self._observer.is_alive():
                  self._logger.warning("Observer thread did not stop within timeout or failed join.")
             else:
@@ -124,7 +126,6 @@ class MonitoringService:
                      self._logger.info("Observer thread stopped.")
                  else:
                       self._logger.warning("Observer thread stopped but join failed.")
-
         except Exception as e:
             self._logger.error("Error stopping monitoring observer", error=str(e), exc_info=True)
         finally:
@@ -134,9 +135,11 @@ class MonitoringService:
              else:
                  self._logger.warning("Monitoring service stopped, but observer thread join may have failed or timed out.")
 
+
     @property
     def is_running(self) -> bool:
         """Returns True if the observer thread is currently active."""
+        # (Implementation remains the same)
         observer_alive = hasattr(self, '_observer') and self._observer is not None and self._observer.is_alive()
         return self._is_running and observer_alive
 
