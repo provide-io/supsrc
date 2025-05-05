@@ -41,7 +41,7 @@ def setup_logging(level: int = logging.INFO, json_logs: bool = False, log_file: 
     """
     log_level_name = logging.getLevelName(level)
     # Use stderr for setup messages to avoid interfering with potential JSON stdout
-    print(f"--- Setting up structlog logging (Level: {log_level_name}, JSON: {json_logs}, File: {log_file}) ---", file=sys.stderr)
+    # print(f"--- Setting up structlog logging (Level: {log_level_name}, JSON: {json_logs}, File: {log_file}) ---", file=sys.stderr)
 
     # Shared processors used by both console/file and potentially JSON outputs
     shared_processors: list[structlog.types.Processor] = [
