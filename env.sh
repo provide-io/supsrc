@@ -9,7 +9,7 @@ CWD=$(pwd)
 cd ${ENV_SCRIPT_DIR}
 
 uv venv
-uv sync --all-groups --dev
+uv sync --all-groups --all-extras --all-packages --dev
 
 source .venv/bin/activate deactivate
 source .venv/bin/activate
