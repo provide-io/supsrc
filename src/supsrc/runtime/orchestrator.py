@@ -112,6 +112,7 @@ class WatchOrchestrator:
         repo_engine = self.repo_engines.get(repo_id)
 
         callback_log = self._log.bind(repo_id=repo_id)
+        callback_log.debug("Entering action callback")
 
         if not repo_state or not repo_config or not global_config or not repo_engine:
             callback_log.error("Action Triggered: Could not find state, config, or engine.")
@@ -151,6 +152,8 @@ class WatchOrchestrator:
             self._post_tui_log(repo_id, "DEBUG", "Checking repository status...")
             self._post_tui_state_update()
             status_result = await repo_engine.get_status(repo_state, engine_config_dict, global_config, working_dir)
+            callback_log.debug("Received status result from engine", status_result=status_result)
+
             if not status_result.success:
                 raise SupsrcError(f"Failed to get repository status: {status_result.message}")
 
@@ -223,7 +226,6 @@ class WatchOrchestrator:
             self._post_tui_log(repo_id, "ERROR", f"Action failed: {action_exc}")
             self._post_tui_state_update() # Update TUI with error
 
-
     async def _consume_events(self) -> None:
         """Consumes events from the queue, updates state, manages timers, checks rules."""
         consumer_log = self._log.bind(component="EventConsumer")
@@ -235,75 +237,103 @@ class WatchOrchestrator:
             shutdown_wait_task = asyncio.create_task(self.shutdown_event.wait(), name="ShutdownWait")
 
             try:
-                consumer_log.debug("Consumer waiting...")
+                consumer_log.debug("Consumer waiting for event or shutdown...") # Existing log
                 done, pending = await asyncio.wait(
                     {get_task, shutdown_wait_task}, return_when=asyncio.FIRST_COMPLETED
                 )
 
                 if shutdown_wait_task in done or self.shutdown_event.is_set():
                     consumer_log.info("Consumer detected shutdown request.")
-                    if get_task in pending: get_task.cancel(); await asyncio.sleep(0) # Allow cancellation
+                    if get_task in pending: get_task.cancel(); await asyncio.sleep(0)
                     break
 
-                event = await get_task
+                event = await get_task # Event received
 
             except asyncio.CancelledError:
                  consumer_log.info("Consumer task cancelled.")
                  break
             except Exception as e:
                  consumer_log.error("Error waiting for queue/shutdown", error=str(e), exc_info=True)
-                 await asyncio.sleep(0.5); continue
+                 await asyncio.sleep(0.5); continue # Avoid tight loop on error
 
             # --- Process Event ---
             repo_id: Optional[str] = None # Define outside try block for finally
             try:
                 repo_id = event.repo_id # Assign here
                 event_log = consumer_log.bind(repo_id=repo_id, event_type=event.event_type, src_path=str(event.src_path))
-                event_log.debug("Consumer received event details")
+                # --- ADDED DEBUG LOG ---
+                event_log.debug(">>> Consumer received event details from queue")
+                # -----------------------
 
                 repo_state = self.repo_states.get(repo_id)
                 repo_config = self.config.repositories.get(repo_id) if self.config else None
 
+                # Check if state or config is missing (e.g., repo disabled after startup)
                 if not repo_state or not repo_config:
-                    event_log.warning("Ignoring event for unknown/disabled/unconfigured repository.")
+                    event_log.warning("Ignoring event for unknown/disabled/unconfigured repository.") # Existing log
                     continue # Skip to finally to mark task done
 
-                # --- Record Change and Update State/TUI ---
-                repo_state.record_change()
-                event_log = event_log.bind(save_count=repo_state.save_count, status=repo_state.status.name)
-                self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}")
-                self._post_tui_state_update()
+                # Record the change, update state and potentially TUI
+                try:
+                    repo_state.record_change() # This updates status to CHANGED
+                    event_log = event_log.bind(save_count=repo_state.save_count, status=repo_state.status.name)
+                    self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}")
+                    self._post_tui_state_update()
+                    event_log.debug("State updated after recording change") # <-- ADDED log after record_change
+                except Exception as record_exc:
+                    event_log.error("Error during repo_state.record_change()", error=str(record_exc), exc_info=True)
+                    continue # Skip rule check if state update failed
 
                 # --- Check Trigger Condition ---
                 rule_config_obj: RuleConfig = repo_config.rule
                 rule_type_str = getattr(rule_config_obj, 'type', 'unknown_rule_type')
 
-                if check_trigger_condition(repo_state, repo_config):
-                    event_log.info("Rule condition met, scheduling action", rule_type=rule_type_str)
-                    asyncio.create_task(self._trigger_action_callback(event.repo_id))
+                # --- ADDED DEBUG LOG ---
+                event_log.debug(">>> About to check trigger condition", rule_type=rule_type_str)
+                # -----------------------
+
+                # Call the rule checker
+                rule_met = check_trigger_condition(repo_state, repo_config)
+
+                # --- Existing DEBUG LOG (verify this appears) ---
+                event_log.debug("Rule check evaluated", rule_met=rule_met)
+                # ---------------------------------------------
+
+                if rule_met:
+                    event_log.info("Rule condition met, scheduling action", rule_type=rule_type_str) # Existing log
+                    # Schedule the action callback asynchronously
+                    action_task = asyncio.create_task(self._trigger_action_callback(event.repo_id), name=f"Action-{repo_id}-{time.monotonic()}")
+                    self._running_tasks.add(action_task) # Track the task
+                    action_task.add_done_callback(self._running_tasks.discard) # Remove when done
                 else:
+                    # If rule not met, reschedule inactivity timer if applicable
                     if isinstance(rule_config_obj, InactivityRuleConfig):
                         delay = rule_config_obj.period.total_seconds()
-                        event_log.debug("Rescheduling inactivity check", delay_seconds=delay)
+                        event_log.debug("Rescheduling inactivity check", delay_seconds=delay) # Existing log
                         self._post_tui_log(repo_id, "DEBUG", f"Activity detected, rescheduling check in {delay:.1f}s.")
                         timer_handle = loop.call_later(
                             delay, lambda rid=event.repo_id: asyncio.create_task(self._trigger_action_callback(rid))
                         )
-                        repo_state.set_inactivity_timer(timer_handle)
+                        repo_state.set_inactivity_timer(timer_handle) # This handles cancellation of previous timer
 
             except Exception as e:
+                # Log errors encountered during event processing for a specific repo
                 logger_to_use = consumer_log
-                if 'event_log' in locals(): logger_to_use = event_log # type: ignore[used-before-assignment]
+                # Use event_log if it was successfully bound
+                if 'event_log' in locals() and isinstance(event_log, structlog.stdlib.BoundLogger):
+                    logger_to_use = event_log
                 current_repo_id = repo_id if repo_id else "UNKNOWN"
-                logger_to_use.error("Error processing event", repo_id=current_repo_id, error=str(e), exc_info=True)
+                logger_to_use.error("Error processing event", repo_id=current_repo_id, error=str(e), exc_info=True) # Existing log
+                # Optionally update state to ERROR
                 if current_repo_id != "UNKNOWN" and current_repo_id in self.repo_states:
                      self.repo_states[current_repo_id].update_status(RepositoryStatus.ERROR, f"Event processing error: {e}")
                      self._post_tui_log(current_repo_id, "ERROR", f"Event processing error: {e}")
                      self._post_tui_state_update()
             finally:
-                self.event_queue.task_done() # Ensure task is marked done
+                # Crucial: Mark the task from the queue as done
+                self.event_queue.task_done()
 
-        consumer_log.info("Event consumer finished.")
+        consumer_log.info("Event consumer finished.") # Existing log
 
     async def _initialize_repositories(self) -> list[str]:
         """Initializes states, loads engines, and logs initial repo summary."""
