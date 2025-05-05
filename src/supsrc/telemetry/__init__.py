@@ -5,6 +5,6 @@
 Telemetry package for supsrc.
 """
 
-from supsrc.telemetry.logger import setup_logging, StructLogger
+from supsrc.telemetry.logger import StructLogger, setup_logging
 
-__all__ = ["setup_logging", "StructLogger"] # Export setup function and type hint
+__all__ = ["StructLogger", "setup_logging"] # Export setup function and type hint

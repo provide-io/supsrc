@@ -6,19 +6,21 @@ Git push logic using pygit2.
 """
 
 from pathlib import Path
-from typing import Optional, Any # Keep Any for flexibility if needed
-import pygit2 # type: ignore[import-untyped]
-# --- Import the credentials submodule ---
-from pygit2 import credentials # <<< Import credentials submodule
+
+import pygit2  # type: ignore[import-untyped]
 import structlog
 
-# Use relative imports within the engine package
-from .runner import run_pygit2_func
-from .errors import GitPushError, GitRemoteError, GitAuthenticationError
+# --- Import the credentials submodule ---
+from pygit2 import credentials  # <<< Import credentials submodule
 
 # Use absolute imports for protocols and core types
 from supsrc.protocols import PushResult
-from supsrc.telemetry import StructLogger # Assuming telemetry provides this type hint
+from supsrc.telemetry import StructLogger  # Assuming telemetry provides this type hint
+
+from .errors import GitAuthenticationError, GitPushError, GitRemoteError
+
+# Use relative imports within the engine package
+from .runner import run_pygit2_async
 
 log: StructLogger = structlog.get_logger("engines.git.push")
 
@@ -39,7 +41,7 @@ class GitCallbacks(pygit2.RemoteCallbacks): # type: ignore[misc] # pygit2 stubs 
     def credentials(
         self, url: str, username_from_url: str | None, allowed_types: int
     # --- Use the correct type hint from the submodule ---
-    ) -> Optional[credentials.CredentialType]: # <<< Corrected type hint
+    ) -> credentials.CredentialType | None: # <<< Corrected type hint
         """Callback to provide credentials when requested by libgit2."""
         self._attempts += 1
         log.debug("Credentials callback invoked", url=url, username_from_url=username_from_url, allowed_types=allowed_types, attempt=self._attempts)
@@ -100,12 +102,12 @@ async def perform_git_push(
     Returns:
         PushResult indicating success or failure.
     """
-    log.debug(f"Attempting git push", repo_path=str(working_dir), remote=remote_name, branch=branch_name)
+    log.debug("Attempting git push", repo_path=str(working_dir), remote=remote_name, branch=branch_name)
 
     try:
         # Find the remote
         try:
-            remote = await run_pygit2_func(repo.remotes.__getitem__, remote_name)
+            remote = await run_pygit2_async(repo.remotes.__getitem__, remote_name)
         except KeyError:
             raise GitRemoteError(f"Remote '{remote_name}' not found.", repo_path=str(working_dir))
         except IndexError: # Sometimes pygit2 raises this instead of KeyError
@@ -123,7 +125,7 @@ async def perform_git_push(
 
         # Check if the local ref exists
         try:
-             _ = await run_pygit2_func(repo.references.get, local_ref)
+             _ = await run_pygit2_async(repo.references.get, local_ref)
         except KeyError:
              raise GitPushError(f"Local branch '{branch_name}' (ref: {local_ref}) not found.", repo_path=str(working_dir))
 
@@ -132,16 +134,16 @@ async def perform_git_push(
 
         # Perform the push operation
         # The push call itself is blocking
-        push_result_details = await run_pygit2_func(remote.push, [refspec], callbacks=callbacks)
+        push_result_details = await run_pygit2_async(remote.push, [refspec], callbacks=callbacks)
 
         # push() returns None on success and raises GitError on failure.
-        # We rely on run_pygit2_func to catch and wrap GitError.
+        # We rely on run_pygit2_async to catch and wrap GitError.
         log.info("Push command executed successfully.", repo_path=str(working_dir), remote=remote_name, branch=branch_name)
 
         return PushResult(success=True, message="Push command executed successfully.")
 
     except pygit2.GitError as e:
-        # Try to interpret common GitErrors (often caught within run_pygit2_func, but catch again for specific push context)
+        # Try to interpret common GitErrors (often caught within run_pygit2_async, but catch again for specific push context)
         err_msg = str(e)
         log.error("GitError during push", repo_path=str(working_dir), error=err_msg, exc_info=True)
         # Check for specific error messages if possible
@@ -150,7 +152,7 @@ async def perform_git_push(
         # Add more specific error checks if needed (e.g., for network errors, non-fast-forward)
         raise GitPushError(f"Push failed: {err_msg}", repo_path=str(working_dir), details=e) from e
     except Exception as e:
-        # Catch other potential errors (like GitEngineError from run_pygit2_func or others)
+        # Catch other potential errors (like GitEngineError from run_pygit2_async or others)
         log.error("Failed to perform push", repo_path=str(working_dir), error=str(e), exc_info=True)
         if isinstance(e, GitPushError): raise # Re-raise if already specific type
         raise GitPushError(f"Push failed unexpectedly: {e}", repo_path=str(working_dir), details=e) from e

@@ -5,14 +5,12 @@
 Configuration loading and validation for supsrc. Uses structlog.
 """
 
-import argparse
 import logging  # Still needed for level names in setup/validation
 import re
-import sys
 import tomllib
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional, TypeAlias, Union
+from typing import Any, Literal, TypeAlias
 
 # --- Third-party Libraries ---
 try:
@@ -23,23 +21,23 @@ except ImportError:
 
 import cattrs
 import structlog  # Import structlog
-from attrs import define, field, mutable, validators
+from attrs import define, field, mutable
 
 # --- Custom Exceptions Import ---
 try:
     from .exceptions import (
-        ConfigurationError,
         ConfigFileNotFoundError,
         ConfigParsingError,
+        ConfigurationError,
         ConfigValidationError,
         DurationValidationError,
     )
 except ImportError:
     # Fallback for direct execution
     from exceptions import (
-        ConfigurationError,
         ConfigFileNotFoundError,
         ConfigParsingError,
+        ConfigurationError,
         ConfigValidationError,
         DurationValidationError,
     )
@@ -171,7 +169,7 @@ class ManualTrigger:
 
 
 # Type alias for the union of trigger types
-TriggerConfig: TypeAlias = Union[InactivityTrigger, SaveCountTrigger, ManualTrigger]
+TriggerConfig: TypeAlias = InactivityTrigger | SaveCountTrigger | ManualTrigger
 
 
 @mutable(slots=True)
@@ -184,8 +182,8 @@ class RepositoryConfig:
     trigger: TriggerConfig = field()
     # Optional fields after
     enabled: bool = field(default=True)
-    commit_message: Optional[str] = field(default=None)
-    auto_push: Optional[bool] = field(default=None)
+    commit_message: str | None = field(default=None)
+    auto_push: bool | None = field(default=None)
     # Internal state flag
     _path_valid: bool = field(default=True, repr=False, init=False)
 
@@ -209,7 +207,7 @@ class GlobalConfig:
 @define(frozen=True, slots=True)
 class SupsrcConfig:
     """Root configuration object for the supsrc application."""
-    repositories: Dict[str, RepositoryConfig] = field(factory=dict)
+    repositories: dict[str, RepositoryConfig] = field(factory=dict)
     global_config: GlobalConfig = field(
         factory=GlobalConfig, metadata={"toml_name": "global"}
     )

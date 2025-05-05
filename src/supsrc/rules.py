@@ -8,23 +8,21 @@ Determines if configured conditions (e.g., inactivity, save count) are met
 based on the current state of a repository.
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import TypeAlias # Explicit import is good practice
+from datetime import UTC, datetime
 
 import structlog
 
 # Use ABSOLUTE imports based on the 'src' layout
 # --- Import the RENAMED config model classes ---
 from supsrc.config.models import (
-    RepositoryConfig,
     # Import the specific rule config classes using their new names
     InactivityRuleConfig,
+    ManualRuleConfig,  # Import the Union type alias if needed, but specific types are used below
+    RepositoryConfig,
     SaveCountRuleConfig,
-    ManualRuleConfig,
-    RuleConfig, # Import the Union type alias if needed, but specific types are used below
 )
-from supsrc.state import RepositoryState, RepositoryStatus
-from supsrc.telemetry import StructLogger # Assuming this type hint exists
+from supsrc.state import RepositoryState
+from supsrc.telemetry import StructLogger  # Assuming this type hint exists
 
 # Logger specific to the rule engine
 log: StructLogger = structlog.get_logger("rules")
@@ -51,7 +49,7 @@ def check_inactivity(
         log.debug("Inactivity check: No last change time recorded, condition false.", repo_id=repo_id)
         return False
 
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
     elapsed_time = now_utc - last_change_time_utc
     required_period = rule_config.period
 
@@ -112,7 +110,7 @@ def check_trigger_condition(
     rule_config_obj = repo_config.rule
     repo_id = repo_state.repo_id # For logging context
 
-    rule_type_str = getattr(rule_config_obj, 'type', 'unknown_rule_type') # Get type string
+    rule_type_str = getattr(rule_config_obj, "type", "unknown_rule_type") # Get type string
     log.debug("Checking trigger condition", repo_id=repo_id, rule_type=rule_type_str)
 
     # Match against the specific *structured* rule config object types

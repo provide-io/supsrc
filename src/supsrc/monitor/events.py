@@ -5,7 +5,9 @@
 Defines the event structure used for communication between monitor handler and consumer.
 """
 from pathlib import Path
-from attrs import define, frozen
+
+from attrs import frozen
+
 
 @frozen(slots=True)
 class MonitoredEvent:

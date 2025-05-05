@@ -5,7 +5,8 @@
 Custom exceptions for Git engine operations within supsrc.
 """
 
-from supsrc.exceptions import SupsrcError # Inherit from base supsrc error
+from supsrc.exceptions import SupsrcError  # Inherit from base supsrc error
+
 
 class GitEngineError(SupsrcError):
     """Base exception for errors originating from the GitEngine."""

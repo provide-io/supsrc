@@ -5,12 +5,16 @@
 Attrs-based data models for supsrc configuration structure.
 """
 
-import logging # Still needed for level names
+import logging  # Still needed for level names
+from collections.abc import Mapping
 from datetime import timedelta
 from pathlib import Path
-from typing import Dict, Literal, Optional, TypeAlias, Union, Any, Mapping # Added Mapping
+from typing import (  # Added Mapping
+    Any,
+    TypeAlias,
+)
 
-from attrs import define, field, mutable, validators
+from attrs import define, field, mutable
 
 # --- Validators (can stay here or move to a validators module) ---
 
@@ -52,7 +56,7 @@ class ManualRuleConfig: # Renamed from ManualTrigger
 
 # Type alias for the union of rule configuration types
 # cattrs will use this union to structure the 'rule' section based on 'type' using the registered hook
-RuleConfig: TypeAlias = Union[InactivityRuleConfig, SaveCountRuleConfig, ManualRuleConfig]
+RuleConfig: TypeAlias = InactivityRuleConfig | SaveCountRuleConfig | ManualRuleConfig
 
 # --- Repository and Global Config Models ---
 
@@ -89,7 +93,7 @@ class GlobalConfig:
 @define(frozen=True, slots=True)
 class SupsrcConfig:
     """Root configuration object for the supsrc application."""
-    repositories: Dict[str, RepositoryConfig] = field(factory=dict)
+    repositories: dict[str, RepositoryConfig] = field(factory=dict)
     global_config: GlobalConfig = field(
         factory=GlobalConfig, metadata={"toml_name": "global"}
     )

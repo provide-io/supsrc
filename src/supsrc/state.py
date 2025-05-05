@@ -7,12 +7,11 @@ Defines the dynamic state management models for monitored repositories in supsrc
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum, auto
-from typing import Optional
 
 import structlog
-from attrs import define, field, mutable
+from attrs import field, mutable
 
 # Logger specific to state management
 log: structlog.stdlib.BoundLogger = structlog.get_logger("state")
@@ -42,12 +41,12 @@ class RepositoryState:
 
     repo_id: str = field()  # The unique identifier for the repository
     status: RepositoryStatus = field(default=RepositoryStatus.IDLE)
-    last_change_time: Optional[datetime] = field(default=None) # Timezone-aware (UTC)
+    last_change_time: datetime | None = field(default=None) # Timezone-aware (UTC)
     save_count: int = field(default=0)
-    error_message: Optional[str] = field(default=None)
+    error_message: str | None = field(default=None)
     # Holds the handle for the asyncio timer used by inactivity triggers.
     # This allows cancellation if new changes arrive before the timer fires.
-    inactivity_timer_handle: Optional[asyncio.TimerHandle] = field(default=None)
+    inactivity_timer_handle: asyncio.TimerHandle | None = field(default=None)
 
     # Consider adding:
     # last_commit_hash: Optional[str] = field(default=None)
@@ -62,7 +61,7 @@ class RepositoryState:
             initial_status=self.status.name,
         )
 
-    def update_status(self, new_status: RepositoryStatus, error_msg: Optional[str] = None) -> None:
+    def update_status(self, new_status: RepositoryStatus, error_msg: str | None = None) -> None:
         """ Safely updates the status and optionally logs errors or recovery. """
         old_status = self.status
         if old_status == new_status:
@@ -103,7 +102,7 @@ class RepositoryState:
 
     def record_change(self) -> None:
         """Records a file change event, updating time and count, and sets status to CHANGED."""
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         self.last_change_time = now_utc
         self.save_count += 1
         self.update_status(RepositoryStatus.CHANGED) # Move to CHANGED state

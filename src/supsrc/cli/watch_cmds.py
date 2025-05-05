@@ -1,19 +1,19 @@
 # file: src/supsrc/cli/watch_cmds.py
 
 import asyncio
+import logging
 import signal
 import sys
-import logging
-import os
-from pathlib import Path
-from typing import Any, Set, Optional # <<< Added Optional
 from contextlib import suppress
+from pathlib import Path
 
 import click
 import structlog
+
+from supsrc.runtime.orchestrator import WatchOrchestrator
+
 # Use absolute imports
 from supsrc.telemetry import StructLogger
-from supsrc.runtime.orchestrator import WatchOrchestrator
 
 # --- Try importing TUI App Class ---
 # (TUI import logic remains the same)
@@ -48,14 +48,14 @@ async def _handle_signal_async(sig: int):
 # --- Click Command Definition (remains the same) ---
 @click.command(name="watch")
 @click.option(
-    '-c', '--config-path',
+    "-c", "--config-path",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path),
     default=Path("supsrc.conf"),
-    show_default=True, envvar='SUPSRC_CONF',
+    show_default=True, envvar="SUPSRC_CONF",
     help="Path to the supsrc configuration file (env var SUPSRC_CONF).", show_envvar=True,
 )
 @click.option(
-    '--tui', is_flag=True, default=False,
+    "--tui", is_flag=True, default=False,
     help="Run with an interactive Text User Interface (requires 'supsrc[tui]')."
 )
 @click.pass_context
@@ -93,7 +93,7 @@ def watch_cli(ctx: click.Context, config_path: Path, tui: bool):
 
         orchestrator = WatchOrchestrator(config_path=config_path, shutdown_event=_shutdown_requested, app=None)
         exit_code = 0
-        main_task: Optional[asyncio.Task] = None
+        main_task: asyncio.Task | None = None
         try:
             _cli_safe_log("debug", "Creating main orchestrator task...")
             main_task = loop.create_task(orchestrator.run(), name="OrchestratorRun")
@@ -147,7 +147,7 @@ def watch_cli(ctx: click.Context, config_path: Path, tui: bool):
                            loop.remove_signal_handler(sig)
                            _cli_safe_log("debug", f"Removed signal handler for {signal.Signals(sig).name}")
 
-            _cli_safe_log("debug", "Shutting down standard logging...");
+            _cli_safe_log("debug", "Shutting down standard logging...")
             with suppress(Exception): logging.shutdown()
 
             _cli_safe_log("debug", f"Closing event loop {id(loop)}")

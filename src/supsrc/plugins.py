@@ -4,13 +4,13 @@
 
 import importlib
 from importlib.metadata import entry_points
-from typing import Type, Protocol, TypeVar
+from typing import Protocol, TypeVar
 
 T = TypeVar("T", bound=Protocol)
 
 _plugin_cache: dict[str, Any] = {} # Simple cache
 
-def load_plugin(plugin_type_str: str, expected_protocol: Type[T]) -> T:
+def load_plugin(plugin_type_str: str, expected_protocol: type[T]) -> T:
     """
     Loads a plugin based on its type string (e.g., 'supsrc.rules.inactivity',
     'plugin:my_rule', 'local:my_module.MyClass').
@@ -28,7 +28,7 @@ def load_plugin(plugin_type_str: str, expected_protocol: Type[T]) -> T:
 
     if plugin_type_str.startswith("supsrc."):
         # Built-in plugin (convention)
-        module_path, class_name = plugin_type_str.rsplit('.', 1)
+        module_path, class_name = plugin_type_str.rsplit(".", 1)
         try:
             module = importlib.import_module(module_path)
             plugin_class = getattr(module, class_name)
@@ -49,7 +49,7 @@ def load_plugin(plugin_type_str: str, expected_protocol: Type[T]) -> T:
     elif plugin_type_str.startswith("local:"):
         # Local module.Class plugin
         path_str = plugin_type_str[len("local:"):]
-        module_path, class_name = path_str.rsplit('.', 1)
+        module_path, class_name = path_str.rsplit(".", 1)
         try:
             module = importlib.import_module(module_path)
             plugin_class = getattr(module, class_name)

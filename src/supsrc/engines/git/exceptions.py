@@ -7,6 +7,7 @@ Custom exceptions specific to the Git Engine for supsrc.
 
 from supsrc.exceptions import SupsrcError
 
+
 class GitEngineError(SupsrcError):
     """Base class for Git engine specific errors."""
     def __init__(self, message: str, repo_path: str | None = None, details: Exception | None = None):

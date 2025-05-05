@@ -7,9 +7,9 @@ Base logging setup for the supsrc application using structlog.
 
 import logging
 import sys
+
 import structlog
 from structlog.typing import FilteringBoundLogger
-from typing import Optional
 
 # Use absolute imports for processors
 from supsrc.telemetry.logger.processors import (
@@ -30,7 +30,7 @@ LOG_EMOJIS = {
 
 # --- Core structlog Setup Function ---
 
-def setup_logging(level: int = logging.INFO, json_logs: bool = False, log_file: Optional[str] = None) -> None:
+def setup_logging(level: int = logging.INFO, json_logs: bool = False, log_file: str | None = None) -> None:
     """
     Configures structlog for the entire supsrc application.
 
@@ -104,7 +104,7 @@ def setup_logging(level: int = logging.INFO, json_logs: bool = False, log_file: 
     # Configure File Handler (Optional, always JSON for machine readability)
     if log_file:
         try:
-            file_handler = logging.FileHandler(log_file, encoding='utf-8')
+            file_handler = logging.FileHandler(log_file, encoding="utf-8")
             # Use a separate formatter for the file, forcing JSON output
             file_formatter = structlog.stdlib.ProcessorFormatter(
                 processor=structlog.processors.JSONRenderer(sort_keys=True),

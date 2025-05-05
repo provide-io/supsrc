@@ -6,34 +6,36 @@ Handles loading, validation, and structuring of supsrc configuration files.
 Applies environment variable overrides for global defaults.
 """
 
-import logging
 import re
-import sys
-import os
 import tomllib
-
+from collections.abc import Mapping
 from datetime import timedelta
 from pathlib import Path
-from typing import Optional, Any, Type, TypeAlias, Mapping, Union
+from typing import Any, TypeAlias
 
+import attrs
 import cattrs
 import structlog
-import attrs
 
 # --- Custom Exceptions Import ---
 # Use relative imports within the same package structure
 from ..exceptions import (
-    ConfigurationError,
     ConfigFileNotFoundError,
     ConfigParsingError,
+    ConfigurationError,
     ConfigValidationError,
     DurationValidationError,
 )
+
 # Import models from sibling module
-from .models import ( # Import specific rule configs too
-    SupsrcConfig, RepositoryConfig, GlobalConfig, RuleConfig,
-    InactivityRuleConfig, SaveCountRuleConfig, ManualRuleConfig
+from .models import (  # Import specific rule configs too
+    InactivityRuleConfig,
+    ManualRuleConfig,
+    RuleConfig,
+    SaveCountRuleConfig,
+    SupsrcConfig,
 )
+
 # Import type hint from telemetry if needed, or define locally
 # from ..telemetry import StructLogger # Assuming telemetry package exists
 # Define StructLogger locally if preferred or if telemetry isn't stable yet
@@ -98,7 +100,7 @@ def _structure_path_simple(path_str: str, type_hint: type[Path]) -> Path:
         raise ConfigValidationError(f"{msg} '{path_str}': {e}") from e
 
 # Hook to structure the RuleConfig union based on the 'type' field
-def structure_rule_hook(data: Mapping[str, Any], cl: Type[RuleConfig]) -> RuleConfig:
+def structure_rule_hook(data: Mapping[str, Any], cl: type[RuleConfig]) -> RuleConfig:
     """Structures the correct RuleConfig based on the 'type' field."""
     if not isinstance(data, Mapping):
         raise ConfigValidationError(f"Rule configuration must be a mapping (dict), got {type(data).__name__}")
@@ -108,7 +110,7 @@ def structure_rule_hook(data: Mapping[str, Any], cl: Type[RuleConfig]) -> RuleCo
         raise ConfigValidationError("Rule configuration missing or invalid 'type' field.")
 
     # Map type string to the actual class (adjust paths if needed)
-    type_map: dict[str, Type[RuleConfig]] = {
+    type_map: dict[str, type[RuleConfig]] = {
         "supsrc.rules.inactivity": InactivityRuleConfig,
         "supsrc.rules.save_count": SaveCountRuleConfig,
         "supsrc.rules.manual": ManualRuleConfig,
