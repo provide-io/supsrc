@@ -5,16 +5,12 @@
 Attrs-based data models for supsrc configuration structure.
 """
 
-import logging  # Still needed for level names
-from collections.abc import Mapping
+import logging # Still needed for level names
 from datetime import timedelta
 from pathlib import Path
-from typing import (  # Added Mapping
-    Any,
-    TypeAlias,
-)
+from typing import Dict, Literal, Optional, TypeAlias, Union, Any, Mapping # Added Mapping
 
-from attrs import define, field, mutable
+from attrs import define, field, mutable, validators
 
 # --- Validators (can stay here or move to a validators module) ---
 
@@ -56,7 +52,7 @@ class ManualRuleConfig: # Renamed from ManualTrigger
 
 # Type alias for the union of rule configuration types
 # cattrs will use this union to structure the 'rule' section based on 'type' using the registered hook
-RuleConfig: TypeAlias = InactivityRuleConfig | SaveCountRuleConfig | ManualRuleConfig
+RuleConfig: TypeAlias = Union[InactivityRuleConfig, SaveCountRuleConfig, ManualRuleConfig]
 
 # --- Repository and Global Config Models ---
 
@@ -69,7 +65,7 @@ class RepositoryConfig:
     path: Path = field()
     # This field will hold the structured rule config object (e.g., InactivityRuleConfig)
     rule: RuleConfig = field() # Holds the specific structured rule config
-    # Holds the raw dictionary from the TOML [repository] section for the engine to parse.
+    # Holds the raw dictionary from the TOML [repositories.*.repository] section for the engine to parse.
     repository: Mapping[str, Any] = field(factory=dict)
 
     # Optional fields after
@@ -93,7 +89,7 @@ class GlobalConfig:
 @define(frozen=True, slots=True)
 class SupsrcConfig:
     """Root configuration object for the supsrc application."""
-    repositories: dict[str, RepositoryConfig] = field(factory=dict)
+    repositories: Dict[str, RepositoryConfig] = field(factory=dict)
     global_config: GlobalConfig = field(
         factory=GlobalConfig, metadata={"toml_name": "global"}
     )

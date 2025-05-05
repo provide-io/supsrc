@@ -3,99 +3,70 @@
 #
 """
 Defines the runtime protocols for supsrc components like Rules, Engines,
-and standard result objects.
+and standard result objects. Uses concrete attrs classes for results.
 """
 
+from typing import Protocol, Any, runtime_checkable, TypeAlias
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from enum import Enum
 
-import attrs  # Import attrs
-
-from supsrc.config.models import GlobalConfig  # Assuming config models exist
+import attrs # Import attrs
+import structlog
 
 # Re-export or define core types needed by protocols
-from supsrc.state import RepositoryState  # Assuming state.py exists
+from supsrc.state import RepositoryState, RepositoryStatus # Assuming state.py exists
+from supsrc.config.models import SupsrcConfig, GlobalConfig # Assuming config models exist
 
-# --- Base Result Structure ---
+log = structlog.get_logger("protocols")
 
-# Using attrs.define for a concrete base makes things simpler sometimes,
-# but let's stick to Protocol for the base interface and define concrete
-# results where needed or let implementations return attrs classes that
-# conform to the protocol.
-
-@runtime_checkable
-class PluginResult(Protocol):
-    """Base protocol for plugin execution results."""
-    success: bool
-    message: str | None = None
-    details: dict[str, Any] | None = None
-
-
-# --- Concrete Result Objects (Examples using attrs for implementations) ---
-# These are examples of how implementations might define their results.
-# The protocols below define the *interface* the orchestrator expects.
+# --- Concrete Result Objects (using attrs) ---
+# These are returned by engine implementations.
 
 @attrs.define(frozen=True, slots=True)
-class ExampleConcreteConversionResult:
-    """Example concrete implementation detail for ConversionResult."""
+class PluginResultBase:
+    """Base for plugin results, providing common fields."""
     success: bool
     message: str | None = None
-    details: dict[str, Any] | None = None
-    processed_files: list[Path] | None = None
+    details: dict[str, Any] | None = attrs.field(factory=dict)
+
+
+@attrs.define(frozen=True, slots=True)
+class ConversionResult(PluginResultBase):
+    """Concrete result from a conversion step."""
+    processed_files: list[Path] | None = attrs.field(factory=list)
     output_data: Any | None = None
 
 
 @attrs.define(frozen=True, slots=True)
-class ExampleConcreteCommitResult:
-    """Example concrete implementation detail for CommitResult."""
-    success: bool
-    message: str | None = None
-    details: dict[str, Any] | None = None
-    commit_hash: str | None = None
+class RepoStatusResult(PluginResultBase):
+    """Concrete result from checking repository status."""
+    is_clean: bool = False
+    has_staged_changes: bool = False
+    has_unstaged_changes: bool = False
+    has_untracked_changes: bool = False
+    is_conflicted: bool = False
+    is_unborn: bool = False
+    current_branch: str | None = None
 
 
-# --- Result Protocols (What the Orchestrator expects) ---
-
-@runtime_checkable
-class ConversionResult(PluginResult, Protocol):
-    """Protocol for results from a conversion step."""
-    processed_files: list[Path] | None = None # Files modified/created
-    output_data: Any | None = None # Optional structured output
+@attrs.define(frozen=True, slots=True)
+class StageResult(PluginResultBase):
+    """Concrete result from staging changes."""
+    files_staged: list[str] | None = attrs.field(factory=list)
 
 
-@runtime_checkable
-class RepoStatusResult(PluginResult, Protocol):
-    """Protocol for results from checking repository status."""
-    # Explicitly list the fields expected by the orchestrator
-    # This makes the interface clearer than just inheriting PluginResult.
-    success: bool
-    message: str | None = None
-    details: dict[str, Any] | None = None
-    is_clean: bool | None = None
-    has_staged_changes: bool | None = None
-    has_unstaged_changes: bool | None = None
-    # Add other relevant status flags potentially needed
-    has_untracked_changes: bool | None = None # Example addition
-    is_conflicted: bool | None = None # Example addition
-    is_unborn: bool | None = None # Example addition
+@attrs.define(frozen=True, slots=True)
+class CommitResult(PluginResultBase):
+    """Concrete result from performing a commit."""
+    commit_hash: str | None = None # None if commit was skipped (e.g., no changes)
 
 
-@runtime_checkable
-class StageResult(PluginResult, Protocol):
-    """Protocol for results from staging changes."""
-    # Currently just inherits success/message/details from PluginResult
-
-
-@runtime_checkable
-class CommitResult(PluginResult, Protocol):
-    """Protocol for results from performing a commit."""
-    commit_hash: str | None = None
-
-
-@runtime_checkable
-class PushResult(PluginResult, Protocol):
-    """Protocol for results from performing a push."""
-    # Currently just inherits success/message/details from PluginResult
+@attrs.define(frozen=True, slots=True)
+class PushResult(PluginResultBase):
+    """Concrete result from performing a push."""
+    remote_name: str | None = None
+    branch_name: str | None = None
+    skipped: bool = False # True if push was skipped due to config
 
 
 # --- Engine/Rule Protocols ---
@@ -133,33 +104,38 @@ class RepositoryEngine(Protocol):
     """Protocol for interacting with a repository (VCS or other)."""
 
     async def get_status(
-        self, state: RepositoryState, config: Any, global_config: GlobalConfig, working_dir: Path
-    ) -> RepoStatusResult: # <- Expects an object conforming to this
+        self, state: RepositoryState, config: dict[str, Any], global_config: GlobalConfig, working_dir: Path
+    ) -> RepoStatusResult: # <- Expects the concrete attrs class
         """Check the current status of the repository (clean, changes, etc.)."""
         ...
 
     async def stage_changes(
-        self, files: list[Path] | None, state: RepositoryState, config: Any, global_config: GlobalConfig, working_dir: Path
-    ) -> StageResult:
+        self, files: list[Path] | None, state: RepositoryState, config: dict[str, Any], global_config: GlobalConfig, working_dir: Path
+    ) -> StageResult: # <- Expects the concrete attrs class
         """Stage specified files, or all changes if files is None."""
         ...
 
     async def perform_commit(
-        self, message_template: str, state: RepositoryState, config: Any, global_config: GlobalConfig, working_dir: Path
-    ) -> CommitResult:
+        self, message_template: str, state: RepositoryState, config: dict[str, Any], global_config: GlobalConfig, working_dir: Path
+    ) -> CommitResult: # <- Expects the concrete attrs class
         """Perform the commit action with the given message template."""
         ...
 
     async def perform_push(
-        self, state: RepositoryState, config: Any, global_config: GlobalConfig, working_dir: Path
-    ) -> PushResult:
+        self, state: RepositoryState, config: dict[str, Any], global_config: GlobalConfig, working_dir: Path
+    ) -> PushResult: # <- Expects the concrete attrs class
         """Perform the push action."""
         ...
 
     # --- Optional Methods (Examples) ---
-    # async def get_summary(self, working_dir: Path) -> Any: ... # Define a SummaryResult protocol if needed
+    async def get_summary(self, working_dir: Path) -> Any:
+        """Get a summary of the repository's current state (e.g., HEAD commit)."""
+        # Define a specific SummaryResult protocol/attrs class if needed
+        log.warning("get_summary called on base protocol, implementation needed.")
+        return None
 
 
-# Ensure TypeAlias is imported if used elsewhere, though not strictly needed here now
+# Ensure TypeAlias is imported if used elsewhere
+from typing import TypeAlias # Keep for good practice
 
 # 🔼⚙️

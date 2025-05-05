@@ -1,20 +1,13 @@
 #
-# supsrc/engines/git/__init__.py
+# engines/git/__init__.py
 #
 """
-Git Engine package for supsrc, using pygit2.
+Git Engine implementation for supsrc.
 """
 
-from supsrc.engines.git.base import GitEngine
-from supsrc.engines.git.exceptions import GitCommandError, GitEngineError
-from supsrc.engines.git.info import GitRepoStatus, GitRepoSummary
+from .base import GitEngine
+from .info import GitRepoSummary
 
-__all__ = [
-    "GitCommandError",
-    "GitEngine",
-    "GitEngineError",
-    "GitRepoStatus",
-    "GitRepoSummary"
-]
+__all__ = ["GitEngine", "GitRepoSummary"]
 
 # 🔼⚙️
