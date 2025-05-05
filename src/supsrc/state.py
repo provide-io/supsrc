@@ -24,6 +24,8 @@ class RepositoryStatus(Enum):
     IDLE = auto()  # No changes detected or operation complete.
     CHANGED = auto()  # Changes detected, awaiting trigger condition.
     TRIGGERED = auto() # Trigger condition met, action pending/queued.
+    PROCESSING = auto()
+    STAGING = auto()
     COMMITTING = auto()  # Git commit operation in progress.
     PUSHING = auto()  # Git push operation in progress.
     ERROR = auto()  # An error occurred, requires attention or clears on next success.
