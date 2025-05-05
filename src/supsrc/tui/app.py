@@ -2,6 +2,7 @@
 # Corrected action_quit to stop the scheduled timer
 
 import asyncio
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 

@@ -160,6 +160,9 @@ select = [
 ignore = [
     "B008", # Function call argument default is mutable
     "B905", # `zip()` without `strict=`
+    "E501",
+    "E701",
+    "E702",
 ]
 # Example: ignore specific errors in specific files if necessary
 #[tool.ruff.lint.per-file-ignores]
