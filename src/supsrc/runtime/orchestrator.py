@@ -1,36 +1,45 @@
 #
-# runtime/orchestrator.py
+# supsrc/runtime/orchestrator.py
 #
-"""
-Manages the core watch lifecycle, orchestrating monitoring, state, rules, and engines.
-"""
 
 import asyncio
 import sys
-import logging # For logging.shutdown
+import logging
 from pathlib import Path
-from typing import Any, Set, TypeAlias, cast # Added cast
+from typing import Any, Set, TypeAlias, Optional, cast
+from contextlib import suppress # For cleaner task cancellation handling
 
 import structlog
-import attrs # For attrs.asdict if needed later
+import attrs
+import cattrs # Needed for config validation exceptions
 
-# Use absolute imports from within supsrc
+# --- Supsrc Imports ---
 from supsrc.telemetry import StructLogger
 from supsrc.config import load_config, SupsrcConfig
 from supsrc.exceptions import ConfigurationError, MonitoringSetupError, SupsrcError
 from supsrc.monitor import MonitoringService, MonitoredEvent
-from supsrc.state import RepositoryState, RepositoryStatus
+from supsrc.state import RepositoryState, RepositoryStatus # Assume enum includes PROCESSING, STAGING, TRIGGERED now
 from supsrc.rules import check_trigger_condition
 from supsrc.config.models import (
     RepositoryConfig, RuleConfig, InactivityRuleConfig, SaveCountRuleConfig, ManualRuleConfig
 )
-# Import protocols and plugin loader if/when implementing dynamic engines
-# from supsrc.protocols import Rule, ConversionStep, RepositoryEngine, PluginResult
-# from supsrc.plugins import load_plugin
-# --- Import specific engine and result types for now ---
-from supsrc.engines.git import GitEngine
-from supsrc.engines.git.info import GitRepoSummary
-from supsrc.protocols import RepositoryEngine # Import base protocol
+from supsrc.protocols import RepositoryEngine, Rule # Import base protocols
+# --- Specific Engine Import (replace with plugin loading later) ---
+from supsrc.engines.git import GitEngine # Example direct import
+from supsrc.engines.git.info import GitRepoSummary # Specific info class
+
+# --- TUI Integration Imports (Conditional) ---
+try:
+    from typing import TYPE_CHECKING
+    if TYPE_CHECKING:
+        from textual.app import App as TextualApp
+    from supsrc.tui.app import StateUpdate, LogMessageUpdate
+    TEXTUAL_AVAILABLE_RUNTIME = True
+except ImportError:
+    TEXTUAL_AVAILABLE_RUNTIME = False
+    TextualApp = None # type: ignore
+    StateUpdate = None # type: ignore
+    LogMessageUpdate = None # type: ignore
 
 # Logger for this module
 log: StructLogger = structlog.get_logger("runtime.orchestrator")
@@ -38,436 +47,491 @@ log: StructLogger = structlog.get_logger("runtime.orchestrator")
 # Type alias for state map
 RepositoryStatesMap: TypeAlias = dict[str, RepositoryState]
 
-# --- Action Callback ---
-async def _trigger_action_callback(
-    repo_id: str,
-    repo_states: RepositoryStatesMap,
-    config: SupsrcConfig,
-    # Pass the engine instance to avoid reloading it every time
-    repo_engine: RepositoryEngine
-    ) -> None:
+class WatchOrchestrator:
     """
-    Callback executed when a trigger condition is met. Executes repository actions.
+    Manages the core watch lifecycle, coordinating monitoring, state, rules,
+    engines, and optionally updating a Textual TUI.
     """
-    repo_state = repo_states.get(repo_id)
-    repo_config = config.repositories.get(repo_id)
-    global_config = config.global_config
-    callback_log = log.bind(repo_id=repo_id) # Bind context
 
-    if not repo_state or not repo_config:
-        callback_log.error("Could not find state or config for triggered action")
-        return
+    def __init__(
+        self,
+        config_path: Path,
+        shutdown_event: asyncio.Event,
+        app: Optional['TextualApp'] = None # Accept optional TUI app instance
+        ) -> None:
+        """
+        Initializes the orchestrator.
 
-    if repo_state.status not in (RepositoryStatus.CHANGED, RepositoryStatus.IDLE):
-         callback_log.warning("Trigger fired but repository is not in CHANGED/IDLE state",
-                     current_status=repo_state.status.name)
-         repo_state.inactivity_timer_handle = None # Ensure timer is cleared
-         return
+        Args:
+            config_path: Path to the configuration file.
+            shutdown_event: Event signalling graceful shutdown.
+            app: Optional instance of the Textual TUI application.
+        """
+        self.config_path = config_path
+        self.shutdown_event = shutdown_event
+        self.app: Optional['TextualApp'] = app if TEXTUAL_AVAILABLE_RUNTIME else None # Store the TUI app instance only if usable
+        self.config: Optional[SupsrcConfig] = None
+        self.monitor_service: Optional[MonitoringService] = None
+        self.event_queue: asyncio.Queue[MonitoredEvent] = asyncio.Queue()
+        self.repo_states: RepositoryStatesMap = {}
+        self.repo_engines: dict[str, RepositoryEngine] = {}
+        self._running_tasks: Set[asyncio.Task[Any]] = set()
+        self._log = log.bind(orchestrator_id=id(self))
+        self._is_tui_active = bool(self.app) # Flag for easier checking
 
-    # Get the structured rule config object and type string
-    rule_config_obj = repo_config.rule
-    rule_type_str = getattr(rule_config_obj, 'type', 'unknown_rule_type')
+    # --- TUI Update Helpers ---
 
-    callback_log.info(
-        "Trigger condition met, performing action...",
-        rule_type=rule_type_str,
-        current_save_count=repo_state.save_count
-    )
-    repo_state.update_status(RepositoryStatus.PROCESSING) # General processing state
-    repo_state.inactivity_timer_handle = None # Action is triggering
+    def _post_tui_log(self, repo_id: Optional[str], level: str, message: str) -> None:
+        """Safely posts a log message to the TUI if active."""
+        if self._is_tui_active and self.app and LogMessageUpdate:
+            try:
+                # Use call_later for thread safety from worker
+                self.app.call_later(self.app.post_message, LogMessageUpdate(repo_id, level.upper(), message))
+            except Exception as e:
+                 self._safe_log("warning", "Failed to post log message to TUI", repo_id=repo_id, error=str(e))
 
-    # Get engine config dictionary
-    engine_config_dict = repo_config.repository
-    working_dir = repo_config.path
+    def _post_tui_state_update(self) -> None:
+        """Safely posts the current repository states to the TUI."""
+        if self._is_tui_active and self.app and StateUpdate:
+            try:
+                # Create a copy for thread safety/mutability concerns
+                states_copy = {rid: attrs.evolve(state) for rid, state in self.repo_states.items()}
+                self.app.call_later(self.app.post_message, StateUpdate(states_copy))
+            except Exception as e:
+                 self._safe_log("warning", "Failed to post state update to TUI", error=str(e))
 
-    try:
-        # --- 1. Get Status (Check for changes) ---
-        callback_log.debug("Checking repository status before action...")
-        status_result = await repo_engine.get_status(repo_state, engine_config_dict, global_config, working_dir)
-        if not status_result.success:
-             raise SupsrcError(f"Failed to get repository status: {status_result.message}")
+    # --- Core Logic Methods ---
 
-        if status_result.is_clean:
-             callback_log.info("Repository is clean, no commit action needed.")
-             repo_state.reset_after_action() # Reset to IDLE
-             return
+    async def _trigger_action_callback(self, repo_id: str) -> None:
+        """
+        Callback executed when a trigger condition is met. Executes repository actions.
+        """
+        repo_state = self.repo_states.get(repo_id)
+        repo_config = self.config.repositories.get(repo_id) if self.config else None
+        global_config = self.config.global_config if self.config else None
+        repo_engine = self.repo_engines.get(repo_id)
 
-        # --- 2. Stage Changes ---
-        repo_state.update_status(RepositoryStatus.STAGING) # More specific state
-        callback_log.debug("Staging changes...")
-        # Stage all detected changes for now (files=None)
-        # TODO: Potentially pass specific changed files if needed/available
-        stage_result = await repo_engine.stage_changes(None, repo_state, engine_config_dict, global_config, working_dir)
-        if not stage_result.success:
-            raise SupsrcError(f"Failed to stage changes: {stage_result.message}")
-        callback_log.debug("Staging successful.")
+        callback_log = self._log.bind(repo_id=repo_id)
 
-        # --- 3. Perform Commit ---
-        repo_state.update_status(RepositoryStatus.COMMITTING)
-        callback_log.debug("Performing commit...")
-        # Pass the template string (message_template is just a placeholder name here)
-        commit_result = await repo_engine.perform_commit(
-            message_template="Placeholder", # The engine gets the template from its config dict
-            state=repo_state,
-            config=engine_config_dict,
-            global_config=global_config,
-            working_dir=working_dir
+        if not repo_state or not repo_config or not global_config or not repo_engine:
+            callback_log.error("Action Triggered: Could not find state, config, or engine.")
+            self._post_tui_log(repo_id, "ERROR", "Action failed: Missing state/config/engine.")
+            return
+
+        # Check status first
+        # Allow triggering from IDLE (e.g., timer fired before any new change) or CHANGED
+        if repo_state.status not in (RepositoryStatus.CHANGED, RepositoryStatus.IDLE):
+            callback_log.warning("Action Triggered: Repo not in CHANGED/IDLE state, skipping.",
+                                current_status=repo_state.status.name)
+            self._post_tui_log(repo_id, "WARNING", f"Action skipped (state: {repo_state.status.name}).")
+            repo_state.cancel_inactivity_timer()
+            return
+
+        # Mark as triggered and clear timer immediately
+        repo_state.update_status(RepositoryStatus.TRIGGERED)
+        repo_state.cancel_inactivity_timer()
+        self._post_tui_state_update() # Update TUI status
+
+        rule_config_obj: RuleConfig = repo_config.rule
+        rule_type_str = getattr(rule_config_obj, 'type', 'unknown_rule_type')
+
+        callback_log.info(
+            "Action Triggered: Performing actions...",
+            rule_type=rule_type_str,
+            current_save_count=repo_state.save_count
         )
-        if not commit_result.success:
-            raise SupsrcError(f"Commit failed: {commit_result.message}")
+        self._post_tui_log(repo_id, "INFO", f"Action triggered by rule: {rule_type_str}")
 
-        if commit_result.commit_hash is None:
-             # This indicates "nothing to commit" was detected by the engine
-             callback_log.info("Commit skipped by engine (no changes detected after staging).")
-             repo_state.reset_after_action() # Reset to IDLE
-             return
-        else:
-             callback_log.info("Commit successful", hash=commit_result.commit_hash)
+        engine_config_dict = repo_config.repository
+        working_dir = repo_config.path
 
-        # --- 4. Perform Push (if applicable) ---
-        # The engine's perform_push method internally checks the 'auto_push' config
-        repo_state.update_status(RepositoryStatus.PUSHING)
-        callback_log.debug("Checking auto-push and potentially pushing...")
-        push_result = await repo_engine.perform_push(repo_state, engine_config_dict, global_config, working_dir)
-
-        if not push_result.success:
-             # Log push failure as warning, but don't necessarily stop monitoring
-             callback_log.warning("Push failed or skipped", reason=push_result.message)
-             # Decide if state should be ERROR or just go back to IDLE after commit success
-             # For now, go back to IDLE as commit succeeded.
-             repo_state.reset_after_action()
-        else:
-             if "skipped" not in push_result.message.lower(): # Avoid logging success if skipped
-                  callback_log.info("Push successful.")
-             repo_state.reset_after_action() # Reset to IDLE after successful push/skip
-
-    except Exception as action_exc:
-        callback_log.error("Error during triggered action execution", error=str(action_exc), exc_info=True)
-        repo_state.update_status(RepositoryStatus.ERROR, f"Action failed: {action_exc}")
-        # Do not reset state here, leave it in ERROR
-
-# --- Event Consumer Logic ---
-async def consume_events(
-    event_queue: asyncio.Queue[MonitoredEvent],
-    repo_states: RepositoryStatesMap,
-    config: SupsrcConfig,
-    shutdown_event: asyncio.Event,
-    # Pass the dictionary of loaded engines
-    repo_engines: dict[str, RepositoryEngine]
-) -> None:
-    """
-    Consumes events from the queue, updates state, manages timers, and checks rules.
-    """
-    consumer_log = log.bind(component="EventConsumer")
-    consumer_log.info("Event consumer started, waiting for file events...")
-    loop = asyncio.get_running_loop()
-    get_task: asyncio.Task | None = None
-
-    while not shutdown_event.is_set():
         try:
-            if get_task is None or get_task.done():
-                 get_task = asyncio.create_task(event_queue.get(), name=f"QueueGet-{id(event_queue)}")
+            # --- 1. Get Status ---
+            repo_state.update_status(RepositoryStatus.PROCESSING)
+            self._post_tui_log(repo_id, "DEBUG", "Checking repository status...")
+            self._post_tui_state_update()
+            status_result = await repo_engine.get_status(repo_state, engine_config_dict, global_config, working_dir)
+            if not status_result.success:
+                raise SupsrcError(f"Failed to get repository status: {status_result.message}")
 
-            shutdown_wait_task = asyncio.create_task(shutdown_event.wait(), name="ShutdownWait")
-            consumer_log.debug("Consumer waiting for event or shutdown...")
+            if status_result.is_clean:
+                callback_log.info("Action Skipped: Repository is clean, no commit needed.")
+                self._post_tui_log(repo_id, "INFO", "Action skipped: Repository clean.")
+                repo_state.reset_after_action() # Reset to IDLE
+                self._post_tui_state_update()
+                return
 
-            done, pending = await asyncio.wait(
-                {get_task, shutdown_wait_task}, return_when=asyncio.FIRST_COMPLETED
+            # --- 2. Stage Changes ---
+            repo_state.update_status(RepositoryStatus.STAGING)
+            self._post_tui_log(repo_id, "INFO", "Staging changes...")
+            self._post_tui_state_update()
+            stage_result = await repo_engine.stage_changes(None, repo_state, engine_config_dict, global_config, working_dir)
+            if not stage_result.success:
+                raise SupsrcError(f"Failed to stage changes: {stage_result.message}")
+            callback_log.info("Action: Staging successful.")
+            self._post_tui_log(repo_id, "DEBUG", "Staging successful.")
+
+            # --- 3. Perform Commit ---
+            repo_state.update_status(RepositoryStatus.COMMITTING)
+            self._post_tui_log(repo_id, "INFO", "Performing commit...")
+            self._post_tui_state_update()
+            commit_result = await repo_engine.perform_commit(
+                message_template="unused", # Engine handles template lookup via config
+                state=repo_state,
+                config=engine_config_dict,
+                global_config=global_config,
+                working_dir=working_dir
             )
-            consumer_log.debug("Consumer woke up.", done_tasks=len(done), pending_tasks=len(pending))
+            if not commit_result.success:
+                raise SupsrcError(f"Commit failed: {commit_result.message}")
 
-            if shutdown_wait_task in done or shutdown_event.is_set():
-                 consumer_log.info("Consumer detected shutdown request.")
-                 if get_task in pending:
-                     consumer_log.debug("Cancelling pending event get task during shutdown.")
-                     get_task.cancel()
-                 break # Exit loop cleanly
+            if commit_result.commit_hash is None:
+                callback_log.info("Action Skipped: Commit skipped by engine (no changes detected after staging).")
+                self._post_tui_log(repo_id, "INFO", "Commit skipped (no changes after staging).")
+                repo_state.reset_after_action() # Reset to IDLE
+                self._post_tui_state_update()
+                return
+            else:
+                commit_short_hash = commit_result.commit_hash[:7]
+                callback_log.info("Action: Commit successful", hash=commit_result.commit_hash)
+                self._post_tui_log(repo_id, "SUCCESS", f"Commit successful: {commit_short_hash}")
 
-            if get_task in done:
-                try:
-                     event = get_task.result()
-                except asyncio.CancelledError:
-                     consumer_log.debug("Queue get task was cancelled.")
-                     continue
-                except Exception as e:
-                     consumer_log.error("Error retrieving event from queue", error=str(e), exc_info=True)
-                     get_task = None; await asyncio.sleep(0.5); continue
+            # --- 4. Perform Push ---
+            repo_state.update_status(RepositoryStatus.PUSHING)
+            self._post_tui_log(repo_id, "INFO", "Performing push (if enabled)...")
+            self._post_tui_state_update()
+            push_result = await repo_engine.perform_push(repo_state, engine_config_dict, global_config, working_dir)
 
-                get_task = None
-                event_log = consumer_log.bind(repo_id=event.repo_id, event_type=event.event_type, src_path=str(event.src_path))
+            if not push_result.success:
+                callback_log.warning("Action: Push failed or skipped", reason=push_result.message)
+                self._post_tui_log(repo_id, "WARNING", f"Push failed/skipped: {push_result.message}")
+                repo_state.reset_after_action() # Reset even on push fail
+            else:
+                if "skipped" in (push_result.message or "").lower():
+                    callback_log.info("Action: Push skipped by configuration.")
+                    self._post_tui_log(repo_id, "INFO", "Push skipped (disabled in config).")
+                else:
+                    callback_log.info("Action: Push successful.")
+                    self._post_tui_log(repo_id, "SUCCESS", "Push successful.")
+                repo_state.reset_after_action() # Reset after success/skip
+
+            self._post_tui_state_update() # Final TUI state update
+
+        except Exception as action_exc:
+            callback_log.error("Action Failed: Error during execution", error=str(action_exc), exc_info=True)
+            repo_state.update_status(RepositoryStatus.ERROR, f"Action failed: {action_exc}")
+            self._post_tui_log(repo_id, "ERROR", f"Action failed: {action_exc}")
+            self._post_tui_state_update() # Update TUI with error
+
+
+    async def _consume_events(self) -> None:
+        """Consumes events from the queue, updates state, manages timers, checks rules."""
+        consumer_log = self._log.bind(component="EventConsumer")
+        consumer_log.info("Event consumer started.")
+        loop = asyncio.get_running_loop()
+
+        while not self.shutdown_event.is_set():
+            get_task = asyncio.create_task(self.event_queue.get(), name=f"QueueGet-{id(self.event_queue)}")
+            shutdown_wait_task = asyncio.create_task(self.shutdown_event.wait(), name="ShutdownWait")
+
+            try:
+                consumer_log.debug("Consumer waiting...")
+                done, pending = await asyncio.wait(
+                    {get_task, shutdown_wait_task}, return_when=asyncio.FIRST_COMPLETED
+                )
+
+                if shutdown_wait_task in done or self.shutdown_event.is_set():
+                    consumer_log.info("Consumer detected shutdown request.")
+                    if get_task in pending: get_task.cancel(); await asyncio.sleep(0) # Allow cancellation
+                    break
+
+                event = await get_task
+
+            except asyncio.CancelledError:
+                 consumer_log.info("Consumer task cancelled.")
+                 break
+            except Exception as e:
+                 consumer_log.error("Error waiting for queue/shutdown", error=str(e), exc_info=True)
+                 await asyncio.sleep(0.5); continue
+
+            # --- Process Event ---
+            repo_id: Optional[str] = None # Define outside try block for finally
+            try:
+                repo_id = event.repo_id # Assign here
+                event_log = consumer_log.bind(repo_id=repo_id, event_type=event.event_type, src_path=str(event.src_path))
                 event_log.debug("Consumer received event details")
 
-                repo_id = event.repo_id
-                repo_state = repo_states.get(repo_id)
-                repo_config = config.repositories.get(repo_id)
-                repo_engine = repo_engines.get(repo_id) # Get pre-loaded engine
+                repo_state = self.repo_states.get(repo_id)
+                repo_config = self.config.repositories.get(repo_id) if self.config else None
 
-                if not repo_state or not repo_config or not repo_engine:
-                    event_log.warning("Received event for unknown/disabled/unconfigured repository, ignoring.",
-                                      has_state=bool(repo_state), has_config=bool(repo_config), has_engine=bool(repo_engine))
-                    event_queue.task_done(); continue
+                if not repo_state or not repo_config:
+                    event_log.warning("Ignoring event for unknown/disabled/unconfigured repository.")
+                    continue # Skip to finally to mark task done
 
+                # --- Record Change and Update State/TUI ---
                 repo_state.record_change()
                 event_log = event_log.bind(save_count=repo_state.save_count, status=repo_state.status.name)
+                self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}")
+                self._post_tui_state_update()
 
-                # --- Check Rules ---
+                # --- Check Trigger Condition ---
                 rule_config_obj: RuleConfig = repo_config.rule
                 rule_type_str = getattr(rule_config_obj, 'type', 'unknown_rule_type')
 
-                try:
-                    if check_trigger_condition(repo_state, repo_config):
-                        event_log.info("Rule condition met, scheduling action", rule_type=rule_type_str)
-                        # Pass the specific engine instance for this repo
-                        asyncio.create_task(_trigger_action_callback(event.repo_id, repo_states, config, repo_engine))
-                    else:
-                        if isinstance(rule_config_obj, InactivityRuleConfig):
-                             delay = rule_config_obj.period.total_seconds()
-                             event_log.debug("Rescheduling inactivity check", delay_seconds=delay)
-                             timer_handle = loop.call_later(
-                                 delay,
-                                 # Pass engine to the lambda as well
-                                 lambda rid=event.repo_id, eng=repo_engine: asyncio.create_task(
-                                     _trigger_action_callback(rid, repo_states, config, eng)
-                                 )
-                             )
-                             repo_state.set_inactivity_timer(timer_handle)
+                if check_trigger_condition(repo_state, repo_config):
+                    event_log.info("Rule condition met, scheduling action", rule_type=rule_type_str)
+                    asyncio.create_task(self._trigger_action_callback(event.repo_id))
+                else:
+                    if isinstance(rule_config_obj, InactivityRuleConfig):
+                        delay = rule_config_obj.period.total_seconds()
+                        event_log.debug("Rescheduling inactivity check", delay_seconds=delay)
+                        self._post_tui_log(repo_id, "DEBUG", f"Activity detected, rescheduling check in {delay:.1f}s.")
+                        timer_handle = loop.call_later(
+                            delay, lambda rid=event.repo_id: asyncio.create_task(self._trigger_action_callback(rid))
+                        )
+                        repo_state.set_inactivity_timer(timer_handle)
 
-                except Exception as e:
-                    event_log.error("Error checking rule", rule_type=rule_type_str, error=str(e), exc_info=True)
-                    repo_state.update_status(RepositoryStatus.ERROR, f"Rule check failed: {e}")
-
-                event_queue.task_done()
-
-        except asyncio.CancelledError:
-            consumer_log.info("Event consumer task explicitly cancelled.")
-            if get_task and not get_task.done():
-                 consumer_log.debug("Cancelling internal queue get task during consumer cancellation.")
-                 get_task.cancel()
-            raise
-
-        except Exception as e:
-            logger_to_use = consumer_log
-            if 'event_log' in locals(): logger_to_use = event_log
-            logger_to_use.error("Error in event consumer loop", error=str(e), exc_info=True)
-            get_task = None; await asyncio.sleep(1)
-
-    consumer_log.info("Event consumer finished.")
-
-
-# --- Orchestrator Class ---
-
-class WatchOrchestrator:
-    """Manages the core watch lifecycle."""
-
-    def __init__(self, config_path: Path, shutdown_event: asyncio.Event):
-        self.config_path = config_path
-        self.shutdown_event = shutdown_event
-        self.config: SupsrcConfig | None = None
-        self.monitor_service: MonitoringService | None = None
-        self.event_queue: asyncio.Queue[MonitoredEvent] | None = None
-        self.repo_states: RepositoryStatesMap = {}
-        self.repo_engines: dict[str, RepositoryEngine] = {} # Store loaded engines
-        self._running_tasks: Set[asyncio.Task[Any]] = set()
-        self._log = log.bind(orchestrator_id=id(self))
-
-    def _safe_log(self, level: str, msg: str, **kwargs):
-        """Helper to suppress logging errors during final shutdown."""
-        try:
-            getattr(self._log, level)(msg, **kwargs)
-        except (BrokenPipeError, RuntimeError, ValueError) as e:
-            pass
-
-    async def run(self) -> None:
-        """Main execution method for the watch process."""
-        self._safe_log("info", "Starting orchestrator run", config_path=str(self.config_path))
-
-        try:
-            # --- Load Configuration ---
-            self._safe_log("debug", "Loading configuration...")
-            try:
-                self.config = load_config(self.config_path)
-                self._safe_log("info", "Configuration loaded successfully.")
-            except ConfigurationError as e:
-                 self._safe_log("error", "Failed to load configuration", error=str(e), path=str(self.config_path))
-                 raise
             except Exception as e:
-                 self._safe_log("critical", "Unexpected error loading configuration", error=str(e), exc_info=True)
-                 raise
+                logger_to_use = consumer_log
+                if 'event_log' in locals(): logger_to_use = event_log # type: ignore[used-before-assignment]
+                current_repo_id = repo_id if repo_id else "UNKNOWN"
+                logger_to_use.error("Error processing event", repo_id=current_repo_id, error=str(e), exc_info=True)
+                if current_repo_id != "UNKNOWN" and current_repo_id in self.repo_states:
+                     self.repo_states[current_repo_id].update_status(RepositoryStatus.ERROR, f"Event processing error: {e}")
+                     self._post_tui_log(current_repo_id, "ERROR", f"Event processing error: {e}")
+                     self._post_tui_state_update()
+            finally:
+                self.event_queue.task_done() # Ensure task is marked done
 
-            # --- Initialize State & Load Engines ---
-            self._safe_log("debug", "Initializing repository states, loading engines, and getting summaries...")
-            # Pass the engine registry (or loading function) if dynamic
-            enabled_repo_ids = await self._initialize_repositories() # Combined init
-            if not enabled_repo_ids:
-                 self._safe_log("warning", "No enabled and valid repositories found. Exiting run.")
-                 return
-
-            # --- Setup Monitoring ---
-            self._safe_log("debug", "Setting up monitoring service...")
-            self.event_queue = asyncio.Queue()
-            self.monitor_service = MonitoringService(self.event_queue)
-            successfully_added_ids = self._setup_monitoring(enabled_repo_ids)
-            if not successfully_added_ids:
-                 self._safe_log("critical", "No repositories could be successfully monitored. Exiting run.")
-                 return
-
-            # --- Start Monitoring ---
-            self._safe_log("debug", "Starting monitor service...")
-            self.monitor_service.start()
-            if not self.monitor_service.is_running:
-                 self._safe_log("critical", "Monitoring service failed to start. Exiting run.")
-                 return
-
-            # --- Start Consumer ---
-            self._safe_log("debug", "Creating event consumer task...")
-            consumer_task = asyncio.create_task(
-                # Pass the loaded engines to the consumer
-                consume_events(self.event_queue, self.repo_states, self.config, self.shutdown_event, self.repo_engines),
-                name="EventConsumer"
-            )
-            self._running_tasks.add(consumer_task)
-            consumer_task.add_done_callback(self._running_tasks.discard)
-
-            self._safe_log("info", f"Monitoring active for {len(successfully_added_ids)} repositories. Waiting for shutdown signal.")
-
-            # --- Wait for Shutdown ---
-            await self.shutdown_event.wait()
-            self._safe_log("info", "Shutdown signal received by orchestrator.")
-
-        except SupsrcError as e:
-            self._safe_log("critical", "A critical supsrc error occurred during watch", error=str(e), exc_info=True)
-        except asyncio.CancelledError:
-             self._safe_log("warning", "Orchestrator run task was cancelled.")
-             if not self.shutdown_event.is_set(): self.shutdown_event.set()
-        except Exception as e:
-            self._safe_log("critical", "An unexpected error occurred in orchestrator run", error=str(e), exc_info=True)
-            if not self.shutdown_event.is_set(): self.shutdown_event.set()
-        finally:
-            # --- Orchestrator Cleanup ---
-            self._safe_log("info", "Orchestrator starting cleanup...")
-            # ... (Cleanup logic for timers, tasks, monitor service remains the same) ...
-            # 1. Cancel Repository Timers
-            self._safe_log("debug", "Cancelling active repository timers...")
-            timers_cancelled = 0
-            for repo_id, state in self.repo_states.items():
-                 if state.inactivity_timer_handle:
-                     try: state.cancel_inactivity_timer(); timers_cancelled += 1
-                     except Exception as timer_cancel_e: self._safe_log("warning", "Error cancelling timer", repo_id=repo_id, error=str(timer_cancel_e))
-            self._safe_log("debug", f"Cancelled {timers_cancelled} repository timer(s).")
-
-            # 2. Cancel Running Async Tasks (Consumer)
-            if self._running_tasks:
-                self._safe_log("debug", f"Cancelling {len(self._running_tasks)} running task(s)...", tasks=[t.get_name() for t in self._running_tasks])
-                tasks_to_cancel = list(self._running_tasks); [t.cancel() for t in tasks_to_cancel if not t.done()]
-                self._safe_log("debug", "Waiting for cancelled tasks to finish...")
-                try:
-                     gathered_results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
-                     self._safe_log("debug", "Running tasks cancellation gathered.", results=[type(r).__name__ for r in gathered_results])
-                except Exception as gather_exc: self._safe_log("error", "Exception during task gathering", error=str(gather_exc), exc_info=True)
-            else: self._safe_log("debug", "No running asyncio tasks found to cancel.")
-
-            # 3. Stop Monitoring Service (joins thread)
-            if self.monitor_service and self.monitor_service.is_running:
-                 self._safe_log("debug", "Stopping monitoring service (includes joining observer thread)...")
-                 try: await self.monitor_service.stop(); self._safe_log("debug", "Monitoring service stop completed.")
-                 except Exception as stop_exc: self._safe_log("error", "Error during monitoring service stop", error=str(stop_exc), exc_info=True)
-            elif self.monitor_service: self._safe_log("debug", "Monitoring service was not running or already stopped.")
-            else: self._safe_log("debug", "Monitoring service was not initialized.")
-
-            self._safe_log("info", "Orchestrator finished cleanup.")
+        consumer_log.info("Event consumer finished.")
 
     async def _initialize_repositories(self) -> list[str]:
         """Initializes states, loads engines, and logs initial repo summary."""
         enabled_repo_ids = []
-        if not self.config: return []
+        if not self.config:
+            self._safe_log("error", "Config missing, cannot initialize repos.")
+            return []
 
         self._safe_log("info", "--- Initializing Repositories ---")
+        self._post_tui_log(None, "INFO", "Initializing repositories...")
         for repo_id, repo_config in self.config.repositories.items():
+            init_log = self._log.bind(repo_id=repo_id)
             if repo_config.enabled and repo_config._path_valid:
-                # Initialize state
+                init_log.debug("Initializing state object")
                 self.repo_states[repo_id] = RepositoryState(repo_id=repo_id)
-                enabled_repo_ids.append(repo_id)
-                self._safe_log("debug", "Initialized state object", repo_id=repo_id)
+                engine_instance: Optional[RepositoryEngine] = None
 
-                # Load Engine for this repo
+                # --- Load Engine ---
                 engine_config = repo_config.repository
                 engine_type = engine_config.get("type")
-                engine_instance: Optional[RepositoryEngine] = None
-                if not engine_type:
-                     self._safe_log("error", "Repository configuration missing 'type' for engine.", repo_id=repo_id)
-                     self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, "Missing engine type in config")
-                     continue # Skip this repo
+                if not engine_type or not isinstance(engine_type, str):
+                    init_log.error("Repo config missing 'type' for engine.", config_section=engine_config)
+                    self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, "Missing engine type")
+                    self._post_tui_log(repo_id, "ERROR", "Config Error: Missing engine type.")
+                    continue
 
                 try:
-                    # TODO: Replace direct instantiation with plugin loading
+                    init_log.debug("Loading repo engine", engine_type=engine_type)
+                    # --- Replace with actual plugin loading ---
                     if engine_type == "supsrc.engines.git":
-                         engine_instance = GitEngine() # Instantiate directly for now
-                         self.repo_engines[repo_id] = engine_instance
-                         self._safe_log("debug", "Loaded GitEngine", repo_id=repo_id)
+                        engine_instance = GitEngine() # Direct instantiation
                     else:
-                         raise NotImplementedError(f"Engine type '{engine_type}' not supported yet.")
-                    # engine_instance = load_plugin(engine_type, RepositoryEngine) # Future state
-                    # self.repo_engines[repo_id] = engine_instance
-                except Exception as load_exc:
-                    self._safe_log("error", "Failed to load repository engine", repo_id=repo_id, engine_type=engine_type, error=str(load_exc))
-                    self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, f"Failed to load engine: {load_exc}")
-                    continue # Skip summary if engine failed
+                        raise NotImplementedError(f"Engine type '{engine_type}' not supported.")
+                    # -----------------------------------------
+                    self.repo_engines[repo_id] = engine_instance
+                    init_log.debug("Engine loaded ok.", engine_class=type(engine_instance).__name__)
+                    self._post_tui_log(repo_id, "DEBUG", f"Engine '{engine_type}' loaded.")
+                    enabled_repo_ids.append(repo_id)
 
-                # Get and log summary using the loaded engine
+                except Exception as load_exc:
+                    init_log.error("Failed to load repo engine", engine_type=engine_type, error=str(load_exc), exc_info=True)
+                    self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, f"Failed to load engine: {load_exc}")
+                    self._post_tui_log(repo_id, "ERROR", f"Engine load failed: {load_exc}")
+                    continue
+
+                # --- Get Initial Summary ---
                 try:
-                    summary = await engine_instance.get_summary(repo_config.path)
-                    if summary.is_empty:
-                         self._safe_log("info", "Repository empty (no commits yet).", repo_id=repo_id)
-                    elif "ERROR" in (summary.head_ref_name or ""):
-                         self._safe_log("warning", f"Could not retrieve repository HEAD summary: {summary.head_ref_name}", repo_id=repo_id)
-                    elif summary.head_ref_name == "UNBORN":
-                         self._safe_log("info", "Repository HEAD is unborn (no commits yet).", repo_id=repo_id)
+                    init_log.debug("Getting initial repo summary...")
+                    if hasattr(engine_instance, 'get_summary'):
+                        summary: GitRepoSummary = await engine_instance.get_summary(repo_config.path)
+                        summary_msg = f"Init: {summary.status_display}"
+                        init_log.info(summary_msg)
+                        self._post_tui_log(repo_id, "INFO", summary_msg)
                     else:
-                         log_msg = f"HEAD: {summary.head_ref_name or 'DETACHED'}@{summary.head_commit_hash[:7] if summary.head_commit_hash else 'N/A'}"
-                         if summary.head_commit_message_summary:
-                              log_msg += f" | Last commit: {summary.head_commit_message_summary}"
-                         self._safe_log("info", log_msg, repo_id=repo_id)
+                         init_log.warning("Engine lacks get_summary method.")
+                         self._post_tui_log(repo_id, "WARNING", "Engine lacks get_summary.")
+
                 except Exception as summary_exc:
-                    self._safe_log("error", "Failed to get initial repo summary", repo_id=repo_id, error=str(summary_exc))
+                    init_log.error("Failed to get initial repo summary", error=str(summary_exc), exc_info=True)
+                    self._post_tui_log(repo_id, "ERROR", f"Failed to get summary: {summary_exc}")
+                    # Don't necessarily mark state as ERROR here, maybe monitoring can still proceed
 
             else:
-                self._safe_log("info", "Skipping initialization for disabled/invalid repo", repo_id=repo_id)
+                init_log.info("Skipping initialization (disabled or invalid path)",
+                              enabled=repo_config.enabled, path_valid=repo_config._path_valid)
 
-        self._safe_log("info", "--- Repository Initialization Complete ---")
-        self._safe_log("info", "Enabled repositories active", count=len(enabled_repo_ids), repos=enabled_repo_ids)
+        self._post_tui_state_update()
+        self._safe_log("info", "--- Repo Initialization Complete ---", count=len(enabled_repo_ids))
+        self._post_tui_log(None, "INFO", f"{len(enabled_repo_ids)} repos initialized.")
         return enabled_repo_ids
 
     def _setup_monitoring(self, enabled_repo_ids: list[str]) -> list[str]:
-        """Adds repositories to the MonitoringService."""
-        # ... (implementation remains the same) ...
+        """Adds successfully initialized repositories to the MonitoringService."""
+        # (Content remains the same as previous answer - verified)
         setup_errors = 0
         successfully_added_ids = []
-        if not self.monitor_service or not self.config: return []
+        if not self.config: return []
+
+        self._safe_log("info", "Setting up filesystem monitoring...")
+        self._post_tui_log(None, "INFO", "Setting up filesystem monitoring...")
+        self.monitor_service = MonitoringService(self.event_queue)
 
         for repo_id in enabled_repo_ids:
-             # Only add repos that successfully loaded an engine in the previous step
-             if repo_id not in self.repo_engines:
-                  self._safe_log("warning", "Skipping monitoring setup for repo with failed engine load", repo_id=repo_id)
-                  continue
+            if repo_id not in self.repo_states or repo_id not in self.repo_engines:
+                self._safe_log("warning", "Skipping monitor setup for repo with failed init/engine load", repo_id=repo_id)
+                continue
 
-             repo_config = self.config.repositories[repo_id]
-             try:
-                 self.monitor_service.add_repository(repo_id, repo_config)
-                 successfully_added_ids.append(repo_id)
-             except MonitoringSetupError as e:
-                 self._safe_log("error", "Failed to setup monitoring for repository", repo_id=repo_id, error=str(e))
-                 if repo_id in self.repo_states:
-                     self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, error_msg=f"Monitoring setup failed: {e}")
-                 setup_errors += 1
-             except Exception as e:
-                 self._safe_log("error", "Unexpected error adding repository", repo_id=repo_id, error=str(e), exc_info=True)
-                 if repo_id in self.repo_states:
-                     self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, error_msg=f"Unexpected setup error: {e}")
-                 setup_errors += 1
+            repo_config = self.config.repositories[repo_id]
+            monitor_log = self._log.bind(repo_id=repo_id)
+            try:
+                monitor_log.debug("Adding repository to monitoring service", path=str(repo_config.path))
+                self.monitor_service.add_repository(repo_id, repo_config)
+                successfully_added_ids.append(repo_id)
+                monitor_log.info("Monitoring successfully scheduled.")
+                self._post_tui_log(repo_id, "INFO", "Monitoring started.")
+            except MonitoringSetupError as e:
+                monitor_log.error("Failed to setup monitoring", error=str(e))
+                if repo_id in self.repo_states: self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, f"Monitoring setup failed: {e}")
+                self._post_tui_log(repo_id, "ERROR", f"Monitoring setup failed: {e}")
+                self._post_tui_state_update()
+                setup_errors += 1
+            except Exception as e:
+                monitor_log.error("Unexpected error adding repository to monitor", error=str(e), exc_info=True)
+                if repo_id in self.repo_states: self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, f"Unexpected setup error: {e}")
+                self._post_tui_log(repo_id, "CRITICAL", f"Unexpected monitor setup error: {e}")
+                self._post_tui_state_update()
+                setup_errors += 1
 
         if setup_errors > 0:
-             self._safe_log("warning", f"Encountered {setup_errors} error(s) during monitoring setup.")
+            self._safe_log("warning", f"Encountered {setup_errors} error(s) during monitoring setup.")
+            self._post_tui_log(None, "WARNING", f"{setup_errors} monitoring setup error(s).")
 
+        self._safe_log("info", f"Monitoring setup complete for {len(successfully_added_ids)} repositories.")
         return successfully_added_ids
+
+
+    async def run(self) -> None:
+        """Main execution method for the watch process."""
+        self._safe_log("info", "Starting orchestrator run", config_path=str(self.config_path), tui_mode=self._is_tui_active)
+
+        try:
+            # --- Load Config ---
+            self._safe_log("debug", "Loading configuration...")
+            try:
+                self.config = load_config(self.config_path)
+                self._safe_log("info", "Config loaded successfully.")
+                self._post_tui_log(None, "INFO", f"Config loaded: {self.config_path.name}")
+            except (ConfigurationError, cattrs.BaseValidationError) as e:
+                 self._safe_log("error", "Failed to load/validate config", error=str(e), path=str(self.config_path))
+                 self._post_tui_log(None, "CRITICAL", f"Config Error: {e}")
+                 raise
+            except Exception as e:
+                 self._safe_log("critical", "Unexpected error loading config", error=str(e), exc_info=True)
+                 self._post_tui_log(None, "CRITICAL", f"Unexpected Config Error: {e}")
+                 raise
+
+            # --- Initialize Repos ---
+            enabled_repo_ids = await self._initialize_repositories()
+            if not enabled_repo_ids:
+                 self._safe_log("warning", "No enabled/valid repos found. Exiting.")
+                 self._post_tui_log(None, "WARNING", "No valid/enabled repositories found.")
+                 return
+
+            # --- Setup & Start Monitoring ---
+            successfully_added_ids = self._setup_monitoring(enabled_repo_ids)
+            if not successfully_added_ids:
+                 self._safe_log("critical", "No repos could be monitored. Exiting.")
+                 self._post_tui_log(None, "CRITICAL", "Failed to start monitoring any repository.")
+                 return
+
+            if self.monitor_service:
+                 self._safe_log("debug", "Starting monitor service thread...")
+                 self.monitor_service.start()
+                 if not self.monitor_service.is_running:
+                     self._safe_log("critical", "Monitor service failed to start. Exiting.")
+                     self._post_tui_log(None, "CRITICAL", "Monitor service failed to start.")
+                     return
+                 self._post_tui_log(None, "INFO", f"Monitoring active for {len(successfully_added_ids)} repositories.")
+            else:
+                 self._safe_log("error", "Monitor service not initialized after setup.")
+                 self._post_tui_log(None, "CRITICAL", "Internal Error: Monitor service missing.")
+                 return
+
+            # --- Start Consumer Task ---
+            self._safe_log("debug", "Creating event consumer task...")
+            consumer_task = asyncio.create_task(self._consume_events(), name="EventConsumer")
+            self._running_tasks.add(consumer_task)
+            consumer_task.add_done_callback(self._running_tasks.discard)
+
+            self._safe_log("info", "Orchestrator running. Waiting for shutdown signal.")
+
+            # --- Wait for Shutdown ---
+            await self.shutdown_event.wait()
+            self._safe_log("info", "Shutdown signal received.")
+            self._post_tui_log(None, "INFO", "Shutdown requested...")
+
+        except SupsrcError as e:
+            self._safe_log("critical", "Critical supsrc error during watch", error=str(e), exc_info=True)
+            self._post_tui_log(None, "CRITICAL", f"Runtime Error: {e}")
+        except asyncio.CancelledError:
+             self._safe_log("warning", "Orchestrator run task cancelled.")
+             if not self.shutdown_event.is_set(): self.shutdown_event.set()
+        except Exception as e:
+            self._safe_log("critical", "Unexpected error in orchestrator run", error=str(e), exc_info=True)
+            self._post_tui_log(None, "CRITICAL", f"Unexpected Error: {e}")
+            if not self.shutdown_event.is_set(): self.shutdown_event.set()
+        finally:
+            # --- Orchestrator Cleanup ---
+            self._safe_log("info", "Orchestrator starting cleanup...")
+            self._post_tui_log(None, "INFO", "Cleaning up...")
+
+            # 1. Cancel Repo Timers
+            self._safe_log("debug", "Cancelling active repo timers...")
+            timers_cancelled = sum(1 for state in self.repo_states.values() if state.inactivity_timer_handle)
+            for state in self.repo_states.values(): state.cancel_inactivity_timer()
+            self._safe_log("debug", f"Cancelled {timers_cancelled} repo timer(s).")
+
+            # 2. Cancel Running Tasks (Consumer)
+            tasks_to_cancel = list(self._running_tasks)
+            if tasks_to_cancel:
+                self._safe_log("debug", f"Cancelling {len(tasks_to_cancel)} running task(s)...", tasks=[t.get_name() for t in tasks_to_cancel])
+                for task in tasks_to_cancel: task.cancel()
+                await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
+                self._safe_log("debug", "Running tasks cancellation gathered.")
+            else: self._safe_log("debug", "No running tasks to cancel.")
+
+            # 3. Stop Monitoring Service
+            if self.monitor_service and self.monitor_service.is_running:
+                 self._safe_log("debug", "Stopping monitoring service...")
+                 try:
+                     await self.monitor_service.stop()
+                     self._safe_log("debug", "Monitoring service stop completed.")
+                     self._post_tui_log(None, "INFO", "Monitoring stopped.")
+                 except Exception as stop_exc:
+                     self._safe_log("error", "Error during monitor service stop", error=str(stop_exc), exc_info=True)
+                     self._post_tui_log(None, "ERROR", "Error stopping monitor service.")
+            elif self.monitor_service: self._safe_log("debug", "Monitor service already stopped.")
+            else: self._safe_log("debug", "Monitor service was not initialized.")
+
+            self._safe_log("info", "Orchestrator finished cleanup.")
+            self._post_tui_log(None, "INFO", "Cleanup complete.")
+
+    def _safe_log(self, level: str, msg: str, **kwargs):
+        """Helper to suppress logging errors during final shutdown."""
+        kwargs["orchestrator_id"] = id(self)
+        try:
+            if hasattr(self, '_log') and self._log: getattr(self._log, level)(msg, **kwargs)
+            else: print(f"[{level.upper()}] (Orch {id(self)}) {msg} {kwargs}", file=sys.stderr)
+        except Exception as e: print(f"LOG ERROR (Orch {id(self)}): {msg} {kwargs} - Error: {e}", file=sys.stderr)
 
 # 🔼⚙️
