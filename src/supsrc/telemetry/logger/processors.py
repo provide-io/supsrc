@@ -6,6 +6,7 @@ Custom structlog processors for supsrc.
 """
 import logging
 
+
 # --- Helper ---
 def get_emoji(event_dict: dict) -> str:
     from supsrc.telemetry.logger.base import LOG_EMOJIS
@@ -34,7 +35,7 @@ def add_emoji_processor(logger, method_name: str, event_dict: dict) -> dict:
 #     # Make relative to base if possible
 #     if logger_name.startswith(BASE_LOGGER_NAME + "."):
 #         logger_name = logger_name[len(BASE_LOGGER_NAME) + 1:]
-# 
+#
 #     if len(logger_name) > 32:
 #         logger_name = "..." + logger_name[-29:]
 #     padded_name = f"{logger_name:<32}"

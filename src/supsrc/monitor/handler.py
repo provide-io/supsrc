@@ -11,7 +11,7 @@ puts relevant events onto an asyncio Queue using thread-safe methods.
 import asyncio
 import os
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pathspec
 import structlog
@@ -46,7 +46,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
         repo_id: str,
         repo_path: Path,
         event_queue: asyncio.Queue[MonitoredEvent],
-        loop: 'AbstractEventLoop' # <<< Added loop parameter
+        loop: "AbstractEventLoop" # <<< Added loop parameter
     ):
         """
         Initializes the event handler for a specific repository.
@@ -63,18 +63,18 @@ class SupsrcEventHandler(FileSystemEventHandler):
         self.event_queue = event_queue
         self.loop = loop # <<< Store the loop
         self.logger = log.bind(repo_id=repo_id, repo_path=str(repo_path))
-        self.gitignore_spec: Optional[pathspec.PathSpec] = self._load_gitignore()
+        self.gitignore_spec: pathspec.PathSpec | None = self._load_gitignore()
 
         self.logger.debug("Initialized event handler")
 
-    def _load_gitignore(self) -> Optional[pathspec.PathSpec]:
+    def _load_gitignore(self) -> pathspec.PathSpec | None:
         """Loads and parses the .gitignore file for the repository."""
         # (Implementation remains the same)
         gitignore_path = self.repo_path / ".gitignore"
         spec = None
         if gitignore_path.is_file():
             try:
-                with open(gitignore_path, "r", encoding="utf-8") as f:
+                with open(gitignore_path, encoding="utf-8") as f:
                     spec = pathspec.PathSpec.from_lines(
                         pathspec.patterns.GitWildMatchPattern, f
                     )

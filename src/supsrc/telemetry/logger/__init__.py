@@ -5,8 +5,11 @@
 Logging setup for supsrc using structlog.
 """
 
-from supsrc.telemetry.logger.base import setup_logging, StructLogger # Expose setup and type hint
+from supsrc.telemetry.logger.base import (  # Expose setup and type hint
+    StructLogger,
+    setup_logging,
+)
 
-__all__ = ["setup_logging", "StructLogger"]
+__all__ = ["StructLogger", "setup_logging"]
 
 #

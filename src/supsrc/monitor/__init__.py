@@ -4,9 +4,9 @@
 """
 Filesystem monitoring package for supsrc using watchdog.
 """
-from .service import MonitoringService
 from .events import MonitoredEvent
+from .service import MonitoringService
 
-__all__ = ["MonitoringService", "MonitoredEvent"]
+__all__ = ["MonitoredEvent", "MonitoringService"]
 
 # 🔼⚙️

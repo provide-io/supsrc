@@ -2,18 +2,18 @@
 # Corrected action_quit to stop the scheduled timer
 
 import asyncio
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 # --- Textual Imports ---
 from textual.app import App, ComposeResult
-from textual.containers import Container, VerticalScroll
-from textual.widgets import Header, Footer, DataTable, Log as TextualLog
-from textual.worker import Worker
+from textual.containers import Container
 from textual.message import Message
 from textual.reactive import var
-from textual.timer import Timer # <<< Import Timer
+from textual.timer import Timer  # <<< Import Timer
+from textual.widgets import DataTable, Footer, Header
+from textual.widgets import Log as TextualLog
+from textual.worker import Worker
 
 if TYPE_CHECKING:
     Var = var
@@ -23,9 +23,8 @@ else:
 import structlog
 
 # --- Supsrc Imports ---
-from supsrc.runtime.orchestrator import WatchOrchestrator, RepositoryStatesMap
-from supsrc.state import RepositoryStatus, RepositoryState
-from supsrc.config import SupsrcConfig
+from supsrc.runtime.orchestrator import RepositoryStatesMap, WatchOrchestrator
+from supsrc.state import RepositoryStatus
 
 log = structlog.get_logger("tui.app")
 
@@ -38,7 +37,7 @@ class StateUpdate(Message):
 
 class LogMessageUpdate(Message):
      ALLOW_BUBBLE = True
-     def __init__(self, repo_id: Optional[str], level: str, message: str) -> None:
+     def __init__(self, repo_id: str | None, level: str, message: str) -> None:
           self.repo_id = repo_id
           self.level = level
           self.message = message
@@ -89,7 +88,7 @@ class SupsrcTuiApp(App):
     """
 
     if TYPE_CHECKING:
-        repo_states_data: Var[Dict[str, Any]]
+        repo_states_data: Var[dict[str, Any]]
     repo_states_data = var({})
 
     # __init__ - Add timer attribute
@@ -101,11 +100,11 @@ class SupsrcTuiApp(App):
         ) -> None:
         super().__init__(**kwargs)
         self._config_path = config_path
-        self._orchestrator: Optional[WatchOrchestrator] = None
+        self._orchestrator: WatchOrchestrator | None = None
         self._shutdown_event = asyncio.Event()
         self._cli_shutdown_event = cli_shutdown_event
-        self._worker: Optional[Worker] = None
-        self._shutdown_check_timer: Optional[Timer] = None # <<< Store timer object
+        self._worker: Worker | None = None
+        self._shutdown_check_timer: Timer | None = None # <<< Store timer object
 
     def compose(self) -> ComposeResult:
         # (Implementation unchanged)
@@ -213,7 +212,7 @@ class SupsrcTuiApp(App):
                 last_change_str = state.last_change_time.strftime("%H:%M:%S") if state.last_change_time else "--:--:--"
                 error_str = state.error_message or ""
                 status_style, status_icon = self._get_status_style_and_icon(state.status)
-                display_error = error_str[:60] + ('...' if len(error_str) > 60 else '')
+                display_error = error_str[:60] + ("..." if len(error_str) > 60 else "")
                 row_data = (f"[{status_style}]{status_icon} {state.status.name}[/]", last_change_str, str(state.save_count), display_error)
                 if table.is_valid_row_key(repo_id): table.update_row(repo_id, *row_data, update_width=False)
                 else: table.add_row(repo_id, *row_data, key=repo_id)

@@ -1,62 +1,52 @@
 #
-# supsrc/engines/git/runner.py
+# filename: src/supsrc/engines/git/runner.py
 #
 """
-Runs potentially blocking pygit2 functions in a separate thread using asyncio.to_thread.
+Helper for running blocking pygit2 operations in a separate thread.
 """
 
 import asyncio
-import functools
-from typing import Callable, Any, Coroutine, TypeVar
-import structlog
-import pygit2 # For exception type checking
+from collections.abc import Callable, Coroutine
+from functools import partial, wraps
+from typing import Any
 
-# Import specific Git exceptions
-from .exceptions import GitCommandError
+import pygit2  # type: ignore
+import structlog
 
 log = structlog.get_logger("engines.git.runner")
 
-T = TypeVar("T") # Generic type variable for return value
+# Type alias for the runner
+Pygit2Runner: type = Callable[..., Coroutine[Any, Any, Any]]
 
-async def run_pygit2_func(func: Callable[..., T], *args: Any, **kwargs: Any) -> Coroutine[Any, Any, T]:
+def run_pygit2_async(func: Callable[..., Any]) -> Pygit2Runner:
     """
-    Runs a pygit2 function in a thread pool to avoid blocking the asyncio loop.
-
-    Handles potential GitErrors and wraps them.
-
-    Args:
-        func: The pygit2 function or method to call.
-        *args: Positional arguments for the function.
-        **kwargs: Keyword arguments for the function.
-
-    Returns:
-        The result of the pygit2 function call.
-
-    Raises:
-        GitCommandError: If the pygit2 function raises a GitError.
-        Exception: For other unexpected errors during execution.
+    Decorator or wrapper to run a blocking pygit2 function
+    in the default executor thread pool.
     """
-    func_name = getattr(func, "__name__", str(func))
-    log.debug(
-        "Running pygit2 function via thread",
-        func_name=func_name,
-        args_len=len(args),
-        kwargs_keys=list(kwargs.keys()),
-    )
-    try:
-        # functools.partial ensures args/kwargs are correctly passed to func
-        # when called by asyncio.to_thread's internal executor.
-        bound_func = functools.partial(func, *args, **kwargs)
-        result = await asyncio.to_thread(bound_func)
-        log.debug("pygit2 function completed successfully", func_name=func_name)
-        return result
-    except pygit2.GitError as e:
-        log.error("pygit2 function failed", func_name=func_name, error=str(e), exc_info=False) # Keep log cleaner
-        # Wrap the GitError in our custom exception
-        raise GitCommandError(f"Git operation '{func_name}' failed", details=e) from e
-    except Exception as e:
-        # Catch other potential exceptions during thread execution
-        log.exception("Unexpected error running pygit2 function in thread", func_name=func_name)
-        raise # Re-raise other exceptions
+    @wraps(func)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        loop = asyncio.get_running_loop()
+        # Use partial to bind arguments to the function
+        func_call = partial(func, *args, **kwargs)
+        log.debug(
+            "Running pygit2 function via thread",
+            func_name=func.__name__,
+            args_len=len(args),
+            kwargs_keys=list(kwargs.keys()),
+        )
+        try:
+            result = await loop.run_in_executor(None, func_call)
+            log.debug("pygit2 function completed successfully", func_name=func.__name__)
+            return result
+        except Exception as e:
+            # Log the exception but re-raise it so the caller can handle it
+            log.error("Error executing pygit2 function in thread", func_name=func.__name__, error=str(e), exc_info=True)
+            raise # Re-raise the original exception
+    return wrapper
+
+# Example of wrapping a pygit2 function directly if preferred over decoration
+async def repo_discover_async(path: str) -> str | None:
+    """Async wrapper for pygit2.discover_repository."""
+    return await run_pygit2_async(pygit2.discover_repository)(path) # type: ignore
 
 # 🔼⚙️

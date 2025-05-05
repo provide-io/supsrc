@@ -4,16 +4,13 @@ Manages the watchdog observer thread and repository event handlers.
 """
 
 import asyncio
-import time
-from pathlib import Path
-from typing import Dict
 
 import structlog
 from watchdog.observers import Observer
 
 # Use absolute imports
 from supsrc.config.models import RepositoryConfig
-from supsrc.exceptions import MonitoringSetupError, MonitoringError
+from supsrc.exceptions import MonitoringError, MonitoringSetupError
 from supsrc.monitor.events import MonitoredEvent
 from supsrc.monitor.handler import SupsrcEventHandler
 
@@ -37,7 +34,7 @@ class MonitoringService:
         """
         self._event_queue = event_queue
         self._observer = Observer()
-        self._handlers: Dict[str, SupsrcEventHandler] = {}
+        self._handlers: dict[str, SupsrcEventHandler] = {}
         self._logger = log
         self._is_running = False
         log.debug("MonitoringService initialized")
@@ -55,7 +52,7 @@ class MonitoringService:
             return
         repo_path = repo_config.path
         if not repo_path.is_dir():
-            raise MonitoringSetupError(f"Repository path is not a valid directory", repo_id=repo_id, path=str(repo_path))
+            raise MonitoringSetupError("Repository path is not a valid directory", repo_id=repo_id, path=str(repo_path))
 
         self._logger.info("Adding repository to monitor", repo_id=repo_id, path=str(repo_path))
         # --- FIX: Pass the loop to the handler ---
@@ -140,7 +137,7 @@ class MonitoringService:
     def is_running(self) -> bool:
         """Returns True if the observer thread is currently active."""
         # (Implementation remains the same)
-        observer_alive = hasattr(self, '_observer') and self._observer is not None and self._observer.is_alive()
+        observer_alive = hasattr(self, "_observer") and self._observer is not None and self._observer.is_alive()
         return self._is_running and observer_alive
 
 # 🔼⚙️

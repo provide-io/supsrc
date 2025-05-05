@@ -5,7 +5,6 @@
 CLI commands related to configuration management for supsrc.
 """
 
-import os # <<< Added for potential future use
 from pathlib import Path
 
 import click
@@ -14,7 +13,7 @@ import structlog
 # Use relative imports within the package
 from ..config import load_config
 from ..exceptions import ConfigurationError
-from ..telemetry import StructLogger # Import type hint
+from ..telemetry import StructLogger  # Import type hint
 
 # Import rich if available for pretty printing
 try:
@@ -34,11 +33,11 @@ def config_cli():
 
 @config_cli.command(name="show")
 @click.option(
-    '-c', '--config-path',
+    "-c", "--config-path",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path),
     default=Path("supsrc.conf"),
     show_default=True,
-    envvar='SUPSRC_CONF', # <<< Added Environment Variable Support
+    envvar="SUPSRC_CONF", # <<< Added Environment Variable Support
     help="Path to the supsrc configuration file (env var SUPSRC_CONF).",
     show_envvar=True, # <<< Show env var in help message
 )
