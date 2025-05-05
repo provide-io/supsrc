@@ -1,6 +1,6 @@
 #
-# supsrc/config/models.py
-# -*- coding: utf-8 -*-
+# config/models.py
+#
 """
 Attrs-based data models for supsrc configuration structure.
 """
@@ -8,7 +8,7 @@ Attrs-based data models for supsrc configuration structure.
 import logging # Still needed for level names
 from datetime import timedelta
 from pathlib import Path
-from typing import Dict, Literal, Optional, TypeAlias, Union, Any
+from typing import Dict, Literal, Optional, TypeAlias, Union, Any, Mapping # Added Mapping
 
 from attrs import define, field, mutable, validators
 
@@ -26,27 +26,35 @@ def _validate_positive_int(inst: Any, attr: Any, value: int) -> None:
     if not isinstance(value, int) or value <= 0:
         raise ValueError(f"Field '{attr.name}' must be positive integer, got {value}")
 
-# --- attrs Data Classes ---
+# --- attrs Data Classes for Rules ---
+# Define the structure for different rule types.
+# The 'type' literal should match the key used for loading (e.g., built-in path or plugin key)
 
 @define(slots=True)
-class InactivityTrigger:
-    """Commit trigger based on inactivity period."""
-    type: Literal["inactivity"] = field(default="inactivity", init=False)
+class InactivityRuleConfig: # Renamed from InactivityTrigger for clarity as config object
+    """Configuration for the inactivity rule."""
+    # Type can be validated during plugin loading if needed, or assume correct here
+    # Use kw_only=True so 'type' isn't required during cattrs structuring if hook handles it
+    type: str = field(default="supsrc.rules.inactivity", kw_only=True)
     period: timedelta = field()
 
 @define(slots=True)
-class SaveCountTrigger:
-    """Commit trigger based on number of save events."""
-    type: Literal["save_count"] = field(default="save_count", init=False)
+class SaveCountRuleConfig: # Renamed from SaveCountTrigger
+    """Configuration for the save count rule."""
+    type: str = field(default="supsrc.rules.save_count", kw_only=True)
     count: int = field(validator=_validate_positive_int)
 
 @define(slots=True)
-class ManualTrigger:
-    """Commit trigger requiring manual intervention."""
-    type: Literal["manual"] = field(default="manual", init=False)
+class ManualRuleConfig: # Renamed from ManualTrigger
+    """Configuration for the manual rule."""
+    type: str = field(default="supsrc.rules.manual", kw_only=True)
 
-# Type alias for the union of trigger types
-TriggerConfig: TypeAlias = Union[InactivityTrigger, SaveCountTrigger, ManualTrigger]
+
+# Type alias for the union of rule configuration types
+# cattrs will use this union to structure the 'rule' section based on 'type' using the registered hook
+RuleConfig: TypeAlias = Union[InactivityRuleConfig, SaveCountRuleConfig, ManualRuleConfig]
+
+# --- Repository and Global Config Models ---
 
 @mutable(slots=True)
 class RepositoryConfig:
@@ -55,22 +63,23 @@ class RepositoryConfig:
     """
     # Mandatory fields first
     path: Path = field()
-    trigger: TriggerConfig = field()
+    # This field will hold the structured rule config object (e.g., InactivityRuleConfig)
+    rule: RuleConfig = field() # Holds the specific structured rule config
+    # Holds the raw dictionary from the TOML [repository] section for the engine to parse.
+    repository: Mapping[str, Any] = field(factory=dict)
+
     # Optional fields after
     enabled: bool = field(default=True)
-    commit_message: Optional[str] = field(default=None)
-    auto_push: Optional[bool] = field(default=None)
+
     # Internal state flag
     _path_valid: bool = field(default=True, repr=False, init=False)
+
 
 @define(frozen=True, slots=True)
 class GlobalConfig:
     """Global default settings for supsrc."""
     log_level: str = field(default="INFO", validator=_validate_log_level)
-    default_commit_message: str = field(
-        default="supsrc auto-commit: {{timestamp}}"
-    )
-    default_auto_push: bool = field(default=True)
+    # Defaults removed - handled by env vars or engine defaults
 
     @property
     def numeric_log_level(self) -> int:

@@ -1,6 +1,6 @@
 #
 # supsrc/runtime/orchestrator.py
-#$
+#
 
 import asyncio
 import sys
@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Set, TypeAlias
 
 import structlog
+import attrs # For attrs.asdict if needed later
 
 # Use absolute imports from within supsrc
 from supsrc.telemetry import StructLogger
@@ -16,8 +17,13 @@ from supsrc.config import load_config, SupsrcConfig
 from supsrc.exceptions import ConfigurationError, MonitoringSetupError, SupsrcError
 from supsrc.monitor import MonitoringService, MonitoredEvent
 from supsrc.state import RepositoryState, RepositoryStatus
-from supsrc.rules import check_trigger_condition
-from supsrc.config.models import RepositoryConfig, InactivityTrigger, SaveCountTrigger, ManualTrigger
+from supsrc.rules import check_trigger_condition # Assuming this handles the structured rule object
+from supsrc.config.models import (
+    RepositoryConfig, RuleConfig, InactivityRuleConfig, SaveCountRuleConfig, ManualRuleConfig
+)
+# Import protocols and plugin loader if/when implementing dynamic engines
+# from supsrc.protocols import Rule, ConversionStep, RepositoryEngine, PluginResult
+# from supsrc.plugins import load_plugin
 
 # Logger for this module
 log: StructLogger = structlog.get_logger("runtime.orchestrator")
@@ -26,7 +32,6 @@ log: StructLogger = structlog.get_logger("runtime.orchestrator")
 RepositoryStatesMap: TypeAlias = dict[str, RepositoryState]
 
 # --- Action Callback (Placeholder) ---
-# Keep this separate or move to another module later (e.g., runtime.actions)
 async def _trigger_action_callback(repo_id: str, repo_states: RepositoryStatesMap, config: SupsrcConfig) -> None:
     """
     Callback executed when a trigger condition is met. Placeholder for Git ops.
@@ -45,25 +50,38 @@ async def _trigger_action_callback(repo_id: str, repo_states: RepositoryStatesMa
          repo_state.inactivity_timer_handle = None
          return
 
-    trigger_type_name = type(repo_config.trigger).__name__
+    # Get the structured rule config object
+    rule_config_obj = repo_config.rule
+    # Get rule type string (might be useful for logging/logic)
+    rule_type_str = getattr(rule_config_obj, 'type', 'unknown_rule_type')
+
     callback_log.info(
         "Trigger condition met!",
-        trigger_type=trigger_type_name,
+        rule_type=rule_type_str,
         current_save_count=repo_state.save_count
     )
     repo_state.update_status(RepositoryStatus.TRIGGERED)
     repo_state.inactivity_timer_handle = None
 
-    # --- Placeholder for Git Action ---
-    callback_log.info(">>> Intent: Perform Git Add/Commit Action <<<")
+    # --- Placeholder for Git Action / Engine Call ---
+    callback_log.info(">>> Intent: Perform Repository Action (e.g., Git Commit) <<<", engine_config=repo_config.repository)
+    # TODO: Replace with actual engine loading and execution
+    # engine_config_dict = repo_config.repository
+    # engine_type = engine_config_dict.get("type", "unknown_engine")
+    # try:
+    #     engine: RepositoryEngine = load_plugin(engine_type, RepositoryEngine)
+    #     # ... call engine methods: get_status, stage_changes, perform_commit, perform_push ...
+    # except Exception as engine_e:
+    #     callback_log.error("Failed to load or execute repository engine", engine_type=engine_type, error=str(engine_e))
+    #     repo_state.update_status(RepositoryStatus.ERROR, f"Engine failed: {engine_e}")
+    #     return # Stop processing
+
     # Simulate work and reset
-    # await asyncio.sleep(0.1) # Simulate tiny delay if needed
     callback_log.debug("Simulating successful action for state reset")
     repo_state.reset_after_action()
     # --- End Placeholder ---
 
 # --- Event Consumer Logic ---
-# Keep this separate or move to another module later (e.g., runtime.events)
 async def consume_events(
     event_queue: asyncio.Queue[MonitoredEvent],
     repo_states: RepositoryStatesMap,
@@ -83,7 +101,6 @@ async def consume_events(
             if get_task is None or get_task.done():
                  get_task = asyncio.create_task(event_queue.get(), name=f"QueueGet-{id(event_queue)}")
 
-            # Wait for either an event or the shutdown signal
             shutdown_wait_task = asyncio.create_task(shutdown_event.wait(), name="ShutdownWait")
             consumer_log.debug("Consumer waiting for event or shutdown...")
 
@@ -92,7 +109,6 @@ async def consume_events(
             )
             consumer_log.debug("Consumer woke up.", done_tasks=len(done), pending_tasks=len(pending))
 
-            # Prioritize shutdown check
             if shutdown_wait_task in done or shutdown_event.is_set():
                  consumer_log.info("Consumer detected shutdown request.")
                  if get_task in pending:
@@ -100,20 +116,19 @@ async def consume_events(
                      get_task.cancel()
                  break # Exit loop cleanly
 
-            # Process event if received
             if get_task in done:
                 try:
                      event = get_task.result()
                 except asyncio.CancelledError:
                      consumer_log.debug("Queue get task was cancelled.")
-                     continue # Go back to check shutdown signal
+                     continue
                 except Exception as e:
                      consumer_log.error("Error retrieving event from queue", error=str(e), exc_info=True)
                      get_task = None
                      await asyncio.sleep(0.5)
                      continue
 
-                get_task = None # Reset for next iteration
+                get_task = None
                 event_log = consumer_log.bind(repo_id=event.repo_id, event_type=event.event_type, src_path=str(event.src_path))
                 event_log.debug("Consumer received event details")
 
@@ -128,25 +143,32 @@ async def consume_events(
                 repo_state.record_change()
                 event_log = event_log.bind(save_count=repo_state.save_count, status=repo_state.status.name)
 
-                trigger_config = repo_config.trigger
-                match trigger_config:
-                    case InactivityTrigger(period=period):
-                        delay_seconds = period.total_seconds()
-                        event_log.debug("Scheduling inactivity check", delay_seconds=delay_seconds)
-                        timer_handle = loop.call_later(
-                            delay_seconds,
-                            lambda rid=repo_id: asyncio.create_task(
-                                 _trigger_action_callback(rid, repo_states, config)
-                            )
-                        )
-                        repo_state.set_inactivity_timer(timer_handle)
-                    case SaveCountTrigger():
-                         event_log.debug("Checking save count trigger")
-                         if check_trigger_condition(repo_state, repo_config):
-                             event_log.info("Save count met, scheduling action")
-                             asyncio.create_task(_trigger_action_callback(repo_id, repo_states, config))
-                    case ManualTrigger():
-                         event_log.debug("Manual trigger: Change recorded, no automatic action.")
+                # --- Check Rules using the structured rule object ---
+                rule_config_obj: RuleConfig = repo_config.rule # <<< Access the structured rule object
+                rule_type_str = getattr(rule_config_obj, 'type', 'unknown_rule_type') # For logging
+
+                try:
+                    # check_trigger_condition should accept repo_state and repo_config
+                    # It can then access repo_config.rule internally.
+                    if check_trigger_condition(repo_state, repo_config):
+                        event_log.info("Rule condition met, scheduling action", rule_type=rule_type_str)
+                        asyncio.create_task(_trigger_action_callback(event.repo_id, repo_states, config))
+                    else:
+                        # Reschedule inactivity timer if applicable
+                        if isinstance(rule_config_obj, InactivityRuleConfig):
+                             delay = rule_config_obj.period.total_seconds()
+                             event_log.debug("Rescheduling inactivity check", delay_seconds=delay)
+                             timer_handle = loop.call_later(
+                                 delay,
+                                 lambda rid=event.repo_id: asyncio.create_task(
+                                     _trigger_action_callback(rid, repo_states, config)
+                                 )
+                             )
+                             repo_state.set_inactivity_timer(timer_handle)
+
+                except Exception as e:
+                    event_log.error("Error checking rule", rule_type=rule_type_str, error=str(e), exc_info=True)
+                    repo_state.update_status(RepositoryStatus.ERROR, f"Rule check failed: {e}")
 
                 event_queue.task_done()
 
@@ -155,7 +177,7 @@ async def consume_events(
             if get_task and not get_task.done():
                  consumer_log.debug("Cancelling internal queue get task during consumer cancellation.")
                  get_task.cancel()
-            raise # Re-raise for the orchestrator to handle
+            raise
 
         except Exception as e:
             logger_to_use = consumer_log
@@ -180,14 +202,13 @@ class WatchOrchestrator:
         self.event_queue: asyncio.Queue[MonitoredEvent] | None = None
         self.repo_states: RepositoryStatesMap = {}
         self._running_tasks: Set[asyncio.Task[Any]] = set()
-        self._log = log.bind(orchestrator_id=id(self)) # Add context
+        self._log = log.bind(orchestrator_id=id(self))
 
     def _safe_log(self, level: str, msg: str, **kwargs):
         """Helper to suppress logging errors during final shutdown."""
         try:
             getattr(self._log, level)(msg, **kwargs)
         except (BrokenPipeError, RuntimeError, ValueError) as e:
-            # print(f"Debug (Orchestrator): Suppressed log error: {e}", file=sys.stderr)
             pass
 
     async def run(self) -> None:
@@ -202,11 +223,10 @@ class WatchOrchestrator:
                 self._safe_log("info", "Configuration loaded successfully.")
             except ConfigurationError as e:
                  self._safe_log("error", "Failed to load configuration", error=str(e), path=str(self.config_path))
-                 # Consider raising or returning an error code instead of sys.exit
                  raise # Re-raise for the CLI layer to handle exit
             except Exception as e:
                  self._safe_log("critical", "Unexpected error loading configuration", error=str(e), exc_info=True)
-                 raise # Re-raise
+                 raise
 
             # --- Initialize State ---
             self._safe_log("debug", "Initializing repository states...")
@@ -222,7 +242,6 @@ class WatchOrchestrator:
             successfully_added_ids = self._setup_monitoring(enabled_repo_ids)
             if not successfully_added_ids:
                  self._safe_log("critical", "No repositories could be successfully monitored. Exiting run.")
-                 # Maybe raise a specific setup error
                  return
 
             # --- Start Monitoring ---
@@ -230,7 +249,6 @@ class WatchOrchestrator:
             self.monitor_service.start()
             if not self.monitor_service.is_running:
                  self._safe_log("critical", "Monitoring service failed to start. Exiting run.")
-                 # Maybe raise
                  return
 
             # --- Start Consumer ---
@@ -249,17 +267,13 @@ class WatchOrchestrator:
             self._safe_log("info", "Shutdown signal received by orchestrator.")
 
         except SupsrcError as e:
-            # Log specific supsrc errors
             self._safe_log("critical", "A critical supsrc error occurred during watch", error=str(e), exc_info=True)
-            # Potentially re-raise or handle specific types differently
         except asyncio.CancelledError:
-             # This happens if the orchestrator task itself is cancelled
              self._safe_log("warning", "Orchestrator run task was cancelled.")
-             if not self.shutdown_event.is_set(): self.shutdown_event.set() # Ensure cleanup runs
+             if not self.shutdown_event.is_set(): self.shutdown_event.set()
         except Exception as e:
-            # Catch-all for unexpected errors during setup or runtime
             self._safe_log("critical", "An unexpected error occurred in orchestrator run", error=str(e), exc_info=True)
-            if not self.shutdown_event.is_set(): self.shutdown_event.set() # Trigger cleanup
+            if not self.shutdown_event.is_set(): self.shutdown_event.set()
         finally:
             # --- Orchestrator Cleanup ---
             self._safe_log("info", "Orchestrator starting cleanup...")
@@ -269,7 +283,6 @@ class WatchOrchestrator:
             timers_cancelled = 0
             for repo_id, state in self.repo_states.items():
                  if state.inactivity_timer_handle:
-                     # Use state's logger if possible, fallback to orchestrator log
                      try:
                          state.cancel_inactivity_timer()
                          timers_cancelled += 1
@@ -288,7 +301,6 @@ class WatchOrchestrator:
                 self._safe_log("debug", "Waiting for cancelled tasks to finish...")
                 try:
                      gathered_results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
-                     # Use safe log here as tasks might log during cancellation
                      self._safe_log("debug", "Running tasks cancellation gathered.", results=[type(r).__name__ for r in gathered_results])
                 except Exception as gather_exc:
                      self._safe_log("error", "Exception during task gathering", error=str(gather_exc), exc_info=True)
@@ -300,7 +312,7 @@ class WatchOrchestrator:
                 if self.monitor_service.is_running:
                      self._safe_log("debug", "Stopping monitoring service (includes joining observer thread)...")
                      try:
-                         await self.monitor_service.stop() # This logs internally, hopefully safely
+                         await self.monitor_service.stop()
                          self._safe_log("debug", "Monitoring service stop completed.")
                      except Exception as stop_exc:
                          self._safe_log("error", "Error during monitoring service stop", error=str(stop_exc), exc_info=True)
@@ -314,7 +326,7 @@ class WatchOrchestrator:
     def _initialize_states(self) -> list[str]:
         """Initializes RepositoryState objects based on config."""
         enabled_repo_ids = []
-        if not self.config: return [] # Should not happen if called after load
+        if not self.config: return []
 
         for repo_id, repo_config in self.config.repositories.items():
             if repo_config.enabled and repo_config._path_valid:

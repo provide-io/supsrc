@@ -1,15 +1,35 @@
 #
-# supsrc/config/__init__.py
-# -*- coding: utf-8 -*-
+# config/__init__.py
+#
 """
 Configuration handling sub-package for supsrc.
 
 Exports the loading function and core configuration model.
 """
 
-from supsrc.config.loader import load_config
-from supsrc.config.models import SupsrcConfig
+# Export the main loading function from the loader module
+from .loader import load_config
 
-__all__ = ["load_config", "SupsrcConfig"]
+# Export the core configuration models from the models module
+from .models import (
+    SupsrcConfig,
+    GlobalConfig,
+    RepositoryConfig,
+    RuleConfig, # Export the union type
+    InactivityRuleConfig, # Export specific rule types if needed externally
+    SaveCountRuleConfig,
+    ManualRuleConfig,
+)
+
+__all__ = [
+    "load_config",
+    "SupsrcConfig",
+    "GlobalConfig",
+    "RepositoryConfig",
+    "RuleConfig",
+    "InactivityRuleConfig",
+    "SaveCountRuleConfig",
+    "ManualRuleConfig",
+]
 
 # 🔼⚙️
