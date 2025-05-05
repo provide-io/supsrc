@@ -31,4 +31,9 @@ dev = [
 [project.scripts]
 supsrc = "supsrc.cli.main:cli"
 
+[project.optional-dependencies]
+tui = [
+    "textual>=3.2.0",
+]
+
 # 🔼⚙️
