@@ -1,193 +1,317 @@
-#
-# engines/git/base.py
-#
+# file: src/supsrc/engines/git/base.py
 """
-Main GitEngine class implementing the RepositoryEngine protocol using pygit2.
+Implementation of the RepositoryEngine protocol using pygit2.
 """
 
+import os
 from pathlib import Path
-from typing import Any, Optional, cast, TypeAlias, List # Use List for Python <3.9 compat if needed, else list
-import pygit2 # type: ignore[import-untyped]
-import attrs
+from typing import Optional, Any, Mapping
+from datetime import datetime, timezone
+
+import pygit2
 import structlog
 
-# Use relative imports within the engine package
-from .runner import run_pygit2_async
-from .errors import GitEngineError, GitRemoteError, GitCommitError, GitPushError, GitStageError, GitStatusError # Import all relevant errors
-from .status import get_git_status
-from .stage import stage_git_changes
-from .commit import perform_git_commit
-from .push import perform_git_push
-from .info import get_git_summary, GitRepoSummary # Import new function and result type
-
-# Use absolute imports for protocols and core types
 from supsrc.protocols import (
-    RepositoryEngine, # Implement this protocol
-    RepoStatusResult, StageResult, CommitResult, PushResult, PluginResult
+    RepositoryEngine, RepoStatusResult, StageResult, CommitResult, PushResult
 )
 from supsrc.state import RepositoryState
-from supsrc.telemetry import StructLogger # Assuming telemetry provides this type hint
+from supsrc.config.models import GlobalConfig # For global defaults
 
-log: StructLogger = structlog.get_logger("engines.git.base")
+# Import Git specific info/runner/exceptions
+# --- FIX: Correct the imported function name ---
+from .runner import run_pygit2_func
+# ---------------------------------------------
+from .info import get_git_status, GitRepoStatus, get_git_summary, GitRepoSummary
+from .exceptions import (
+    GitEngineError, GitCommandError, ConflictError, NoRemoteError,
+    PushRejectedError, AuthenticationError, NetworkError
+)
 
-GitEngineConfig: TypeAlias = dict[str, Any]
 
-@attrs.define(slots=True, auto_attribs=True) # Using attrs.define for potential future state
+log = structlog.get_logger("engines.git.base")
+
 class GitEngine(RepositoryEngine):
-    """
-    RepositoryEngine implementation using pygit2 for Git operations.
-    """
+    """Implements RepositoryEngine using pygit2."""
 
-    # Add attributes if the engine needs state, otherwise keep it simple
-    # Example: default_committer: Optional[pygit2.Signature] = None
-
-    def __attrs_post_init__(self):
-        # Post-initialization hook if needed
-        log.debug("GitEngine initialized", engine_id=id(self))
+    def __init__(self):
+        self._log = log.bind(engine_id=id(self))
+        self._log.debug("GitEngine initialized")
 
     async def _get_repo(self, working_dir: Path) -> pygit2.Repository:
-        """Helper to safely open the pygit2 repository object."""
-        log.debug("Attempting to open repository", path=str(working_dir))
+        """Helper to open the repository object."""
         try:
-            # Ensure working_dir exists before passing to pygit2
-            if not working_dir.is_dir():
-                 raise GitEngineError(f"Working directory does not exist or is not a directory: {working_dir}")
-
-            # pygit2.Repository expects the path to the .git dir or the worktree root
-            repo = await run_pygit2_async(pygit2.Repository, str(working_dir))
-            # Log details after successful opening
-            repo_path = getattr(repo, 'path', 'N/A') # Path to .git dir
-            repo_workdir = getattr(repo, 'workdir', 'N/A') # Path to worktree root
-            log.debug("Opened repository object successfully", repo_path=repo_path, workdir=repo_workdir)
+            # Discover upwards from working_dir if needed, or use direct path
+            # pygit2.Repository(str(working_dir)) expects working_dir to be repo root or subdir
+            repo = await run_pygit2_func(pygit2.Repository, str(working_dir))
+            # Verify it's not bare
+            if await run_pygit2_func(getattr, repo, 'is_bare'):
+                 raise GitEngineError("Repository is bare, cannot perform working directory operations.", repo_path=str(working_dir))
             return repo
-        except pygit2.GitError as e:
-            # More specific error for common case
-            if "repository not found" in str(e).lower():
-                 raise GitEngineError(f"Not a git repository (or unable to find .git): '{working_dir}'", repo_path=str(working_dir), details=e) from e
-            raise GitEngineError(f"Failed to open repository at '{working_dir}': {e}", repo_path=str(working_dir), details=e) from e
-        except Exception as e:
-             # Catch other unexpected errors during repo opening
-             log.error("Unexpected error opening repository", path=str(working_dir), error=str(e), exc_info=True)
-             raise GitEngineError(f"Unexpected error opening repository at '{working_dir}': {e}", repo_path=str(working_dir), details=e) from e
+        except GitCommandError as e:
+            # Intercept error during repo opening specifically
+             self._log.error("Failed to open repository", path=str(working_dir), error=str(e.details))
+             raise GitEngineError(f"Cannot open Git repository at '{working_dir}'", details=e.details) from e
 
-    async def get_summary(
-        self, working_dir: Path
-    ) -> GitRepoSummary:
-        """Retrieves summary information (HEAD commit/message) for the repository."""
-        try:
-            repo = await self._get_repo(working_dir)
-            return await get_git_summary(repo, working_dir)
-        except GitEngineError as e:
-            # Log the error but return a summary indicating failure
-            log.error("Failed to get repository summary", repo_path=str(working_dir), error=str(e))
-            # Provide specific error details if possible
-            return GitRepoSummary(is_empty=False, head_ref_name=f"ERROR: {e}")
-        except Exception as e:
-            log.critical("Unexpected error in get_summary", error=str(e), exc_info=True)
-            return GitRepoSummary(is_empty=False, head_ref_name=f"UNEXPECTED_ERROR: {e}")
+    # --- Protocol Method Implementations ---
 
     async def get_status(
-        self, state: RepositoryState, config: Any, global_config: Any, working_dir: Path
+        self, state: RepositoryState, config: Mapping[str, Any], global_config: GlobalConfig, working_dir: Path
     ) -> RepoStatusResult:
-        """Check the current status of the repository."""
-        # repo_config = cast(GitEngineConfig, config) # If needed
-        log.debug("Engine get_status called", repo_id=state.repo_id)
+        """Check the current status of the Git repository."""
+        status_log = self._log.bind(repo_id=state.repo_id)
         try:
             repo = await self._get_repo(working_dir)
-            return await get_git_status(repo, working_dir)
-        except GitEngineError as e:
-            # Catch errors from _get_repo or get_git_status
-            log.error("get_status failed due to GitEngineError", repo_id=state.repo_id, error=str(e))
-            return RepoStatusResult(success=False, message=str(e), is_clean=None, has_staged_changes=None, has_unstaged_changes=None)
+            git_status: GitRepoStatus = await get_git_status(repo, working_dir)
+            # Optionally enhance the message based on combined status
+            if git_status.is_conflicted:
+                git_status = attrs.evolve(git_status, message="Repository has merge conflicts.")
+            elif not git_status.success:
+                 git_status = attrs.evolve(git_status, message=git_status.message or "Failed to get status")
+            elif git_status.is_clean:
+                 git_status = attrs.evolve(git_status, message="Repository clean.")
+            else:
+                 parts = []
+                 if git_status.has_staged_changes: parts.append("staged")
+                 if git_status.has_unstaged_changes: parts.append("unstaged")
+                 if git_status.has_untracked_files: parts.append("untracked")
+                 git_status = attrs.evolve(git_status, message=f"Changes detected: {', '.join(parts)}.")
+
+            return git_status # Return the specific GitRepoStatus instance
+
+        except GitEngineError as e: # Catch errors from _get_repo
+            status_log.error("get_status failed (repo open)", error=str(e))
+            return RepoStatusResult(success=False, message=str(e))
         except Exception as e:
-            log.critical("Unexpected error in get_status", repo_id=state.repo_id, error=str(e), exc_info=True)
-            return RepoStatusResult(success=False, message=f"Unexpected error: {e}", is_clean=None, has_staged_changes=None, has_unstaged_changes=None)
+            status_log.exception("Unexpected error in get_status")
+            return RepoStatusResult(success=False, message=f"Unexpected error: {e}")
 
     async def stage_changes(
-        self, files: list[Path] | None, state: RepositoryState, config: Any, global_config: Any, working_dir: Path
+        self, files: list[Path] | None, state: RepositoryState, config: Mapping[str, Any], global_config: GlobalConfig, working_dir: Path
     ) -> StageResult:
-        """Stage specified files, or all changes if files is None."""
-        repo_config = cast(GitEngineConfig, config)
-        log.debug("Engine stage_changes called", repo_id=state.repo_id, files_count=len(files) if files else 'all')
+        """Stage all changes, equivalent to 'git add .'"""
+        stage_log = self._log.bind(repo_id=state.repo_id)
+        if files is not None:
+            # Current implementation only supports staging all
+            stage_log.warning("Specific file staging not implemented, staging all changes.")
+
         try:
             repo = await self._get_repo(working_dir)
-            return await stage_git_changes(repo, working_dir, files)
-        except GitEngineError as e:
-            log.error("stage_changes failed due to GitEngineError", repo_id=state.repo_id, error=str(e))
-            return StageResult(success=False, message=str(e))
+            status_dict: Mapping[str, int] = await run_pygit2_func(repo.status)
+
+            if not status_dict:
+                stage_log.info("No changes detected to stage.")
+                return StageResult(success=True, message="No changes to stage.")
+
+            repo_index = await run_pygit2_func(getattr, repo, 'index')
+            paths_to_add = []
+            paths_to_remove = []
+
+            for file_path_rel, flags in status_dict.items():
+                 # Stage files that are new, modified, renamed, typechanged in WT
+                 if flags & (pygit2.GIT_STATUS_WT_NEW |
+                             pygit2.GIT_STATUS_WT_MODIFIED |
+                             pygit2.GIT_STATUS_WT_RENAMED | # Stage the new name
+                             pygit2.GIT_STATUS_WT_TYPECHANGE):
+                      paths_to_add.append(file_path_rel)
+                 # Remove files that are deleted in WT
+                 elif flags & pygit2.GIT_STATUS_WT_DELETED:
+                     paths_to_remove.append(file_path_rel)
+                 # Explicitly ignore conflicts here - commit will fail later if still conflicted
+                 # Ignore ignored files (should be filtered by status already if gitignored)
+
+            if paths_to_add:
+                 stage_log.debug("Adding paths to index", paths=paths_to_add)
+                 # Using add_all might fail if some paths are directories; consider iterating
+                 # await run_pygit2_func(repo_index.add_all, paths_to_add)
+                 for path_to_add in paths_to_add:
+                      await run_pygit2_func(repo_index.add, path_to_add)
+
+            if paths_to_remove:
+                 stage_log.debug("Removing paths from index", paths=paths_to_remove)
+                 # Removing needs iteration
+                 for path_to_rm in paths_to_remove:
+                     await run_pygit2_func(repo_index.remove, path_to_rm)
+
+            stage_log.debug("Writing index")
+            await run_pygit2_func(repo_index.write)
+            stage_log.info("Staging successful.")
+            return StageResult(success=True, message="Changes staged.")
+
+        except (GitEngineError, GitCommandError) as e:
+            stage_log.error("Staging failed", error=str(e))
+            return StageResult(success=False, message=f"Staging failed: {e}")
         except Exception as e:
-            log.critical("Unexpected error in stage_changes", repo_id=state.repo_id, error=str(e), exc_info=True)
-            return StageResult(success=False, message=f"Unexpected error: {e}")
+            stage_log.exception("Unexpected error during staging")
+            return StageResult(success=False, message=f"Unexpected staging error: {e}")
 
     async def perform_commit(
-        self, message_template: str, state: RepositoryState, config: Any, global_config: Any, working_dir: Path
+        self, message_template: str, # Template lookup now responsibility of engine
+        state: RepositoryState, config: Mapping[str, Any], global_config: GlobalConfig, working_dir: Path
     ) -> CommitResult:
-        """Perform the commit action with the given message."""
-        repo_config = cast(GitEngineConfig, config)
-        # Get template from engine config, provide a sensible default if missing
-        template = repo_config.get("commit_message_template", "supsrc auto-commit: {{timestamp}}")
-        log.debug("Engine perform_commit called", repo_id=state.repo_id, template=template)
+        """Perform the commit action with templating."""
+        commit_log = self._log.bind(repo_id=state.repo_id)
         try:
             repo = await self._get_repo(working_dir)
-            # Pass the specific repo_config dict to the commit function
-            return await perform_git_commit(repo, working_dir, template, state, repo_config)
-        except GitEngineError as e:
-            log.error("perform_commit failed due to GitEngineError", repo_id=state.repo_id, error=str(e))
-            return CommitResult(success=False, message=str(e), commit_hash=None)
+
+            # --- Pre-Checks ---
+            status_result = await get_git_status(repo, working_dir)
+            if not status_result.success:
+                return CommitResult(success=False, message=f"Cannot commit, status check failed: {status_result.message}")
+            if status_result.is_conflicted:
+                commit_log.warning("Commit skipped: Repository has conflicts.")
+                # Raise specific error? Or return failure? Returning failure is safer.
+                return CommitResult(success=False, message="Repository has merge conflicts.", details={"conflict": True})
+            # Check if there are staged changes? status_result.has_staged_changes
+
+            # --- Determine Parents, Author, Committer ---
+            if await run_pygit2_func(getattr, repo, 'head_is_unborn'):
+                parents = []
+                parent_tree_id = None
+                commit_log.debug("Performing initial commit (no parents).")
+            else:
+                head_commit_oid = await run_pygit2_func(getattr, repo.head, 'target')
+                parents = [head_commit_oid]
+                parent_commit = await run_pygit2_func(repo.get, head_commit_oid)
+                parent_tree_id = await run_pygit2_func(getattr, parent_commit, 'tree_id')
+                commit_log.debug("Found parent commit", hash=str(head_commit_oid))
+
+            # Use default signature or create specific ones
+            # For simplicity, using default signature associated with repo/global config
+            signature = await run_pygit2_func(getattr, repo, 'default_signature')
+            if not signature:
+                 # Fallback if git config user.name/email isn't set
+                 # Using placeholder - ideally raise config error earlier
+                 commit_log.warning("Git user.name/email not configured, using placeholder.")
+                 signature = pygit2.Signature("supsrc", "supsrc@localhost", int(datetime.now(timezone.utc).timestamp()), 0)
+
+            author = committer = signature
+
+            # --- Process Commit Message Template ---
+            final_commit_message: str
+            template = config.get('commit_message_template') # Engine config is already specific
+            if template is None: # Check explicitly for None, as "" is a valid message
+                 template = global_config.default_commit_message
+            if not template: template = "supsrc auto-commit: changes detected" # Final fallback
+
+            try:
+                # Gather context data
+                context = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(timespec='seconds'),
+                    "save_count": state.save_count,
+                    "repo_id": state.repo_id,
+                    "trigger_type": config.get('rule',{}).get('type', 'unknown') # Access nested dict safely
+                    # Add hostname, etc. if needed
+                    # "hostname": os.uname().nodename
+                }
+                # Basic templating - replace with more robust engine if needed (e.g., Jinja2)
+                final_commit_message = template
+                for key, value in context.items():
+                     final_commit_message = final_commit_message.replace(f"{{{{{key}}}}}", str(value))
+
+            except Exception as tmpl_exc:
+                 commit_log.error("Failed to render commit message template", template=template, error=str(tmpl_exc))
+                 final_commit_message = f"supsrc auto-commit: Error rendering template - {tmpl_exc}"
+
+
+            # --- Create Tree and Check for Empty Commit ---
+            repo_index = await run_pygit2_func(getattr, repo, 'index')
+            # Must read index state *after* staging changes
+            await run_pygit2_func(repo_index.read)
+            current_tree_id = await run_pygit2_func(repo_index.write_tree)
+
+            if parent_tree_id is not None and current_tree_id == parent_tree_id:
+                commit_log.info("Commit skipped: No effective changes staged.")
+                return CommitResult(success=True, commit_hash=None, message="No changes to commit.")
+
+            # --- Create Commit ---
+            commit_log.debug("Creating commit object", tree=str(current_tree_id), parents=[str(p) for p in parents])
+            commit_oid = await run_pygit2_func(
+                repo.create_commit,
+                'HEAD',          # Reference to update (HEAD)
+                author,          # Author signature
+                committer,       # Committer signature
+                final_commit_message, # The commit message
+                current_tree_id, # The tree OID
+                parents          # List of parent commit OIDs
+            )
+            commit_log.info("Commit successful", hash=str(commit_oid))
+            return CommitResult(success=True, commit_hash=str(commit_oid))
+
+        except (GitEngineError, GitCommandError, ConflictError) as e:
+            commit_log.error("Commit failed", error=str(e))
+            return CommitResult(success=False, message=f"Commit failed: {e}", details=getattr(e,'details', None))
         except Exception as e:
-            log.critical("Unexpected error in perform_commit", repo_id=state.repo_id, error=str(e), exc_info=True)
-            return CommitResult(success=False, message=f"Unexpected error: {e}", commit_hash=None)
+            commit_log.exception("Unexpected error during commit")
+            return CommitResult(success=False, message=f"Unexpected commit error: {e}")
 
     async def perform_push(
-        self, state: RepositoryState, config: Any, global_config: Any, working_dir: Path
+        self, state: RepositoryState, config: Mapping[str, Any], global_config: GlobalConfig, working_dir: Path
     ) -> PushResult:
-        """Perform the push action, respecting the auto_push config."""
-        repo_config = cast(GitEngineConfig, config)
-        log.debug("Engine perform_push called", repo_id=state.repo_id)
+        """Perform the push action to the configured remote."""
+        push_log = self._log.bind(repo_id=state.repo_id)
 
-        # Check auto_push setting from engine config
-        should_push = repo_config.get("auto_push", False)
-        if not isinstance(should_push, bool):
-             log.warning("Invalid 'auto_push' value in config, expected boolean, defaulting to false.",
-                         value=should_push, repo_id=state.repo_id)
-             should_push = False
-
-        if not should_push:
-            log.info("Auto-push disabled in configuration, skipping push.", repo_id=state.repo_id)
-            return PushResult(success=True, message="Auto-push disabled, push skipped.")
-
-        # Proceed with push only if auto_push was true
-        log.info("Auto-push enabled, proceeding with push.", repo_id=state.repo_id)
-        remote_name = repo_config.get("remote", "origin")
-        branch_name: Optional[str] = None
+        # --- Check if push is enabled ---
+        # Precedence: repo config -> global config -> default (True in GlobalConfig model)
+        auto_push = config.get('auto_push', global_config.default_auto_push)
+        if not auto_push:
+            push_log.info("Push skipped by configuration.")
+            return PushResult(success=True, message="Push skipped by configuration")
 
         try:
             repo = await self._get_repo(working_dir)
+
+            # --- Get Remote ---
+            remote_name = config.get('remote', 'origin') # Default to origin
+            push_log.debug("Attempting push", remote=remote_name)
             try:
-                 # Attempt to get current branch name from HEAD
-                 branch_name = await run_pygit2_async(lambda: repo.head.shorthand)
-                 log.debug("Determined current branch for push from HEAD", branch=branch_name, repo_id=state.repo_id)
-            except pygit2.GitError as head_error:
-                 log.warning("Could not determine current branch from HEAD, checking config.", repo_id=state.repo_id, error=str(head_error))
-                 branch_name = repo_config.get("branch") # Check engine config
-                 if not branch_name:
-                      # Fallback if not in config either
-                      default_branch = "main" # Common default
-                      log.warning(f"Branch not specified in config, defaulting to '{default_branch}'.", repo_id=state.repo_id)
-                      branch_name = default_branch
+                remote = await run_pygit2_func(repo.remotes.__getitem__, remote_name) # Use getitem for lookup
+            except KeyError:
+                raise NoRemoteError(f"Remote '{remote_name}' not found in repository.", repo_path=str(working_dir))
+            except GitCommandError as e: # Catch errors getting remote list etc.
+                 raise GitEngineError(f"Failed to access remotes: {e.details}", repo_path=str(working_dir), details=e.details) from e
 
-            if not branch_name: # Should be set by now, but safety check
-                 raise GitRemoteError("Could not determine branch to push.", repo_path=str(working_dir))
+            # --- Get Refspec (Current Branch) ---
+            if await run_pygit2_func(getattr, repo, 'head_is_unborn'):
+                 return PushResult(success=False, message="Cannot push: Repository has no commits yet.")
+            if await run_pygit2_func(getattr, repo, 'head_is_detached'):
+                 return PushResult(success=False, message="Cannot push: HEAD is detached.")
 
-            # Pass the specific repo_config dict to the push function for potential credential hints etc.
-            return await perform_git_push(repo, working_dir, remote_name, branch_name, repo_config)
+            head_ref = await run_pygit2_func(getattr, repo, 'head')
+            ref_name = getattr(head_ref, 'name', None) # Get full ref name e.g., 'refs/heads/main'
+            if not ref_name or not ref_name.startswith('refs/heads/'):
+                return PushResult(success=False, message=f"Cannot push: HEAD is not on a local branch ('{ref_name}').")
 
-        except GitEngineError as e:
-            # Catch errors from _get_repo or perform_git_push
-            log.error("perform_push failed due to GitEngineError", repo_id=state.repo_id, error=str(e))
-            return PushResult(success=False, message=str(e))
+            refspec = f"{ref_name}:{ref_name}" # Push current branch to remote branch of same name
+
+            # --- Perform Push (Simplified - No Callbacks for Preview) ---
+            push_log.info(f"Pushing {refspec} to {remote_name}...")
+            # For a preview, rely on existing credential helpers (SSH keys, OS store)
+            # Providing callbacks for auth is complex and often environment specific.
+            await run_pygit2_func(remote.push, [refspec], callbacks=None)
+
+            push_log.info("Push successful.")
+            return PushResult(success=True, message="Push successful.")
+
+        except (GitEngineError, GitCommandError, NoRemoteError) as e:
+            push_log.error("Push failed", error=str(e), remote=config.get('remote', 'origin'))
+            # Try to categorize common GitErrors from push
+            details = getattr(e, 'details', None)
+            detail_msg = str(details).lower() if details else ""
+            if isinstance(e, NoRemoteError): pass # Already specific
+            elif "authentication required" in detail_msg or "auth" in detail_msg:
+                e = AuthenticationError("Authentication failed during push.", repo_path=str(working_dir), details=details)
+            elif "failed to connect" in detail_msg or "could not resolve host" in detail_msg or "network is unreachable" in detail_msg:
+                 e = NetworkError("Network error during push.", repo_path=str(working_dir), details=details)
+            elif "rejected" in detail_msg or "non-fast-forward" in detail_msg:
+                e = PushRejectedError("Push rejected by remote (likely requires pull/rebase).", repo_path=str(working_dir), details=details)
+
+            return PushResult(success=False, message=f"Push failed: {e}")
         except Exception as e:
-            log.critical("Unexpected error in perform_push", repo_id=state.repo_id, error=str(e), exc_info=True)
-            return PushResult(success=False, message=f"Unexpected error: {e}")
+            push_log.exception("Unexpected error during push")
+            return PushResult(success=False, message=f"Unexpected push error: {e}")
 
+    # --- Optional: Add get_summary if Orchestrator needs it directly ---
+    async def get_summary(self, working_dir: Path) -> GitRepoSummary:
+        """ Convenience method to call get_git_summary. """
+        return await get_git_summary(working_dir)
 # 🔼⚙️

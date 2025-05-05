@@ -1,14 +1,20 @@
 #
-# engines/git/__init__.py
+# supsrc/engines/git/__init__.py
 #
 """
-Supsrc Git Repository Engine using pygit2.
-
-This package provides the GitEngine class that implements the RepositoryEngine protocol.
+Git Engine package for supsrc, using pygit2.
 """
 
-from .base import GitEngine
+from supsrc.engines.git.base import GitEngine
+from supsrc.engines.git.exceptions import GitEngineError, GitCommandError
+from supsrc.engines.git.info import GitRepoSummary, GitRepoStatus
 
-__all__ = ["GitEngine"]
+__all__ = [
+    "GitEngine",
+    "GitEngineError",
+    "GitCommandError",
+    "GitRepoSummary",
+    "GitRepoStatus"
+]
 
 # 🔼⚙️

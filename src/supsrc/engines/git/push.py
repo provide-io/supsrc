@@ -13,7 +13,7 @@ from pygit2 import credentials # <<< Import credentials submodule
 import structlog
 
 # Use relative imports within the engine package
-from .runner import run_pygit2_async
+from .runner import run_pygit2_func
 from .errors import GitPushError, GitRemoteError, GitAuthenticationError
 
 # Use absolute imports for protocols and core types
@@ -105,7 +105,7 @@ async def perform_git_push(
     try:
         # Find the remote
         try:
-            remote = await run_pygit2_async(repo.remotes.__getitem__, remote_name)
+            remote = await run_pygit2_func(repo.remotes.__getitem__, remote_name)
         except KeyError:
             raise GitRemoteError(f"Remote '{remote_name}' not found.", repo_path=str(working_dir))
         except IndexError: # Sometimes pygit2 raises this instead of KeyError
@@ -123,7 +123,7 @@ async def perform_git_push(
 
         # Check if the local ref exists
         try:
-             _ = await run_pygit2_async(repo.references.get, local_ref)
+             _ = await run_pygit2_func(repo.references.get, local_ref)
         except KeyError:
              raise GitPushError(f"Local branch '{branch_name}' (ref: {local_ref}) not found.", repo_path=str(working_dir))
 
@@ -132,16 +132,16 @@ async def perform_git_push(
 
         # Perform the push operation
         # The push call itself is blocking
-        push_result_details = await run_pygit2_async(remote.push, [refspec], callbacks=callbacks)
+        push_result_details = await run_pygit2_func(remote.push, [refspec], callbacks=callbacks)
 
         # push() returns None on success and raises GitError on failure.
-        # We rely on run_pygit2_async to catch and wrap GitError.
+        # We rely on run_pygit2_func to catch and wrap GitError.
         log.info("Push command executed successfully.", repo_path=str(working_dir), remote=remote_name, branch=branch_name)
 
         return PushResult(success=True, message="Push command executed successfully.")
 
     except pygit2.GitError as e:
-        # Try to interpret common GitErrors (often caught within run_pygit2_async, but catch again for specific push context)
+        # Try to interpret common GitErrors (often caught within run_pygit2_func, but catch again for specific push context)
         err_msg = str(e)
         log.error("GitError during push", repo_path=str(working_dir), error=err_msg, exc_info=True)
         # Check for specific error messages if possible
@@ -150,7 +150,7 @@ async def perform_git_push(
         # Add more specific error checks if needed (e.g., for network errors, non-fast-forward)
         raise GitPushError(f"Push failed: {err_msg}", repo_path=str(working_dir), details=e) from e
     except Exception as e:
-        # Catch other potential errors (like GitEngineError from run_pygit2_async or others)
+        # Catch other potential errors (like GitEngineError from run_pygit2_func or others)
         log.error("Failed to perform push", repo_path=str(working_dir), error=str(e), exc_info=True)
         if isinstance(e, GitPushError): raise # Re-raise if already specific type
         raise GitPushError(f"Push failed unexpectedly: {e}", repo_path=str(working_dir), details=e) from e

@@ -332,17 +332,12 @@ class WatchOrchestrator:
 
                 try:
                     init_log.debug("Loading repo engine", engine_type=engine_type)
-                    # --- Replace with actual plugin loading ---
-                    if engine_type == "supsrc.engines.git":
-                        engine_instance = GitEngine() # Direct instantiation
-                    else:
-                        raise NotImplementedError(f"Engine type '{engine_type}' not supported.")
-                    # -----------------------------------------
+                    if engine_type == "supsrc.engines.git": engine_instance = GitEngine()
+                    else: raise NotImplementedError(f"Engine type '{engine_type}' not supported.")
                     self.repo_engines[repo_id] = engine_instance
                     init_log.debug("Engine loaded ok.", engine_class=type(engine_instance).__name__)
                     self._post_tui_log(repo_id, "DEBUG", f"Engine '{engine_type}' loaded.")
                     enabled_repo_ids.append(repo_id)
-
                 except Exception as load_exc:
                     init_log.error("Failed to load repo engine", engine_type=engine_type, error=str(load_exc), exc_info=True)
                     self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, f"Failed to load engine: {load_exc}")
@@ -353,8 +348,21 @@ class WatchOrchestrator:
                 try:
                     init_log.debug("Getting initial repo summary...")
                     if hasattr(engine_instance, 'get_summary'):
-                        summary: GitRepoSummary = await engine_instance.get_summary(repo_config.path)
-                        summary_msg = f"Init: {summary.status_display}"
+                        summary: GitRepoSummary = await engine_instance.get_summary(repo_config.path) # type: ignore # Assume get_summary exists
+
+                        # --- FIX HERE: Construct summary message from actual attributes ---
+                        if summary.is_empty:
+                            summary_msg = "Init: Repository empty."
+                        elif summary.head_ref_name == "UNBORN":
+                             summary_msg = "Init: Repository has no commits yet (unborn HEAD)."
+                        elif not summary.head_ref_name or not summary.head_commit_hash:
+                             summary_msg = "Init: Unable to determine HEAD reference or commit."
+                        else:
+                             commit_short_hash = summary.head_commit_hash[:7]
+                             commit_msg_summary = summary.head_commit_message_summary or "No commit message"
+                             summary_msg = f"Init: HEAD at {summary.head_ref_name} ({commit_short_hash}) | {commit_msg_summary}"
+                        # -------------------------------------------------------------------
+
                         init_log.info(summary_msg)
                         self._post_tui_log(repo_id, "INFO", summary_msg)
                     else:
@@ -362,9 +370,11 @@ class WatchOrchestrator:
                          self._post_tui_log(repo_id, "WARNING", "Engine lacks get_summary.")
 
                 except Exception as summary_exc:
+                    # Catch specific expected errors if possible (e.g., GitError)
                     init_log.error("Failed to get initial repo summary", error=str(summary_exc), exc_info=True)
                     self._post_tui_log(repo_id, "ERROR", f"Failed to get summary: {summary_exc}")
-                    # Don't necessarily mark state as ERROR here, maybe monitoring can still proceed
+                    # Decide if this should set the state to ERROR
+                    # self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, f"Summary failed: {summary_exc}")
 
             else:
                 init_log.info("Skipping initialization (disabled or invalid path)",

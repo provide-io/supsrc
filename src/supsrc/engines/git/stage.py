@@ -10,7 +10,7 @@ import pygit2 # type: ignore[import-untyped]
 import structlog
 
 from supsrc.protocols import StageResult
-from .runner import run_pygit2_async
+from .runner import run_pygit2_func
 from .errors import GitStageError
 
 log = structlog.get_logger("engines.git.stage")
@@ -36,20 +36,20 @@ async def stage_git_changes(
     log.debug(f"Staging {action}", repo_path=str(working_dir))
 
     try:
-        index = await run_pygit2_async(repo.index) # Get the index object
+        index = await run_pygit2_func(repo.index) # Get the index object
 
         if files is None:
             # Stage all changes (tracked, untracked, deleted)
-            await run_pygit2_async(index.add_all)
+            await run_pygit2_func(index.add_all)
             # Need to handle removed files explicitly? repo.status() should show them
             # as WT_DELETED. add_all *should* handle staging deletions, but let's verify.
             # An alternative is to iterate through status and add/remove individually.
             # For simplicity, starting with add_all.
             # If files were deleted, we might need:
-            # status = await run_pygit2_async(repo.status)
+            # status = await run_pygit2_func(repo.status)
             # for filepath, flags in status.items():
             #     if flags & pygit2.GIT_STATUS_WT_DELETED:
-            #         await run_pygit2_async(index.remove, filepath)
+            #         await run_pygit2_func(index.remove, filepath)
             # Let's assume add_all handles this correctly for now based on typical git behavior.
             log.debug("Staged all detected changes.", repo_path=str(working_dir))
         else:
@@ -62,7 +62,7 @@ async def stage_git_changes(
                     abs_f = Path(f).resolve()
                     relative_path_str = str(abs_f.relative_to(working_dir))
                     relative_files.append(relative_path_str)
-                    await run_pygit2_async(index.add, relative_path_str)
+                    await run_pygit2_func(index.add, relative_path_str)
                 except ValueError:
                     log.warning("File path is not relative to working directory, skipping staging.", file=str(f), repo_path=str(working_dir))
                 except KeyError:
@@ -71,7 +71,7 @@ async def stage_git_changes(
             log.debug("Staged specific files", count=len(relative_files), files=relative_files, repo_path=str(working_dir))
 
         # Write the index changes to disk
-        await run_pygit2_async(index.write)
+        await run_pygit2_func(index.write)
         log.debug("Index written successfully.", repo_path=str(working_dir))
 
         return StageResult(success=True, message=f"Staged {action} successfully.")
