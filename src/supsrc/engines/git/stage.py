@@ -6,7 +6,6 @@ Git staging logic (git add) using pygit2.
 """
 
 from pathlib import Path
-from typing import list # Use lowercase list per PEP 585 (Python 3.9+)
 import pygit2 # type: ignore[import-untyped]
 import structlog
 

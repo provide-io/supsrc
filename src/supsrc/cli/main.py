@@ -8,7 +8,7 @@ Handles global options like logging level.
 
 import logging
 import sys
-import os # <<< Added for potential future use, good practice
+import os
 
 from importlib.metadata import version, PackageNotFoundError
 
@@ -42,25 +42,25 @@ LOG_LEVEL_CHOICES = click.Choice(
     type=LOG_LEVEL_CHOICES,
     default='INFO',
     show_default=True,
-    envvar='SUPSRC_LOG_LEVEL', # <<< Added Environment Variable Support
+    envvar='SUPSRC_LOG_LEVEL',
     help='Set the logging level (overrides config file, env var SUPSRC_LOG_LEVEL).',
-    show_envvar=True, # <<< Show env var in help message
+    show_envvar=True,
 )
 @click.option(
     '--log-file',
     type=click.Path(dir_okay=False, writable=True, resolve_path=True),
     default=None,
-    envvar='SUPSRC_LOG_FILE', # <<< Added Environment Variable Support
+    envvar='SUPSRC_LOG_FILE',
     help='Path to write logs to a file (JSON format) (env var SUPSRC_LOG_FILE).',
-    show_envvar=True, # <<< Show env var in help message
+    show_envvar=True,
 )
 @click.option(
     '--json-logs',
     is_flag=True,
     default=False,
-    envvar='SUPSRC_JSON_LOGS', # <<< Added Environment Variable Support
+    envvar='SUPSRC_JSON_LOGS',
     help='Output console logs as JSON (env var SUPSRC_JSON_LOGS).',
-    show_envvar=True, # <<< Show env var in help message
+    show_envvar=True,
 )
 @click.pass_context # Pass context to store/retrieve shared options
 def cli(ctx: click.Context, log_level: str, log_file: str | None, json_logs: bool):

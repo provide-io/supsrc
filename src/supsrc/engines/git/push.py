@@ -6,14 +6,21 @@ Git push logic using pygit2.
 """
 
 from pathlib import Path
+from typing import Optional, Any # Keep Any for flexibility if needed
 import pygit2 # type: ignore[import-untyped]
+# --- Import the credentials submodule ---
+from pygit2 import credentials # <<< Import credentials submodule
 import structlog
 
-from supsrc.protocols import PushResult
+# Use relative imports within the engine package
 from .runner import run_pygit2_async
 from .errors import GitPushError, GitRemoteError, GitAuthenticationError
 
-log = structlog.get_logger("engines.git.push")
+# Use absolute imports for protocols and core types
+from supsrc.protocols import PushResult
+from supsrc.telemetry import StructLogger # Assuming telemetry provides this type hint
+
+log: StructLogger = structlog.get_logger("engines.git.push")
 
 # Note: Handling complex authentication (SSH keys with passphrases, HTTPS tokens)
 # often requires more setup, potentially using pygit2 Callbacks or external helpers.
@@ -29,12 +36,16 @@ class GitCallbacks(pygit2.RemoteCallbacks): # type: ignore[misc] # pygit2 stubs 
         self._key_path = key_path
         self._attempts = 0
 
-    def credentials(self, url: str, username_from_url: str | None, allowed_types: int) -> pygit2.Cred | None:
+    def credentials(
+        self, url: str, username_from_url: str | None, allowed_types: int
+    # --- Use the correct type hint from the submodule ---
+    ) -> Optional[credentials.CredentialType]: # <<< Corrected type hint
+        """Callback to provide credentials when requested by libgit2."""
         self._attempts += 1
         log.debug("Credentials callback invoked", url=url, username_from_url=username_from_url, allowed_types=allowed_types, attempt=self._attempts)
 
         # Example: SSH Key Authentication (if public key path is known)
-        if allowed_types & pygit2.GIT_CREDENTIAL_SSH_KEY:
+        if allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY: # Use constant from submodule
             # This assumes the key is usable without a passphrase or via an agent
             # For keys with passphrases, more complex logic is needed.
             ssh_pub_key = self._key_path + ".pub" if self._key_path else None
@@ -43,17 +54,18 @@ class GitCallbacks(pygit2.RemoteCallbacks): # type: ignore[misc] # pygit2 stubs 
             log.debug("Attempting SSH key authentication", user=user, pubkey=ssh_pub_key)
             try:
                 # Passphrase would be the 4th arg if needed
-                return pygit2.Keypair(user, ssh_pub_key, ssh_priv_key, "")
+                # Use credentials.Keypair
+                return credentials.Keypair(user, ssh_pub_key, ssh_priv_key, "")
             except Exception as e:
                  log.error("Failed to create SSH Keypair credential", error=str(e))
                  # Fall through to other methods or fail
 
         # Example: User/Password (less secure, avoid if possible)
-        if allowed_types & pygit2.GIT_CREDENTIAL_USERPASS_PLAINTEXT:
+        if allowed_types & pygit2.credentials.GIT_CREDENTIAL_USERPASS_PLAINTEXT: # Use constant from submodule
              log.warning("Attempting USERPASS_PLAINTEXT authentication (less secure)")
              # Need to securely get username/password (e.g., from config, keyring)
              # Placeholder:
-             # return pygit2.UserPass("my_user", "my_password")
+             # return credentials.UserPass("my_user", "my_password") # Use credentials.UserPass
              pass # Fall through
 
         # TODO: Implement other credential types if needed (e.g., GIT_CREDENTIAL_DEFAULT)
@@ -103,7 +115,7 @@ async def perform_git_push(
 
         # Prepare callbacks (e.g., for authentication)
         # TODO: Enhance credential handling based on config
-        callbacks = GitCallbacks()
+        callbacks = GitCallbacks() # Instantiate our callbacks class
 
         # Construct the refspec (e.g., 'refs/heads/main:refs/heads/main')
         local_ref = f"refs/heads/{branch_name}"
@@ -122,30 +134,23 @@ async def perform_git_push(
         # The push call itself is blocking
         push_result_details = await run_pygit2_async(remote.push, [refspec], callbacks=callbacks)
 
-        # push() doesn't raise exceptions on common push failures (like rejection),
-        # but might on network errors or severe issues. It returns None on success.
-        # We need to check callbacks or potentially parse output if more detail is needed,
-        # but for now, assume success if no exception was raised.
-        # Note: pygit2 push result interpretation is subtle. A non-exception doesn't
-        # *guarantee* the remote accepted the push (e.g., non-fast-forward rejection
-        # might not raise an exception but fail silently without callback checks).
-        # For MVP, we'll assume no exception means success.
-
-        log.info("Push command executed.", repo_path=str(working_dir), remote=remote_name, branch=branch_name)
-        # A more robust check would involve inspecting callback status if implemented.
+        # push() returns None on success and raises GitError on failure.
+        # We rely on run_pygit2_async to catch and wrap GitError.
+        log.info("Push command executed successfully.", repo_path=str(working_dir), remote=remote_name, branch=branch_name)
 
         return PushResult(success=True, message="Push command executed successfully.")
 
     except pygit2.GitError as e:
-        # Try to interpret common GitErrors
+        # Try to interpret common GitErrors (often caught within run_pygit2_async, but catch again for specific push context)
         err_msg = str(e)
         log.error("GitError during push", repo_path=str(working_dir), error=err_msg, exc_info=True)
+        # Check for specific error messages if possible
         if "authenticat" in err_msg.lower():
              raise GitAuthenticationError(f"Push failed: {err_msg}", repo_path=str(working_dir), details=e) from e
-        # Add more specific error checks if needed (e.g., for network errors)
+        # Add more specific error checks if needed (e.g., for network errors, non-fast-forward)
         raise GitPushError(f"Push failed: {err_msg}", repo_path=str(working_dir), details=e) from e
     except Exception as e:
-        # Catch other potential errors
+        # Catch other potential errors (like GitEngineError from run_pygit2_async or others)
         log.error("Failed to perform push", repo_path=str(working_dir), error=str(e), exc_info=True)
         if isinstance(e, GitPushError): raise # Re-raise if already specific type
         raise GitPushError(f"Push failed unexpectedly: {e}", repo_path=str(working_dir), details=e) from e
