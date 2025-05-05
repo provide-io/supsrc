@@ -1,22 +1,24 @@
+#
 # src/supsrc/cli/watch_cmds.py
+#
 
 import asyncio
 import signal
 import sys
-import logging
-import os # <<< Added for os.getenv
+import logging # For logging.shutdown
+import os # For potential future use
 from pathlib import Path
 from typing import Any
 
 import click
 import structlog
-import attrs # <<< Added for attrs.evolve
+import attrs # For potential future use
 
 # Use absolute imports
 from supsrc.telemetry import StructLogger
 from supsrc.runtime.orchestrator import WatchOrchestrator # Use the orchestrator
 
-log: StructLogger = structlog.get_logger("cli.watch")
+log: StructLogger = structlog.get_logger("cli.watch") # Logger for the CLI layer
 
 # --- Global Shutdown Event ---
 _shutdown_requested = asyncio.Event()
@@ -41,9 +43,9 @@ async def _handle_signal_async(sig: int):
     type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path),
     default=Path("supsrc.conf"),
     show_default=True,
-    envvar='SUPSRC_CONF', # <<< Added Environment Variable Support
+    envvar='SUPSRC_CONF',
     help="Path to the supsrc configuration file (env var SUPSRC_CONF).",
-    show_envvar=True, # <<< Show env var in help message
+    show_envvar=True,
 )
 @click.pass_context
 def watch_cli(ctx: click.Context, config_path: Path):
@@ -109,39 +111,42 @@ def watch_cli(ctx: click.Context, config_path: Path):
          exit_code = 1
 
     finally:
-        # --- Final CLI Layer Cleanup ---
-        _cli_safe_log("debug", f"watch_cli finally block entered. Loop {id(loop)} running: {loop.is_running()}, closed: {loop.is_closed()}")
-        # --- Remove Signal Handlers ---
-        if handlers_added and not loop.is_closed():
-            _cli_safe_log("debug", f"Removing signal handlers from loop {id(loop)}")
-            for sig in signals_to_handle:
-                try:
-                    removed = loop.remove_signal_handler(sig)
-                    _cli_safe_log("debug", f"Attempted removal of signal handler for {signal.Signals(sig).name} (found/removed: {removed})")
-                except (ValueError, RuntimeError) as e:
-                    _cli_safe_log("debug", f"Signal handler for {signal.Signals(sig).name} not found or loop closing during removal.", error=str(e))
-                except Exception as e:
-                    _cli_safe_log("error", f"Error removing signal handler for {signal.Signals(sig).name}", error=str(e), exc_info=True)
-        # --- Explicitly Shutdown Standard Logging ---
-        _cli_safe_log("debug", "Attempting standard logging shutdown...")
-        try:
-            logging.shutdown()
-            _cli_safe_log("debug", "Standard logging shutdown completed.")
-        except Exception as log_shutdown_exc:
-            _cli_safe_log("error", "Error during logging.shutdown()", error=str(log_shutdown_exc), exc_info=True)
-        # --- Close the Event Loop ---
-        _cli_safe_log("debug", f"Closing event loop {id(loop)}")
-        try:
-            if not loop.is_closed():
-                if sys.version_info >= (3, 6):
-                    loop.run_until_complete(loop.shutdown_asyncgens())
-                    _cli_safe_log("debug", "Async generators shut down.")
-                loop.close()
-                _cli_safe_log("info", "Event loop closed.")
-            else:
-                _cli_safe_log("warning", "Event loop was already closed before final cleanup.")
-        except Exception as loop_close_exc:
-            _cli_safe_log("error", "Error during event loop closing", error=str(loop_close_exc), exc_info=True)
+         # --- Final CLI Layer Cleanup ---
+         _cli_safe_log("debug", f"watch_cli finally block entered. Loop {id(loop)} running: {loop.is_running()}, closed: {loop.is_closed()}")
+
+         # --- Remove Signal Handlers ---
+         if handlers_added and not loop.is_closed():
+             _cli_safe_log("debug", f"Removing signal handlers from loop {id(loop)}")
+             for sig in signals_to_handle:
+                 try:
+                     removed = loop.remove_signal_handler(sig)
+                     _cli_safe_log("debug", f"Attempted removal of signal handler for {signal.Signals(sig).name} (found/removed: {removed})")
+                 except (ValueError, RuntimeError) as e:
+                     _cli_safe_log("debug", f"Signal handler for {signal.Signals(sig).name} not found or loop closing during removal.", error=str(e))
+                 except Exception as e:
+                     _cli_safe_log("error", f"Error removing signal handler for {signal.Signals(sig).name}", error=str(e), exc_info=True)
+
+         # --- Explicitly Shutdown Standard Logging ---
+         _cli_safe_log("debug", "Attempting standard logging shutdown...")
+         try:
+             logging.shutdown()
+             _cli_safe_log("debug", "Standard logging shutdown completed.")
+         except Exception as log_shutdown_exc:
+             _cli_safe_log("error", "Error during logging.shutdown()", error=str(log_shutdown_exc), exc_info=True)
+
+         # --- Close the Event Loop ---
+         _cli_safe_log("debug", f"Closing event loop {id(loop)}")
+         try:
+             if not loop.is_closed():
+                 if sys.version_info >= (3, 6):
+                     loop.run_until_complete(loop.shutdown_asyncgens())
+                     _cli_safe_log("debug", "Async generators shut down.")
+                 loop.close()
+                 _cli_safe_log("info", "Event loop closed.")
+             else:
+                 _cli_safe_log("warning", "Event loop was already closed before final cleanup.")
+         except Exception as loop_close_exc:
+             _cli_safe_log("error", "Error during event loop closing", error=str(loop_close_exc), exc_info=True)
 
     _cli_safe_log("info", "'watch' command finished.")
     if exit_code != 0:
