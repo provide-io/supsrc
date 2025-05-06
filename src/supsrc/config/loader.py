@@ -19,7 +19,7 @@ import structlog
 
 # --- Custom Exceptions Import ---
 # Use relative imports within the same package structure
-from ..exceptions import (
+from supsrc.exceptions import (
     ConfigFileNotFoundError,
     ConfigParsingError,
     ConfigurationError,

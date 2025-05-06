@@ -33,7 +33,7 @@ LOG_LEVEL_CHOICES = click.Choice(
     list(logging._nameToLevel.keys()), case_sensitive=False
 )
 
-@click.group(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(__version__, "-V", "--version", package_name="supsrc")
 @click.option(
     "-l", "--log-level",

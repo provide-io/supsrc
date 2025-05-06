@@ -134,7 +134,7 @@ async def perform_git_push(
 
         # Perform the push operation
         # The push call itself is blocking
-        push_result_details = await run_pygit2_async(remote.push, [refspec], callbacks=callbacks)
+        await run_pygit2_async(remote.push, [refspec], callbacks=callbacks)
 
         # push() returns None on success and raises GitError on failure.
         # We rely on run_pygit2_async to catch and wrap GitError.

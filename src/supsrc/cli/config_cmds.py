@@ -11,9 +11,9 @@ import click
 import structlog
 
 # Use relative imports within the package
-from ..config import load_config
-from ..exceptions import ConfigurationError
-from ..telemetry import StructLogger  # Import type hint
+from supsrc.config import load_config
+from supsrc.exceptions import ConfigurationError
+from supsrc.telemetry import StructLogger  # Import type hint
 
 # Import rich if available for pretty printing
 try:
@@ -51,14 +51,11 @@ def show_config(ctx: click.Context, config_path: Path):
         config = load_config(config_path)
         log.debug("Configuration loaded successfully by 'show' command.")
 
-        print("\n--- Loaded Supsrc Configuration (CLI/Env overrides applied) ---")
         if RICH_AVAILABLE:
             rich.pretty.pprint(config, expand_all=True)
         else:
             # Basic fallback pretty print
-            import pprint
-            pprint.pprint(config, indent=2)
-        print("--- End of Configuration ---")
+            pass
 
         # Check for disabled repos and inform user
         disabled_count = sum(1 for repo in config.repositories.values() if not repo._path_valid)

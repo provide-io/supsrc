@@ -6,16 +6,16 @@ Defines the runtime protocols for supsrc components like Rules, Engines,
 and standard result objects. Uses concrete attrs classes for results.
 """
 
-from typing import Protocol, Any, runtime_checkable, TypeAlias
 from pathlib import Path
-from enum import Enum
+from typing import Any, Protocol, runtime_checkable
 
-import attrs # Import attrs
+import attrs  # Import attrs
 import structlog
 
+from supsrc.config.models import GlobalConfig  # Assuming config models exist
+
 # Re-export or define core types needed by protocols
-from supsrc.state import RepositoryState, RepositoryStatus # Assuming state.py exists
-from supsrc.config.models import SupsrcConfig, GlobalConfig # Assuming config models exist
+from supsrc.state import RepositoryState  # Assuming state.py exists
 
 log = structlog.get_logger("protocols")
 
@@ -136,6 +136,5 @@ class RepositoryEngine(Protocol):
 
 
 # Ensure TypeAlias is imported if used elsewhere
-from typing import TypeAlias # Keep for good practice
 
 # 🔼⚙️
