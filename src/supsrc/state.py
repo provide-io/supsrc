@@ -1,7 +1,6 @@
 #
-# src/supsrc/state.py
+# supsrc/state.py
 #
-
 """
 Defines the dynamic state management models for monitored repositories in supsrc.
 """

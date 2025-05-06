@@ -1,5 +1,6 @@
-# file: src/supsrc/tui/app.py
-# Corrected action_quit to stop the scheduled timer
+#
+# supsrc/tui/app.py
+#
 
 import asyncio
 from pathlib import Path
@@ -266,6 +267,5 @@ if __name__ == "__main__":
             app_instance.run()
     except NameError: pass
     except ImportError: pass
-
 
 # 🔼⚙️

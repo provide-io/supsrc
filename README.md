@@ -10,13 +10,11 @@
 
 Automated Git commit/push utility based on filesystem events and rules.
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/provide-io/supsrc/ci.yml?branch=main&style=flat-square)](https://github.com/provide-io/supsrc/actions) <!-- Placeholder -->
-[![Code Coverage](https://img.shields.io/codecov/c/github/provide-io/supsrc?style=flat-square)](https://codecov.io/gh/provide-io/supsrc) <!-- Placeholder -->
 [![PyPI Version](https://img.shields.io/pypi/v/supsrc?style=flat-square)](https://pypi.org/project/supsrc/) <!-- Placeholder -->
 [![Python Versions](https://img.shields.io/pypi/pyversions/supsrc?style=flat-square)](https://pypi.org/project/supsrc/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
+[![Package Manager: uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/refs/heads/main/assets/badge/v0.json&style=flat-square)](https://github.com/astral-sh/uv)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
-[![Code style: uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
 [![Powered by Structlog](https://img.shields.io/badge/powered%20by-structlog-lightgrey.svg?style=flat-square)](https://www.structlog.org/)
 
 ---
@@ -202,29 +200,6 @@ If installed (`pip install 'supsrc[tui]'`) and run with `supsrc watch --tui`, a 
 *   A live-updating table showing the status, last change time, save count, and errors for each monitored repository.
 *   A scrolling log view displaying messages from `supsrc`.
 
-[![TUI Screenshot Placeholder](https://via.placeholder.com/800x400/1E1E1E/808080?text=Supsrc+TUI+Interface)](https://github.com/provide-io/supsrc) <!-- Replace with actual screenshot -->
-
-## 🛠️ Development
-
-To set up for development:
-
-1.  Clone the repository.
-2.  Create and activate a virtual environment (recommended).
-3.  Install in editable mode with development dependencies:
-    ```bash
-    pip install -e '.[dev]'
-    ```
-4.  Use `hatch` for environment management and running checks (linting, type checking, testing):
-    ```bash
-    # Enter the hatch environment
-    hatch shell
-
-    # Run checks (inside hatch shell or using 'hatch run')
-    hatch run lint
-    hatch run types
-    hatch run test
-    hatch run fmt # Auto-format code
-    ```
 
 ## 🤝 Contributing
 
