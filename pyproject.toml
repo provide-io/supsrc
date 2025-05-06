@@ -1,11 +1,10 @@
-# file: pyproject.toml
+#
+# pyproject.toml
+#
 
-# --------------------------------------------------------------------------- #
-# Core Project Metadata (PEP 621)                                             #
-# --------------------------------------------------------------------------- #
 [project]
 name = "supsrc"
-version = "0.1.0" # Consider using hatch-vcs or similar for dynamic versioning
+version = "0.1.0"
 description = "Automated Git commit/push utility based on filesystem events and rules."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -14,7 +13,7 @@ authors = [
     { name = "Tim Perkins", email = "code@tim.life" },
 ]
 maintainers = [
-    { name = "provide.io llc", email = "opensource@provide.io" }, # Example maintainer
+    { name = "provide.io llc", email = "code@provide.io" },
 ]
 keywords = ["git", "automation", "watchdog", "developer-tools", "vcs", "backup"]
 classifiers = [
@@ -28,6 +27,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Version Control",
     "Topic :: System :: Filesystems",
     "Topic :: Utilities",
@@ -47,9 +47,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://code.provide.io/supsrc"
-Repository = "https://code.provide.io/supsrc" # Adjust if repo URL differs
-# Issues = "https://code.provide.io/supsrc/issues" # Add if applicable
+Homepage = "https://projects.provide.io/supsrc"
+Repository = "https://github.com/provide-io/supsrc"
+Issues = "https://code.provide.io/supsrc/issues"
 
 # --- Optional Features (Extras) ---
 [project.optional-dependencies]
