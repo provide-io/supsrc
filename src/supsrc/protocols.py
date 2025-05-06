@@ -1,5 +1,5 @@
 #
-# filename: src/supsrc/protocols.py
+# supsrc/protocols.py
 #
 """
 Defines the runtime protocols for supsrc components like Rules, Engines,
@@ -133,8 +133,5 @@ class RepositoryEngine(Protocol):
         # Define a specific SummaryResult protocol/attrs class if needed
         log.warning("get_summary called on base protocol, implementation needed.")
         return None
-
-
-# Ensure TypeAlias is imported if used elsewhere
 
 # 🔼⚙️
