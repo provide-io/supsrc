@@ -92,7 +92,7 @@ class RepositoryState:
             repo_id=self.repo_id,
             old_status=old_status.name,
             new_status=new_status.name,
-            **(dict(error=self.error_message) if new_status == RepositoryStatus.ERROR else {})
+            **({"error": self.error_message} if new_status == RepositoryStatus.ERROR else {})
         )
 
         # Reset relevant fields on transition back to IDLE or CHANGED?

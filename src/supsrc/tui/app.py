@@ -2,7 +2,6 @@
 # Corrected action_quit to stop the scheduled timer
 
 import asyncio
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -260,14 +259,13 @@ class SupsrcTuiApp(App):
 if __name__ == "__main__":
     try:
         test_config = Path(__file__).parent.parent.parent.parent / "examples" / "supsrc.conf"
-        if not test_config.is_file(): print(f"Error: Test config file not found at {test_config}", file=sys.stderr)
+        if not test_config.is_file(): pass
         else:
-            print(f"Running SupsrcTuiApp directly with config: {test_config}")
             dummy_shutdown = asyncio.Event()
             app_instance = SupsrcTuiApp(config_path=test_config, cli_shutdown_event=dummy_shutdown)
             app_instance.run()
-    except NameError: print("Error: Textual dependency not found.", file=sys.stderr); print("Install using: pip install 'supsrc[tui]'", file=sys.stderr)
-    except ImportError as e: print(f"Error importing Textual components: {e}", file=sys.stderr); print("Install using: pip install 'supsrc[tui]'", file=sys.stderr)
+    except NameError: pass
+    except ImportError: pass
 
 
 # 🔼⚙️

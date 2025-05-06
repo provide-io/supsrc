@@ -3,41 +3,46 @@
 #
 
 import asyncio
-import sys
-import logging
-import time # Import time for unique task names
+import time  # Import time for unique task names
+from contextlib import suppress  # For cleaner task cancellation handling
 from pathlib import Path
-from typing import Any, Set, TypeAlias, Optional, cast
-from contextlib import suppress # For cleaner task cancellation handling
+from typing import Any, Optional, TypeAlias, cast
 
-import structlog
 import attrs
-import cattrs # Needed for config validation exceptions
+import cattrs  # Needed for config validation exceptions
+import structlog
+
+from supsrc.config import SupsrcConfig, load_config
+from supsrc.config.models import (
+    InactivityRuleConfig,
+    RuleConfig,
+)
+
+# --- Specific Engine Import (replace with plugin loading later) ---
+from supsrc.engines.git import GitEngine, GitRepoSummary  # Import summary class too
+from supsrc.exceptions import ConfigurationError, MonitoringSetupError, SupsrcError
+from supsrc.monitor import MonitoredEvent, MonitoringService
+
+# --- Import concrete result types and base protocols ---
+from supsrc.protocols import (
+    CommitResult,
+    PushResult,
+    RepositoryEngine,
+    RepoStatusResult,  # Concrete result classes
+    StageResult,
+)
+from supsrc.rules import check_trigger_condition
+from supsrc.state import RepositoryState, RepositoryStatus
 
 # --- Supsrc Imports ---
 from supsrc.telemetry import StructLogger
-from supsrc.config import load_config, SupsrcConfig
-from supsrc.exceptions import ConfigurationError, MonitoringSetupError, SupsrcError
-from supsrc.monitor import MonitoringService, MonitoredEvent
-from supsrc.state import RepositoryState, RepositoryStatus
-from supsrc.rules import check_trigger_condition
-from supsrc.config.models import (
-    RepositoryConfig, RuleConfig, InactivityRuleConfig, SaveCountRuleConfig, ManualRuleConfig
-)
-# --- Import concrete result types and base protocols ---
-from supsrc.protocols import (
-    RepositoryEngine, Rule,
-    RepoStatusResult, StageResult, CommitResult, PushResult # Concrete result classes
-)
-# --- Specific Engine Import (replace with plugin loading later) ---
-from supsrc.engines.git import GitEngine, GitRepoSummary # Import summary class too
 
 # --- TUI Integration Imports (Conditional) ---
 try:
     from typing import TYPE_CHECKING
     if TYPE_CHECKING:
         from textual.app import App as TextualApp
-    from supsrc.tui.app import StateUpdate, LogMessageUpdate
+    from supsrc.tui.app import LogMessageUpdate, StateUpdate
     TEXTUAL_AVAILABLE_RUNTIME = True
 except ImportError:
     TEXTUAL_AVAILABLE_RUNTIME = False
@@ -61,7 +66,7 @@ class WatchOrchestrator:
         self,
         config_path: Path,
         shutdown_event: asyncio.Event,
-        app: Optional['TextualApp'] = None # Accept optional TUI app instance
+        app: Optional["TextualApp"] = None # Accept optional TUI app instance
         ) -> None:
         """
         Initializes the orchestrator.
@@ -73,19 +78,19 @@ class WatchOrchestrator:
         """
         self.config_path = config_path
         self.shutdown_event = shutdown_event
-        self.app: Optional['TextualApp'] = app if TEXTUAL_AVAILABLE_RUNTIME else None # Store the TUI app instance only if usable
-        self.config: Optional[SupsrcConfig] = None
-        self.monitor_service: Optional[MonitoringService] = None
+        self.app: TextualApp | None = app if TEXTUAL_AVAILABLE_RUNTIME else None # Store the TUI app instance only if usable
+        self.config: SupsrcConfig | None = None
+        self.monitor_service: MonitoringService | None = None
         self.event_queue: asyncio.Queue[MonitoredEvent] = asyncio.Queue()
         self.repo_states: RepositoryStatesMap = {}
         self.repo_engines: dict[str, RepositoryEngine] = {}
-        self._running_tasks: Set[asyncio.Task[Any]] = set()
+        self._running_tasks: set[asyncio.Task[Any]] = set()
         self._log = log.bind(orchestrator_id=id(self))
         self._is_tui_active = bool(self.app) # Flag for easier checking
 
     # --- TUI Update Helpers ---
 
-    def _post_tui_log(self, repo_id: Optional[str], level: str, message: str) -> None:
+    def _post_tui_log(self, repo_id: str | None, level: str, message: str) -> None:
         """Safely posts a log message to the TUI if active."""
         if self._is_tui_active and self.app and LogMessageUpdate:
             try:
@@ -138,7 +143,7 @@ class WatchOrchestrator:
         self._post_tui_state_update() # Update TUI status
 
         rule_config_obj: RuleConfig = repo_config.rule
-        rule_type_str = getattr(rule_config_obj, 'type', 'unknown_rule_type')
+        rule_type_str = getattr(rule_config_obj, "type", "unknown_rule_type")
 
         callback_log.info(
             "Action Triggered: Performing actions...",
@@ -261,7 +266,7 @@ class WatchOrchestrator:
         """Consumes events from the queue, updates state, manages timers, checks rules."""
         consumer_log = self._log.bind(component="EventConsumer")
         consumer_log.info("Event consumer starting loop.")
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
         processed_event_count = 0
 
         while not self.shutdown_event.is_set():
@@ -332,7 +337,7 @@ class WatchOrchestrator:
                         event_log.debug("State updated after recording change")
 
                         rule_config_obj: RuleConfig = repo_config.rule
-                        rule_type_str = getattr(rule_config_obj, 'type', 'unknown_rule_type')
+                        rule_type_str = getattr(rule_config_obj, "type", "unknown_rule_type")
                         event_log.debug(">>> About to check trigger condition", rule_type=rule_type_str)
 
                         rule_met = check_trigger_condition(repo_state, repo_config)
@@ -394,7 +399,7 @@ class WatchOrchestrator:
             if repo_config.enabled and repo_config._path_valid:
                 init_log.debug("Initializing state object")
                 self.repo_states[repo_id] = RepositoryState(repo_id=repo_id)
-                engine_instance: Optional[RepositoryEngine] = None
+                engine_instance: RepositoryEngine | None = None
 
                 # --- Load Engine ---
                 engine_config = repo_config.repository
@@ -426,7 +431,7 @@ class WatchOrchestrator:
                 try:
                     init_log.debug("Getting initial repo summary...")
                     # Use hasattr for safety, assuming get_summary might be optional
-                    if hasattr(engine_instance, 'get_summary'):
+                    if hasattr(engine_instance, "get_summary"):
                         # Cast to expected type if necessary and confident
                         summary = cast(GitRepoSummary, await engine_instance.get_summary(repo_config.path))
 
@@ -632,8 +637,8 @@ class WatchOrchestrator:
         """Helper to suppress logging errors during final shutdown."""
         kwargs["orchestrator_id"] = id(self)
         try:
-            if hasattr(self, '_log') and self._log: getattr(self._log, level)(msg, **kwargs)
-            else: print(f"[{level.upper()}] (Orch {id(self)}) {msg} {kwargs}", file=sys.stderr)
-        except Exception as e: print(f"LOG ERROR (Orch {id(self)}): {msg} {kwargs} - Error: {e}", file=sys.stderr)
+            if hasattr(self, "_log") and self._log: getattr(self._log, level)(msg, **kwargs)
+            else: pass
+        except Exception: pass
 
 # 🔼⚙️

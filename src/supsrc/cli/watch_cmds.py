@@ -62,8 +62,7 @@ async def _handle_signal_async(sig: int):
 def watch_cli(ctx: click.Context, config_path: Path, tui: bool):
     """Monitor configured repositories for changes and trigger actions."""
     def _cli_safe_log(level: str, msg: str, **kwargs):
-        try: getattr(log, level)(msg, **kwargs)
-        except Exception: print(f"LOGGING ERROR: {msg} {kwargs}", file=sys.stderr)
+        with suppress(Exception): getattr(log, level)(msg, **kwargs)
 
     if tui:
         # (TUI logic remains the same)
