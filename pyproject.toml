@@ -4,7 +4,7 @@
 
 [project]
 name = "supsrc"
-version = "0.1.0"
+version = "0.1.1"
 description = "Automated Git commit/push utility based on filesystem events and rules."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -13,7 +13,7 @@ authors = [
     { name = "Tim Perkins", email = "code@tim.life" },
 ]
 maintainers = [
-    { name = "provide.io llc", email = "code@provide.io" },
+    { name = "provide.io", email = "code@provide.io" },
 ]
 keywords = ["git", "automation", "watchdog", "developer-tools", "vcs", "backup"]
 classifiers = [
