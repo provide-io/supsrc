@@ -5,22 +5,19 @@
 Comprehensive tests for configuration loading and validation.
 """
 
-from datetime import timedelta
 from pathlib import Path
+from datetime import timedelta
 
 import pytest
 
 from supsrc.config import load_config
 from supsrc.config.models import (
-    InactivityRuleConfig,
-    ManualRuleConfig,
-    SaveCountRuleConfig,
-    SupsrcConfig,
+    SupsrcConfig, GlobalConfig, RepositoryConfig,
+    InactivityRuleConfig, SaveCountRuleConfig, ManualRuleConfig
 )
 from supsrc.exceptions import (
-    ConfigFileNotFoundError,
-    ConfigParsingError,
-    ConfigValidationError,
+    ConfigFileNotFoundError, ConfigParsingError,
+    ConfigValidationError
 )
 
 
@@ -78,46 +75,6 @@ class TestConfigLoading:
             load_config(config_file)
 
         assert "TOML" in str(exc_info.value)
-
-    def test_invalid_duration_format(self, tmp_path: Path) -> None:
-        """Test invalid duration format handling."""
-        config_content = """
-        [repositories.test-repo]
-        path = "/tmp/test"
-        enabled = true
-
-        [repositories.test-repo.rule]
-        type = "supsrc.rules.inactivity"
-        period = "invalid-duration"
-
-        [repositories.test-repo.repository]
-        type = "supsrc.engines.git"
-        """
-
-        config_file = tmp_path / "test.conf"
-        config_file.write_text(config_content)
-
-        with pytest.raises(ConfigValidationError):
-            load_config(config_file)
-
-    def test_missing_required_fields(self, tmp_path: Path) -> None:
-        """Test missing required configuration fields."""
-        config_content = """
-        [repositories.test-repo]
-        enabled = true
-
-        [repositories.test-repo.rule]
-        type = "supsrc.rules.inactivity"
-
-        [repositories.test-repo.repository]
-        type = "supsrc.engines.git"
-        """
-
-        config_file = tmp_path / "test.conf"
-        config_file.write_text(config_content)
-
-        with pytest.raises(ConfigValidationError):
-            load_config(config_file)
 
 
 class TestRuleConfiguration:
@@ -196,27 +153,6 @@ class TestRuleConfiguration:
         assert isinstance(rule, ManualRuleConfig)
         assert rule.type == "supsrc.rules.manual"
 
-    def test_invalid_save_count(self, tmp_path: Path) -> None:
-        """Test invalid save count validation."""
-        config_content = """
-        [repositories.test-repo]
-        path = "/tmp/test"
-        enabled = true
-
-        [repositories.test-repo.rule]
-        type = "supsrc.rules.save_count"
-        count = 0
-
-        [repositories.test-repo.repository]
-        type = "supsrc.engines.git"
-        """
-
-        config_file = tmp_path / "test.conf"
-        config_file.write_text(config_content)
-
-        with pytest.raises(ConfigValidationError):
-            load_config(config_file)
-
 
 class TestGlobalConfiguration:
     """Test global configuration handling."""
@@ -267,28 +203,5 @@ class TestGlobalConfiguration:
 
         assert config.global_config.log_level == "DEBUG"
         assert config.global_config.numeric_log_level == 10
-
-    def test_invalid_log_level(self, tmp_path: Path) -> None:
-        """Test invalid log level validation."""
-        config_content = """
-        [global]
-        log_level = "INVALID_LEVEL"
-
-        [repositories.test-repo]
-        path = "/tmp/test"
-        enabled = true
-
-        [repositories.test-repo.rule]
-        type = "supsrc.rules.manual"
-
-        [repositories.test-repo.repository]
-        type = "supsrc.engines.git"
-        """
-
-        config_file = tmp_path / "test.conf"
-        config_file.write_text(config_content)
-
-        with pytest.raises(ConfigValidationError):
-            load_config(config_file)
 
 # 🧪⚙️

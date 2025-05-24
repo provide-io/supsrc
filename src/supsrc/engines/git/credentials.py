@@ -12,7 +12,6 @@ from typing import Any
 
 import pygit2
 import structlog
-from pygit2.credentials import CredentialType
 
 log = structlog.get_logger("engines.git.credentials")
 
@@ -32,15 +31,15 @@ class GitCredentialManager:
         url: str,
         username_from_url: str | None,
         allowed_types: int
-    ) -> CredentialType | None:
+    ) -> pygit2.credentials.Keypair | pygit2.credentials.KeypairFromAgent | pygit2.credentials.UserPass | pygit2.credentials.Username | None:
         """
         Comprehensive credential resolution with multiple strategies.
-        
+
         Args:
             url: Git repository URL
             username_from_url: Username extracted from URL
             allowed_types: Allowed credential types bitmask
-            
+
         Returns:
             Appropriate credential object or None
         """
@@ -51,25 +50,25 @@ class GitCredentialManager:
         )
 
         # Strategy 1: SSH Key Authentication
-        if allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY:
+        if allowed_types & pygit2.GIT_CREDENTIAL_SSH_KEY:
             credentials = self._try_ssh_key_auth(url, username_from_url, cred_log)
             if credentials:
                 return credentials
 
         # Strategy 2: SSH Agent
-        if allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY:
+        if allowed_types & pygit2.GIT_CREDENTIAL_SSH_KEY:
             credentials = self._try_ssh_agent_auth(url, username_from_url, cred_log)
             if credentials:
                 return credentials
 
         # Strategy 3: Username/Password (Environment Variables)
-        if allowed_types & pygit2.credentials.GIT_CREDENTIAL_USERPASS_PLAINTEXT:
+        if allowed_types & pygit2.GIT_CREDENTIAL_USERPASS_PLAINTEXT:
             credentials = self._try_userpass_auth(url, username_from_url, cred_log)
             if credentials:
                 return credentials
 
         # Strategy 4: Default credentials
-        if allowed_types & pygit2.credentials.GIT_CREDENTIAL_DEFAULT:
+        if allowed_types & pygit2.GIT_CREDENTIAL_DEFAULT:
             cred_log.debug("Attempting default credential resolution")
             try:
                 return pygit2.credentials.Username(
@@ -86,7 +85,7 @@ class GitCredentialManager:
         url: str,
         username_from_url: str | None,
         cred_log: Any
-    ) -> CredentialType | None:
+    ) -> pygit2.credentials.Keypair | None:
         """Attempt SSH key authentication."""
         if not self.ssh_key_path:
             return None
@@ -124,7 +123,7 @@ class GitCredentialManager:
         url: str,
         username_from_url: str | None,
         cred_log: Any
-    ) -> CredentialType | None:
+    ) -> pygit2.credentials.KeypairFromAgent | None:
         """Attempt SSH agent authentication."""
         try:
             ssh_user = username_from_url or getpass.getuser()
@@ -141,7 +140,7 @@ class GitCredentialManager:
         url: str,
         username_from_url: str | None,
         cred_log: Any
-    ) -> CredentialType | None:
+    ) -> pygit2.credentials.UserPass | None:
         """Attempt username/password authentication from environment."""
         git_username = os.getenv("GIT_USERNAME")
         git_password = os.getenv("GIT_PASSWORD") or os.getenv("GIT_TOKEN")
@@ -175,7 +174,7 @@ class RemoteCallbacks(pygit2.RemoteCallbacks):
         url: str,
         username_from_url: str | None,
         allowed_types: int
-    ) -> CredentialType | None:
+    ) -> pygit2.credentials.Keypair | pygit2.credentials.KeypairFromAgent | pygit2.credentials.UserPass | pygit2.credentials.Username | None:
         """Handle credential requests with retry logic."""
         self._attempts += 1
 
@@ -192,20 +191,20 @@ class RemoteCallbacks(pygit2.RemoteCallbacks):
             url, username_from_url, allowed_types
         )
 
-    def update_tips(self, refname: str, old_oid: str, new_oid: str) -> None:
+    def update_tips(self, refname: str, old_oid: pygit2.Oid, new_oid: pygit2.Oid) -> None:
         """Log reference updates."""
         self._log.debug("Reference updated",
                        ref=refname,
                        old_oid=str(old_oid)[:8],
                        new_oid=str(new_oid)[:8])
 
-    def transfer_progress(self, stats: pygit2.TransferProgress) -> None:
-        """Log transfer progress."""
-        if stats.total_objects > 0:
-            progress = (stats.indexed_objects / stats.total_objects) * 100
-            self._log.debug("Transfer progress",
-                           progress=f"{progress:.1f}%",
-                           indexed=stats.indexed_objects,
-                           total=stats.total_objects)
-
+    def transfer_progress(self, stats) -> None:
+        """Log transfer progress - removed TransferProgress type hint to avoid import issues."""
+        if hasattr(stats, 'total_objects') and hasattr(stats, 'indexed_objects'):
+            if stats.total_objects > 0:
+                progress = (stats.indexed_objects / stats.total_objects) * 100
+                self._log.debug("Transfer progress",
+                               progress=f"{progress:.1f}%",
+                               indexed=stats.indexed_objects,
+                               total=stats.total_objects)
 # 🔐🚀
