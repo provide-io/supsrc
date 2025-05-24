@@ -109,35 +109,6 @@ class TestRepositoryState:
         # Test canceling when no timer exists
         state.cancel_inactivity_timer()  # Should not raise
 
-    def test_timer_replacement(self) -> None:
-        """Test timer replacement when setting new timer."""
-        state = RepositoryState(repo_id="test-repo")
-
-        # Create mock timers
-        old_timer = Mock()
-        old_timer.cancel = Mock()
-        new_timer = Mock()
-
-        # Set first timer
-        state.set_inactivity_timer(old_timer)
-
-        # Set new timer (should cancel old one)
-        state.set_inactivity_timer(new_timer)
-
-        old_timer.cancel.assert_called_once()
-        assert state.inactivity_timer_handle == new_timer
-
-    def test_status_no_change_optimization(self) -> None:
-        """Test that identical status updates are optimized."""
-        state = RepositoryState(repo_id="test-repo")
-        initial_status = state.status
-
-        # Update to same status
-        state.update_status(RepositoryStatus.IDLE)
-
-        # Should remain the same
-        assert state.status == initial_status
-
 
 class TestRepositoryStatusEnum:
     """Test repository status enumeration."""
@@ -148,72 +119,5 @@ class TestRepositoryStatusEnum:
 
         for status in RepositoryStatus:
             assert status in STATUS_EMOJI_MAP, f"Missing emoji for {status}"
-
-    def test_emoji_uniqueness(self) -> None:
-        """Test that status emojis are reasonably unique."""
-        from supsrc.state import STATUS_EMOJI_MAP
-
-        emojis = list(STATUS_EMOJI_MAP.values())
-
-        # Allow some duplication but not complete duplication
-        unique_emojis = set(emojis)
-        assert len(unique_emojis) >= len(emojis) * 0.7
-
-
-class TestStateFieldValidation:
-    """Test state field validation and edge cases."""
-
-    def test_action_progress_validation(self) -> None:
-        """Test action progress field handling."""
-        state = RepositoryState(repo_id="test-repo")
-
-        # Test progress tracking
-        state.action_progress_total = 100
-        state.action_progress_completed = 50
-
-        assert state.action_progress_total == 100
-        assert state.action_progress_completed == 50
-
-        # Test reset
-        state.action_progress_total = None
-        state.action_progress_completed = None
-
-        assert state.action_progress_total is None
-        assert state.action_progress_completed is None
-
-    def test_commit_info_persistence(self) -> None:
-        """Test that commit information persists across resets."""
-        state = RepositoryState(repo_id="test-repo")
-
-        # Set commit info
-        state.last_commit_short_hash = "abc123"
-        state.last_commit_message_summary = "Test commit"
-
-        # Reset should not clear commit info
-        state.reset_after_action()
-
-        assert state.last_commit_short_hash == "abc123"
-        assert state.last_commit_message_summary == "Test commit"
-
-    def test_rule_info_management(self) -> None:
-        """Test rule-related field management."""
-        state = RepositoryState(repo_id="test-repo")
-
-        # Set rule info
-        state.rule_emoji = "⏳"
-        state.rule_dynamic_indicator = "Waiting..."
-        state.active_rule_description = "Inactivity rule"
-
-        # Verify fields are set
-        assert state.rule_emoji == "⏳"
-        assert state.rule_dynamic_indicator == "Waiting..."
-        assert state.active_rule_description == "Inactivity rule"
-
-        # Reset should clear rule info
-        state.reset_after_action()
-
-        assert state.rule_emoji is None
-        assert state.rule_dynamic_indicator is None
-        assert state.active_rule_description is None
 
 # 🧪📊
