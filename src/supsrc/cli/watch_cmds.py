@@ -5,14 +5,15 @@
 import asyncio
 import logging
 import signal
-# --- Rich Imports ---
-from rich.console import Console
 import sys
 from contextlib import suppress
 from pathlib import Path
 
 import click
 import structlog
+
+# --- Rich Imports ---
+from rich.console import Console
 
 from supsrc.runtime.orchestrator import WatchOrchestrator
 

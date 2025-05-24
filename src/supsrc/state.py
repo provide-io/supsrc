@@ -156,14 +156,14 @@ class RepositoryState:
         self.last_change_time = None # Cleared to allow inactivity rule to reset properly
         self.active_rule_description = None # Clear specific action/wait messages
         # self.error_message is cleared by update_status if moving out of ERROR
-        
+
         # Reset new TUI fields
         self.rule_emoji = None # Or reset to default based on config for next cycle
         self.rule_dynamic_indicator = None # Or reset to default
         self.action_description = None
         self.action_progress_total = None
         self.action_progress_completed = None
-        
+
         self.cancel_inactivity_timer() # Ensure timer is gone
         self.update_status(RepositoryStatus.IDLE) # Back to idle state
         # Note: last_commit_short_hash and last_commit_message_summary are intentionally persisted

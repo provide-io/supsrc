@@ -431,19 +431,19 @@ class GitEngine(RepositoryEngine):
             for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):
                 if len(last_commits) >= limit:
                     break
-                commit_time = datetime.fromtimestamp(commit.commit_time, tz=datetime.now(UTC).astimezone().tzinfo).strftime('%Y-%m-%d %H:%M:%S')
+                commit_time = datetime.fromtimestamp(commit.commit_time, tz=datetime.now(UTC).astimezone().tzinfo).strftime("%Y-%m-%d %H:%M:%S")
                 # Format: "hash_short - author - date - message_summary"
-                summary = (commit.message or "").split('\n', 1)[0]
+                summary = (commit.message or "").split("\n", 1)[0]
                 if len(summary) > 60: # Truncate long summaries
                     summary = summary[:57] + "..."
-                
+
                 # Ensure commit.author is not None before accessing its properties
                 author_name = commit.author.name if commit.author else "Unknown Author"
 
                 last_commits.append(
                     f"{str(commit.id)[:7]} - {author_name} - {commit_time} - {summary}"
                 )
-            
+
             history_log.debug(f"Retrieved {len(last_commits)} commit history items.")
             return last_commits
         except pygit2.GitError as e:

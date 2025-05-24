@@ -5,13 +5,13 @@
 import asyncio
 import time  # Import time for unique task names
 from contextlib import suppress  # For cleaner task cancellation handling
-from rich.console import Console
 from pathlib import Path
 from typing import Any, Optional, TypeAlias, cast
 
 import attrs
 import cattrs  # Needed for config validation exceptions
 import structlog
+from rich.console import Console
 
 from supsrc.config import SupsrcConfig, load_config
 from supsrc.config.models import (
@@ -192,7 +192,7 @@ class WatchOrchestrator:
             self._console_message("Checking repository status...", repo_id=repo_id, style="blue bold", emoji="🔄")
             self._post_tui_log(repo_id, "DEBUG", "Checking repository status...")
             self._post_tui_state_update()
-            
+
             status_result: RepoStatusResult = await repo_engine.get_status(repo_state, engine_config_dict, global_config, working_dir)
             repo_state.action_description = "Status OK" # Or more specific if needed
             self._post_tui_state_update()
@@ -205,10 +205,10 @@ class WatchOrchestrator:
                 callback_log.warning("Action Skipped: Repository has conflicts.")
                 repo_state.action_description = "Skipped (conflicts)"
                 repo_state.action_progress_total = None; repo_state.action_progress_completed = None
-                repo_state.display_status_emoji = "❌" 
-                self._console_message(f"Action failed: Conflicts detected. See logs for details.", repo_id=repo_id, style="red bold", emoji="❌")
+                repo_state.display_status_emoji = "❌"
+                self._console_message("Action failed: Conflicts detected. See logs for details.", repo_id=repo_id, style="red bold", emoji="❌")
                 self._post_tui_log(repo_id, "ERROR", "Action skipped: Conflicts detected!")
-                repo_state.update_status(RepositoryStatus.ERROR, "Conflicts detected") 
+                repo_state.update_status(RepositoryStatus.ERROR, "Conflicts detected")
                 self._post_tui_state_update()
                 return
 
@@ -219,7 +219,7 @@ class WatchOrchestrator:
                 repo_state.display_status_emoji = "🚫"
                 self._console_message("Action skipped: Unborn repository clean.", repo_id=repo_id, style="dim", emoji="🚫")
                 self._post_tui_log(repo_id, "INFO", "Action skipped: Unborn repository clean.")
-                repo_state.reset_after_action() 
+                repo_state.reset_after_action()
                 self._post_tui_state_update()
                 return
             elif status_result.is_clean:
@@ -229,22 +229,22 @@ class WatchOrchestrator:
                  repo_state.display_status_emoji = "🚫"
                  self._console_message("Action skipped: Repository clean.", repo_id=repo_id, style="dim", emoji="🚫")
                  self._post_tui_log(repo_id, "INFO", "Action skipped: Repository clean.")
-                 repo_state.reset_after_action() 
+                 repo_state.reset_after_action()
                  self._post_tui_state_update()
                  return
 
             # --- 2. Stage Changes ---
-            repo_state.update_status(RepositoryStatus.STAGING) 
+            repo_state.update_status(RepositoryStatus.STAGING)
             repo_state.action_description = "Staging changes..."
             repo_state.action_progress_total = None; repo_state.action_progress_completed = None
             self._console_message("Staging changes...", repo_id=repo_id, style="blue bold", emoji="🔄")
             self._post_tui_log(repo_id, "INFO", "Staging changes...")
             self._post_tui_state_update()
-            
+
             stage_result: StageResult = await repo_engine.stage_changes(None, repo_state, engine_config_dict, global_config, working_dir)
             if not stage_result.success:
                 raise SupsrcError(f"Failed to stage changes: {stage_result.message}")
-            
+
             files_staged_count = len(stage_result.files_staged or [])
             repo_state.action_description = f"Staged {files_staged_count} file(s)"
             # Simulate progress for staging if desired, e.g., total = 1, completed = 1
@@ -254,15 +254,15 @@ class WatchOrchestrator:
             self._post_tui_log(repo_id, "DEBUG", f"Staging successful ({files_staged_count} files).")
 
             # --- 3. Perform Commit ---
-            repo_state.update_status(RepositoryStatus.COMMITTING) 
+            repo_state.update_status(RepositoryStatus.COMMITTING)
             repo_state.action_description = "Committing..."
             repo_state.action_progress_total = None; repo_state.action_progress_completed = None
             self._console_message("Performing commit...", repo_id=repo_id, style="blue bold", emoji="🔄")
             self._post_tui_log(repo_id, "INFO", "Performing commit...")
             self._post_tui_state_update()
-            
+
             commit_result: CommitResult = await repo_engine.perform_commit(
-                message_template="unused", 
+                message_template="unused",
                 state=repo_state,
                 config=engine_config_dict,
                 global_config=global_config,
@@ -278,13 +278,13 @@ class WatchOrchestrator:
                 self._console_message("Commit skipped: No changes after staging.", repo_id=repo_id, style="dim", emoji="🚫")
                 callback_log.info("Action Skipped: Commit skipped by engine.", reason=commit_result.message)
                 self._post_tui_log(repo_id, "INFO", f"Commit skipped: {commit_result.message}")
-                repo_state.reset_after_action() 
+                repo_state.reset_after_action()
                 self._post_tui_state_update()
                 return
             else:
                 repo_state.last_commit_short_hash = commit_result.commit_hash[:7]
                 repo_state.action_description = f"Committed: {repo_state.last_commit_short_hash}"
-                repo_state.display_status_emoji = "✅" 
+                repo_state.display_status_emoji = "✅"
                 self._console_message(f"Commit complete. Hash: {repo_state.last_commit_short_hash}", repo_id=repo_id, style="green bold", emoji="✅")
                 self._post_tui_state_update()
                 callback_log.info("Action: Commit successful", hash=commit_result.commit_hash)
@@ -292,13 +292,13 @@ class WatchOrchestrator:
 
 
             # --- 4. Perform Push ---
-            repo_state.update_status(RepositoryStatus.PUSHING) 
+            repo_state.update_status(RepositoryStatus.PUSHING)
             repo_state.action_description = "Pushing..."
             repo_state.action_progress_total = None; repo_state.action_progress_completed = None
             self._console_message("Pushing changes...", repo_id=repo_id, style="blue bold", emoji="🔄")
             self._post_tui_log(repo_id, "INFO", "Performing push (if enabled)...")
             self._post_tui_state_update()
-            
+
             push_result: PushResult = await repo_engine.perform_push(repo_state, engine_config_dict, global_config, working_dir)
 
             if not push_result.success:
@@ -306,7 +306,7 @@ class WatchOrchestrator:
                 self._console_message(f"Push failed: {push_result.message}. See logs.", repo_id=repo_id, style="red bold", emoji="❌")
                 callback_log.warning("Action: Push failed", reason=push_result.message)
                 self._post_tui_log(repo_id, "WARNING", f"Push failed: {push_result.message}")
-                repo_state.reset_after_action() 
+                repo_state.reset_after_action()
             else:
                 if push_result.skipped:
                     repo_state.action_description = "Push skipped (config)"
@@ -316,16 +316,16 @@ class WatchOrchestrator:
                     self._post_tui_log(repo_id, "INFO", "Push skipped (disabled in config).")
                 else:
                     repo_state.action_description = "Push successful"
-                    repo_state.display_status_emoji = "✅" 
+                    repo_state.display_status_emoji = "✅"
                     self._console_message("Push successful.", repo_id=repo_id, style="green bold", emoji="✅")
                     callback_log.info("Action: Push successful.")
                     self._post_tui_log(repo_id, "SUCCESS", "Push successful.")
-                
+
                 # After successful/skipped push, finalize action description before reset
                 repo_state.action_description = "Completed"
                 repo_state.action_progress_total = None; repo_state.action_progress_completed = None
                 self._post_tui_state_update()
-                repo_state.reset_after_action() 
+                repo_state.reset_after_action()
 
             self._post_tui_state_update() # Final TUI state update
 
@@ -337,7 +337,7 @@ class WatchOrchestrator:
             if repo_state:
                  repo_state.update_status(RepositoryStatus.ERROR, f"Action failed: {action_exc}")
                  self._post_tui_log(repo_id, "ERROR", f"Action failed: {action_exc}")
-                 self._post_tui_state_update() 
+                 self._post_tui_state_update()
             else:
                  self._post_tui_log(repo_id, "CRITICAL", f"Action failed (state missing): {action_exc}")
 
@@ -414,7 +414,7 @@ class WatchOrchestrator:
                         event_log = event_log.bind(save_count=repo_state.save_count, status=repo_state.status.name)
                         self._console_message(f"Change detected: {event.src_path.name}", repo_id=repo_id, style="magenta bold", emoji="✏️")
                         self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}")
-                        
+
                         rule_config_obj: RuleConfig = repo_config.rule
                         rule_type_str_lc = getattr(rule_config_obj, "type", "default").lower()
                         repo_state.rule_emoji = RULE_EMOJI_MAP.get(rule_type_str_lc, RULE_EMOJI_MAP["default"])
@@ -426,7 +426,7 @@ class WatchOrchestrator:
                             repo_state.rule_dynamic_indicator = f"{rule_type_str_lc.capitalize()} pending"
                         self._post_tui_state_update() # Update TUI with new rule description
                         event_log.debug("State updated after recording change and setting rule description")
-                        
+
                         # Rule evaluation phase
                         repo_state.display_status_emoji = "🧪" # Evaluating emoji
                         repo_state.active_rule_description = f"Evaluating {rule_type_str_lc.capitalize()}..."
@@ -456,7 +456,7 @@ class WatchOrchestrator:
                                 self._console_message(f"Waiting for inactivity period ({delay:.0f}s)...", repo_id=repo_id, style="italic yellow", emoji="⏳")
                                 self._post_tui_log(repo_id, "DEBUG", f"Activity detected, rescheduling check in {delay:.1f}s.")
                                 self._post_tui_state_update() # Update TUI for waiting state
-                                
+
                                 current_loop = asyncio.get_running_loop()
                                 # Ensure the callback lambda creates a task
                                 timer_handle = current_loop.call_later(
@@ -821,7 +821,7 @@ class WatchOrchestrator:
                 # though for local git log, it's often fast enough.
                 # For simplicity in this subtask, we'll call it directly if it's reasonably fast.
                 # If performance issues arise, this should be wrapped with loop.run_in_executor.
-                
+
                 # The config stores path as str, GitEngine might need Path
                 history = repo_engine.get_commit_history(Path(repo_config.path), limit=15)
                 commit_history.extend(history)
