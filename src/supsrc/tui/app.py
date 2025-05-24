@@ -2,7 +2,7 @@
 # supsrc/tui/app.py
 #
 """
-Stabilized TUI application with proper timer management and error handling.
+Stabilized TUI application with improved layout and proper timer management.
 """
 
 import asyncio
@@ -11,7 +11,7 @@ from typing import Any
 
 import structlog
 from textual.app import App, ComposeResult
-from textual.containers import Container
+from textual.containers import Container, Horizontal, Vertical
 from textual.message import Message
 from textual.reactive import var
 from textual.timer import Timer
@@ -106,24 +106,53 @@ class SupsrcTuiApp(App):
         ("enter", "select_repo_for_detail", "View Details"),
         ("escape", "hide_detail_pane", "Hide Details"),
         ("r", "refresh_details", "Refresh Details"),
+        ("tab", "focus_next", "Next Panel"),
+        ("shift+tab", "focus_previous", "Previous Panel"),
     ]
+    
+    # Updated CSS for better layout
     CSS = """
     Screen {
         layout: vertical;
-        overflow-y: hidden;
+        overflow: hidden;
     }
+    
     #main_content_area {
-        layout: vertical;
+        layout: horizontal;
         height: 1fr;
-        overflow-y: hidden;
+        overflow: hidden;
     }
-    #table_container {
-        height: 60%;
+    
+    #left_panel {
+        width: 40%;
+        layout: vertical;
+        overflow: hidden;
+    }
+    
+    #right_panel {
+        width: 60%;
+        layout: vertical;
+        overflow: hidden;
+    }
+    
+    #log_container {
+        height: 1fr;
         overflow-y: auto;
         scrollbar-gutter: stable;
         border: round $accent;
         padding: 1;
+        margin: 1;
     }
+    
+    #table_container {
+        height: 70%;
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+        border: round $accent;
+        padding: 1;
+        margin: 1;
+    }
+    
     #detail_container {
         display: none;
         height: 30%;
@@ -131,23 +160,29 @@ class SupsrcTuiApp(App):
         scrollbar-gutter: stable;
         border: round $accent;
         padding: 1;
-        margin-top: 1;
+        margin: 1;
     }
-    #global_log_container {
-        height: 40%;
-        overflow-y: auto;
-        scrollbar-gutter: stable;
+    
+    #status_container {
+        height: 3;
         border: round $accent;
         padding: 1;
-        margin-top: 1;
+        margin: 1;
     }
+    
     DataTable > .datatable--header {
         background: $accent-darken-2;
         color: $text;
     }
+    
     DataTable > .datatable--cursor {
         background: $accent;
         color: $text;
+    }
+    
+    .panel-title {
+        text-style: bold;
+        color: $accent;
     }
     """
 
@@ -172,14 +207,26 @@ class SupsrcTuiApp(App):
         self._is_shutting_down = False
 
     def compose(self) -> ComposeResult:
+        """Compose the TUI layout with improved structure."""
         yield Header()
+        
         with Container(id="main_content_area"):
-            with Container(id="table_container"):
-                yield DataTable(id="repo-table", zebra_stripes=True)
-            with Container(id="detail_container"):
-                yield TextualLog(id="repo_detail_log", highlight=False)
-            with Container(id="global_log_container"):
-                yield TextualLog(id="event-log", highlight=True, max_lines=1000)
+            # Left panel: Logs
+            with Vertical(id="left_panel"):
+                with Container(id="log_container"):
+                    yield TextualLog(id="event-log", highlight=True, max_lines=1000)
+            
+            # Right panel: Repository data and details
+            with Vertical(id="right_panel"):
+                with Container(id="table_container"):
+                    yield DataTable(id="repo-table", zebra_stripes=True)
+                
+                with Container(id="detail_container"):
+                    yield TextualLog(id="repo_detail_log", highlight=False)
+                
+                with Container(id="status_container"):
+                    yield TextualLog(id="status_log", highlight=False, max_lines=3)
+        
         yield Footer()
 
     def on_mount(self) -> None:
@@ -203,6 +250,10 @@ class SupsrcTuiApp(App):
 
             repo_detail_log_widget = self.query_one("#repo_detail_log", TextualLog)
             repo_detail_log_widget.wrap = True
+
+            status_log_widget = self.query_one("#status_log", TextualLog)
+            status_log_widget.write_line("[bold green]Supsrc TUI Started[/]")
+            status_log_widget.write_line("Press [bold]Tab[/] to navigate, [bold]Enter[/] for details, [bold]Q[/] to quit")
 
             # Start orchestrator worker
             log.info("Starting orchestrator worker...")
@@ -296,17 +347,14 @@ class SupsrcTuiApp(App):
         try:
             detail_container = self.query_one("#detail_container", Container)
             table_container = self.query_one("#table_container", Container)
-            global_log_container = self.query_one("#global_log_container", Container)
 
             if show_detail:
                 detail_container.styles.display = "block"
-                table_container.styles.height = "40%"
-                detail_container.styles.height = "30%"
-                global_log_container.styles.height = "30%"
+                table_container.styles.height = "50%"
+                detail_container.styles.height = "50%"
             else:
                 detail_container.styles.display = "none"
-                table_container.styles.height = "60%"
-                global_log_container.styles.height = "40%"
+                table_container.styles.height = "70%"
         except Exception as e:
             log.error("Error updating layout", error=str(e))
 
