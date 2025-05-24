@@ -1,9 +1,16 @@
-import pytest
-from pathlib import Path
+import shutil  # Added for robust cleanup, though tmp_path handles it mostly
 import subprocess
-import shutil # Added for robust cleanup, though tmp_path handles it mostly
+from pathlib import Path
 
-from supsrc.config import SupsrcConfig, GlobalConfig, RepositoryConfig, RuleConfig, InactivityRuleConfig
+import pytest
+
+from supsrc.config import (
+    GlobalConfig,
+    InactivityRuleConfig,
+    RepositoryConfig,
+    SupsrcConfig,
+)
+
 
 @pytest.fixture
 def temp_git_repo(tmp_path: Path) -> Path:

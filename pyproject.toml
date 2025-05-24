@@ -275,6 +275,9 @@ output = "coverage.xml"
 [dependency-groups]
 dev = [
     "pytest-asyncio>=0.26.0",
+    "pytest-cov>=6.1.1",
+    "pytest-xdist>=3.6.1",
+    "ty>=0.0.1a6",
 ]
 
 # 🔼⚙️
