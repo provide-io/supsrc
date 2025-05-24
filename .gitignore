@@ -317,3 +317,4 @@ $RECYCLE.BIN/
 *.bf.txt
 *.pdf
 supsrc.conf
+*.log.json
