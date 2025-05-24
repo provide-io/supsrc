@@ -5,6 +5,7 @@
 import asyncio
 import time  # Import time for unique task names
 from contextlib import suppress  # For cleaner task cancellation handling
+from rich.console import Console
 from pathlib import Path
 from typing import Any, Optional, TypeAlias, cast
 
@@ -53,6 +54,15 @@ except ImportError:
 # Logger for this module
 log: StructLogger = structlog.get_logger("runtime.orchestrator")
 
+# --- Rule Type to Emoji Mapping ---
+RULE_EMOJI_MAP = {
+    "inactivity": "⏳",
+    # Add other known rule type strings (lowercase) and their emojis
+    # e.g., "filecount": "🗂️",
+    # e.g., "savecount": "💾",
+    "default": "⚙️", # Fallback
+}
+
 # Type alias for state map
 RepositoryStatesMap: TypeAlias = dict[str, RepositoryState]
 
@@ -66,7 +76,8 @@ class WatchOrchestrator:
         self,
         config_path: Path,
         shutdown_event: asyncio.Event,
-        app: Optional["TextualApp"] = None # Accept optional TUI app instance
+        app: Optional["TextualApp"] = None, # Accept optional TUI app instance
+        console: Console | None = None
         ) -> None:
         """
         Initializes the orchestrator.
@@ -75,10 +86,12 @@ class WatchOrchestrator:
             config_path: Path to the configuration file.
             shutdown_event: Event signalling graceful shutdown.
             app: Optional instance of the Textual TUI application.
+            console: Optional instance of Rich Console for non-TUI output.
         """
         self.config_path = config_path
         self.shutdown_event = shutdown_event
         self.app: TextualApp | None = app if TEXTUAL_AVAILABLE_RUNTIME else None # Store the TUI app instance only if usable
+        self.console = console
         self.config: SupsrcConfig | None = None
         self.monitor_service: MonitoringService | None = None
         self.event_queue: asyncio.Queue[MonitoredEvent] = asyncio.Queue()
@@ -88,7 +101,18 @@ class WatchOrchestrator:
         self._log = log.bind(orchestrator_id=id(self))
         self._is_tui_active = bool(self.app) # Flag for easier checking
 
-    # --- TUI Update Helpers ---
+    # --- Console and TUI Update Helpers ---
+
+    def _console_message(self, message: str, repo_id: str | None = None, style: str | None = None, emoji: str | None = None) -> None:
+        """Helper to print messages to the Rich console if available (non-TUI mode)."""
+        if self.console and not self._is_tui_active: # Only print if console exists and not in TUI mode
+            formatted_message = message
+            if repo_id:
+                # Using a consistent repo_id style for console messages
+                formatted_message = f"[bold blue]{repo_id}[/]: {formatted_message}"
+            if emoji:
+                formatted_message = f"{emoji} {formatted_message}"
+            self.console.print(formatted_message, style=style if style else None)
 
     def _post_tui_log(self, repo_id: str | None, level: str, message: str) -> None:
         """Safely posts a log message to the TUI if active."""
@@ -145,6 +169,11 @@ class WatchOrchestrator:
         rule_config_obj: RuleConfig = repo_config.rule
         rule_type_str = getattr(rule_config_obj, "type", "unknown_rule_type")
 
+        # repo_state.active_rule_description = f"Action for {rule_type_str}" # Replaced by action_description
+        repo_state.action_description = "Queued..."
+        repo_state.rule_dynamic_indicator = "Triggered!"
+        self._console_message("Rule triggered: Commit due.", repo_id=repo_id, style="green bold", emoji="✅")
+        self._post_tui_state_update() # Update TUI for triggered state
         callback_log.info(
             "Action Triggered: Performing actions...",
             rule_type=rule_type_str,
@@ -157,56 +186,83 @@ class WatchOrchestrator:
 
         try:
             # --- 1. Get Status ---
-            repo_state.update_status(RepositoryStatus.PROCESSING)
+            repo_state.update_status(RepositoryStatus.PROCESSING) # Emoji will be set by update_status
+            repo_state.action_description = "Checking status..."
+            repo_state.action_progress_total = None; repo_state.action_progress_completed = None
+            self._console_message("Checking repository status...", repo_id=repo_id, style="blue bold", emoji="🔄")
             self._post_tui_log(repo_id, "DEBUG", "Checking repository status...")
             self._post_tui_state_update()
-            # Expecting a RepoStatusResult object now
+            
             status_result: RepoStatusResult = await repo_engine.get_status(repo_state, engine_config_dict, global_config, working_dir)
+            repo_state.action_description = "Status OK" # Or more specific if needed
+            self._post_tui_state_update()
             callback_log.debug("Received status result from engine", status_result=attrs.asdict(status_result))
 
             if not status_result.success:
-                # Use the message from the result object
                 raise SupsrcError(f"Failed to get repository status: {status_result.message}")
 
-            # Check specific flags from the result
             if status_result.is_conflicted:
                 callback_log.warning("Action Skipped: Repository has conflicts.")
+                repo_state.action_description = "Skipped (conflicts)"
+                repo_state.action_progress_total = None; repo_state.action_progress_completed = None
+                repo_state.display_status_emoji = "❌" 
+                self._console_message(f"Action failed: Conflicts detected. See logs for details.", repo_id=repo_id, style="red bold", emoji="❌")
                 self._post_tui_log(repo_id, "ERROR", "Action skipped: Conflicts detected!")
-                repo_state.update_status(RepositoryStatus.ERROR, "Conflicts detected") # Stay in ERROR state
+                repo_state.update_status(RepositoryStatus.ERROR, "Conflicts detected") 
                 self._post_tui_state_update()
                 return
 
             if status_result.is_clean and status_result.is_unborn:
                 callback_log.info("Action Skipped: Unborn repository is clean, no commit needed.")
+                repo_state.action_description = "Skipped (unborn & clean)"
+                repo_state.action_progress_total = None; repo_state.action_progress_completed = None
+                repo_state.display_status_emoji = "🚫"
+                self._console_message("Action skipped: Unborn repository clean.", repo_id=repo_id, style="dim", emoji="🚫")
                 self._post_tui_log(repo_id, "INFO", "Action skipped: Unborn repository clean.")
-                repo_state.reset_after_action() # Reset to IDLE
+                repo_state.reset_after_action() 
                 self._post_tui_state_update()
                 return
             elif status_result.is_clean:
                  callback_log.info("Action Skipped: Repository is clean, no commit needed.")
+                 repo_state.action_description = "Skipped (clean)"
+                 repo_state.action_progress_total = None; repo_state.action_progress_completed = None
+                 repo_state.display_status_emoji = "🚫"
+                 self._console_message("Action skipped: Repository clean.", repo_id=repo_id, style="dim", emoji="🚫")
                  self._post_tui_log(repo_id, "INFO", "Action skipped: Repository clean.")
-                 repo_state.reset_after_action() # Reset to IDLE
+                 repo_state.reset_after_action() 
                  self._post_tui_state_update()
                  return
 
             # --- 2. Stage Changes ---
-            repo_state.update_status(RepositoryStatus.STAGING)
+            repo_state.update_status(RepositoryStatus.STAGING) 
+            repo_state.action_description = "Staging changes..."
+            repo_state.action_progress_total = None; repo_state.action_progress_completed = None
+            self._console_message("Staging changes...", repo_id=repo_id, style="blue bold", emoji="🔄")
             self._post_tui_log(repo_id, "INFO", "Staging changes...")
             self._post_tui_state_update()
-            # Expecting a StageResult object
+            
             stage_result: StageResult = await repo_engine.stage_changes(None, repo_state, engine_config_dict, global_config, working_dir)
             if not stage_result.success:
                 raise SupsrcError(f"Failed to stage changes: {stage_result.message}")
+            
+            files_staged_count = len(stage_result.files_staged or [])
+            repo_state.action_description = f"Staged {files_staged_count} file(s)"
+            # Simulate progress for staging if desired, e.g., total = 1, completed = 1
+            self._console_message(f"Staged {files_staged_count} file(s).", repo_id=repo_id, style="green bold", emoji="✅")
+            self._post_tui_state_update()
             callback_log.info("Action: Staging successful.", files_staged=stage_result.files_staged)
-            self._post_tui_log(repo_id, "DEBUG", f"Staging successful ({len(stage_result.files_staged or [])} files).")
+            self._post_tui_log(repo_id, "DEBUG", f"Staging successful ({files_staged_count} files).")
 
             # --- 3. Perform Commit ---
-            repo_state.update_status(RepositoryStatus.COMMITTING)
+            repo_state.update_status(RepositoryStatus.COMMITTING) 
+            repo_state.action_description = "Committing..."
+            repo_state.action_progress_total = None; repo_state.action_progress_completed = None
+            self._console_message("Performing commit...", repo_id=repo_id, style="blue bold", emoji="🔄")
             self._post_tui_log(repo_id, "INFO", "Performing commit...")
             self._post_tui_state_update()
-            # Expecting a CommitResult object
+            
             commit_result: CommitResult = await repo_engine.perform_commit(
-                message_template="unused", # Engine handles template lookup via config
+                message_template="unused", 
                 state=repo_state,
                 config=engine_config_dict,
                 global_config=global_config,
@@ -216,49 +272,73 @@ class WatchOrchestrator:
                 raise SupsrcError(f"Commit failed: {commit_result.message}")
 
             if commit_result.commit_hash is None:
-                # Engine skipped commit (e.g., no changes after staging)
+                repo_state.action_description = f"Commit skipped ({commit_result.message or 'no changes'})"
+                repo_state.action_progress_total = None; repo_state.action_progress_completed = None
+                repo_state.display_status_emoji = "🚫"
+                self._console_message("Commit skipped: No changes after staging.", repo_id=repo_id, style="dim", emoji="🚫")
                 callback_log.info("Action Skipped: Commit skipped by engine.", reason=commit_result.message)
                 self._post_tui_log(repo_id, "INFO", f"Commit skipped: {commit_result.message}")
-                repo_state.reset_after_action() # Reset to IDLE
+                repo_state.reset_after_action() 
                 self._post_tui_state_update()
                 return
             else:
-                commit_short_hash = commit_result.commit_hash[:7]
+                repo_state.last_commit_short_hash = commit_result.commit_hash[:7]
+                repo_state.action_description = f"Committed: {repo_state.last_commit_short_hash}"
+                repo_state.display_status_emoji = "✅" 
+                self._console_message(f"Commit complete. Hash: {repo_state.last_commit_short_hash}", repo_id=repo_id, style="green bold", emoji="✅")
+                self._post_tui_state_update()
                 callback_log.info("Action: Commit successful", hash=commit_result.commit_hash)
-                self._post_tui_log(repo_id, "SUCCESS", f"Commit successful: {commit_short_hash}")
+                self._post_tui_log(repo_id, "SUCCESS", f"Commit successful: {repo_state.last_commit_short_hash}")
+
 
             # --- 4. Perform Push ---
-            repo_state.update_status(RepositoryStatus.PUSHING)
+            repo_state.update_status(RepositoryStatus.PUSHING) 
+            repo_state.action_description = "Pushing..."
+            repo_state.action_progress_total = None; repo_state.action_progress_completed = None
+            self._console_message("Pushing changes...", repo_id=repo_id, style="blue bold", emoji="🔄")
             self._post_tui_log(repo_id, "INFO", "Performing push (if enabled)...")
             self._post_tui_state_update()
-            # Expecting a PushResult object
+            
             push_result: PushResult = await repo_engine.perform_push(repo_state, engine_config_dict, global_config, working_dir)
 
             if not push_result.success:
-                # Log warning, but still reset state to IDLE as commit was successful
+                repo_state.action_description = f"Push failed: {push_result.message}"
+                self._console_message(f"Push failed: {push_result.message}. See logs.", repo_id=repo_id, style="red bold", emoji="❌")
                 callback_log.warning("Action: Push failed", reason=push_result.message)
                 self._post_tui_log(repo_id, "WARNING", f"Push failed: {push_result.message}")
-                repo_state.reset_after_action() # Reset even on push fail
+                repo_state.reset_after_action() 
             else:
                 if push_result.skipped:
+                    repo_state.action_description = "Push skipped (config)"
+                    repo_state.display_status_emoji = "🚫"
+                    self._console_message("Push skipped (disabled in config).", repo_id=repo_id, style="dim", emoji="🚫")
                     callback_log.info("Action: Push skipped by configuration.")
                     self._post_tui_log(repo_id, "INFO", "Push skipped (disabled in config).")
                 else:
+                    repo_state.action_description = "Push successful"
+                    repo_state.display_status_emoji = "✅" 
+                    self._console_message("Push successful.", repo_id=repo_id, style="green bold", emoji="✅")
                     callback_log.info("Action: Push successful.")
                     self._post_tui_log(repo_id, "SUCCESS", "Push successful.")
-                repo_state.reset_after_action() # Reset after success/skip
+                
+                # After successful/skipped push, finalize action description before reset
+                repo_state.action_description = "Completed"
+                repo_state.action_progress_total = None; repo_state.action_progress_completed = None
+                self._post_tui_state_update()
+                repo_state.reset_after_action() 
 
             self._post_tui_state_update() # Final TUI state update
 
         except Exception as action_exc:
+            repo_state.action_description = f"Error: {str(action_exc)[:30]}..."
+            repo_state.action_progress_total = None; repo_state.action_progress_completed = None
+            self._console_message(f"Action failed: {action_exc}. See logs for details.", repo_id=repo_id, style="red bold", emoji="❌")
             callback_log.error("Action Failed: Error during execution", error=str(action_exc), exc_info=True)
-            # Ensure state exists before updating
             if repo_state:
                  repo_state.update_status(RepositoryStatus.ERROR, f"Action failed: {action_exc}")
                  self._post_tui_log(repo_id, "ERROR", f"Action failed: {action_exc}")
-                 self._post_tui_state_update() # Update TUI with error
+                 self._post_tui_state_update() 
             else:
-                 # This case should be rare due to initial checks
                  self._post_tui_log(repo_id, "CRITICAL", f"Action failed (state missing): {action_exc}")
 
 
@@ -266,7 +346,7 @@ class WatchOrchestrator:
         """Consumes events from the queue, updates state, manages timers, checks rules."""
         consumer_log = self._log.bind(component="EventConsumer")
         consumer_log.info("Event consumer starting loop.")
-        asyncio.get_running_loop()
+        # asyncio.get_running_loop() # Removed, as it's called later or implicitly. Ensure loop is obtained where needed.
         processed_event_count = 0
 
         while not self.shutdown_event.is_set():
@@ -330,15 +410,30 @@ class WatchOrchestrator:
 
                     else:
                         # Record change, check rules, schedule actions/timers
-                        repo_state.record_change()
+                        repo_state.record_change() # This calls update_status, which sets emoji for CHANGED
                         event_log = event_log.bind(save_count=repo_state.save_count, status=repo_state.status.name)
+                        self._console_message(f"Change detected: {event.src_path.name}", repo_id=repo_id, style="magenta bold", emoji="✏️")
                         self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}")
-                        self._post_tui_state_update()
-                        event_log.debug("State updated after recording change")
-
+                        
                         rule_config_obj: RuleConfig = repo_config.rule
-                        rule_type_str = getattr(rule_config_obj, "type", "unknown_rule_type")
-                        event_log.debug(">>> About to check trigger condition", rule_type=rule_type_str)
+                        rule_type_str_lc = getattr(rule_config_obj, "type", "default").lower()
+                        repo_state.rule_emoji = RULE_EMOJI_MAP.get(rule_type_str_lc, RULE_EMOJI_MAP["default"])
+                        if isinstance(rule_config_obj, InactivityRuleConfig):
+                            repo_state.active_rule_description = f"Inactivity ({rule_config_obj.period.total_seconds():.0f}s)"
+                            repo_state.rule_dynamic_indicator = f"({rule_config_obj.period.total_seconds():.0f}s period)"
+                        else:
+                            repo_state.active_rule_description = f"{rule_type_str_lc.capitalize()} pending"
+                            repo_state.rule_dynamic_indicator = f"{rule_type_str_lc.capitalize()} pending"
+                        self._post_tui_state_update() # Update TUI with new rule description
+                        event_log.debug("State updated after recording change and setting rule description")
+                        
+                        # Rule evaluation phase
+                        repo_state.display_status_emoji = "🧪" # Evaluating emoji
+                        repo_state.active_rule_description = f"Evaluating {rule_type_str_lc.capitalize()}..."
+                        repo_state.rule_dynamic_indicator = "Checking..." # Dynamic indicator for evaluation
+                        self._console_message(f"Evaluating {rule_type_str_lc.capitalize()} rule", repo_id=repo_id, style="cyan", emoji="🧪")
+                        self._post_tui_state_update() # Update TUI for evaluating state
+                        event_log.debug(">>> About to check trigger condition", rule_type=rule_type_str_lc)
 
                         rule_met = check_trigger_condition(repo_state, repo_config)
                         event_log.debug("Rule check evaluated", rule_met=rule_met)
@@ -353,13 +448,24 @@ class WatchOrchestrator:
                             if isinstance(rule_config_obj, InactivityRuleConfig):
                                 delay = rule_config_obj.period.total_seconds()
                                 event_log.debug("Rescheduling inactivity check", delay_seconds=delay)
+                                # Update state for "Waiting"
+                                repo_state.display_status_emoji = "😴" # Already done by worker (this is a specific state)
+                                repo_state.active_rule_description = f"Inactivity ({delay:.0f}s waiting)"
+                                repo_state.rule_emoji = RULE_EMOJI_MAP.get("inactivity", "⏳")
+                                repo_state.rule_dynamic_indicator = f"({int(delay)}s left)" # Placeholder, real countdown later
+                                self._console_message(f"Waiting for inactivity period ({delay:.0f}s)...", repo_id=repo_id, style="italic yellow", emoji="⏳")
                                 self._post_tui_log(repo_id, "DEBUG", f"Activity detected, rescheduling check in {delay:.1f}s.")
+                                self._post_tui_state_update() # Update TUI for waiting state
+                                
                                 current_loop = asyncio.get_running_loop()
                                 # Ensure the callback lambda creates a task
                                 timer_handle = current_loop.call_later(
                                     delay, lambda rid=repo_id: asyncio.create_task(self._trigger_action_callback(rid))
                                 )
                                 repo_state.set_inactivity_timer(timer_handle)
+                            # else: Rule not met, but not inactivity, so emoji/description might reset or stay 'Evaluating'
+                            # The next event or state change will update it. Or reset to default rule description.
+                            # For now, if not rule_met and not inactivity, it implicitly goes back to its base status emoji on next cycle.
 
                 except Exception as processing_exc:
                      event_log.error("Error during event processing logic", error=str(processing_exc), exc_info=True)
@@ -393,12 +499,16 @@ class WatchOrchestrator:
             return []
 
         self._safe_log("info", "--- Initializing Repositories ---")
+        # self._console_message("Initializing repositories...", style="dim", emoji="📂") # Moved to run method
         self._post_tui_log(None, "INFO", "Initializing repositories...")
         for repo_id, repo_config in self.config.repositories.items():
             init_log = self._log.bind(repo_id=repo_id)
+            repo_state = None # Initialize for broader scope
+
             if repo_config.enabled and repo_config._path_valid:
                 init_log.debug("Initializing state object")
-                self.repo_states[repo_id] = RepositoryState(repo_id=repo_id)
+                repo_state = RepositoryState(repo_id=repo_id)
+                self.repo_states[repo_id] = repo_state
                 engine_instance: RepositoryEngine | None = None
 
                 # --- Load Engine ---
@@ -423,57 +533,92 @@ class WatchOrchestrator:
                     enabled_repo_ids.append(repo_id)
                 except Exception as load_exc:
                     init_log.error("Failed to load repo engine", engine_type=engine_type, error=str(load_exc), exc_info=True)
-                    self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, f"Failed to load engine: {load_exc}")
+                    if repo_state: repo_state.update_status(RepositoryStatus.ERROR, f"Failed to load engine: {load_exc}")
                     self._post_tui_log(repo_id, "ERROR", f"Engine load failed: {load_exc}")
                     continue
 
-                # --- Get Initial Summary ---
-                try:
-                    init_log.debug("Getting initial repo summary...")
-                    # Use hasattr for safety, assuming get_summary might be optional
-                    if hasattr(engine_instance, "get_summary"):
-                        # Cast to expected type if necessary and confident
-                        summary = cast(GitRepoSummary, await engine_instance.get_summary(repo_config.path))
+                # --- Set initial rule description, emoji, and dynamic indicator ---
+                if repo_state:
+                    rule_conf_obj = repo_config.rule
+                    rule_type_str = getattr(rule_conf_obj, "type", "default").lower()
+                    repo_state.rule_emoji = RULE_EMOJI_MAP.get(rule_type_str, RULE_EMOJI_MAP["default"])
 
-                        if summary.head_ref_name == "ERROR":
-                            summary_msg = f"Init Error: {summary.head_commit_message_summary}"
-                            init_log.error(summary_msg)
-                            self._post_tui_log(repo_id, "ERROR", summary_msg)
-                            # Optionally set state to ERROR here
-                            # self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, summary_msg)
-                        elif summary.is_empty:
-                            summary_msg = "Init: Repository empty."
-                            init_log.info(summary_msg)
-                            self._post_tui_log(repo_id, "INFO", summary_msg)
-                        elif summary.head_ref_name == "UNBORN":
-                            summary_msg = "Init: Repository has no commits yet (unborn HEAD)."
-                            init_log.info(summary_msg)
-                            self._post_tui_log(repo_id, "INFO", summary_msg)
-                        elif not summary.head_ref_name or not summary.head_commit_hash:
-                            summary_msg = "Init: Unable to determine HEAD reference or commit."
-                            init_log.warning(summary_msg)
-                            self._post_tui_log(repo_id, "WARNING", summary_msg)
-                        else:
-                            commit_short_hash = summary.head_commit_hash[:7]
-                            commit_msg_summary = summary.head_commit_message_summary or "No commit message"
-                            summary_msg = f"Init: HEAD at {summary.head_ref_name} ({commit_short_hash}) | {commit_msg_summary}"
-                            init_log.info(summary_msg)
-                            self._post_tui_log(repo_id, "INFO", summary_msg)
+                    if isinstance(rule_conf_obj, InactivityRuleConfig):
+                        repo_state.active_rule_description = f"Inactivity ({rule_conf_obj.period.total_seconds():.0f}s)" # Existing
+                        repo_state.rule_dynamic_indicator = f"({rule_conf_obj.period.total_seconds():.0f}s period)"
+                    elif hasattr(rule_conf_obj, "type"):
+                        repo_state.active_rule_description = f"{getattr(rule_conf_obj, 'type', 'Unknown')} rule" # Existing
+                        repo_state.rule_dynamic_indicator = rule_type_str.capitalize()
                     else:
-                         init_log.warning("Engine lacks get_summary method.")
-                         self._post_tui_log(repo_id, "WARNING", "Engine lacks get_summary.")
+                        repo_state.active_rule_description = "Default rule" # Existing
+                        repo_state.rule_dynamic_indicator = "Default"
 
-                except Exception as summary_exc:
-                    init_log.error("Failed to get initial repo summary", error=str(summary_exc), exc_info=True)
-                    self._post_tui_log(repo_id, "ERROR", f"Failed to get summary: {summary_exc}")
 
-            else:
+                # --- Get Initial Summary ---
+                if repo_state and engine_instance: # Ensure repo_state and engine are valid
+                    try:
+                        init_log.debug("Getting initial repo summary...")
+                        if hasattr(engine_instance, "get_summary"):
+                            summary = cast(GitRepoSummary, await engine_instance.get_summary(repo_config.path))
+
+                            if summary.head_ref_name == "ERROR":
+                                summary_msg = f"Init Error: {summary.head_commit_message_summary}"
+                                init_log.error(summary_msg)
+                                self._post_tui_log(repo_id, "ERROR", summary_msg)
+                                # repo_state.update_status(RepositoryStatus.ERROR, summary_msg) # Already handled by engine?
+                            elif summary.is_empty:
+                                summary_msg = "Init: Repository empty."
+                                init_log.info(summary_msg)
+                                self._post_tui_log(repo_id, "INFO", summary_msg)
+                            elif summary.head_ref_name == "UNBORN":
+                                summary_msg = "Init: Repository has no commits yet (unborn HEAD)."
+                                init_log.info(summary_msg)
+                                self._post_tui_log(repo_id, "INFO", summary_msg)
+                            elif not summary.head_ref_name or not summary.head_commit_hash:
+                                summary_msg = "Init: Unable to determine HEAD reference or commit."
+                                init_log.warning(summary_msg)
+                                self._post_tui_log(repo_id, "WARNING", summary_msg)
+                            else:
+                                repo_state.last_commit_short_hash = summary.head_commit_hash[:7] if summary.head_commit_hash else None
+                                repo_state.last_commit_message_summary = summary.head_commit_message_summary
+                                commit_short_hash = repo_state.last_commit_short_hash or "N/A"
+                                commit_msg_summary = repo_state.last_commit_message_summary or "No commit message"
+                                summary_msg = f"Init: HEAD at {summary.head_ref_name} ({commit_short_hash}) | {commit_msg_summary}"
+                                init_log.info(summary_msg)
+                                self._post_tui_log(repo_id, "INFO", summary_msg)
+                                self._console_message(f"Watching: {repo_config.path} (Branch: {summary.head_ref_name}, Last Commit: {commit_short_hash})", repo_id=repo_id, style="dim", emoji="📂")
+                        else:
+                             init_log.warning("Engine lacks get_summary method.")
+                             self._post_tui_log(repo_id, "WARNING", "Engine lacks get_summary.")
+
+                    except Exception as summary_exc:
+                        init_log.error("Failed to get initial repo summary", error=str(summary_exc), exc_info=True)
+                        self._post_tui_log(repo_id, "ERROR", f"Failed to get summary: {summary_exc}")
+                        # repo_state.update_status(RepositoryStatus.ERROR, f"Summary failed: {summary_exc}") # Potentially set error
+
+                # Ensure emoji is updated based on initial status (typically IDLE)
+                if repo_state:
+                    repo_state.update_status(repo_state.status) # This will set the emoji via STATUS_EMOJI_MAP
+
+            else: # Not enabled or path not valid
                 init_log.info("Skipping initialization (disabled or invalid path)",
                               enabled=repo_config.enabled, path_valid=repo_config._path_valid)
+                # If you want to show disabled repos in TUI, you could add a placeholder state here
+                # e.g., self.repo_states[repo_id] = RepositoryState(repo_id=repo_id, status=RepositoryStatus.DISABLED_OR_INVALID_TYPE_MAYBE?)
+                # For now, they are just skipped.
 
+        self._log.debug(
+            "Orchestrator: Final repo_states before initial TUI update",
+            num_states=len(self.repo_states),
+            repo_ids=list(self.repo_states.keys())
+        )
         self._post_tui_state_update()
         self._safe_log("info", "--- Repo Initialization Complete ---", count=len(enabled_repo_ids))
         self._post_tui_log(None, "INFO", f"{len(enabled_repo_ids)} repos initialized.")
+
+        if enabled_repo_ids:
+            self._console_message(f"Monitoring active for {len(enabled_repo_ids)} repositories.", style="dim", emoji="✅")
+            self._console_message("All repositories idle. Awaiting changes... (Press Ctrl+C to exit)", style="dim", emoji="🧼")
         return enabled_repo_ids
 
     def _setup_monitoring(self, enabled_repo_ids: list[str]) -> list[str]:
@@ -537,17 +682,21 @@ class WatchOrchestrator:
             try:
                 self.config = load_config(self.config_path)
                 self._safe_log("info", "Config loaded successfully.")
+                self._console_message("Config loaded successfully.", style="dim", emoji="📂")
                 self._post_tui_log(None, "INFO", f"Config loaded: {self.config_path.name}")
             except (ConfigurationError, cattrs.BaseValidationError) as e:
                  self._safe_log("error", "Failed to load/validate config", error=str(e), path=str(self.config_path))
+                 self._console_message(f"Config Error: {e}", style="bold red", emoji="❌")
                  self._post_tui_log(None, "CRITICAL", f"Config Error: {e}")
                  raise
             except Exception as e:
                  self._safe_log("critical", "Unexpected error loading config", error=str(e), exc_info=True)
+                 self._console_message(f"Unexpected Config Error: {e}", style="bold red", emoji="❌")
                  self._post_tui_log(None, "CRITICAL", f"Unexpected Config Error: {e}")
                  raise
 
             # Initialize Repos
+            self._console_message("Initializing repositories...", style="dim", emoji="📂")
             enabled_repo_ids = await self._initialize_repositories()
             if not enabled_repo_ids:
                  self._safe_log("warning", "No enabled/valid repos found. Exiting.")
@@ -585,21 +734,25 @@ class WatchOrchestrator:
             # Wait for Shutdown
             await self.shutdown_event.wait()
             self._safe_log("info", "Shutdown signal received.")
+            self._console_message("Shutdown requested...", style="dim") # emoji="INFO" removed to match UX
             self._post_tui_log(None, "INFO", "Shutdown requested...")
 
         except SupsrcError as e:
             self._safe_log("critical", "Critical supsrc error during watch", error=str(e), exc_info=True)
+            self._console_message(f"Runtime Error: {e}", style="bold red", emoji="❌")
             self._post_tui_log(None, "CRITICAL", f"Runtime Error: {e}")
         except asyncio.CancelledError:
              self._safe_log("warning", "Orchestrator run task cancelled.")
              if not self.shutdown_event.is_set(): self.shutdown_event.set()
         except Exception as e:
             self._safe_log("critical", "Unexpected error in orchestrator run", error=str(e), exc_info=True)
+            self._console_message(f"Unexpected Error: {e}", style="bold red", emoji="❌")
             self._post_tui_log(None, "CRITICAL", f"Unexpected Error: {e}")
             if not self.shutdown_event.is_set(): self.shutdown_event.set()
         finally:
             # Orchestrator Cleanup
             self._safe_log("info", "Orchestrator starting cleanup...")
+            self._console_message("Cleaning up...", style="dim") # emoji="INFO" removed
             self._post_tui_log(None, "INFO", "Cleaning up...")
 
             # 1. Cancel Repo Timers
@@ -623,6 +776,7 @@ class WatchOrchestrator:
                  try:
                      await self.monitor_service.stop()
                      self._safe_log("debug", "Monitoring service stop completed.")
+                     self._console_message("Monitoring stopped.", style="dim") # emoji="INFO" removed
                      self._post_tui_log(None, "INFO", "Monitoring stopped.")
                  except Exception as stop_exc:
                      self._safe_log("error", "Error during monitor service stop", error=str(stop_exc), exc_info=True)
@@ -631,6 +785,7 @@ class WatchOrchestrator:
             else: self._safe_log("debug", "Monitor service was not initialized.")
 
             self._safe_log("info", "Orchestrator finished cleanup.")
+            self._console_message("Cleanup complete.", style="dim")
             self._post_tui_log(None, "INFO", "Cleanup complete.")
 
     def _safe_log(self, level: str, msg: str, **kwargs):
@@ -640,5 +795,48 @@ class WatchOrchestrator:
             if hasattr(self, "_log") and self._log: getattr(self._log, level)(msg, **kwargs)
             else: pass
         except Exception: pass
+
+    async def get_repository_details(self, repo_id: str) -> dict[str, Any]:
+        """
+        Retrieves detailed information for a given repository,
+        currently focused on commit history.
+        """
+        details_log = self._log.bind(repo_id=repo_id)
+        details_log.debug("Fetching repository details for TUI")
+
+        repo_state = self.repo_states.get(repo_id)
+        repo_config = self.config.repositories.get(repo_id) if self.config else None
+        repo_engine = self.repo_engines.get(repo_id)
+
+        if not repo_state or not repo_config or not repo_engine:
+            details_log.warning("Could not find state, config, or engine for repo details.")
+            return {"error": "Repository data not found."}
+
+        commit_history = []
+        if isinstance(repo_engine, GitEngine): # Check if it's the GitEngine
+            try:
+                # Ensure repo_config.path is a Path object if your engine expects it
+                # The get_commit_history is synchronous, run it in a thread pool
+                # to avoid blocking the orchestrator's async loop if it were very slow,
+                # though for local git log, it's often fast enough.
+                # For simplicity in this subtask, we'll call it directly if it's reasonably fast.
+                # If performance issues arise, this should be wrapped with loop.run_in_executor.
+                
+                # The config stores path as str, GitEngine might need Path
+                history = repo_engine.get_commit_history(Path(repo_config.path), limit=15)
+                commit_history.extend(history)
+            except Exception as e:
+                details_log.error("Error fetching commit history from GitEngine", error=str(e))
+                commit_history.append(f"Error fetching history: {e}")
+        else:
+            commit_history.append("Detail view not supported for this engine type.")
+            details_log.warning("Detail view requested for non-Git engine type", engine_type=type(repo_engine).__name__)
+
+
+        return {
+            "repo_id": repo_id,
+            "commit_history": commit_history,
+            # Add other details here in the future if needed
+        }
 
 # 🔼⚙️

@@ -418,4 +418,39 @@ class GitEngine(RepositoryEngine):
             push_log.exception("Unexpected error performing push")
             return PushResult(success=False, message=f"Unexpected push error: {e}", remote_name=remote_name, branch_name=branch_name)
 
+    def get_commit_history(self, working_dir: Path, limit: int = 10) -> list[str]:
+        """Retrieves the last N commit messages from the repository."""
+        history_log = self._log.bind(working_dir=str(working_dir), limit=limit)
+        history_log.debug("Fetching commit history")
+        try:
+            repo = self._get_repo(working_dir)
+            if repo.is_empty or repo.head_is_unborn:
+                return ["Repository is empty or unborn."]
+
+            last_commits = []
+            for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):
+                if len(last_commits) >= limit:
+                    break
+                commit_time = datetime.fromtimestamp(commit.commit_time, tz=datetime.now(UTC).astimezone().tzinfo).strftime('%Y-%m-%d %H:%M:%S')
+                # Format: "hash_short - author - date - message_summary"
+                summary = (commit.message or "").split('\n', 1)[0]
+                if len(summary) > 60: # Truncate long summaries
+                    summary = summary[:57] + "..."
+                
+                # Ensure commit.author is not None before accessing its properties
+                author_name = commit.author.name if commit.author else "Unknown Author"
+
+                last_commits.append(
+                    f"{str(commit.id)[:7]} - {author_name} - {commit_time} - {summary}"
+                )
+            
+            history_log.debug(f"Retrieved {len(last_commits)} commit history items.")
+            return last_commits
+        except pygit2.GitError as e:
+            history_log.error("Failed to get commit history", error=str(e))
+            return [f"Error fetching history: {e}"]
+        except Exception as e:
+            history_log.exception("Unexpected error getting commit history")
+            return [f"Unexpected error fetching history: {e}"]
+
 # 🔼⚙️
