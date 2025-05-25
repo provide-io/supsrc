@@ -30,7 +30,12 @@ LOG_EMOJIS = {
 
 # --- Core structlog Setup Function ---
 
-def setup_logging(level: int = logging.INFO, json_logs: bool = False, log_file: str | None = None) -> None:
+def setup_logging(
+    level: int = logging.INFO,
+    json_logs: bool = False,
+    log_file: str | None = None,
+    file_only: bool = False  # New parameter for file-only logging
+) -> None:
     """
     Configures structlog for the entire supsrc application.
 
@@ -93,13 +98,22 @@ def setup_logging(level: int = logging.INFO, json_logs: bool = False, log_file: 
     )
 
     # Configure the standard library root logger handler (for console)
-    handler = logging.StreamHandler(sys.stdout) # Explicitly use stdout
-    handler.setFormatter(formatter)
-
     root_logger = logging.getLogger() # Get stdlib root logger
     root_logger.handlers.clear()      # Clear existing handlers
-    root_logger.addHandler(handler)
-    root_logger.setLevel(level)     # Set level on the root logger
+    root_logger.setLevel(level)     # Set level on the root logger first
+
+    # Console Handler (conditionally added)
+    if not file_only:
+        handler = logging.StreamHandler(sys.stdout) # Explicitly use stdout
+        handler.setFormatter(formatter)
+        root_logger.addHandler(handler)
+    elif file_only and not log_file: # file_only is True, but no log_file is specified
+        # This means no log output will occur. Log a warning directly.
+        # Using a basic print to stderr as logging might not be fully functional or desired here.
+        print(f"WARNING: Logging configured with file_only=True but no log_file was provided. No log output will be generated.", file=sys.stderr)
+    elif file_only and log_file: # file_only is True and a log_file is specified
+        # Inform that console output is suppressed.
+        print(f"INFO: Console logging suppressed. Logs are being written to '{log_file}'.", file=sys.stderr)
 
     # Configure File Handler (Optional, always JSON for machine readability)
     if log_file:
@@ -108,17 +122,13 @@ def setup_logging(level: int = logging.INFO, json_logs: bool = False, log_file: 
             # Use a separate formatter for the file, forcing JSON output
             file_formatter = structlog.stdlib.ProcessorFormatter(
                 processor=structlog.processors.JSONRenderer(sort_keys=True),
-                # foreign_pre_chain=[structlog.stdlib.add_log_level], # Keep consistent if needed
             )
             file_handler.setFormatter(file_formatter)
             file_handler.setLevel(level) # Set level for file handler too
             root_logger.addHandler(file_handler) # Add file handler to root
-            # Log using structlog now that basic config is done
             structlog.get_logger(BASE_LOGGER_NAME).info(f"File logging enabled to '{log_file}'")
         except Exception as e:
-             # Use standard logging as a fallback during setup failure
             logging.getLogger(BASE_LOGGER_NAME).error(f"Failed to setup file logging to '{log_file}': {e}", exc_info=True)
-
 
     # Log initial message using a structlog logger AFTER configuration
     slog = structlog.get_logger(BASE_LOGGER_NAME)
@@ -126,8 +136,10 @@ def setup_logging(level: int = logging.INFO, json_logs: bool = False, log_file: 
         "structlog logging initialized",
         # Removed padded_logger from the initial log message context
         log_level=log_level_name,
-        json_console=json_logs,
-        log_file=log_file or "None"
+        json_console_format=json_logs,
+        console_output_enabled=(not file_only), # Corrected logic
+        log_file=log_file or "None",
+        file_only_requested=file_only
     )
 
 
