@@ -13,8 +13,9 @@ import cattrs  # Needed for config validation exceptions
 import structlog
 from rich.console import Console
 
-from supsrc.config import SupsrcConfig, load_config
-from supsrc.config.models import (
+from supsrc.config import (
+    load_config,
+    SupsrcConfig,
     InactivityRuleConfig,
     RuleConfig,
 )

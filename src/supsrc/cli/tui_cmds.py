@@ -27,24 +27,36 @@ log = structlog.get_logger("cli.tui")
 )
 @logging_options # Reuse logging options
 @click.pass_context
-def tui_cli(ctx: click.Context, config_path_str: str, **kwargs):
+def tui_cli(
+    ctx: click.Context,
+    config_path_str: str,
+    log_level: str | None,    # Explicitly define
+    log_file: str | None,     # Explicitly define
+    json_logs: bool | None,   # Explicitly define
+    file_only_logs: bool | None # Explicitly define (added by @logging_options)
+    # **kwargs removed as all known options from @logging_options are now explicit
+):
     """Launch the Supsrc Textual User Interface."""
 
-    # Setup logging using the utility function.
-    # TUI might prefer logs to go to a file by default and not clutter the console,
-    # so we set local_file_only_logs=True if a log_file is specified.
-    # The TUI itself will also handle its internal logging separate from CLI verbosity.
-    log_file_in_ctx = ctx.obj.get("LOG_FILE")
-    # Default TUI to file-only logging if a log file is active from global options
-    # or if this command were to add its own --log-file option.
-    # If no log file, console logs are fine.
-    tui_file_only_default = bool(log_file_in_ctx)
+    # Setup logging using the utility function with explicitly passed parameters.
+    # Determine the effective file_only_logs for TUI mode.
+    # If --file-only-logs is passed to `supsrc tui`, use that.
+    # Else, if --log-file (either global or local to `tui`) is specified, default to True for TUI.
+    effective_file_only_logs: bool
+    if file_only_logs is not None:
+        effective_file_only_logs = file_only_logs
+    else:
+        # Check if a log file is active either from this command's options or global context
+        # local_log_file (now `log_file` parameter) takes precedence.
+        active_log_file = log_file or ctx.obj.get("LOG_FILE")
+        effective_file_only_logs = bool(active_log_file)
 
     setup_logging_from_context(
         ctx,
-        local_log_level=kwargs.get("log_level"), # Pass through if tui_cli has its own level
-        local_json_logs=kwargs.get("json_logs"),
-        local_file_only_logs=kwargs.get("file_only_logs", tui_file_only_default), # TUI specific default for file_only
+        local_log_level=log_level,
+        local_log_file=log_file,
+        local_json_logs=json_logs,
+        local_file_only_logs=effective_file_only_logs,
         default_log_level="INFO" # Default for TUI operations if no global level set
     )
 
