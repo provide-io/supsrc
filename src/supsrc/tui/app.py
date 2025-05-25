@@ -116,74 +116,61 @@ class SupsrcTuiApp(App):
         layout: vertical;
         overflow: hidden;
     }
-    
-    #main_content_area {
-        layout: horizontal;
-        height: 1fr;
-        overflow: hidden;
-    }
-    
-    #left_panel {
-        width: 40%;
-        layout: vertical;
-        overflow: hidden;
-    }
-    
-    #right_panel {
-        width: 60%;
-        layout: vertical;
-        overflow: hidden;
-    }
-    
-    #log_container {
-        height: 1fr;
+
+    #repository_pane_container { /* Was #table_container */
+        height: 40%; /* Initial height, can be adjusted by watch_show_detail_pane */
         overflow-y: auto;
         scrollbar-gutter: stable;
         border: round $accent;
         padding: 1;
         margin: 1;
     }
-    
-    #table_container {
-        height: 70%;
+
+    #detail_pane_container { /* Was #detail_container */
+        display: none; /* Hidden by default */
+        height: 30%; /* Height when visible, adjusted by watch_show_detail_pane */
         overflow-y: auto;
         scrollbar-gutter: stable;
         border: round $accent;
         padding: 1;
         margin: 1;
     }
-    
-    #detail_container {
-        display: none;
-        height: 30%;
+
+    #global_log_container { /* Was #log_container */
+        height: 1fr; /* Takes remaining space */
         overflow-y: auto;
         scrollbar-gutter: stable;
         border: round $accent;
         padding: 1;
         margin: 1;
     }
-    
+
     #status_container {
-        height: 3;
+        height: 3; /* Fixed height for status messages */
         border: round $accent;
         padding: 1;
         margin: 1;
     }
-    
+
     DataTable > .datatable--header {
         background: $accent-darken-2;
         color: $text;
     }
-    
+
     DataTable > .datatable--cursor {
         background: $accent;
         color: $text;
     }
-    
+
+    /* .panel-title can be removed if no longer used, or kept if it is.
+       For now, I'll keep it commented out as its usage is unclear
+       in the new layout. If it was used for titles within the old #left_panel
+       or #right_panel, it might not be needed directly on these new containers.
     .panel-title {
         text-style: bold;
         color: $accent;
     }
+    */
     """
 
     # Reactive variables
@@ -209,24 +196,25 @@ class SupsrcTuiApp(App):
     def compose(self) -> ComposeResult:
         """Compose the TUI layout with improved structure."""
         yield Header()
+
+        # Repositories Table (Top)
+        with Container(id="repository_pane_container"):
+            yield DataTable(id="repo-table", zebra_stripes=True)
+
+        # Repository Details (Middle, initially hidden)
+        # This container's display style will be controlled by `watch_show_detail_pane`
+        with Container(id="detail_pane_container"): 
+            yield TextualLog(id="repo_detail_log", highlight=False)
+
+        # Global Event Log (Bottom)
+        with Container(id="global_log_container"):
+            yield TextualLog(id="event-log", highlight=True, max_lines=1000)
         
-        with Container(id="main_content_area"):
-            # Left panel: Logs
-            with Vertical(id="left_panel"):
-                with Container(id="log_container"):
-                    yield TextualLog(id="event-log", highlight=True, max_lines=1000)
-            
-            # Right panel: Repository data and details
-            with Vertical(id="right_panel"):
-                with Container(id="table_container"):
-                    yield DataTable(id="repo-table", zebra_stripes=True)
-                
-                with Container(id="detail_container"):
-                    yield TextualLog(id="repo_detail_log", highlight=False)
-                
-                with Container(id="status_container"):
-                    yield TextualLog(id="status_log", highlight=False, max_lines=3)
-        
+        # Status Log (just above Footer or integrated if simple enough)
+        # For now, place it in its own container above the footer.
+        with Container(id="status_container"):
+            yield TextualLog(id="status_log", highlight=False, max_lines=3)
+
         yield Footer()
 
     def on_mount(self) -> None:
@@ -345,18 +333,14 @@ class SupsrcTuiApp(App):
     def watch_show_detail_pane(self, show_detail: bool) -> None:
         """Update layout when detail pane visibility changes."""
         try:
-            detail_container = self.query_one("#detail_container", Container)
-            table_container = self.query_one("#table_container", Container)
+            detail_pane_container = self.query_one("#detail_pane_container", Container) # New ID
 
             if show_detail:
-                detail_container.styles.display = "block"
-                table_container.styles.height = "50%"
-                detail_container.styles.height = "50%"
+                detail_pane_container.styles.display = "block"
             else:
-                detail_container.styles.display = "none"
-                table_container.styles.height = "70%"
+                detail_pane_container.styles.display = "none"
         except Exception as e:
-            log.error("Error updating layout", error=str(e))
+            log.error("Error updating detail pane visibility", error=str(e)) # Updated log message
 
     # Action Methods
     def action_select_repo_for_detail(self) -> None:
