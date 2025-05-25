@@ -77,10 +77,14 @@ class TimerManager:
 
         timer = self._timers[name]
         try:
-            if not timer.is_cancelled():
+            # Check if the timer is active by inspecting its internal handle
+            if hasattr(timer, '_Timer__handle') and timer._Timer__handle is not None:
                 timer.stop()
-            del self._timers[name]
-            self._logger.debug("Timer stopped", name=name)
+            # No need to check is_cancelled, stop() should be idempotent or handle internal state.
+            # Textual's stop() method on Timer sets _Timer__handle to None.
+            if name in self._timers: # Re-check as timer.stop() might have already removed it via a callback
+                del self._timers[name]
+            self._logger.debug("Timer stopped or already inactive", name=name)
             return True
         except Exception as e:
             self._logger.error("Error stopping timer", name=name, error=str(e))
@@ -109,7 +113,7 @@ class SupsrcTuiApp(App):
         ("tab", "focus_next", "Next Panel"),
         ("shift+tab", "focus_previous", "Previous Panel"),
     ]
-    
+
     # Updated CSS for better layout
     CSS = """
     Screen {
@@ -203,13 +207,13 @@ class SupsrcTuiApp(App):
 
         # Repository Details (Middle, initially hidden)
         # This container's display style will be controlled by `watch_show_detail_pane`
-        with Container(id="detail_pane_container"): 
+        with Container(id="detail_pane_container"):
             yield TextualLog(id="repo_detail_log", highlight=False)
 
         # Global Event Log (Bottom)
         with Container(id="global_log_container"):
             yield TextualLog(id="event-log", highlight=True, max_lines=1000)
-        
+
         # Status Log (just above Footer or integrated if simple enough)
         # For now, place it in its own container above the footer.
         with Container(id="status_container"):
@@ -401,11 +405,12 @@ class SupsrcTuiApp(App):
 
     async def action_quit(self) -> None:
         """Quit the application gracefully."""
+        log.info("action_quit invoked.") # ADD THIS VERY FIRST
         if self._is_shutting_down:
             return
 
         self._is_shutting_down = True
-        log.info("Quit action triggered.")
+        log.info("Quit action triggered.") # Original log.info kept for sequence confirmation
         self._update_sub_title("Quitting...")
 
         try:
@@ -420,12 +425,16 @@ class SupsrcTuiApp(App):
             await asyncio.sleep(0.3)
 
             # Cancel worker if still running
-            if self._worker and self._worker.is_running:
+            if self._worker and self._worker.is_running: # Check if worker exists and is_running
                 log.info("Cancelling orchestrator worker...")
                 try:
-                    await self._worker.cancel()
+                    await self._worker.cancel() # Call cancel on the Textual Worker object
                 except Exception as e:
                     log.error("Error cancelling worker", error=str(e))
+            elif self._worker:
+                log.info("Orchestrator worker exists but is not running.")
+            else:
+                log.info("Orchestrator worker is None, no cancellation needed.")
 
             log.info("Exiting TUI application.")
             self.exit(0)

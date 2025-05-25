@@ -57,7 +57,7 @@ def setup_logging_from_context(
     local_log_file: str | None = None,
     local_json_logs: bool | None = None,
     local_file_only_logs: bool | None = None, # For specific command needs, e.g. TUI
-    default_log_level: str = "INFO", # Global default if nothing else is set
+    default_log_level: str = "WARNING", # Global default if nothing else is set
 ) -> None:
     """
     Setup logging using context values, allowing local overrides.
