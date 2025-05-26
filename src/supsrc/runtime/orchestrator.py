@@ -150,7 +150,7 @@ class WatchOrchestrator:
 
         if not repo_state or not repo_config or not global_config or not repo_engine:
             callback_log.error("Action Triggered: Could not find state, config, or engine.")
-            self._post_tui_log(repo_id, "ERROR", "Action failed: Missing state/config/engine.")
+            # self._post_tui_log(repo_id, "ERROR", "Action failed: Missing state/config/engine.") # Redundant
             return
 
         # Check status first
@@ -158,7 +158,7 @@ class WatchOrchestrator:
         if repo_state.status not in (RepositoryStatus.CHANGED, RepositoryStatus.IDLE):
             callback_log.warning("Action Triggered: Repo not in CHANGED/IDLE state, skipping.",
                                 current_status=repo_state.status.name)
-            self._post_tui_log(repo_id, "WARNING", f"Action skipped (state: {repo_state.status.name}).")
+            # self._post_tui_log(repo_id, "WARNING", f"Action skipped (state: {repo_state.status.name}).") # Redundant
             repo_state.cancel_inactivity_timer()
             return
 
@@ -180,7 +180,7 @@ class WatchOrchestrator:
             rule_type=rule_type_str,
             current_save_count=repo_state.save_count
         )
-        self._post_tui_log(repo_id, "INFO", f"Action triggered by rule: {rule_type_str}")
+        # self._post_tui_log(repo_id, "INFO", f"Action triggered by rule: {rule_type_str}") # Redundant
 
         engine_config_dict = repo_config.repository # This is the dict for the engine
         working_dir = repo_config.path
@@ -191,7 +191,7 @@ class WatchOrchestrator:
             repo_state.action_description = "Checking status..."
             repo_state.action_progress_total = None; repo_state.action_progress_completed = None
             self._console_message("Checking repository status...", repo_id=repo_id, style="blue bold", emoji="🔄")
-            self._post_tui_log(repo_id, "DEBUG", "Checking repository status...")
+            # self._post_tui_log(repo_id, "DEBUG", "Checking repository status...") # Redundant
             self._post_tui_state_update()
 
             status_result: RepoStatusResult = await repo_engine.get_status(repo_state, engine_config_dict, global_config, working_dir)
@@ -208,7 +208,7 @@ class WatchOrchestrator:
                 repo_state.action_progress_total = None; repo_state.action_progress_completed = None
                 repo_state.display_status_emoji = "❌"
                 self._console_message("Action failed: Conflicts detected. See logs for details.", repo_id=repo_id, style="red bold", emoji="❌")
-                self._post_tui_log(repo_id, "ERROR", "Action skipped: Conflicts detected!")
+                # self._post_tui_log(repo_id, "ERROR", "Action skipped: Conflicts detected!") # Redundant
                 repo_state.update_status(RepositoryStatus.ERROR, "Conflicts detected")
                 self._post_tui_state_update()
                 return
@@ -219,7 +219,7 @@ class WatchOrchestrator:
                 repo_state.action_progress_total = None; repo_state.action_progress_completed = None
                 repo_state.display_status_emoji = "🚫"
                 self._console_message("Action skipped: Unborn repository clean.", repo_id=repo_id, style="dim", emoji="🚫")
-                self._post_tui_log(repo_id, "INFO", "Action skipped: Unborn repository clean.")
+                # self._post_tui_log(repo_id, "INFO", "Action skipped: Unborn repository clean.") # Redundant
                 repo_state.reset_after_action()
                 self._post_tui_state_update()
                 return
@@ -229,7 +229,7 @@ class WatchOrchestrator:
                  repo_state.action_progress_total = None; repo_state.action_progress_completed = None
                  repo_state.display_status_emoji = "🚫"
                  self._console_message("Action skipped: Repository clean.", repo_id=repo_id, style="dim", emoji="🚫")
-                 self._post_tui_log(repo_id, "INFO", "Action skipped: Repository clean.")
+                 # self._post_tui_log(repo_id, "INFO", "Action skipped: Repository clean.") # Redundant
                  repo_state.reset_after_action()
                  self._post_tui_state_update()
                  return
@@ -239,7 +239,7 @@ class WatchOrchestrator:
             repo_state.action_description = "Staging changes..."
             repo_state.action_progress_total = None; repo_state.action_progress_completed = None
             self._console_message("Staging changes...", repo_id=repo_id, style="blue bold", emoji="🔄")
-            self._post_tui_log(repo_id, "INFO", "Staging changes...")
+            # self._post_tui_log(repo_id, "INFO", "Staging changes...") # Redundant
             self._post_tui_state_update()
 
             stage_result: StageResult = await repo_engine.stage_changes(None, repo_state, engine_config_dict, global_config, working_dir)
@@ -252,14 +252,14 @@ class WatchOrchestrator:
             self._console_message(f"Staged {files_staged_count} file(s).", repo_id=repo_id, style="green bold", emoji="✅")
             self._post_tui_state_update()
             callback_log.info("Action: Staging successful.", files_staged=stage_result.files_staged)
-            self._post_tui_log(repo_id, "DEBUG", f"Staging successful ({files_staged_count} files).")
+            # self._post_tui_log(repo_id, "DEBUG", f"Staging successful ({files_staged_count} files).") # Redundant
 
             # --- 3. Perform Commit ---
             repo_state.update_status(RepositoryStatus.COMMITTING)
             repo_state.action_description = "Committing..."
             repo_state.action_progress_total = None; repo_state.action_progress_completed = None
             self._console_message("Performing commit...", repo_id=repo_id, style="blue bold", emoji="🔄")
-            self._post_tui_log(repo_id, "INFO", "Performing commit...")
+            # self._post_tui_log(repo_id, "INFO", "Performing commit...") # Redundant
             self._post_tui_state_update()
 
             commit_result: CommitResult = await repo_engine.perform_commit(
@@ -278,7 +278,7 @@ class WatchOrchestrator:
                 repo_state.display_status_emoji = "🚫"
                 self._console_message("Commit skipped: No changes after staging.", repo_id=repo_id, style="dim", emoji="🚫")
                 callback_log.info("Action Skipped: Commit skipped by engine.", reason=commit_result.message)
-                self._post_tui_log(repo_id, "INFO", f"Commit skipped: {commit_result.message}")
+                # self._post_tui_log(repo_id, "INFO", f"Commit skipped: {commit_result.message}") # Redundant
                 repo_state.reset_after_action()
                 self._post_tui_state_update()
                 return
@@ -289,7 +289,7 @@ class WatchOrchestrator:
                 self._console_message(f"Commit complete. Hash: {repo_state.last_commit_short_hash}", repo_id=repo_id, style="green bold", emoji="✅")
                 self._post_tui_state_update()
                 callback_log.info("Action: Commit successful", hash=commit_result.commit_hash)
-                self._post_tui_log(repo_id, "SUCCESS", f"Commit successful: {repo_state.last_commit_short_hash}")
+                # self._post_tui_log(repo_id, "SUCCESS", f"Commit successful: {repo_state.last_commit_short_hash}") # Redundant
 
 
             # --- 4. Perform Push ---
@@ -297,7 +297,7 @@ class WatchOrchestrator:
             repo_state.action_description = "Pushing..."
             repo_state.action_progress_total = None; repo_state.action_progress_completed = None
             self._console_message("Pushing changes...", repo_id=repo_id, style="blue bold", emoji="🔄")
-            self._post_tui_log(repo_id, "INFO", "Performing push (if enabled)...")
+            # self._post_tui_log(repo_id, "INFO", "Performing push (if enabled)...") # Redundant
             self._post_tui_state_update()
 
             push_result: PushResult = await repo_engine.perform_push(repo_state, engine_config_dict, global_config, working_dir)
@@ -306,7 +306,7 @@ class WatchOrchestrator:
                 repo_state.action_description = f"Push failed: {push_result.message}"
                 self._console_message(f"Push failed: {push_result.message}. See logs.", repo_id=repo_id, style="red bold", emoji="❌")
                 callback_log.warning("Action: Push failed", reason=push_result.message)
-                self._post_tui_log(repo_id, "WARNING", f"Push failed: {push_result.message}")
+                # self._post_tui_log(repo_id, "WARNING", f"Push failed: {push_result.message}") # Redundant
                 repo_state.reset_after_action()
             else:
                 if push_result.skipped:
@@ -314,13 +314,13 @@ class WatchOrchestrator:
                     repo_state.display_status_emoji = "🚫"
                     self._console_message("Push skipped (disabled in config).", repo_id=repo_id, style="dim", emoji="🚫")
                     callback_log.info("Action: Push skipped by configuration.")
-                    self._post_tui_log(repo_id, "INFO", "Push skipped (disabled in config).")
+                    # self._post_tui_log(repo_id, "INFO", "Push skipped (disabled in config).") # Redundant
                 else:
                     repo_state.action_description = "Push successful"
                     repo_state.display_status_emoji = "✅"
                     self._console_message("Push successful.", repo_id=repo_id, style="green bold", emoji="✅")
                     callback_log.info("Action: Push successful.")
-                    self._post_tui_log(repo_id, "SUCCESS", "Push successful.")
+                    # self._post_tui_log(repo_id, "SUCCESS", "Push successful.") # Redundant
 
                 # After successful/skipped push, finalize action description before reset
                 repo_state.action_description = "Completed"
@@ -337,10 +337,14 @@ class WatchOrchestrator:
             callback_log.error("Action Failed: Error during execution", error=str(action_exc), exc_info=True)
             if repo_state:
                  repo_state.update_status(RepositoryStatus.ERROR, f"Action failed: {action_exc}")
-                 self._post_tui_log(repo_id, "ERROR", f"Action failed: {action_exc}")
+                 # self._post_tui_log(repo_id, "ERROR", f"Action failed: {action_exc}") # Redundant
                  self._post_tui_state_update()
             else:
-                 self._post_tui_log(repo_id, "CRITICAL", f"Action failed (state missing): {action_exc}")
+                 # self._post_tui_log(repo_id, "CRITICAL", f"Action failed (state missing): {action_exc}") # Redundant
+                 # If repo_state is None here, callback_log (which is self._log.bind(repo_id=repo_id))
+                 # will log with the repo_id, but not specific state error.
+                 # Consider if a general log is needed if repo_state itself is None.
+                 self._log.critical("Action failed and repo_state is None", repo_id_if_known=repo_id, root_error=str(action_exc))
 
 
     async def _consume_events(self) -> None:
@@ -414,7 +418,7 @@ class WatchOrchestrator:
                         repo_state.record_change() # This calls update_status, which sets emoji for CHANGED
                         event_log = event_log.bind(save_count=repo_state.save_count, status=repo_state.status.name)
                         self._console_message(f"Change detected: {event.src_path.name}", repo_id=repo_id, style="magenta bold", emoji="✏️")
-                        self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}")
+                        # self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}") # Redundant
 
                         rule_config_obj: RuleConfig = repo_config.rule
                         rule_type_str_lc = getattr(rule_config_obj, "type", "default").lower()
@@ -455,7 +459,7 @@ class WatchOrchestrator:
                                 repo_state.rule_emoji = RULE_EMOJI_MAP.get("inactivity", "⏳")
                                 repo_state.rule_dynamic_indicator = f"({int(delay)}s left)" # Placeholder, real countdown later
                                 self._console_message(f"Waiting for inactivity period ({delay:.0f}s)...", repo_id=repo_id, style="italic yellow", emoji="⏳")
-                                self._post_tui_log(repo_id, "DEBUG", f"Activity detected, rescheduling check in {delay:.1f}s.")
+                                # self._post_tui_log(repo_id, "DEBUG", f"Activity detected, rescheduling check in {delay:.1f}s.") # Redundant
                                 self._post_tui_state_update() # Update TUI for waiting state
 
                                 current_loop = asyncio.get_running_loop()
@@ -472,7 +476,7 @@ class WatchOrchestrator:
                      event_log.error("Error during event processing logic", error=str(processing_exc), exc_info=True)
                      if repo_id and repo_id in self.repo_states:
                          self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, f"Event processing error: {processing_exc}")
-                         self._post_tui_log(repo_id, "ERROR", f"Event processing error: {processing_exc}")
+                         # self._post_tui_log(repo_id, "ERROR", f"Event processing error: {processing_exc}") # Redundant
                          self._post_tui_state_update()
 
             except asyncio.CancelledError:
@@ -501,7 +505,7 @@ class WatchOrchestrator:
 
         self._safe_log("info", "--- Initializing Repositories ---")
         # self._console_message("Initializing repositories...", style="dim", emoji="📂") # Moved to run method
-        self._post_tui_log(None, "INFO", "Initializing repositories...")
+        # self._post_tui_log(None, "INFO", "Initializing repositories...") # Redundant
         for repo_id, repo_config in self.config.repositories.items():
             init_log = self._log.bind(repo_id=repo_id)
             repo_state = None # Initialize for broader scope
@@ -518,7 +522,7 @@ class WatchOrchestrator:
                 if not engine_type or not isinstance(engine_type, str):
                     init_log.error("Repo config missing 'type' for engine.", config_section=engine_config)
                     self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, "Missing engine type")
-                    self._post_tui_log(repo_id, "ERROR", "Config Error: Missing engine type.")
+                    # self._post_tui_log(repo_id, "ERROR", "Config Error: Missing engine type.") # Redundant
                     continue
 
                 try:
@@ -530,12 +534,12 @@ class WatchOrchestrator:
                     # ---------------------------------------------
                     self.repo_engines[repo_id] = engine_instance
                     init_log.debug("Engine loaded ok.", engine_class=type(engine_instance).__name__)
-                    self._post_tui_log(repo_id, "DEBUG", f"Engine '{engine_type}' loaded.")
+                    # self._post_tui_log(repo_id, "DEBUG", f"Engine '{engine_type}' loaded.") # Redundant
                     enabled_repo_ids.append(repo_id)
                 except Exception as load_exc:
                     init_log.error("Failed to load repo engine", engine_type=engine_type, error=str(load_exc), exc_info=True)
                     if repo_state: repo_state.update_status(RepositoryStatus.ERROR, f"Failed to load engine: {load_exc}")
-                    self._post_tui_log(repo_id, "ERROR", f"Engine load failed: {load_exc}")
+                    # self._post_tui_log(repo_id, "ERROR", f"Engine load failed: {load_exc}") # Redundant
                     continue
 
                 # --- Set initial rule description, emoji, and dynamic indicator ---
@@ -565,20 +569,20 @@ class WatchOrchestrator:
                             if summary.head_ref_name == "ERROR":
                                 summary_msg = f"Init Error: {summary.head_commit_message_summary}"
                                 init_log.error(summary_msg)
-                                self._post_tui_log(repo_id, "ERROR", summary_msg)
+                                # self._post_tui_log(repo_id, "ERROR", summary_msg) # Redundant
                                 # repo_state.update_status(RepositoryStatus.ERROR, summary_msg) # Already handled by engine?
                             elif summary.is_empty:
                                 summary_msg = "Init: Repository empty."
                                 init_log.info(summary_msg)
-                                self._post_tui_log(repo_id, "INFO", summary_msg)
+                                # self._post_tui_log(repo_id, "INFO", summary_msg) # Redundant
                             elif summary.head_ref_name == "UNBORN":
                                 summary_msg = "Init: Repository has no commits yet (unborn HEAD)."
                                 init_log.info(summary_msg)
-                                self._post_tui_log(repo_id, "INFO", summary_msg)
+                                # self._post_tui_log(repo_id, "INFO", summary_msg) # Redundant
                             elif not summary.head_ref_name or not summary.head_commit_hash:
                                 summary_msg = "Init: Unable to determine HEAD reference or commit."
                                 init_log.warning(summary_msg)
-                                self._post_tui_log(repo_id, "WARNING", summary_msg)
+                                # self._post_tui_log(repo_id, "WARNING", summary_msg) # Redundant
                             else:
                                 repo_state.last_commit_short_hash = summary.head_commit_hash[:7] if summary.head_commit_hash else None
                                 repo_state.last_commit_message_summary = summary.head_commit_message_summary
@@ -586,15 +590,15 @@ class WatchOrchestrator:
                                 commit_msg_summary = repo_state.last_commit_message_summary or "No commit message"
                                 summary_msg = f"Init: HEAD at {summary.head_ref_name} ({commit_short_hash}) | {commit_msg_summary}"
                                 init_log.info(summary_msg)
-                                self._post_tui_log(repo_id, "INFO", summary_msg)
+                                # self._post_tui_log(repo_id, "INFO", summary_msg) # Redundant
                                 self._console_message(f"Watching: {repo_config.path} (Branch: {summary.head_ref_name}, Last Commit: {commit_short_hash})", repo_id=repo_id, style="dim", emoji="📂")
                         else:
                              init_log.warning("Engine lacks get_summary method.")
-                             self._post_tui_log(repo_id, "WARNING", "Engine lacks get_summary.")
+                             # self._post_tui_log(repo_id, "WARNING", "Engine lacks get_summary.") # Redundant
 
                     except Exception as summary_exc:
                         init_log.error("Failed to get initial repo summary", error=str(summary_exc), exc_info=True)
-                        self._post_tui_log(repo_id, "ERROR", f"Failed to get summary: {summary_exc}")
+                        # self._post_tui_log(repo_id, "ERROR", f"Failed to get summary: {summary_exc}") # Redundant
                         # repo_state.update_status(RepositoryStatus.ERROR, f"Summary failed: {summary_exc}") # Potentially set error
 
                 # Ensure emoji is updated based on initial status (typically IDLE)
@@ -615,7 +619,7 @@ class WatchOrchestrator:
         )
         self._post_tui_state_update()
         self._safe_log("info", "--- Repo Initialization Complete ---", count=len(enabled_repo_ids))
-        self._post_tui_log(None, "INFO", f"{len(enabled_repo_ids)} repos initialized.")
+        # self._post_tui_log(None, "INFO", f"{len(enabled_repo_ids)} repos initialized.") # Redundant
 
         if enabled_repo_ids:
             self._console_message(f"Monitoring active for {len(enabled_repo_ids)} repositories.", style="dim", emoji="✅")
@@ -629,7 +633,7 @@ class WatchOrchestrator:
         if not self.config: return []
 
         self._safe_log("info", "Setting up filesystem monitoring...")
-        self._post_tui_log(None, "INFO", "Setting up filesystem monitoring...")
+        # self._post_tui_log(None, "INFO", "Setting up filesystem monitoring...") # Redundant
         self.monitor_service = MonitoringService(self.event_queue)
 
         try:
@@ -651,23 +655,23 @@ class WatchOrchestrator:
                 self.monitor_service.add_repository(repo_id, repo_config, loop)
                 successfully_added_ids.append(repo_id)
                 monitor_log.info("Monitoring successfully scheduled.")
-                self._post_tui_log(repo_id, "INFO", "Monitoring started.")
+                # self._post_tui_log(repo_id, "INFO", "Monitoring started.") # Redundant
             except MonitoringSetupError as e:
                 monitor_log.error("Failed to setup monitoring", error=str(e))
                 if repo_id in self.repo_states: self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, f"Monitoring setup failed: {e}")
-                self._post_tui_log(repo_id, "ERROR", f"Monitoring setup failed: {e}")
+                # self._post_tui_log(repo_id, "ERROR", f"Monitoring setup failed: {e}") # Redundant
                 self._post_tui_state_update()
                 setup_errors += 1
             except Exception as e:
                 monitor_log.error("Unexpected error adding repository to monitor", error=str(e), exc_info=True)
                 if repo_id in self.repo_states: self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, f"Unexpected setup error: {e}")
-                self._post_tui_log(repo_id, "CRITICAL", f"Unexpected monitor setup error: {e}")
+                # self._post_tui_log(repo_id, "CRITICAL", f"Unexpected monitor setup error: {e}") # Redundant
                 self._post_tui_state_update()
                 setup_errors += 1
 
         if setup_errors > 0:
             self._safe_log("warning", f"Encountered {setup_errors} error(s) during monitoring setup.")
-            self._post_tui_log(None, "WARNING", f"{setup_errors} monitoring setup error(s).")
+            # self._post_tui_log(None, "WARNING", f"{setup_errors} monitoring setup error(s).") # Redundant
 
         self._safe_log("info", f"Monitoring setup complete for {len(successfully_added_ids)} repositories.")
         return successfully_added_ids
@@ -684,16 +688,16 @@ class WatchOrchestrator:
                 self.config = load_config(self.config_path)
                 self._safe_log("info", "Config loaded successfully.")
                 self._console_message("Config loaded successfully.", style="dim", emoji="📂")
-                self._post_tui_log(None, "INFO", f"Config loaded: {self.config_path.name}")
+                # self._post_tui_log(None, "INFO", f"Config loaded: {self.config_path.name}") # Redundant
             except (ConfigurationError, cattrs.BaseValidationError) as e:
                  self._safe_log("error", "Failed to load/validate config", error=str(e), path=str(self.config_path))
                  self._console_message(f"Config Error: {e}", style="bold red", emoji="❌")
-                 self._post_tui_log(None, "CRITICAL", f"Config Error: {e}")
+                 # self._post_tui_log(None, "CRITICAL", f"Config Error: {e}") # Redundant
                  raise
             except Exception as e:
                  self._safe_log("critical", "Unexpected error loading config", error=str(e), exc_info=True)
                  self._console_message(f"Unexpected Config Error: {e}", style="bold red", emoji="❌")
-                 self._post_tui_log(None, "CRITICAL", f"Unexpected Config Error: {e}")
+                 # self._post_tui_log(None, "CRITICAL", f"Unexpected Config Error: {e}") # Redundant
                  raise
 
             # Initialize Repos
@@ -701,14 +705,14 @@ class WatchOrchestrator:
             enabled_repo_ids = await self._initialize_repositories()
             if not enabled_repo_ids:
                  self._safe_log("warning", "No enabled/valid repos found. Exiting.")
-                 self._post_tui_log(None, "WARNING", "No valid/enabled repositories found.")
+                 # self._post_tui_log(None, "WARNING", "No valid/enabled repositories found.") # Redundant
                  return
 
             # Setup & Start Monitoring
             successfully_added_ids = self._setup_monitoring(enabled_repo_ids)
             if not successfully_added_ids:
                  self._safe_log("critical", "No repos could be monitored. Exiting.")
-                 self._post_tui_log(None, "CRITICAL", "Failed to start monitoring any repository.")
+                 # self._post_tui_log(None, "CRITICAL", "Failed to start monitoring any repository.") # Redundant
                  return
 
             if self.monitor_service:
@@ -716,12 +720,12 @@ class WatchOrchestrator:
                  self.monitor_service.start()
                  if not self.monitor_service.is_running:
                      self._safe_log("critical", "Monitor service failed to start. Exiting.")
-                     self._post_tui_log(None, "CRITICAL", "Monitor service failed to start.")
+                     # self._post_tui_log(None, "CRITICAL", "Monitor service failed to start.") # Redundant
                      return
-                 self._post_tui_log(None, "INFO", f"Monitoring active for {len(successfully_added_ids)} repositories.")
+                 # self._post_tui_log(None, "INFO", f"Monitoring active for {len(successfully_added_ids)} repositories.") # Redundant with other logs
             else:
                  self._safe_log("error", "Monitor service not initialized after setup.")
-                 self._post_tui_log(None, "CRITICAL", "Internal Error: Monitor service missing.")
+                 # self._post_tui_log(None, "CRITICAL", "Internal Error: Monitor service missing.") # Redundant
                  return
 
             # Start Consumer Task
@@ -736,25 +740,25 @@ class WatchOrchestrator:
             await self.shutdown_event.wait()
             self._safe_log("info", "Shutdown signal received.")
             self._console_message("Shutdown requested...", style="dim") # emoji="INFO" removed to match UX
-            self._post_tui_log(None, "INFO", "Shutdown requested...")
+            # self._post_tui_log(None, "INFO", "Shutdown requested...") # Redundant
 
         except SupsrcError as e:
             self._safe_log("critical", "Critical supsrc error during watch", error=str(e), exc_info=True)
             self._console_message(f"Runtime Error: {e}", style="bold red", emoji="❌")
-            self._post_tui_log(None, "CRITICAL", f"Runtime Error: {e}")
+            # self._post_tui_log(None, "CRITICAL", f"Runtime Error: {e}") # Redundant
         except asyncio.CancelledError:
              self._safe_log("warning", "Orchestrator run task cancelled.")
              if not self.shutdown_event.is_set(): self.shutdown_event.set()
         except Exception as e:
             self._safe_log("critical", "Unexpected error in orchestrator run", error=str(e), exc_info=True)
             self._console_message(f"Unexpected Error: {e}", style="bold red", emoji="❌")
-            self._post_tui_log(None, "CRITICAL", f"Unexpected Error: {e}")
+            # self._post_tui_log(None, "CRITICAL", f"Unexpected Error: {e}") # Redundant
             if not self.shutdown_event.is_set(): self.shutdown_event.set()
         finally:
             # Orchestrator Cleanup
             self._safe_log("info", "Orchestrator starting cleanup...")
             self._console_message("Cleaning up...", style="dim") # emoji="INFO" removed
-            self._post_tui_log(None, "INFO", "Cleaning up...")
+            # self._post_tui_log(None, "INFO", "Cleaning up...") # Redundant
 
             # 1. Cancel Repo Timers
             self._safe_log("debug", "Cancelling active repo timers...")
@@ -778,16 +782,16 @@ class WatchOrchestrator:
                      await self.monitor_service.stop()
                      self._safe_log("debug", "Monitoring service stop completed.")
                      self._console_message("Monitoring stopped.", style="dim") # emoji="INFO" removed
-                     self._post_tui_log(None, "INFO", "Monitoring stopped.")
+                     # self._post_tui_log(None, "INFO", "Monitoring stopped.") # Redundant
                  except Exception as stop_exc:
                      self._safe_log("error", "Error during monitor service stop", error=str(stop_exc), exc_info=True)
-                     self._post_tui_log(None, "ERROR", "Error stopping monitor service.")
+                     # self._post_tui_log(None, "ERROR", "Error stopping monitor service.") # Redundant
             elif self.monitor_service: self._safe_log("debug", "Monitor service already stopped.")
             else: self._safe_log("debug", "Monitor service was not initialized.")
 
             self._safe_log("info", "Orchestrator finished cleanup.")
             self._console_message("Cleanup complete.", style="dim")
-            self._post_tui_log(None, "INFO", "Cleanup complete.")
+            # self._post_tui_log(None, "INFO", "Cleanup complete.") # Redundant
 
     def _safe_log(self, level: str, msg: str, **kwargs):
         """Helper to suppress logging errors during final shutdown."""
