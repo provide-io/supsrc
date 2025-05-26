@@ -7,6 +7,7 @@ Stabilized TUI application with improved layout and proper timer management.
 
 import asyncio
 from pathlib import Path
+import sys # Ensure this import is present
 from typing import Any
 
 import structlog
@@ -447,18 +448,24 @@ class SupsrcTuiApp(App):
     def on_state_update(self, message: StateUpdate) -> None:
         """Handle repository state updates."""
         try:
+            debug_message_content = repr(message.repo_states)
+            log.debug(f"DEBUG_TUI_APP: on_state_update received: {debug_message_content}")
+
             table = self.query_one(DataTable)
             current_keys = set(table.rows.keys())
             incoming_keys = set(message.repo_states.keys())
 
             # Remove obsolete rows
             for key_to_remove in current_keys - incoming_keys:
-                if table.is_valid_row_key(key_to_remove):
+                if table.is_valid_row_key(key_to_remove): # This check might be redundant if keys are always valid from table.rows.keys()
+                    log.debug("on_state_update: Removing obsolete row", key=key_to_remove)
                     table.remove_row(key_to_remove)
+                    log.debug("on_state_update: Removed row", key=key_to_remove) # Added
 
             # Update/add rows
             for repo_id_obj, state in message.repo_states.items():
                 repo_id_str = str(repo_id_obj)
+                log.debug("on_state_update: Processing repo", repo_id=repo_id_str, status=state.status.name, display_emoji=state.display_status_emoji, last_change=state.last_change_time) # Added more detail
 
                 # Format display data
                 status_display = state.display_status_emoji
@@ -504,12 +511,17 @@ class SupsrcTuiApp(App):
                 )
 
                 if table.is_valid_row_key(repo_id_str):
+                    log.debug("on_state_update: Attempting to update row", key=repo_id_str, data=row_data)
                     table.update_row(repo_id_str, *row_data, update_width=False)
                 else:
+                    log.debug("on_state_update: Attempting to add row", key=repo_id_str, data=row_data)
                     table.add_row(*row_data, key=repo_id_str)
+            
+            # It might also be useful to log the total number of rows after updates/additions
+            log.debug("on_state_update: Finished processing, table row count", row_count=table.row_count)
 
         except Exception as e:
-            log.error("Failed to update TUI table", error=str(e))
+            log.exception("Failed to update TUI table") # Changed from log.error to log.exception for traceback
 
     def on_log_message_update(self, message: LogMessageUpdate) -> None:
         """Handle log message updates."""

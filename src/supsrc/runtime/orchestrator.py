@@ -91,7 +91,7 @@ class WatchOrchestrator:
         """
         self.config_path = config_path
         self.shutdown_event = shutdown_event
-        self.app: TextualApp | None = app if TEXTUAL_AVAILABLE_RUNTIME else None # Store the TUI app instance only if usable
+        self.app: TextualApp | None = app # Directly use the passed app instance
         self.console = console
         self.config: SupsrcConfig | None = None
         self.monitor_service: MonitoringService | None = None
@@ -100,7 +100,10 @@ class WatchOrchestrator:
         self.repo_engines: dict[str, RepositoryEngine] = {}
         self._running_tasks: set[asyncio.Task[Any]] = set()
         self._log = log.bind(orchestrator_id=id(self))
-        self._is_tui_active = bool(self.app) # Flag for easier checking
+        self._is_tui_active = bool(self.app) # Determine activity based on the instance's truthiness
+        self._log.debug("WatchOrchestrator initialized.",
+                        passed_app_type=type(app).__name__,
+                        is_tui_active=self._is_tui_active)
 
     # --- Console and TUI Update Helpers ---
 
@@ -126,13 +129,34 @@ class WatchOrchestrator:
 
     def _post_tui_state_update(self) -> None:
         """Safely posts the current repository states to the TUI."""
-        if self._is_tui_active and self.app and StateUpdate:
+        # Existing debug log, add TEXTUAL_AVAILABLE_RUNTIME and StateUpdate class check
+        self._log.debug("_post_tui_state_update attempting.",
+                        is_tui_active=self._is_tui_active,
+                        app_is_none=(self.app is None),
+                        textual_available_runtime_flag=TEXTUAL_AVAILABLE_RUNTIME, # Added
+                        stateupdate_class_is_none=(StateUpdate is None) # Added
+                        )
+
+        if self._is_tui_active and self.app and StateUpdate: # This is the critical guard
+            self._log.debug("_post_tui_state_update: Guard passed, preparing to post.") # Added
             try:
-                # Create a copy for thread safety/mutability concerns
                 states_copy = {rid: attrs.evolve(state) for rid, state in self.repo_states.items()}
-                self.app.call_later(self.app.post_message, StateUpdate(states_copy))
+                # Ensure StateUpdate is the correct class reference here
+                msg_to_post = StateUpdate(states_copy)
+                
+                self.app.call_later(self.app.post_message, msg_to_post)
+                self._log.debug("_post_tui_state_update: call_later for post_message executed.",
+                                message_type=type(msg_to_post).__name__,
+                                repo_count=len(states_copy)) # Added
             except Exception as e:
-                 self._safe_log("warning", "Failed to post state update to TUI", error=str(e))
+                 # This _safe_log uses self._log, so it will also go to the TUI log panel if it works
+                 self._safe_log("warning", "Failed to post state update to TUI", error=str(e), exc_info=True)
+        else:
+            self._log.debug("_post_tui_state_update: Guard NOT passed, message not posted.", # Added for else case
+                            is_tui_active=self._is_tui_active,
+                            app_is_none=(self.app is None),
+                            stateupdate_class_is_none=(StateUpdate is None)
+                            )
 
     # --- Core Logic Methods ---
 
