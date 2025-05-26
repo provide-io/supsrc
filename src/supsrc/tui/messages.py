@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any # Ensure Any is kept if details in RepoDet
                                  # If not, Any can be removed. For now, keeping it.
 
 from textual.message import Message
+from rich.text import Text # Added import for Text
 
 # Import for type hinting only to break circular dependency
 if TYPE_CHECKING:
@@ -28,10 +29,10 @@ class LogMessageUpdate(Message):
     """Message to send a new log entry to the TUI's event log."""
     ALLOW_BUBBLE = True # Or False if only handled by App
 
-    def __init__(self, repo_id: str | None, level: str, message: str) -> None:
+    def __init__(self, repo_id: str | None, level: str, message: Text) -> None: # Changed str to Text
         self.repo_id = repo_id
         self.level = level
-        self.message = message
+        self.message = message # This will now be a rich.text.Text object
         super().__init__()
 
 class RepoDetailUpdate(Message):
