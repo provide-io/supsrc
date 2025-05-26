@@ -274,7 +274,6 @@ output = "coverage.xml"
 
 [dependency-groups]
 dev = [
-    "crosshair-tool>=0.0.86",
     "hypothesis>=6.131.9",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=6.1.1",

@@ -6,11 +6,10 @@ Custom logging handler for integrating structlog output with the Textual TUI.
 """
 
 import logging
-import sys
-from typing import TYPE_CHECKING, Any, Optional
+import sys # Ensured import
+from typing import TYPE_CHECKING, Any, Optional # Optional and Any might not be needed if not used elsewhere
 
-import structlog # For ConsoleRenderer
-# from structlog.dev import ConsoleRenderer # Could be more specific
+import structlog # For ConsoleRenderer # Keep if structlog types are used, though not directly in this snippet
 from rich.text import Text
 
 # Assuming LogMessageUpdate is in supsrc.tui.messages
@@ -36,62 +35,36 @@ class TextualLogHandler(logging.Handler):
         """
         super().__init__(level=level)
         self.app = app
-        # The ConsoleRenderer from structlog can be used to format messages
-        # with Rich markup, which Textual can then render.
-        # This handler will rely on the formatter configured in the main logging setup
-        # (which should be ProcessorFormatter using ConsoleRenderer)
-        # to provide the already formatted string via self.format(record).
-        # So, an explicit renderer instance here might not be strictly needed for formatting,
-        # but it was in the requirements. Let's keep it for now.
-        self.renderer = structlog.dev.ConsoleRenderer(colors=True) # As per requirements
+        # self.renderer = structlog.dev.ConsoleRenderer(colors=True) # Removed as per instructions
 
     def emit(self, record: logging.LogRecord) -> None:
-        """
-        Format and emit a log record to the TUI.
-
-        This method is called by the logging system for each log record.
-        It formats the record and then posts a LogMessageUpdate to the
-        associated TUI application.
-
-        Args:
-            record: The log record to emit.
-        """
         try:
-            # Attempt to get 'repo_id' from the log record, defaulting to 'SYSTEM'.
-            # structlog adds bound variables directly to the record.
-            repo_id: str = getattr(record, 'repo_id', 'SYSTEM')
+            repo_id = getattr(record, 'repo_id', 'SYSTEM')
+            message_str: str = self.format(record).rstrip()
 
-            # The record.msg is usually the 'event' from structlog.
-            # The self.format(record) call will use the formatter set on this handler
-            # (or the root logger's formatter if none is set here).
-            # In our setup, structlog.stdlib.ProcessorFormatter is used, which
-            # applies all structlog processors including the final renderer (e.g., ConsoleRenderer).
-            message_str: str = self.format(record)
-            rich_text = Text.from_ansi(message_str) # Convert to Rich Text object
+            # Check if string is empty after rstrip to avoid sending empty Text objects.
+            if not message_str:
+                return # Don't process or send empty messages
 
-            # Create the message object for the TUI
+            rich_text = Text.from_ansi(message_str)
+            
             log_update_msg = LogMessageUpdate(
                 repo_id=repo_id,
-                level=record.levelname, # e.g., "INFO", "WARNING"
-                message=rich_text # Pass the Text object
+                level=record.levelname,
+                message=rich_text
             )
-
-            # Post the message to the TUI application's message queue
+            
+            # Check if self.app and post_message are available before calling
             if self.app and hasattr(self.app, 'post_message'):
-                self.app.post_message(log_update_msg)
-            else:
-                # Fallback if app is not available or misconfigured (should not happen in normal operation)
-                print(f"TextualLogHandler: TUI app not available for message: {message_str}", file=sys.stderr)
+                 self.app.post_message(log_update_msg)
+            # else:
+                 # Optionally, log to stderr if app is not available,
+                 # but this might be too noisy for normal operation if it happens often.
+                 # print(f"TextualLogHandler: TUI app not available for message: {message_str}", file=sys.stderr)
 
-        except Exception as e:
-            # Fallback for any errors during log emission to TUI
-            # (e.g., if TUI is closing or an unexpected error occurs)
-            # We print to stderr to avoid a loop if this handler itself is part of the failing logging chain.
-            print(f"TextualLogHandler: Error emitting log to TUI: {e}\nRecord: {record.__dict__}", file=sys.stderr)
-            # Optionally, print the original message as well if self.format(record) failed
-            try:
-                print(f"Original log message: {record.getMessage()}", file=sys.stderr)
-            except Exception:
-                pass # Avoid further errors if getMessage itself fails
+        except Exception:
+            # Keep basic error handling for the handler itself.
+            # This uses the standard library's handler error reporting.
+            self.handleError(record)
 
 # 🪵🎨
