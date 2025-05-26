@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import structlog # For ConsoleRenderer
 # from structlog.dev import ConsoleRenderer # Could be more specific
+from rich.text import Text
 
 # Assuming LogMessageUpdate is in supsrc.tui.messages
 from supsrc.tui.messages import LogMessageUpdate
@@ -66,12 +67,13 @@ class TextualLogHandler(logging.Handler):
             # In our setup, structlog.stdlib.ProcessorFormatter is used, which
             # applies all structlog processors including the final renderer (e.g., ConsoleRenderer).
             message_str: str = self.format(record)
+            rich_text = Text.from_ansi(message_str) # Convert to Rich Text object
 
             # Create the message object for the TUI
             log_update_msg = LogMessageUpdate(
                 repo_id=repo_id,
                 level=record.levelname, # e.g., "INFO", "WARNING"
-                message=message_str
+                message=rich_text # Pass the Text object
             )
 
             # Post the message to the TUI application's message queue
