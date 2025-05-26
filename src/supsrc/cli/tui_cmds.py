@@ -15,6 +15,7 @@ import structlog
 # Import logging utilities from the new cli.utils module
 from supsrc.cli.utils import setup_logging_from_context, logging_options
 from supsrc.tui.app import SupsrcTuiApp
+import supsrc.telemetry.logger.base as telemetry_logger_base
 
 log = structlog.get_logger("cli.tui")
 
@@ -38,46 +39,51 @@ def tui_cli(
 ):
     """Launch the Supsrc Textual User Interface."""
 
-    # Setup logging using the utility function with explicitly passed parameters.
-    # Determine the effective file_only_logs for TUI mode.
-    # If --file-only-logs is passed to `supsrc tui`, use that.
-    # Else, if --log-file (either global or local to `tui`) is specified, default to True for TUI.
-    effective_file_only_logs: bool
-    if file_only_logs is not None:
-        effective_file_only_logs = file_only_logs
-    else:
-        # Check if a log file is active either from this command's options or global context
-        # local_log_file (now `log_file` parameter) takes precedence.
-        active_log_file = log_file or ctx.obj.get("LOG_FILE")
-        effective_file_only_logs = bool(active_log_file)
-
-    setup_logging_from_context(
-        ctx,
-        local_log_level=log_level,
-        local_log_file=log_file,
-        local_json_logs=json_logs,
-        local_file_only_logs=effective_file_only_logs,
-        default_log_level="INFO" # Default for TUI operations if no global level set
-    )
-
     config_path = Path(config_path_str)
-    log.info("TUI command invoked", config_path=str(config_path))
+    # Log basic info before full logging setup, if necessary, or rely on post-setup logging.
+    # For now, we'll set up logging after app instantiation.
 
     # Ensure TUI's own logging (if any internal to Textual) doesn't conflict.
     # Textual has its own log handling; our setup is for supsrc's structured logs.
 
     try:
         # Create an asyncio Event for shutdown signaling if needed by the app
-        # This is a simplified example; the actual app might need more complex setup.
         cli_shutdown_event = asyncio.Event()
 
-        # Instantiate and run the TUI app
-        # Pass necessary parameters like config_path and shutdown_event
+        # Instantiate the TUI app
         app = SupsrcTuiApp(
             config_path=config_path,
             cli_shutdown_event=cli_shutdown_event
             # Add other necessary parameters here if SupsrcTuiApp constructor requires them
         )
+
+        # --- Logging Setup for TUI ---
+        # Set TUI mode active for the logger
+        telemetry_logger_base._is_tui_active = True
+
+        # Determine effective file_only_logs for TUI mode.
+        effective_file_only_logs: bool
+        if file_only_logs is not None: # Check flag from @logging_options
+            effective_file_only_logs = file_only_logs
+        else:
+            # Default to True if a log file is specified (either globally or locally for tui command)
+            active_log_file = log_file or ctx.obj.get("LOG_FILE")
+            effective_file_only_logs = bool(active_log_file)
+
+        # Setup logging, now passing the TUI app instance
+        setup_logging_from_context(
+            ctx,
+            local_log_level=log_level,
+            local_log_file=log_file,
+            local_json_logs=json_logs,
+            local_file_only_logs=effective_file_only_logs, # Use the determined value
+            default_log_level="INFO", # Default for TUI operations
+            tui_app_instance=app # Pass the TUI app instance
+        )
+
+        log.info("TUI command invoked and logging configured", config_path=str(config_path))
+
+        # Run the TUI app
         app.run()
         log.info("TUI finished.")
 

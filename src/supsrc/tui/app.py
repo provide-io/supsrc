@@ -515,12 +515,12 @@ class SupsrcTuiApp(App):
         """Handle log message updates."""
         try:
             log_widget = self.query_one("#event-log", TextualLog)
-            prefix = f"[dim]({message.repo_id or 'SYSTEM'})[/dim] "
-            level_style = self._get_level_style(message.level)
-            level_prefix = f"[{level_style}]{message.level.upper():<8}[/]"
-            log_widget.write_line(f"{level_prefix} {prefix}{message.message}")
+            # The message.message from TextualLogHandler should now be pre-formatted
+            # with Rich markup by the ConsoleRenderer.
+            log_widget.write_line(message.message)
         except Exception as e:
-            log.error("Failed to write to TUI log", error=str(e))
+            # Using the app's own logger here is fine for TUI-specific errors.
+            log.error("Failed to write to TUI log widget", error=str(e), raw_message_level=message.level, raw_message_content=message.message)
 
     def on_repo_detail_update(self, message: RepoDetailUpdate) -> None:
         """Handle repository detail updates."""

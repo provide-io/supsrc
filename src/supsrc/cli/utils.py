@@ -6,6 +6,7 @@ Shared utility functions and decorators for CLI commands.
 """
 
 import logging
+from typing import Any, Optional
 import click
 import structlog
 
@@ -58,6 +59,7 @@ def setup_logging_from_context(
     local_json_logs: bool | None = None,
     local_file_only_logs: bool | None = None, # For specific command needs, e.g. TUI
     default_log_level: str = "WARNING", # Global default if nothing else is set
+    tui_app_instance: Optional[Any] = None
 ) -> None:
     """
     Setup logging using context values, allowing local overrides.
@@ -95,7 +97,8 @@ def setup_logging_from_context(
         level=numeric_level,
         json_logs=use_json_logs, # This remains from click options/context
         log_file=log_file_path,
-        file_only=final_file_only_setting # Corrected usage: true if log_file is specified
+        file_only=final_file_only_setting, # Corrected usage: true if log_file is specified
+        tui_app_instance=tui_app_instance
     )
 
     log.debug("CLI logging initialized via utils",
