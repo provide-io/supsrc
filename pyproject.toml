@@ -45,7 +45,6 @@ dependencies = [
     "pathspec>=0.12.1", # Required for .gitignore handling
     "sshconf>=0.2.7",
     "rich>=13.7.1",
-    "aioconsole>=0.8.1",
 ]
 
 [project.urls]

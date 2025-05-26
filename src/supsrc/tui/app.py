@@ -448,8 +448,8 @@ class SupsrcTuiApp(App):
     def on_state_update(self, message: StateUpdate) -> None:
         """Handle repository state updates."""
         try:
-            debug_message_content = repr(message.repo_states)
-            log.debug(f"DEBUG_TUI_APP: on_state_update received: {debug_message_content}")
+            # REMOVED: print(f"DEBUG_TUI_APP: on_state_update received: {{message.repo_states!r}}", file=sys.stderr)
+            log.debug("on_state_update: Received StateUpdate", repo_states_count=len(message.repo_states), repo_states_keys=list(message.repo_states.keys()))
 
             table = self.query_one(DataTable)
             current_keys = set(table.rows.keys())
