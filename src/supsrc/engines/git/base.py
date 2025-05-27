@@ -277,29 +277,37 @@ class GitEngine(RepositoryEngine):
     ) -> CommitResult:
         commit_log = self._log.bind(repo_id=state.repo_id, path=str(working_dir))
         commit_log.info("Performing commit...")
-        is_unborn = False
+        is_unborn = False # Will be set after repo object is obtained
 
         try:
             repo = self._get_repo(working_dir)
             index = repo.index
             is_unborn = repo.head_is_unborn
 
+            # Determine if there are actual changes to commit
             diff: pygit2.Diff | None = None
             try:
                  if is_unborn:
-                      commit_log.debug("Comparing index to empty tree (unborn HEAD)")
-                      diff = index.diff_to_tree(None)
+                      commit_log.debug("Comparing index to empty tree (unborn HEAD for diff)")
+                      if not index.is_empty:
+                          diff = index.diff_to_tree(None)
+                      else:
+                          diff = None
                  else:
                       head_commit = repo.head.peel()
-                      commit_log.debug("Comparing index to HEAD tree", head_commit=str(head_commit.id))
+                      commit_log.debug("Comparing index to HEAD tree", head_commit_oid=str(head_commit.id))
                       diff = index.diff_to_tree(head_commit.tree)
             except pygit2.GitError as diff_err:
-                 commit_log.warning("Could not diff index to HEAD tree, assuming changes exist", error=str(diff_err))
+                 commit_log.warning("Could not diff index to HEAD tree, assuming changes exist for now", error=str(diff_err))
 
-            if diff is not None and not diff:
-                commit_log.info("Commit skipped: No changes staged.")
-                return CommitResult(success=True, message="Commit skipped: No changes staged.", commit_hash=None)
+            if diff is not None and not diff.deltas and not (is_unborn and not index.is_empty):
+                 commit_log.info("Commit skipped: No changes detected in diff.")
+                 return CommitResult(success=True, message="Commit skipped: No changes detected.", commit_hash=None)
+            elif diff is None and is_unborn and index.is_empty:
+                 commit_log.info("Commit skipped: Unborn HEAD and empty index.")
+                 return CommitResult(success=True, message="Commit skipped: Unborn HEAD and empty index.", commit_hash=None)
 
+            # Signature
             try:
                  signature = repo.default_signature
             except pygit2.GitError:
@@ -310,70 +318,78 @@ class GitEngine(RepositoryEngine):
                  offset = 0 # UTC
                  signature = pygit2.Signature(fallback_name, fallback_email, timestamp, offset)
 
+            # Commit message
             change_summary_str = ""
             if diff is not None:
-                 change_summary_str = self._generate_change_summary(diff) # Now uses diff.deltas
+                 change_summary_str = self._generate_change_summary(diff)
                  commit_log.debug("Generated change summary", summary_length=len(change_summary_str))
             else:
-                 commit_log.debug("Skipping change summary generation due to diff error.")
+                 commit_log.debug("Skipping change summary generation as diff was not available/empty.")
 
-            commit_message_template = self._get_config_value(
+            commit_message_template_str = self._get_config_value(
                 "commit_message_template", config, "supsrc auto-commit: {{timestamp}}\n\n{{change_summary}}"
             )
             timestamp_str = datetime.now(UTC).isoformat()
-            commit_message = commit_message_template.replace("{{timestamp}}", timestamp_str)
+            commit_message = commit_message_template_str.replace("{{timestamp}}", timestamp_str)
             commit_message = commit_message.replace("{{repo_id}}", state.repo_id)
             commit_message = commit_message.replace("{{save_count}}", str(state.save_count))
             commit_message = commit_message.replace("{{change_summary}}", change_summary_str)
             commit_message = commit_message.rstrip()
 
-            parents = []
-            if not is_unborn:
-                parents.append(repo.head.target)
-            commit_log.debug("Commit details", parents=[str(p) for p in parents], is_unborn=is_unborn, message_head=commit_message.split("\n",1)[0])
+            # Parents
+            parents = [] if is_unborn else [repo.head.target]
 
+            # Tree
             tree_oid = index.write_tree()
             commit_log.debug("Index tree written", tree_oid=str(tree_oid))
 
-            ref_to_update = "HEAD"
-            if is_unborn:
-                 try:
-                      symbolic_ref = repo.lookup_reference("HEAD")
-                      if symbolic_ref.type == pygit2.GIT_REF_SYMBOLIC:
-                           ref_to_update = symbolic_ref.target
-                           commit_log.debug(f"First commit will update target ref: {ref_to_update}")
-                      else: commit_log.warning("HEAD is not a symbolic ref during first commit? Using 'HEAD'.")
-                 except pygit2.GitError as ref_err:
-                      commit_log.warning(f"Could not lookup HEAD target during first commit, using 'HEAD'. Error: {ref_err}")
-
-            # --- Added diagnostic logging and pre-check (Corrected Placement) ---
+            # Pre-create_commit diagnostic logging
             commit_log.debug(
-                "Calling repo.create_commit",
-                ref_to_update=ref_to_update,
+                "Preparing for repo.create_commit",
                 author=f"{signature.name} <{signature.email}>",
                 committer=f"{signature.name} <{signature.email}>",
                 tree_oid_str=str(tree_oid),
                 parents_str=[str(p) for p in parents],
                 is_unborn_check=is_unborn
             )
-            # Explicitly check if tree_oid is None before the call
             if tree_oid is None:
                 commit_log.error("tree_oid is None before create_commit, this will fail.")
-                # Raise a specific error to make it clear in logs if this happens
                 raise ValueError("Cannot create commit: tree_oid is None after index.write_tree().")
-            # --- End added block ---
 
-            commit_oid = repo.create_commit(
-                ref_to_update, signature, signature, commit_message, tree_oid, parents
-            )
-            commit_hash = str(commit_oid)
-            log_msg = "First commit successful" if is_unborn else "Commit successful"
-            commit_log.info(log_msg, hash=commit_hash, message=commit_message.split("\n",1)[0])
+            commit_hash: str
+            if is_unborn:
+                commit_log.info("Performing explicit initial commit sequence for unborn HEAD.")
+                commit_oid_obj = repo.create_commit(
+                    None, signature, signature, commit_message, tree_oid, parents
+                )
+                commit_hash = str(commit_oid_obj)
+                commit_log.debug(f"Initial commit object created: {commit_hash}")
+
+                target_branch_ref_name = repo.head.target
+                commit_log.debug(f"HEAD is symbolic; target branch for initial commit is: {target_branch_ref_name}")
+
+                repo.create_reference(target_branch_ref_name, commit_oid_obj)
+                commit_log.debug(f"Created reference {target_branch_ref_name} pointing to {commit_hash}")
+
+                repo.head.set_target(target_branch_ref_name)
+                commit_log.info(f"Initial commit successful. HEAD now points to {target_branch_ref_name} ({commit_hash[:7]})")
+            else:
+                ref_to_update = "HEAD"
+                commit_log.info(f"Performing commit, updating reference: {ref_to_update}")
+                commit_oid_obj = repo.create_commit(
+                    ref_to_update, signature, signature, commit_message, tree_oid, parents
+                )
+                commit_hash = str(commit_oid_obj)
+                commit_log.info(f"Commit successful ({commit_hash[:7]})")
+
             return CommitResult(success=True, message=f"Commit successful: {commit_hash[:7]}", commit_hash=commit_hash)
 
         except pygit2.GitError as e:
-            commit_log.error("Failed to perform commit", error=str(e), is_unborn=is_unborn)
+            commit_log.error("Failed to perform commit due to GitError", error=str(e), is_unborn=is_unborn, exc_info=True)
             return CommitResult(success=False, message=f"Git commit error: {e}")
+        except ValueError as e:
+            commit_log.error("Failed to perform commit due to ValueError", error=str(e), is_unborn=is_unborn, exc_info=True)
+            return CommitResult(success=False, message=str(e))
         except Exception as e:
             commit_log.exception("Unexpected error performing commit", is_unborn=is_unborn)
             return CommitResult(success=False, message=f"Unexpected commit error: {e}")
