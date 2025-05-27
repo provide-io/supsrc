@@ -21,6 +21,7 @@ from textual.widgets import Log as TextualLog
 from textual.worker import Worker
 
 from supsrc.runtime.orchestrator import RepositoryStatesMap, WatchOrchestrator
+from supsrc.state import RepositoryState, RepositoryStatus # Added import
 
 log = structlog.get_logger("tui.app")
 
@@ -266,6 +267,20 @@ class SupsrcTuiApp(App):
 
             self._update_sub_title("Monitoring...")
 
+            # --- ADD DIAGNOSTIC ---
+            log.debug("TUI on_mount: Posting a test StateUpdate message to self.")
+            # Ensure necessary imports are present for RepositoryState and RepositoryStatus
+            # These might need to be added at the top of the file if not already there:
+            # from supsrc.state import RepositoryState, RepositoryStatus
+            # (Worker should check and add if missing)
+            # from supsrc.state import RepositoryState, RepositoryStatus # Explicitly add for clarity for the worker -> This is now added above.
+            test_repo_states: RepositoryStatesMap = {
+                "test-repo": RepositoryState(repo_id="test-repo", status=RepositoryStatus.IDLE)
+            }
+            self.post_message(StateUpdate(test_repo_states))
+            log.debug("TUI on_mount: Test StateUpdate message posted.")
+            # --- END DIAGNOSTIC ---
+
         except Exception as e:
             log.exception("Error during TUI mount")
             self._update_sub_title(f"Initialization Error: {e}")
@@ -458,9 +473,18 @@ class SupsrcTuiApp(App):
     # Message Handlers
     def on_state_update(self, message: StateUpdate) -> None:
         """Handle repository state updates."""
+        log.debug(
+            "TUI on_state_update received",
+            num_states=len(message.repo_states),
+            repo_ids=list(message.repo_states.keys())
+        )
         try:
-            debug_message_content = repr(message.repo_states)
-            log.debug(f"DEBUG_TUI_APP: on_state_update received: {debug_message_content}")
+            # The original debug log has been replaced by the more structured one above.
+            # If the repr(message.repo_states) is still desired for deep debugging,
+            # it could be added here or a separate log line. For now, it's removed
+            # to avoid redundancy with the new structured log.
+            # debug_message_content = repr(message.repo_states)
+            # log.debug(f"DEBUG_TUI_APP: on_state_update received: {debug_message_content}")
 
             table = self.query_one(DataTable)
             current_keys = set(table.rows.keys())
@@ -518,7 +542,7 @@ class SupsrcTuiApp(App):
                     last_commit_display
                 )
 
-                if table.is_valid_row_key(repo_id_str):
+                if repo_id_str in table.rows:
                     table.update_row(repo_id_str, *row_data, update_width=False)
                 else:
                     table.add_row(*row_data, key=repo_id_str)
@@ -578,4 +602,3 @@ class SupsrcTuiApp(App):
         return styles.get(level, "white")
 
 # 🖥️✨
-
