@@ -91,7 +91,7 @@ class WatchOrchestrator:
         """
         self.config_path = config_path
         self.shutdown_event = shutdown_event
-        self.app: TextualApp | None = app # Directly use the passed app instance
+        self.app: TextualApp | None = app if TEXTUAL_AVAILABLE_RUNTIME else None # Store the TUI app instance only if usable
         self.console = console
         self.config: SupsrcConfig | None = None
         self.monitor_service: MonitoringService | None = None
@@ -100,10 +100,7 @@ class WatchOrchestrator:
         self.repo_engines: dict[str, RepositoryEngine] = {}
         self._running_tasks: set[asyncio.Task[Any]] = set()
         self._log = log.bind(orchestrator_id=id(self))
-        self._is_tui_active = bool(self.app) # Determine activity based on the instance's truthiness
-        self._log.debug("WatchOrchestrator initialized.",
-                        passed_app_type=type(app).__name__,
-                        is_tui_active=self._is_tui_active)
+        self._is_tui_active = bool(self.app) # Flag for easier checking
 
     # --- Console and TUI Update Helpers ---
 
@@ -129,34 +126,13 @@ class WatchOrchestrator:
 
     def _post_tui_state_update(self) -> None:
         """Safely posts the current repository states to the TUI."""
-        # Existing debug log, add TEXTUAL_AVAILABLE_RUNTIME and StateUpdate class check
-        self._log.debug("_post_tui_state_update attempting.",
-                        is_tui_active=self._is_tui_active,
-                        app_is_none=(self.app is None),
-                        textual_available_runtime_flag=TEXTUAL_AVAILABLE_RUNTIME, # Added
-                        stateupdate_class_is_none=(StateUpdate is None) # Added
-                        )
-
-        if self._is_tui_active and self.app and StateUpdate: # This is the critical guard
-            self._log.debug("_post_tui_state_update: Guard passed, preparing to post.") # Added
+        if self._is_tui_active and self.app and StateUpdate:
             try:
+                # Create a copy for thread safety/mutability concerns
                 states_copy = {rid: attrs.evolve(state) for rid, state in self.repo_states.items()}
-                # Ensure StateUpdate is the correct class reference here
-                msg_to_post = StateUpdate(states_copy)
-                
-                self.app.call_later(self.app.post_message, msg_to_post)
-                self._log.debug("_post_tui_state_update: call_later for post_message executed.",
-                                message_type=type(msg_to_post).__name__,
-                                repo_count=len(states_copy)) # Added
+                self.app.call_later(self.app.post_message, StateUpdate(states_copy))
             except Exception as e:
-                 # This _safe_log uses self._log, so it will also go to the TUI log panel if it works
-                 self._safe_log("warning", "Failed to post state update to TUI", error=str(e), exc_info=True)
-        else:
-            self._log.debug("_post_tui_state_update: Guard NOT passed, message not posted.", # Added for else case
-                            is_tui_active=self._is_tui_active,
-                            app_is_none=(self.app is None),
-                            stateupdate_class_is_none=(StateUpdate is None)
-                            )
+                 self._safe_log("warning", "Failed to post state update to TUI", error=str(e))
 
     # --- Core Logic Methods ---
 
@@ -504,7 +480,22 @@ class WatchOrchestrator:
                          self._post_tui_state_update()
 
             except asyncio.CancelledError:
-                 consumer_log.info("Consumer task processing cancelled.")
+                 consumer_log.info("Consumer task processing cancelled. Cleaning up internal tasks...")
+                 if get_task and not get_task.done():
+                     get_task.cancel()
+                     with suppress(asyncio.CancelledError):
+                         await get_task
+                 if shutdown_wait_task and not shutdown_wait_task.done():
+                     shutdown_wait_task.cancel()
+                     with suppress(asyncio.CancelledError):
+                         await shutdown_wait_task
+                 consumer_log.info("Internal tasks cleanup complete for consumer.")
+                 # It's important to re-raise the CancelledError if this is not the outermost cancellation handler
+                 # for this task, or if the surrounding architecture expects it.
+                 # However, given this task is directly managed and cancelled by the orchestrator's
+                 # finally block, simply cleaning up and exiting the loop (which will happen
+                 # as the while condition is checked or the error propagates up) is usually sufficient.
+                 # For now, just log and the loop will terminate or the error will propagate.
             except Exception as e:
                 current_repo_id = repo_id if repo_id else "UNKNOWN_PRE_ASSIGNMENT"
                 consumer_log.error("Error in consumer main try block", repo_id=current_repo_id, error=str(e), exc_info=True)

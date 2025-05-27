@@ -260,7 +260,7 @@ class SupsrcTuiApp(App):
             self._timer_manager.create_timer(
                 "shutdown_check",
                 0.5,
-                self._check_external_shutdown,
+                self._check_external_shutdown_sync, # Updated callback
                 repeat=True
             )
 
@@ -294,15 +294,23 @@ class SupsrcTuiApp(App):
         finally:
             log.info("Orchestrator worker finished.")
 
-    async def _check_external_shutdown(self) -> None:
-        """Check for external shutdown requests."""
+    async def _check_external_shutdown_async(self) -> None: # Renamed
+        """Async part of the shutdown check: performs actual shutdown actions."""
+        # This part remains async: logging, subtitle update, and action_quit
+        log.warning("External shutdown detected (CLI signal). Processing async actions.")
+        self._update_sub_title("Shutdown requested...")
+        await self.action_quit()
+
+    def _check_external_shutdown_sync(self) -> None: # New synchronous method
+        """
+        Synchronous callback for the timer.
+        Checks for shutdown conditions and schedules the async part if needed.
+        """
         if (self._cli_shutdown_event.is_set() and
             not self._shutdown_event.is_set() and
             not self._is_shutting_down):
-
-            log.warning("External shutdown detected (CLI signal).")
-            self._update_sub_title("Shutdown requested...")
-            await self.action_quit()
+            # If conditions met, create a task for the async operations
+            asyncio.create_task(self._check_external_shutdown_async())
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         """Handle worker state changes."""
@@ -448,8 +456,8 @@ class SupsrcTuiApp(App):
     def on_state_update(self, message: StateUpdate) -> None:
         """Handle repository state updates."""
         try:
-            # REMOVED: print(f"DEBUG_TUI_APP: on_state_update received: {{message.repo_states!r}}", file=sys.stderr)
-            log.debug("on_state_update: Received StateUpdate", repo_states_count=len(message.repo_states), repo_states_keys=list(message.repo_states.keys()))
+            debug_message_content = repr(message.repo_states)
+            log.debug(f"DEBUG_TUI_APP: on_state_update received: {debug_message_content}")
 
             table = self.query_one(DataTable)
             current_keys = set(table.rows.keys())
@@ -457,15 +465,12 @@ class SupsrcTuiApp(App):
 
             # Remove obsolete rows
             for key_to_remove in current_keys - incoming_keys:
-                if table.is_valid_row_key(key_to_remove): # This check might be redundant if keys are always valid from table.rows.keys()
-                    log.debug("on_state_update: Removing obsolete row", key=key_to_remove)
+                if table.is_valid_row_key(key_to_remove):
                     table.remove_row(key_to_remove)
-                    log.debug("on_state_update: Removed row", key=key_to_remove) # Added
 
             # Update/add rows
             for repo_id_obj, state in message.repo_states.items():
                 repo_id_str = str(repo_id_obj)
-                log.debug("on_state_update: Processing repo", repo_id=repo_id_str, status=state.status.name, display_emoji=state.display_status_emoji, last_change=state.last_change_time) # Added more detail
 
                 # Format display data
                 status_display = state.display_status_emoji
@@ -511,17 +516,12 @@ class SupsrcTuiApp(App):
                 )
 
                 if table.is_valid_row_key(repo_id_str):
-                    log.debug("on_state_update: Attempting to update row", key=repo_id_str, data=row_data)
                     table.update_row(repo_id_str, *row_data, update_width=False)
                 else:
-                    log.debug("on_state_update: Attempting to add row", key=repo_id_str, data=row_data)
                     table.add_row(*row_data, key=repo_id_str)
-            
-            # It might also be useful to log the total number of rows after updates/additions
-            log.debug("on_state_update: Finished processing, table row count", row_count=table.row_count)
 
         except Exception as e:
-            log.exception("Failed to update TUI table") # Changed from log.error to log.exception for traceback
+            log.error("Failed to update TUI table", error=str(e))
 
     def on_log_message_update(self, message: LogMessageUpdate) -> None:
         """Handle log message updates."""
@@ -575,3 +575,4 @@ class SupsrcTuiApp(App):
         return styles.get(level, "white")
 
 # 🖥️✨
+
