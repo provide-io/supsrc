@@ -422,6 +422,9 @@ class SupsrcTuiApp(App):
         log.info("Quit action triggered.") # Original log.info kept for sequence confirmation
         self._update_sub_title("Quitting...")
 
+        # Capture worker instance before any awaits that allow context switching
+        worker_to_cancel = self._worker
+
         try:
             # Signal orchestrator shutdown
             if not self._shutdown_event.is_set():
@@ -430,20 +433,20 @@ class SupsrcTuiApp(App):
             # Stop all timers
             self._timer_manager.stop_all_timers()
 
-            # Give worker time to react
+            # Give worker time to react (and other tasks to run)
             await asyncio.sleep(0.3)
 
-            # Cancel worker if still running
-            if self._worker and self._worker.is_running: # Check if worker exists and is_running
-                log.info("Cancelling orchestrator worker...")
+            # Cancel worker if it was valid and is still running
+            if worker_to_cancel and worker_to_cancel.is_running:
+                log.info("Cancelling orchestrator worker...", worker_name=getattr(worker_to_cancel, 'name', 'Unknown'))
                 try:
-                    await self._worker.cancel() # Call cancel on the Textual Worker object
+                    await worker_to_cancel.cancel()
                 except Exception as e:
-                    log.error("Error cancelling worker", error=str(e))
-            elif self._worker:
-                log.info("Orchestrator worker exists but is not running.")
-            else:
-                log.info("Orchestrator worker is None, no cancellation needed.")
+                    log.error("Error cancelling worker", worker_name=getattr(worker_to_cancel, 'name', 'Unknown'), error=str(e), exc_info=True)
+            elif worker_to_cancel: # Worker existed but was not running
+                log.info("Orchestrator worker existed but was not running.", worker_name=getattr(worker_to_cancel, 'name', 'Unknown'), worker_state=getattr(worker_to_cancel, 'state', 'Unknown'))
+            else: # Worker was None to begin with
+                log.info("Orchestrator worker was None, no cancellation needed.")
 
             log.info("Exiting TUI application.")
             self.exit(0)
