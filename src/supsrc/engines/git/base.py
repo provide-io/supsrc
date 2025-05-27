@@ -346,6 +346,23 @@ class GitEngine(RepositoryEngine):
                  except pygit2.GitError as ref_err:
                       commit_log.warning(f"Could not lookup HEAD target during first commit, using 'HEAD'. Error: {ref_err}")
 
+            # --- Added diagnostic logging and pre-check (Corrected Placement) ---
+            commit_log.debug(
+                "Calling repo.create_commit",
+                ref_to_update=ref_to_update,
+                author=f"{signature.name} <{signature.email}>",
+                committer=f"{signature.name} <{signature.email}>",
+                tree_oid_str=str(tree_oid),
+                parents_str=[str(p) for p in parents],
+                is_unborn_check=is_unborn
+            )
+            # Explicitly check if tree_oid is None before the call
+            if tree_oid is None:
+                commit_log.error("tree_oid is None before create_commit, this will fail.")
+                # Raise a specific error to make it clear in logs if this happens
+                raise ValueError("Cannot create commit: tree_oid is None after index.write_tree().")
+            # --- End added block ---
+
             commit_oid = repo.create_commit(
                 ref_to_update, signature, signature, commit_message, tree_oid, parents
             )
