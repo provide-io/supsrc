@@ -197,7 +197,7 @@ class TestMonitoringIntegration:
                 text=True,
                 check=True
             )
-            assert "supsrc auto-commit" in result.stdout or len(result.stdout.splitlines()) == 2
+            assert "🔼⚙️ [skip ci] auto-commit" in result.stdout or len(result.stdout.splitlines()) == 2
 
         finally:
             # Shutdown orchestrator

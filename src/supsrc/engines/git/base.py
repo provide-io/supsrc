@@ -327,7 +327,7 @@ class GitEngine(RepositoryEngine):
                  commit_log.debug("Skipping change summary generation as diff was not available/empty.")
 
             commit_message_template_str = self._get_config_value(
-                "commit_message_template", config, "supsrc auto-commit: {{timestamp}}\n\n{{change_summary}}"
+                "commit_message_template", config, "🔼⚙️ [skip ci] auto-commit\n\n{{change_summary}}"
             )
             timestamp_str = datetime.now(UTC).isoformat()
             commit_message = commit_message_template_str.replace("{{timestamp}}", timestamp_str)
