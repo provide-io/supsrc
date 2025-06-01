@@ -5,9 +5,12 @@
 Defines custom messages for the Textual User Interface (TUI).
 """
 
-from typing import TYPE_CHECKING, Any # Ensure Any is kept if details in RepoDetailUpdate uses it, or other classes.
-                                 # If not, Any can be removed. For now, keeping it.
+from typing import (  # Ensure Any is kept if details in RepoDetailUpdate uses it, or other classes.
+    TYPE_CHECKING,
+    Any,
+)
 
+# If not, Any can be removed. For now, keeping it.
 from textual.message import Message
 
 # Import for type hinting only to break circular dependency

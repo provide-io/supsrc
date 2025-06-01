@@ -7,12 +7,11 @@ Stabilized TUI application with improved layout and proper timer management.
 
 import asyncio
 from pathlib import Path
-import sys # Ensure this import is present
 from typing import Any
 
 import structlog
 from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container
 from textual.message import Message
 from textual.reactive import var
 from textual.timer import Timer
@@ -21,7 +20,7 @@ from textual.widgets import Log as TextualLog
 from textual.worker import Worker
 
 from supsrc.runtime.orchestrator import RepositoryStatesMap, WatchOrchestrator
-from supsrc.state import RepositoryState, RepositoryStatus # Added import
+from supsrc.state import RepositoryState, RepositoryStatus  # Added import
 
 log = structlog.get_logger("tui.app")
 
@@ -80,7 +79,7 @@ class TimerManager:
         timer = self._timers[name]
         try:
             # Check if the timer is active by inspecting its internal handle
-            if hasattr(timer, '_Timer__handle') and timer._Timer__handle is not None:
+            if hasattr(timer, "_Timer__handle") and timer._Timer__handle is not None:
                 timer.stop()
             # No need to check is_cancelled, stop() should be idempotent or handle internal state.
             # Textual's stop() method on Timer sets _Timer__handle to None.
@@ -453,13 +452,13 @@ class SupsrcTuiApp(App):
 
             # Cancel worker if it was valid and is still running
             if worker_to_cancel and worker_to_cancel.is_running:
-                log.info("Cancelling orchestrator worker...", worker_name=getattr(worker_to_cancel, 'name', 'Unknown'))
+                log.info("Cancelling orchestrator worker...", worker_name=getattr(worker_to_cancel, "name", "Unknown"))
                 try:
                     await worker_to_cancel.cancel()
                 except Exception as e:
-                    log.error("Error cancelling worker", worker_name=getattr(worker_to_cancel, 'name', 'Unknown'), error=str(e), exc_info=True)
+                    log.error("Error cancelling worker", worker_name=getattr(worker_to_cancel, "name", "Unknown"), error=str(e), exc_info=True)
             elif worker_to_cancel: # Worker existed but was not running
-                log.info("Orchestrator worker existed but was not running.", worker_name=getattr(worker_to_cancel, 'name', 'Unknown'), worker_state=getattr(worker_to_cancel, 'state', 'Unknown'))
+                log.info("Orchestrator worker existed but was not running.", worker_name=getattr(worker_to_cancel, "name", "Unknown"), worker_state=getattr(worker_to_cancel, "state", "Unknown"))
             else: # Worker was None to begin with
                 log.info("Orchestrator worker was None, no cancellation needed.")
 

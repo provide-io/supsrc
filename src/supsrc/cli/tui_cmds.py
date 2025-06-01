@@ -12,10 +12,11 @@ from pathlib import Path
 import click
 import structlog
 
-# Import logging utilities from the new cli.utils module
-from supsrc.cli.utils import setup_logging_from_context, logging_options
-from supsrc.tui.app import SupsrcTuiApp
 import supsrc.telemetry.logger.base as telemetry_logger_base
+
+# Import logging utilities from the new cli.utils module
+from supsrc.cli.utils import logging_options, setup_logging_from_context
+from supsrc.tui.app import SupsrcTuiApp
 
 log = structlog.get_logger("cli.tui")
 
@@ -92,7 +93,7 @@ def tui_cli(
         # Ensure a clean exit code on error
         sys.exit(1)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # This allows running `python -m src.supsrc.cli.tui_cmds` for testing this command directly
     # For actual use, it's registered with the main CLI group.
     # A minimal context object for standalone testing:

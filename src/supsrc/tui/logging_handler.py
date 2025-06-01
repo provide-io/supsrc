@@ -7,11 +7,11 @@ Custom logging handler for integrating structlog output with the Textual TUI.
 
 import logging
 import sys
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING
 
-import structlog # For ConsoleRenderer
+import structlog  # For ConsoleRenderer
+
 # from structlog.dev import ConsoleRenderer # Could be more specific
-
 # Assuming LogMessageUpdate is in supsrc.tui.messages
 from supsrc.tui.messages import LogMessageUpdate
 
@@ -58,7 +58,7 @@ class TextualLogHandler(logging.Handler):
         try:
             # Attempt to get 'repo_id' from the log record, defaulting to 'SYSTEM'.
             # structlog adds bound variables directly to the record.
-            repo_id: str = getattr(record, 'repo_id', 'SYSTEM')
+            repo_id: str = getattr(record, "repo_id", "SYSTEM")
 
             # The record.msg is usually the 'event' from structlog.
             # The self.format(record) call will use the formatter set on this handler
@@ -75,7 +75,7 @@ class TextualLogHandler(logging.Handler):
             )
 
             # Post the message to the TUI application's message queue
-            if self.app and hasattr(self.app, 'post_message'):
+            if self.app and hasattr(self.app, "post_message"):
                 self.app.post_message(log_update_msg)
             else:
                 # Fallback if app is not available or misconfigured (should not happen in normal operation)

@@ -6,18 +6,18 @@ Main CLI entry point for supsrc using Click.
 Handles global options like logging level.
 """
 
-import sys
 from importlib.metadata import PackageNotFoundError, version
 
 import click
 import structlog
 
 from supsrc.cli.config_cmds import config_cli
-from supsrc.cli.watch_cmds import watch_cli
-from supsrc.cli.tui_cmds import tui_cli # Import the new TUI command
-from supsrc.telemetry import StructLogger
+from supsrc.cli.tui_cmds import tui_cli  # Import the new TUI command
+
 # Import logging utilities from the new cli.utils module
 from supsrc.cli.utils import logging_options, setup_logging_from_context
+from supsrc.cli.watch_cmds import watch_cli
+from supsrc.telemetry import StructLogger
 
 try:
     __version__ = version("supsrc")
@@ -57,7 +57,7 @@ def cli(
     # None means "not set by CLI", False is the effective default from the decorator.
     ctx.obj["JSON_LOGS"] = json_logs if json_logs is not None else False
     ctx.obj["FILE_ONLY_LOGS"] = file_only_logs if file_only_logs is not None else False
-    
+
     # Initial minimal logging setup for the CLI itself before subcommands run their own.
     # Subcommands will call setup_logging_from_context again, which is fine.
     setup_logging_from_context(ctx, default_log_level="WARNING") # Default to WARNING for CLI group itself

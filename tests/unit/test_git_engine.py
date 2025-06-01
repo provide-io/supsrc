@@ -5,20 +5,18 @@
 Comprehensive tests for the Git engine implementation.
 """
 
-import tempfile
+import subprocess
 from pathlib import Path
 from unittest.mock import Mock, patch
-import subprocess
-import shutil
 
-import pytest
 import pygit2
+import pytest
 
+from supsrc.config.models import GlobalConfig
 from supsrc.engines.git import GitEngine, GitRepoSummary
 from supsrc.engines.git.credentials import GitCredentialManager
-from supsrc.config.models import GlobalConfig
+from supsrc.protocols import CommitResult, PushResult, RepoStatusResult, StageResult
 from supsrc.state import RepositoryState
-from supsrc.protocols import RepoStatusResult, StageResult, CommitResult, PushResult
 
 
 @pytest.fixture
@@ -257,7 +255,7 @@ class TestGitCredentialManager:
 
         assert result is None
 
-    @patch('os.getenv')
+    @patch("os.getenv")
     def test_userpass_auth_success(self, mock_getenv: Mock) -> None:
         """Test successful username/password authentication."""
         mock_getenv.side_effect = lambda key: {
@@ -268,7 +266,7 @@ class TestGitCredentialManager:
         config = {}
         manager = GitCredentialManager(config)
 
-        with patch('pygit2.credentials.UserPass') as mock_userpass:
+        with patch("pygit2.credentials.UserPass") as mock_userpass:
             mock_userpass.return_value = Mock()
 
             result = manager.get_credentials(
@@ -280,7 +278,7 @@ class TestGitCredentialManager:
             assert result is not None
             mock_userpass.assert_called_once_with("testuser", "testpass")
 
-    @patch('os.getenv')
+    @patch("os.getenv")
     def test_userpass_auth_missing_env(self, mock_getenv: Mock) -> None:
         """Test username/password authentication with missing environment variables."""
         mock_getenv.return_value = None
@@ -296,7 +294,7 @@ class TestGitCredentialManager:
 
         assert result is None
 
-    @patch('pygit2.credentials.KeypairFromAgent')
+    @patch("pygit2.credentials.KeypairFromAgent")
     def test_ssh_agent_auth_failure(self, mock_agent: Mock) -> None:
         """Test SSH agent authentication failure."""
         mock_agent.side_effect = pygit2.GitError("SSH agent not available")

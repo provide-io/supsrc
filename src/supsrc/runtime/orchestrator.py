@@ -14,10 +14,10 @@ import structlog
 from rich.console import Console
 
 from supsrc.config import (
-    load_config,
-    SupsrcConfig,
     InactivityRuleConfig,
     RuleConfig,
+    SupsrcConfig,
+    load_config,
 )
 
 # --- Specific Engine Import (replace with plugin loading later) ---

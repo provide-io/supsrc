@@ -10,12 +10,13 @@ from pathlib import Path
 import click
 import structlog
 
+# Import logging utilities
+from supsrc.cli.utils import logging_options, setup_logging_from_context
+
 # Use relative imports within the package
 from supsrc.config import load_config
 from supsrc.exceptions import ConfigurationError
 from supsrc.telemetry import StructLogger  # Import type hint
-# Import logging utilities
-from supsrc.cli.utils import logging_options, setup_logging_from_context
 
 # Import rich if available for pretty printing
 try:
