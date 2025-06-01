@@ -1,13 +1,14 @@
 #
 # supsrc/telemetry/logger/base.py
 #
+from __future__ import annotations
 """
 Base logging setup for the supsrc application using structlog.
 """
 
 import logging
 import sys
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import structlog
 from structlog.typing import FilteringBoundLogger
@@ -42,7 +43,7 @@ def setup_logging(
     json_logs: bool = False,
     log_file: str | None = None,
     file_only: bool = False,  # New parameter for file-only logging
-    tui_app_instance: Optional["SupsrcTuiApp"] = None
+    tui_app_instance: "SupsrcTuiApp" | None = None
 ) -> None:
     """
     Configures structlog for the entire supsrc application.

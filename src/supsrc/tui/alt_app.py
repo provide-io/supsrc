@@ -47,7 +47,7 @@ class StateUpdate(Message):
 
 class LogMessageUpdate(Message):
     ALLOW_BUBBLE = True
-    def __init__(self, repo_id: str | None, level: str, message: str, timestamp: str = None) -> None:
+    def __init__(self, repo_id: str | None, level: str, message: str, timestamp: str | None = None) -> None:
         self.repo_id = repo_id
         self.level = level
         self.message = message
