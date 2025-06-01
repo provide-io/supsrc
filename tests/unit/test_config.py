@@ -5,19 +5,21 @@
 Comprehensive tests for configuration loading and validation.
 """
 
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 
 from supsrc.config import load_config
 from supsrc.config.models import (
-    SupsrcConfig, GlobalConfig, RepositoryConfig,
-    InactivityRuleConfig, SaveCountRuleConfig, ManualRuleConfig
+    InactivityRuleConfig,
+    ManualRuleConfig,
+    SaveCountRuleConfig,
+    SupsrcConfig,
 )
 from supsrc.exceptions import (
-    ConfigFileNotFoundError, ConfigParsingError,
-    ConfigValidationError
+    ConfigFileNotFoundError,
+    ConfigParsingError,
 )
 
 

@@ -116,7 +116,7 @@ class MonitoringService:
                 )
                 join_success = True
                 log.debug("asyncio.to_thread(observer.join) completed within outer timeout.")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 log.error("Outer timeout (7s) reached while waiting for observer.join via asyncio.to_thread.", exc_info=True)
                 # join_success remains False
             except Exception as join_exc:
