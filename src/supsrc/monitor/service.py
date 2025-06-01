@@ -147,5 +147,33 @@ class MonitoringService:
         observer_alive = hasattr(self, "_observer") and self._observer is not None and self._observer.is_alive()
         return self._is_running and observer_alive
 
+    def pause_monitoring(self, repo_id: str) -> bool:
+        """
+        Pauses monitoring for a specific repository by disabling its event handler.
+        Returns True if successful, False if handler not found.
+        """
+        handler = self._handlers.get(repo_id)
+        if handler:
+            handler.pause()
+            self._logger.info("Paused monitoring for repository", repo_id=repo_id)
+            return True
+        else:
+            self._logger.warning("Attempted to pause monitoring for unknown repository", repo_id=repo_id)
+            return False
+
+    def resume_monitoring(self, repo_id: str) -> bool:
+        """
+        Resumes monitoring for a specific repository by enabling its event handler.
+        Returns True if successful, False if handler not found.
+        """
+        handler = self._handlers.get(repo_id)
+        if handler:
+            handler.resume()
+            self._logger.info("Resumed monitoring for repository", repo_id=repo_id)
+            return True
+        else:
+            self._logger.warning("Attempted to resume monitoring for unknown repository", repo_id=repo_id)
+            return False
+
 # 🔼⚙️
 

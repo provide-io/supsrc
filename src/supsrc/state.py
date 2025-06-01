@@ -8,6 +8,7 @@ Defines the dynamic state management models for monitored repositories in supsrc
 import asyncio
 from datetime import UTC, datetime
 from enum import Enum, auto
+from typing import TypeAlias # Added TypeAlias
 
 import structlog
 from attrs import field, mutable
@@ -26,6 +27,7 @@ class RepositoryStatus(Enum):
     COMMITTING = auto()  # Git commit operation in progress.
     PUSHING = auto()  # Git push operation in progress.
     ERROR = auto()  # An error occurred, requires attention or clears on next success.
+    PAUSED = auto() # Monitoring is paused for this repository.
 
 # Mapping of RepositoryStatus to display emojis for TUI
 # Note: Some TUI statuses like 'Committed', 'Skipped', 'Evaluating', 'Waiting'
@@ -40,6 +42,7 @@ STATUS_EMOJI_MAP = {
     RepositoryStatus.COMMITTING: "💾",
     RepositoryStatus.PUSHING: "🅿️",
     RepositoryStatus.ERROR: "❌",
+    RepositoryStatus.PAUSED: "⏸️", # Emoji for PAUSED state
     # Specific states like 'Evaluating' or 'Waiting' will be set directly by Orchestrator
     # as they are not direct RepositoryStatus enum members.
 }
@@ -195,5 +198,8 @@ class RepositoryState:
              # This is normal operation, no need to log unless debugging timing issues
              # log.debug("No active inactivity timer to cancel", repo_id=self.repo_id)
              pass
+
+# Type alias for a dictionary mapping repository IDs to their states
+RepositoryStatesMap: TypeAlias = dict[str, RepositoryState]
 
 # 🔼⚙️
