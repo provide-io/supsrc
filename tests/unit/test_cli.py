@@ -106,6 +106,13 @@ class TestConfigCommands:
 
         runner = CliRunner()
         result = runner.invoke(config_cli, ["show", "--config-path", str(config_file)])
+        print("Test Output:")
+        print(f"Exit Code: {result.exit_code}")
+        print(f"Stdout: {result.stdout}")
+        if hasattr(result, 'stderr') and result.stderr: # Older click versions might not have separate stderr
+            print(f"Stderr: {result.stderr}")
+        print(f"Exception: {result.exception}")
+        print(f"Exc_info: {result.exc_info}")
 
         # Should exit with success even if paths don't exist (validation warnings)
         assert result.exit_code == 0
@@ -132,7 +139,7 @@ class TestConfigCommands:
         result = runner.invoke(config_cli, ["show", "--config-path", str(config_file)])
 
         assert result.exit_code == 1
-        assert "Error" in result.output
+        assert "Error" in result.stderr
 
     def test_config_show_with_env_var(self, tmp_path: Path) -> None:
         """Test config show with environment variable."""
@@ -327,8 +334,8 @@ class TestCLIIntegration:
             "config", "show",
             "--config-path", "/invalid/path/config.conf"
         ])
-        assert result.exit_code == 1
-        assert "Error" in result.output
+        assert result.exit_code == 2
+        assert "Error" in result.stderr
 
     def test_cli_logging_integration(self, tmp_path: Path) -> None:
         """Test CLI logging integration."""

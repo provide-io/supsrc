@@ -28,8 +28,8 @@ except PackageNotFoundError:
 log: StructLogger = structlog.get_logger("cli.main")
 
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]})
-@click.version_option(__version__, "-V", "--version", package_name="supsrc")
+@click.group(name="supsrc", context_settings={"help_option_names": ["-h", "--help"]})
+@click.version_option(__version__, "-V", "--version", package_name="supsrc", prog_name="supsrc")
 @logging_options # This now comes from cli.utils
 @click.pass_context
 def cli(
