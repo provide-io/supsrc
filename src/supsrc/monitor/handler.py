@@ -64,8 +64,19 @@ class SupsrcEventHandler(FileSystemEventHandler):
         self.loop = loop # <<< Store the loop
         self.logger = log.bind(repo_id=repo_id, repo_path=str(repo_path))
         self.gitignore_spec: pathspec.PathSpec | None = self._load_gitignore()
+        self._is_paused: bool = False # Added for pause/resume
 
         self.logger.debug("Initialized event handler")
+
+    def pause(self) -> None:
+        """Signal the handler to stop processing new filesystem events."""
+        self._is_paused = True
+        self.logger.info("Event handler paused")
+
+    def resume(self) -> None:
+        """Signal the handler to resume processing new filesystem events."""
+        self._is_paused = False
+        self.logger.info("Event handler resumed")
 
     def _load_gitignore(self) -> pathspec.PathSpec | None:
         """Loads and parses the .gitignore file for the repository."""
@@ -145,6 +156,10 @@ class SupsrcEventHandler(FileSystemEventHandler):
 
     def _process_and_queue_event(self, event: FileSystemEvent):
         """Processes, filters, and queues a watchdog event using thread-safe mechanism."""
+        if self._is_paused: # Check if paused at the beginning
+            self.logger.debug("Handler is paused, ignoring event", event_type=event.event_type, src_path=event.src_path)
+            return None # Do not process if paused
+
         # (Filtering logic remains the same)
         event_type = event.event_type
         src_path_str = event.src_path

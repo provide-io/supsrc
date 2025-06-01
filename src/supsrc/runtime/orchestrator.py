@@ -157,10 +157,15 @@ class WatchOrchestrator:
 
         # Check status first
         # Allow triggering from IDLE (e.g., timer fired before any new change) or CHANGED
+        # Also explicitly block if PAUSED.
+        if repo_state.status == RepositoryStatus.PAUSED:
+            callback_log.info("Action Triggered: Repo is PAUSED, skipping.", current_status=repo_state.status.name)
+            repo_state.cancel_inactivity_timer() # Ensure timer is cleared if it somehow triggered for a paused repo
+            return
         if repo_state.status not in (RepositoryStatus.CHANGED, RepositoryStatus.IDLE):
-            callback_log.warning("Action Triggered: Repo not in CHANGED/IDLE state, skipping.",
+            callback_log.warning("Action Triggered: Repo not in CHANGED/IDLE state (and not PAUSED), skipping.",
                                 current_status=repo_state.status.name)
-            # self._post_tui_log(repo_id, "WARNING", f"Action skipped (state: {repo_state.status.name}).") # Redundant
+            # self._post_tui_log(repo_id, "WARNING", f"Action skipped (state: {repo_state.status.name}).")
             repo_state.cancel_inactivity_timer()
             return
 
@@ -414,13 +419,16 @@ class WatchOrchestrator:
 
                     if not repo_state or not repo_config:
                         event_log.warning("Ignoring event for unknown/disabled/unconfigured repository.")
-
+                    elif repo_state.status == RepositoryStatus.PAUSED:
+                        event_log.debug("Ignoring event: Repository is PAUSED.", current_status=repo_state.status.name)
+                        # Do not process events for paused repositories. The handler should already prevent this,
+                        # but this is an additional safeguard in the consumer.
                     else:
                         # Record change, check rules, schedule actions/timers
                         repo_state.record_change() # This calls update_status, which sets emoji for CHANGED
                         event_log = event_log.bind(save_count=repo_state.save_count, status=repo_state.status.name)
                         self._console_message(f"Change detected: {event.src_path.name}", repo_id=repo_id, style="magenta bold", emoji="✏️")
-                        # self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}") # Redundant
+                        # self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}")
 
                         rule_config_obj: RuleConfig = repo_config.rule
                         rule_type_str_lc = getattr(rule_config_obj, "type", "default").lower()
@@ -860,5 +868,104 @@ class WatchOrchestrator:
             "commit_history": commit_history,
             # Add other details here in the future if needed
         }
+
+    # --- REPL Helper Methods ---
+    def get_all_repository_states(self) -> RepositoryStatesMap:
+        """
+        Returns a copy of the current states of all repositories.
+        Intended for REPL/status display.
+        """
+        self._log.debug("REPL requested all repository states.")
+        return self.repo_states.copy() if self.repo_states else {}
+
+    def get_repository_state(self, repo_id: str) -> RepositoryState | None:
+        """
+        Returns the current state of a specific repository.
+        Intended for REPL/status display.
+        """
+        self._log.debug("REPL requested state for repository", repo_id=repo_id)
+        return self.repo_states.get(repo_id)
+
+    def pause_repository(self, repo_id: str) -> bool:
+        """Pauses monitoring for a specific repository."""
+        pause_log = self._log.bind(repo_id=repo_id)
+        repo_state = self.repo_states.get(repo_id)
+
+        if not repo_state:
+            pause_log.error("Cannot pause: Repository not found in state map.")
+            return False
+
+        if repo_state.status == RepositoryStatus.PAUSED:
+            pause_log.info("Repository already paused.")
+            return True # Considered successful as the state is already PAUSED
+
+        # Add checks for other non-pausable states if necessary (e.g. ERROR, or during active processing)
+        # For now, allow pausing from most states.
+
+        if self.monitor_service and self.monitor_service.pause_monitoring(repo_id):
+            repo_state.update_status(RepositoryStatus.PAUSED)
+            repo_state.cancel_inactivity_timer() # Ensure any pending inactivity timers are cleared
+            repo_state.action_description = "Monitoring paused by user." # Informative message
+            repo_state.rule_dynamic_indicator = "Paused"
+            self._post_tui_state_update() # Update TUI/REPL data
+            self._console_message("Monitoring paused.", repo_id=repo_id, style="yellow bold", emoji="⏸️")
+            pause_log.info("Repository monitoring paused successfully.")
+            return True
+        else:
+            pause_log.error("Failed to pause monitoring via service (handler not found or service missing).")
+            # Optionally set repo_state to ERROR here if this is critical
+            return False
+
+    def resume_repository(self, repo_id: str) -> bool:
+        """Resumes monitoring for a specific repository."""
+        resume_log = self._log.bind(repo_id=repo_id)
+        repo_state = self.repo_states.get(repo_id)
+
+        if not repo_state:
+            resume_log.error("Cannot resume: Repository not found in state map.")
+            return False
+
+        if repo_state.status != RepositoryStatus.PAUSED:
+            resume_log.info("Repository is not paused, resume action ignored.", current_status=repo_state.status.name)
+            return False # Not an error, but no action taken if not paused
+
+        if self.monitor_service and self.monitor_service.resume_monitoring(repo_id):
+            # Transition to IDLE. The next filesystem event or scheduled check will determine further state.
+            repo_state.update_status(RepositoryStatus.IDLE)
+            repo_state.action_description = "Monitoring resumed." # Informative message
+            # Reset rule descriptions; they will be repopulated on next event or if inactivity rule applies
+            repo_config = self.config.repositories.get(repo_id) if self.config else None
+            if repo_config: # Attempt to set initial rule description again
+                rule_conf_obj = repo_config.rule
+                rule_type_str = getattr(rule_conf_obj, "type", "default").lower()
+                repo_state.rule_emoji = RULE_EMOJI_MAP.get(rule_type_str, RULE_EMOJI_MAP["default"])
+                if isinstance(rule_conf_obj, InactivityRuleConfig):
+                    repo_state.active_rule_description = f"Inactivity ({rule_conf_obj.period.total_seconds():.0f}s)"
+                    repo_state.rule_dynamic_indicator = f"({rule_conf_obj.period.total_seconds():.0f}s period)"
+                     # If it's an inactivity rule, it might need its timer restarted if no changes are pending.
+                    if repo_state.status == RepositoryStatus.IDLE: # Check if it should start timer
+                         delay = rule_conf_obj.period.total_seconds()
+                         current_loop = asyncio.get_running_loop()
+                         timer_handle = current_loop.call_later(
+                             delay, lambda rid=repo_id: asyncio.create_task(self._trigger_action_callback(rid))
+                         )
+                         repo_state.set_inactivity_timer(timer_handle)
+                         self._console_message(f"Inactivity timer started after resume ({delay:.0f}s).", repo_id=repo_id, style="dim", emoji="⏳")
+                else:
+                    repo_state.active_rule_description = f"{rule_type_str.capitalize()} pending"
+                    repo_state.rule_dynamic_indicator = rule_type_str.capitalize()
+            else: # Fallback if config not found (should not happen if state exists)
+                repo_state.active_rule_description = "Monitoring active"
+                repo_state.rule_dynamic_indicator = None
+
+
+            self._post_tui_state_update() # Update TUI/REPL data
+            self._console_message("Monitoring resumed.", repo_id=repo_id, style="green bold", emoji="▶️")
+            resume_log.info("Repository monitoring resumed successfully.")
+            return True
+        else:
+            resume_log.error("Failed to resume monitoring via service (handler not found or service missing).")
+            # Optionally set repo_state to ERROR here
+            return False
 
 # 🔼⚙️
