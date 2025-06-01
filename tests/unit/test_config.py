@@ -28,12 +28,14 @@ class TestConfigLoading:
 
     def test_load_valid_config(self, tmp_path: Path) -> None:
         """Test loading a valid configuration file."""
-        config_content = """
+        repo_actual_path = tmp_path / "test_repo_dir"
+        repo_actual_path.mkdir()
+        config_content = f"""
         [global]
         log_level = "DEBUG"
 
         [repositories.test-repo]
-        path = "/tmp/test"
+        path = "{repo_actual_path}" # Use the path of the created directory
         enabled = true
 
         [repositories.test-repo.rule]
@@ -76,7 +78,7 @@ class TestConfigLoading:
         with pytest.raises(ConfigParsingError) as exc_info:
             load_config(config_file)
 
-        assert "TOML" in str(exc_info.value)
+        assert "Failed to parse configuration file" in str(exc_info.value)
 
 
 class TestRuleConfiguration:
