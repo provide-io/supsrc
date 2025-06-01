@@ -68,12 +68,13 @@ def setup_logging_from_context(
     """
     # Determine the effective setting, prioritizing local command options,
     # then context (which includes CLI global options & env vars), then a fallback default.
-    log_level_str = local_log_level or ctx.obj.get("LOG_LEVEL") or default_log_level
-    log_file_path = local_log_file or ctx.obj.get("LOG_FILE")
+    obj = ctx.obj if ctx.obj is not None else {}
+    log_level_str = local_log_level or obj.get("LOG_LEVEL") or default_log_level
+    log_file_path = local_log_file or obj.get("LOG_FILE")
 
     # For flags, None means "not set by this command", so check context
     # If context also has None (meaning not set by global CLI option), then use a default (False).
-    use_json_logs = local_json_logs if local_json_logs is not None else ctx.obj.get("JSON_LOGS", False)
+    use_json_logs = local_json_logs if local_json_logs is not None else obj.get("JSON_LOGS", False)
 
     # file_only_logs: True if this command sets it, else check context, else default to False.
     # This allows TUI to default to True while other commands default to False.

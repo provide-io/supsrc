@@ -170,6 +170,10 @@ def load_config(config_path: Path) -> SupsrcConfig:
 
     try:
         log.debug("Structuring TOML data...")
+        # Preprocess toml_data to rename "global" to "global_config" if necessary
+        if "global" in toml_data and "global_config" not in toml_data:
+            log.debug("Renaming 'global' key to 'global_config' for cattrs structuring.")
+            toml_data["global_config"] = toml_data.pop("global")
         # Initial structure from TOML + attrs defaults
         config_object = converter.structure(toml_data, SupsrcConfig)
         log.debug("Initial structuring complete.")
