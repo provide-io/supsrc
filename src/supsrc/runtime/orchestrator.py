@@ -1,12 +1,13 @@
 #
 # supsrc/runtime/orchestrator.py
 #
+from __future__ import annotations
 
 import asyncio
 import time  # Import time for unique task names
 from contextlib import suppress  # For cleaner task cancellation handling
 from pathlib import Path
-from typing import Any, Optional, TypeAlias, cast
+from typing import Any, TypeAlias, cast
 
 import attrs
 import cattrs  # Needed for config validation exceptions
@@ -77,7 +78,7 @@ class WatchOrchestrator:
         self,
         config_path: Path,
         shutdown_event: asyncio.Event,
-        app: Optional["TextualApp"] = None, # Accept optional TUI app instance
+        app: "TextualApp" | None = None, # Accept optional TUI app instance
         console: Console | None = None
         ) -> None:
         """
