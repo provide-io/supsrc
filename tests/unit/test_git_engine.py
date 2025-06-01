@@ -242,7 +242,8 @@ class TestGitEngine:
 class TestGitCredentialManager:
     """Test Git credential management functionality."""
 
-    def test_ssh_key_auth_missing_files(self) -> None:
+    @patch.object(GitCredentialManager, '_try_ssh_agent_auth', return_value=None)
+    def test_ssh_key_auth_missing_files(self, mock_agent_auth: Mock) -> None:
         """Test SSH key authentication with missing key files."""
         config = {"ssh_key_path": "/nonexistent/key"}
         manager = GitCredentialManager(config)

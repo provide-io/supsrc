@@ -107,7 +107,15 @@ def setup_logging(
 
     # Configure the standard library root logger handler (for console)
     root_logger = logging.getLogger() # Get stdlib root logger
-    root_logger.handlers.clear()      # Clear existing handlers
+    # Explicitly close existing handlers before clearing, especially FileHandlers
+    for handler in list(root_logger.handlers): # Iterate over a copy
+        try:
+            handler.close()
+        except Exception:
+            # Ignore errors during close, e.g., if already closed or not closable
+            pass
+        root_logger.removeHandler(handler) # Remove individually
+    # root_logger.handlers.clear() # Replaced by individual removal
     root_logger.setLevel(level)     # Set level on the root logger first
 
     # Log initial message using a structlog logger AFTER configuration
