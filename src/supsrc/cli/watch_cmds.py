@@ -68,12 +68,10 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
     # Setup logging for TUI mode
     log_file_in_ctx = ctx.obj.get("LOG_FILE")  # Check if global --log-file was set
     
-    # For TUI mode with log file, default to file_only_logs=True
+    # For TUI mode, always default to file_only_logs=True to prevent console log pollution
     effective_file_only_logs = kwargs.get("file_only_logs")
-    if log_file_in_ctx and effective_file_only_logs is None:
-        effective_file_only_logs = True
-    elif effective_file_only_logs is None:
-        effective_file_only_logs = False
+    if effective_file_only_logs is None:
+        effective_file_only_logs = True  # Always suppress console logs in TUI mode
 
     setup_logging_from_context(
         ctx,

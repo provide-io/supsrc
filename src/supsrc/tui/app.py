@@ -267,19 +267,6 @@ class SupsrcTuiApp(App):
 
             self._update_sub_title("Monitoring...")
 
-            # --- ADD DIAGNOSTIC ---
-            log.debug("TUI on_mount: Posting a test StateUpdate message to self.")
-            # Ensure necessary imports are present for RepositoryState and RepositoryStatus
-            # These might need to be added at the top of the file if not already there:
-            # from supsrc.state import RepositoryState, RepositoryStatus
-            # (Worker should check and add if missing)
-            # from supsrc.state import RepositoryState, RepositoryStatus # Explicitly add for clarity for the worker -> This is now added above.
-            test_repo_states: RepositoryStatesMap = {
-                "test-repo": RepositoryState(repo_id="test-repo", status=RepositoryStatus.IDLE)
-            }
-            self.post_message(StateUpdate(test_repo_states))
-            log.debug("TUI on_mount: Test StateUpdate message posted.")
-            # --- END DIAGNOSTIC ---
 
         except Exception as e:
             log.exception("Error during TUI mount")
