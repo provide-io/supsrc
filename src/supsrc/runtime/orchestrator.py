@@ -869,7 +869,7 @@ class WatchOrchestrator:
                                 init_log.info(summary_msg)
                                 # self._post_tui_log(repo_id, "INFO", summary_msg) # Redundant
                             elif summary.head_ref_name == "UNBORN":
-                                summary_msg = "Init: Repository has no commits yet (unborn HEAD)."
+                                summary_msg = "Init: Repository has no commits (unborn HEAD)"
                                 init_log.info(summary_msg)
                                 # self._post_tui_log(repo_id, "INFO", summary_msg) # Redundant
                             elif not summary.head_ref_name or not summary.head_commit_hash:
