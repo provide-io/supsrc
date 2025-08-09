@@ -744,6 +744,9 @@ class WatchOrchestrator:
                  # self._post_tui_log(None, "CRITICAL", "Internal Error: Monitor service missing.") # Redundant
                  return
 
+            # Send initial state update to TUI
+            self._post_tui_state_update()
+            
             # Start Consumer Task
             self._safe_log("debug", "Creating event consumer task...")
             consumer_task = asyncio.create_task(self._consume_events(), name="EventConsumer")
