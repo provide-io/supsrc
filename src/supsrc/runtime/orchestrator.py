@@ -35,6 +35,7 @@ from supsrc.protocols import (
 )
 from supsrc.rules import check_trigger_condition
 from supsrc.state import RepositoryState, RepositoryStatus
+from supsrc.types import RepositoryStatesMap
 
 # --- Supsrc Imports ---
 from supsrc.telemetry import StructLogger
@@ -68,8 +69,6 @@ RULE_EMOJI_MAP = {
     "default": "⚙️", # Fallback
 }
 
-# Type alias for state map
-RepositoryStatesMap: TypeAlias = dict[str, RepositoryState]
 
 class WatchOrchestrator:
     """

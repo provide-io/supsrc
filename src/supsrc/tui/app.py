@@ -20,8 +20,9 @@ from textual.widgets import DataTable, Footer, Header
 from textual.widgets import Log as TextualLog
 from textual.worker import Worker
 
-from supsrc.runtime.orchestrator import RepositoryStatesMap, WatchOrchestrator
-from supsrc.state import RepositoryState, RepositoryStatus # Added import
+from supsrc.runtime.orchestrator import WatchOrchestrator
+from supsrc.state import RepositoryState, RepositoryStatus
+from supsrc.types import RepositoryStatesMap
 
 log = structlog.get_logger("tui.app")
 
