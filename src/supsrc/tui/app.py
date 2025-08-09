@@ -82,6 +82,7 @@ class SupsrcTuiApp(App):
     BINDINGS = [
         ("d", "toggle_dark", "Toggle Dark Mode"),
         ("q", "quit", "Quit Application"),
+        ("ctrl+c", "quit", "Quit Application"),
         ("ctrl+l", "clear_log", "Clear Log"),
         ("enter", "select_repo_for_detail", "View Details"),
         ("escape", "hide_detail_pane", "Hide Details"),
@@ -474,6 +475,7 @@ class SupsrcTuiApp(App):
   c     - Reload configuration (90s pause)
   d     - Toggle dark mode
   q     - Quit application
+  Ctrl+C - Quit application
   Ctrl+L - Clear event log
   Enter  - View repository details
   Escape - Hide details pane
