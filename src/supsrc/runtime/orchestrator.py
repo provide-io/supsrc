@@ -153,9 +153,7 @@ class WatchOrchestrator:
         if self._is_tui_active and self.app and StateUpdate:
             try:
                 # Create a copy for thread safety/mutability concerns
-                states_copy = {
-                    rid: attrs.evolve(state) for rid, state in self.repo_states.items()
-                }
+                states_copy = {rid: attrs.evolve(state) for rid, state in self.repo_states.items()}
                 self._safe_log(
                     "debug",
                     f"Posting state update to TUI with {len(states_copy)} repositories",
@@ -163,9 +161,7 @@ class WatchOrchestrator:
                 # Use call_later for thread safety from worker thread
                 self.app.call_later(self.app.post_message, StateUpdate(states_copy))
             except Exception as e:
-                self._safe_log(
-                    "warning", "Failed to post state update to TUI", error=str(e)
-                )
+                self._safe_log("warning", "Failed to post state update to TUI", error=str(e))
 
     # --- Core Logic Methods ---
 
@@ -182,9 +178,7 @@ class WatchOrchestrator:
         callback_log.debug("Entering action callback")
 
         if not repo_state or not repo_config or not global_config or not repo_engine:
-            callback_log.error(
-                "Action Triggered: Could not find state, config, or engine."
-            )
+            callback_log.error("Action Triggered: Could not find state, config, or engine.")
             # self._post_tui_log(repo_id, "ERROR", "Action failed: Missing state/config/engine.") # Redundant
             return
 
@@ -255,9 +249,7 @@ class WatchOrchestrator:
             )
 
             if not status_result.success:
-                raise SupsrcError(
-                    f"Failed to get repository status: {status_result.message}"
-                )
+                raise SupsrcError(f"Failed to get repository status: {status_result.message}")
 
             if status_result.is_conflicted:
                 callback_log.warning("Action Skipped: Repository has conflicts.")
@@ -277,9 +269,7 @@ class WatchOrchestrator:
                 return
 
             if status_result.is_clean and status_result.is_unborn:
-                callback_log.info(
-                    "Action Skipped: Unborn repository is clean, no commit needed."
-                )
+                callback_log.info("Action Skipped: Unborn repository is clean, no commit needed.")
                 repo_state.action_description = "Skipped (unborn & clean)"
                 repo_state.action_progress_total = None
                 repo_state.action_progress_completed = None
@@ -295,9 +285,7 @@ class WatchOrchestrator:
                 self._post_tui_state_update()
                 return
             elif status_result.is_clean:
-                callback_log.info(
-                    "Action Skipped: Repository is clean, no commit needed."
-                )
+                callback_log.info("Action Skipped: Repository is clean, no commit needed.")
                 repo_state.action_description = "Skipped (clean)"
                 repo_state.action_progress_total = None
                 repo_state.action_progress_completed = None
@@ -340,9 +328,7 @@ class WatchOrchestrator:
                 emoji="✅",
             )
             self._post_tui_state_update()
-            callback_log.info(
-                "Action: Staging successful.", files_staged=stage_result.files_staged
-            )
+            callback_log.info("Action: Staging successful.", files_staged=stage_result.files_staged)
             # self._post_tui_log(repo_id, "DEBUG", f"Staging successful ({files_staged_count} files).") # Redundant
 
             # --- 3. Perform Commit ---
@@ -389,9 +375,7 @@ class WatchOrchestrator:
                 return
             else:
                 repo_state.last_commit_short_hash = commit_result.commit_hash[:7]
-                repo_state.action_description = (
-                    f"Committed: {repo_state.last_commit_short_hash}"
-                )
+                repo_state.action_description = f"Committed: {repo_state.last_commit_short_hash}"
                 repo_state.display_status_emoji = "✅"
                 self._console_message(
                     f"Commit complete. Hash: {repo_state.last_commit_short_hash}",
@@ -400,9 +384,7 @@ class WatchOrchestrator:
                     emoji="✅",
                 )
                 self._post_tui_state_update()
-                callback_log.info(
-                    "Action: Commit successful", hash=commit_result.commit_hash
-                )
+                callback_log.info("Action: Commit successful", hash=commit_result.commit_hash)
                 # self._post_tui_log(repo_id, "SUCCESS", f"Commit successful: {repo_state.last_commit_short_hash}") # Redundant
 
             # --- 4. Perform Push ---
@@ -480,9 +462,7 @@ class WatchOrchestrator:
                 exc_info=True,
             )
             if repo_state:
-                repo_state.update_status(
-                    RepositoryStatus.ERROR, f"Action failed: {action_exc}"
-                )
+                repo_state.update_status(RepositoryStatus.ERROR, f"Action failed: {action_exc}")
                 # self._post_tui_log(repo_id, "ERROR", f"Action failed: {action_exc}") # Redundant
                 self._post_tui_state_update()
             else:
@@ -546,9 +526,7 @@ class WatchOrchestrator:
                 # If shutdown didn't happen, get_task must be in done
                 if get_task in done:
                     event = get_task.result()
-                    consumer_log.debug(
-                        ">>> Consumer AWOKE from queue.get() with event."
-                    )
+                    consumer_log.debug(">>> Consumer AWOKE from queue.get() with event.")
                     # Assign repo_id *before* the main processing try block
                     repo_id = event.repo_id
                 else:
@@ -587,10 +565,28 @@ class WatchOrchestrator:
 
                 # Inner Try/Except for event processing logic
                 try:
+                    # Handle special config file changes
+                    if repo_id == "__config__":
+                        event_log.info("Config file change detected")
+                        self._console_message(
+                            f"Config file changed: {event.src_path.name}",
+                            style="yellow bold",
+                            emoji="🔄",
+                        )
+                        self._post_tui_log(
+                            None, "INFO", "🔄 Config file change detected, reloading..."
+                        )
+
+                        # Schedule config reload
+                        reload_task = asyncio.create_task(
+                            self.reload_config(), name=f"ConfigReload-{time.monotonic()}"
+                        )
+                        self._running_tasks.add(reload_task)
+                        reload_task.add_done_callback(self._running_tasks.discard)
+                        continue
+
                     repo_state = self.repo_states.get(repo_id)
-                    repo_config = (
-                        self.config.repositories.get(repo_id) if self.config else None
-                    )
+                    repo_config = self.config.repositories.get(repo_id) if self.config else None
 
                     if not repo_state or not repo_config:
                         event_log.warning(
@@ -613,15 +609,17 @@ class WatchOrchestrator:
                         # self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}") # Redundant
 
                         rule_config_obj: RuleConfig = repo_config.rule
-                        rule_type_str_lc = getattr(
-                            rule_config_obj, "type", "default"
-                        ).lower()
+                        rule_type_str_lc = getattr(rule_config_obj, "type", "default").lower()
                         repo_state.rule_emoji = RULE_EMOJI_MAP.get(
                             rule_type_str_lc, RULE_EMOJI_MAP["default"]
                         )
                         if isinstance(rule_config_obj, InactivityRuleConfig):
-                            repo_state.active_rule_description = f"Inactivity ({rule_config_obj.period.total_seconds():.0f}s)"
-                            repo_state.rule_dynamic_indicator = f"({rule_config_obj.period.total_seconds():.0f}s period)"
+                            repo_state.active_rule_description = (
+                                f"Inactivity ({rule_config_obj.period.total_seconds():.0f}s)"
+                            )
+                            repo_state.rule_dynamic_indicator = (
+                                f"({rule_config_obj.period.total_seconds():.0f}s period)"
+                            )
                         else:
                             repo_state.active_rule_description = (
                                 f"{rule_type_str_lc.capitalize()} pending"
@@ -676,14 +674,16 @@ class WatchOrchestrator:
                                     "Rescheduling inactivity check", delay_seconds=delay
                                 )
                                 # Update state for "Waiting"
-                                repo_state.display_status_emoji = "😴"  # Already done by worker (this is a specific state)
+                                repo_state.display_status_emoji = (
+                                    "😴"  # Already done by worker (this is a specific state)
+                                )
                                 repo_state.active_rule_description = (
                                     f"Inactivity ({delay:.0f}s waiting)"
                                 )
-                                repo_state.rule_emoji = RULE_EMOJI_MAP.get(
-                                    "inactivity", "⏳"
+                                repo_state.rule_emoji = RULE_EMOJI_MAP.get("inactivity", "⏳")
+                                repo_state.rule_dynamic_indicator = (
+                                    f"({int(delay)}s left)"  # Placeholder, real countdown later
                                 )
-                                repo_state.rule_dynamic_indicator = f"({int(delay)}s left)"  # Placeholder, real countdown later
                                 self._console_message(
                                     f"Waiting for inactivity period ({delay:.0f}s)...",
                                     repo_id=repo_id,
@@ -758,9 +758,7 @@ class WatchOrchestrator:
                             event_processed=bool(event),
                         )
                     except Exception as td_exc:
-                        consumer_log.error(
-                            "Error calling queue.task_done()", error=str(td_exc)
-                        )
+                        consumer_log.error("Error calling queue.task_done()", error=str(td_exc))
 
         consumer_log.info(
             f"Event consumer finished after processing {processed_event_count} events."
@@ -807,14 +805,10 @@ class WatchOrchestrator:
                         engine_instance = GitEngine()
                     # elif engine_type == "plugin:my_custom_hg_engine": engine_instance = load_plugin(...)
                     else:
-                        raise NotImplementedError(
-                            f"Engine type '{engine_type}' not supported."
-                        )
+                        raise NotImplementedError(f"Engine type '{engine_type}' not supported.")
                     # ---------------------------------------------
                     self.repo_engines[repo_id] = engine_instance
-                    init_log.debug(
-                        "Engine loaded ok.", engine_class=type(engine_instance).__name__
-                    )
+                    init_log.debug("Engine loaded ok.", engine_class=type(engine_instance).__name__)
                     # self._post_tui_log(repo_id, "DEBUG", f"Engine '{engine_type}' loaded.") # Redundant
                     enabled_repo_ids.append(repo_id)
                 except Exception as load_exc:
@@ -840,21 +834,23 @@ class WatchOrchestrator:
                     )
 
                     if isinstance(rule_conf_obj, InactivityRuleConfig):
-                        repo_state.active_rule_description = f"Inactivity ({rule_conf_obj.period.total_seconds():.0f}s)"  # Existing
+                        repo_state.active_rule_description = (
+                            f"Inactivity ({rule_conf_obj.period.total_seconds():.0f}s)"  # Existing
+                        )
                         repo_state.rule_dynamic_indicator = (
                             f"({rule_conf_obj.period.total_seconds():.0f}s period)"
                         )
                     elif hasattr(rule_conf_obj, "type"):
-                        repo_state.active_rule_description = f"{getattr(rule_conf_obj, 'type', 'Unknown')} rule"  # Existing
+                        repo_state.active_rule_description = (
+                            f"{getattr(rule_conf_obj, 'type', 'Unknown')} rule"  # Existing
+                        )
                         repo_state.rule_dynamic_indicator = rule_type_str.capitalize()
                     else:
                         repo_state.active_rule_description = "Default rule"  # Existing
                         repo_state.rule_dynamic_indicator = "Default"
 
                 # --- Get Initial Summary ---
-                if (
-                    repo_state and engine_instance
-                ):  # Ensure repo_state and engine are valid
+                if repo_state and engine_instance:  # Ensure repo_state and engine are valid
                     try:
                         init_log.debug("Getting initial repo summary...")
                         if hasattr(engine_instance, "get_summary"):
@@ -864,9 +860,7 @@ class WatchOrchestrator:
                             )
 
                             if summary.head_ref_name == "ERROR":
-                                summary_msg = (
-                                    f"Init Error: {summary.head_commit_message_summary}"
-                                )
+                                summary_msg = f"Init Error: {summary.head_commit_message_summary}"
                                 init_log.error(summary_msg)
                                 # self._post_tui_log(repo_id, "ERROR", summary_msg) # Redundant
                                 # repo_state.update_status(RepositoryStatus.ERROR, summary_msg) # Already handled by engine?
@@ -875,15 +869,10 @@ class WatchOrchestrator:
                                 init_log.info(summary_msg)
                                 # self._post_tui_log(repo_id, "INFO", summary_msg) # Redundant
                             elif summary.head_ref_name == "UNBORN":
-                                summary_msg = (
-                                    "Init: Repository has no commits yet (unborn HEAD)."
-                                )
+                                summary_msg = "Init: Repository has no commits yet (unborn HEAD)."
                                 init_log.info(summary_msg)
                                 # self._post_tui_log(repo_id, "INFO", summary_msg) # Redundant
-                            elif (
-                                not summary.head_ref_name
-                                or not summary.head_commit_hash
-                            ):
+                            elif not summary.head_ref_name or not summary.head_commit_hash:
                                 summary_msg = "Init: Unable to determine HEAD reference or commit."
                                 init_log.warning(summary_msg)
                                 # self._post_tui_log(repo_id, "WARNING", summary_msg) # Redundant
@@ -896,12 +885,9 @@ class WatchOrchestrator:
                                 repo_state.last_commit_message_summary = (
                                     summary.head_commit_message_summary
                                 )
-                                commit_short_hash = (
-                                    repo_state.last_commit_short_hash or "N/A"
-                                )
+                                commit_short_hash = repo_state.last_commit_short_hash or "N/A"
                                 commit_msg_summary = (
-                                    repo_state.last_commit_message_summary
-                                    or "No commit message"
+                                    repo_state.last_commit_message_summary or "No commit message"
                                 )
                                 summary_msg = f"Init: HEAD at {summary.head_ref_name} ({commit_short_hash}) | {commit_msg_summary}"
                                 init_log.info(summary_msg)
@@ -947,9 +933,7 @@ class WatchOrchestrator:
             repo_ids=list(self.repo_states.keys()),
         )
         self._post_tui_state_update()
-        self._safe_log(
-            "info", "--- Repo Initialization Complete ---", count=len(enabled_repo_ids)
-        )
+        self._safe_log("info", "--- Repo Initialization Complete ---", count=len(enabled_repo_ids))
         # self._post_tui_log(None, "INFO", f"{len(enabled_repo_ids)} repos initialized.") # Redundant
 
         if enabled_repo_ids:
@@ -979,9 +963,7 @@ class WatchOrchestrator:
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
-            self._safe_log(
-                "critical", "Cannot get running event loop during monitoring setup."
-            )
+            self._safe_log("critical", "Cannot get running event loop during monitoring setup.")
             return []
 
         for repo_id in enabled_repo_ids:
@@ -1056,9 +1038,7 @@ class WatchOrchestrator:
             try:
                 self.config = load_config(self.config_path)
                 self._safe_log("info", "Config loaded successfully.")
-                self._console_message(
-                    "Config loaded successfully.", style="dim", emoji="📂"
-                )
+                self._console_message("Config loaded successfully.", style="dim", emoji="📂")
                 # self._post_tui_log(None, "INFO", f"Config loaded: {self.config_path.name}") # Redundant
             except (ConfigurationError, cattrs.BaseValidationError) as e:
                 self._safe_log(
@@ -1067,9 +1047,7 @@ class WatchOrchestrator:
                     error=str(e),
                     path=str(self.config_path),
                 )
-                self._console_message(
-                    f"Config Error: {e}", style="bold red", emoji="❌"
-                )
+                self._console_message(f"Config Error: {e}", style="bold red", emoji="❌")
                 # self._post_tui_log(None, "CRITICAL", f"Config Error: {e}") # Redundant
                 raise
             except Exception as e:
@@ -1079,16 +1057,12 @@ class WatchOrchestrator:
                     error=str(e),
                     exc_info=True,
                 )
-                self._console_message(
-                    f"Unexpected Config Error: {e}", style="bold red", emoji="❌"
-                )
+                self._console_message(f"Unexpected Config Error: {e}", style="bold red", emoji="❌")
                 # self._post_tui_log(None, "CRITICAL", f"Unexpected Config Error: {e}") # Redundant
                 raise
 
             # Initialize Repos
-            self._console_message(
-                "Initializing repositories...", style="dim", emoji="📂"
-            )
+            self._console_message("Initializing repositories...", style="dim", emoji="📂")
             enabled_repo_ids = await self._initialize_repositories()
             if not enabled_repo_ids:
                 self._safe_log("warning", "No enabled/valid repos found. Exiting.")
@@ -1106,9 +1080,7 @@ class WatchOrchestrator:
                 self._safe_log("debug", "Starting monitor service thread...")
                 self.monitor_service.start()
                 if not self.monitor_service.is_running:
-                    self._safe_log(
-                        "critical", "Monitor service failed to start. Exiting."
-                    )
+                    self._safe_log("critical", "Monitor service failed to start. Exiting.")
                     # self._post_tui_log(None, "CRITICAL", "Monitor service failed to start.") # Redundant
                     return
                 # self._post_tui_log(None, "INFO", f"Monitoring active for {len(successfully_added_ids)} repositories.") # Redundant with other logs
@@ -1117,14 +1089,15 @@ class WatchOrchestrator:
                 # self._post_tui_log(None, "CRITICAL", "Internal Error: Monitor service missing.") # Redundant
                 return
 
+            # Setup config watcher for hot reload
+            self.setup_config_watcher()
+
             # Send initial state update to TUI
             self._post_tui_state_update()
 
             # Start Consumer Task
             self._safe_log("debug", "Creating event consumer task...")
-            consumer_task = asyncio.create_task(
-                self._consume_events(), name="EventConsumer"
-            )
+            consumer_task = asyncio.create_task(self._consume_events(), name="EventConsumer")
             self._running_tasks.add(consumer_task)
             consumer_task.add_done_callback(self._running_tasks.discard)
 
@@ -1158,9 +1131,7 @@ class WatchOrchestrator:
                 error=str(e),
                 exc_info=True,
             )
-            self._console_message(
-                f"Unexpected Error: {e}", style="bold red", emoji="❌"
-            )
+            self._console_message(f"Unexpected Error: {e}", style="bold red", emoji="❌")
             # self._post_tui_log(None, "CRITICAL", f"Unexpected Error: {e}") # Redundant
             if not self.shutdown_event.is_set():
                 self.shutdown_event.set()
@@ -1173,9 +1144,7 @@ class WatchOrchestrator:
             # 1. Cancel Repo Timers
             self._safe_log("debug", "Cancelling active repo timers...")
             timers_cancelled = sum(
-                1
-                for state in self.repo_states.values()
-                if state.inactivity_timer_handle
+                1 for state in self.repo_states.values() if state.inactivity_timer_handle
             )
             for state in self.repo_states.values():
                 state.cancel_inactivity_timer()
@@ -1247,9 +1216,7 @@ class WatchOrchestrator:
         repo_engine = self.repo_engines.get(repo_id)
 
         if not repo_state or not repo_config or not repo_engine:
-            details_log.warning(
-                "Could not find state, config, or engine for repo details."
-            )
+            details_log.warning("Could not find state, config, or engine for repo details.")
             return {"error": "Repository data not found."}
 
         commit_history = []
@@ -1263,14 +1230,10 @@ class WatchOrchestrator:
                 # If performance issues arise, this should be wrapped with loop.run_in_executor.
 
                 # The config stores path as str, GitEngine might need Path
-                history = repo_engine.get_commit_history(
-                    Path(repo_config.path), limit=15
-                )
+                history = repo_engine.get_commit_history(Path(repo_config.path), limit=15)
                 commit_history.extend(history)
             except Exception as e:
-                details_log.error(
-                    "Error fetching commit history from GitEngine", error=str(e)
-                )
+                details_log.error("Error fetching commit history from GitEngine", error=str(e))
                 commit_history.append(f"Error fetching history: {e}")
         else:
             commit_history.append("Detail view not supported for this engine type.")
@@ -1284,9 +1247,9 @@ class WatchOrchestrator:
             "commit_history": commit_history,
             # Add other details here in the future if needed
         }
-    
+
     # --- Pause/Suspend Control Methods ---
-    
+
     def pause_monitoring(self) -> None:
         """Pause monitoring - events are queued but not processed."""
         self._is_paused = True
@@ -1294,7 +1257,7 @@ class WatchOrchestrator:
         if self.monitor_service:
             # We'll still receive events but not process them
             pass
-    
+
     def suspend_monitoring(self) -> None:
         """Suspend monitoring - stronger than pause, stops file watching."""
         self._is_suspended = True
@@ -1303,13 +1266,13 @@ class WatchOrchestrator:
         if self.monitor_service:
             # Actually stop the watchers
             self.monitor_service.stop()
-    
+
     def resume_monitoring(self) -> None:
         """Resume monitoring from pause or suspend state."""
         was_suspended = self._is_suspended
         self._is_paused = False
         self._is_suspended = False
-        
+
         if was_suspended:
             self._log.info("Monitoring RESUMED from suspension")
             # Restart the monitor service if it was suspended
@@ -1318,19 +1281,159 @@ class WatchOrchestrator:
                 asyncio.create_task(self._restart_monitor_service())
         else:
             self._log.info("Monitoring RESUMED from pause")
-    
+
     async def _restart_monitor_service(self) -> None:
         """Restart the monitor service after suspension."""
         if not self.config:
             return
-            
+
         # Start fresh monitor service
         self.monitor_service = MonitoringService(self.event_queue, self.config)
-        
+
         # Restart monitoring for each repository
         for repo_id, repo_config in self.config.repositories.items():
             if repo_config.enabled:
                 await self.monitor_service.start_monitoring(repo_id, repo_config)
+
+    async def reload_config(self) -> bool:
+        """
+        Reload configuration from disk.
+        Temporarily pauses monitoring (90s) to allow safe reload.
+        Returns True if successful, False otherwise.
+        """
+        reload_log = self._log.bind(action="reload_config")
+        reload_log.info("Config reload requested")
+
+        # Pause monitoring during reload
+        original_pause_state = self._is_paused
+        self.pause_monitoring()
+        self._console_message(
+            "⏸️  Pausing monitoring for config reload...", style="yellow", emoji="⚠️"
+        )
+        self._post_tui_log(None, "WARNING", "⏸️  Config reload in progress...")
+
+        try:
+            # Load new config
+            reload_log.debug("Loading new configuration from disk", path=str(self.config_path))
+            new_config = load_config(self.config_path)
+
+            # Validate new config has at least one enabled repository
+            enabled_repos = [r for r, cfg in new_config.repositories.items() if cfg.enabled]
+            if not enabled_repos:
+                raise ConfigurationError("New config has no enabled repositories")
+
+            # Store old config for rollback
+            old_config = self.config
+            old_monitor_service = self.monitor_service
+
+            try:
+                # Apply new config
+                self.config = new_config
+                reload_log.info("New config loaded successfully", enabled_repos=len(enabled_repos))
+
+                # Stop current monitoring
+                if self.monitor_service:
+                    self.monitor_service.stop()
+
+                # Re-initialize repositories with new config
+                reload_log.debug("Re-initializing repositories")
+                enabled_repo_ids = await self._initialize_repositories()
+
+                # Setup new monitoring with new config
+                reload_log.debug("Setting up monitoring with new config")
+                successfully_added_ids = self._setup_monitoring(enabled_repo_ids)
+
+                if not successfully_added_ids:
+                    raise MonitoringSetupError("Failed to setup monitoring with new config")
+
+                # Start new monitor service
+                if self.monitor_service:
+                    self.monitor_service.start()
+                    reload_log.info("Monitor service restarted with new config")
+
+                # Update TUI
+                self._post_tui_state_update()
+
+                # Success message
+                self._console_message(
+                    f"✅ Config reloaded successfully ({len(successfully_added_ids)} repositories)",
+                    style="green bold",
+                    emoji="🔄",
+                )
+                self._post_tui_log(
+                    None,
+                    "SUCCESS",
+                    f"✅ Config reloaded: monitoring {len(successfully_added_ids)} repositories",
+                )
+
+                # Create a task to resume monitoring after 90 seconds
+                asyncio.create_task(self._resume_after_delay(90, original_pause_state))
+
+                return True
+
+            except Exception as e:
+                # Rollback on error
+                reload_log.error("Config reload failed, rolling back", error=str(e))
+                self.config = old_config
+                self.monitor_service = old_monitor_service
+
+                self._console_message(f"❌ Config reload failed: {e}", style="red bold", emoji="⚠️")
+                self._post_tui_log(None, "ERROR", f"❌ Config reload failed: {e}")
+
+                # Resume original pause state
+                if not original_pause_state:
+                    self.resume_monitoring()
+
+                raise
+
+        except Exception as e:
+            reload_log.exception("Config reload error")
+
+            # Resume original pause state on any error
+            if not original_pause_state:
+                self.resume_monitoring()
+
+            return False
+
+    async def _resume_after_delay(self, delay_seconds: int, original_pause_state: bool) -> None:
+        """Resume monitoring after a delay, unless manually resumed earlier."""
+        await asyncio.sleep(delay_seconds)
+
+        # Only resume if still paused from config reload
+        if self._is_paused and not original_pause_state:
+            self.resume_monitoring()
+            self._console_message(
+                "▶️  Monitoring resumed after config reload", style="green", emoji="✅"
+            )
+            self._post_tui_log(None, "INFO", "▶️  Monitoring resumed after config reload")
+
+    def setup_config_watcher(self) -> None:
+        """
+        Setup a file watcher for the config file to enable hot reload.
+        """
+        if not self.monitor_service or not self.config:
+            return
+
+        watcher_log = self._log.bind(action="setup_config_watcher")
+        watcher_log.info("Setting up config file watcher", path=str(self.config_path))
+
+        # Create a special repository config for watching the config file
+        from supsrc.config import RepositoryConfig
+
+        config_repo = RepositoryConfig(
+            enabled=True,
+            path=str(self.config_path.parent),
+            watch_patterns=[self.config_path.name],
+            # Use a special rule that triggers on any change
+            rules=[],
+        )
+
+        # Add config watcher as a special monitored path
+        try:
+            asyncio.create_task(self.monitor_service.start_monitoring("__config__", config_repo))
+            watcher_log.info("Config file watcher setup complete")
+        except Exception as e:
+            watcher_log.error("Failed to setup config watcher", error=str(e))
 
 
 # 🔼⚙️

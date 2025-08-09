@@ -88,6 +88,7 @@ class SupsrcTuiApp(App):
         ("r", "refresh_details", "Refresh Details"),
         ("p", "pause_monitoring", "Pause/Resume Monitoring"),
         ("s", "suspend_monitoring", "Suspend Monitoring"),
+        ("c", "reload_config", "Reload Config"),
         ("tab", "focus_next", "Next Panel"),
         ("shift+tab", "focus_previous", "Previous Panel"),
     ]
@@ -160,9 +161,7 @@ class SupsrcTuiApp(App):
     show_detail_pane: bool = var(False)
     selected_repo_id: str | None = var(None)
 
-    def __init__(
-        self, config_path: Path, cli_shutdown_event: asyncio.Event, **kwargs: Any
-    ) -> None:
+    def __init__(self, config_path: Path, cli_shutdown_event: asyncio.Event, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._config_path = config_path
         self._orchestrator: WatchOrchestrator | None = None
@@ -275,9 +274,7 @@ class SupsrcTuiApp(App):
     async def _check_external_shutdown_async(self) -> None:  # Renamed
         """Async part of the shutdown check: performs actual shutdown actions."""
         # This part remains async: logging, subtitle update, and action_quit
-        log.warning(
-            "External shutdown detected (CLI signal). Processing async actions."
-        )
+        log.warning("External shutdown detected (CLI signal). Processing async actions.")
         self._update_sub_title("Shutdown requested...")
         await self.action_quit()
 
@@ -316,27 +313,21 @@ class SupsrcTuiApp(App):
             self.post_message(RepoDetailUpdate(repo_id, details))
         except Exception as e:
             log.error(f"Error fetching repo details for {repo_id}", error=str(e))
-            error_details = {
-                "commit_history": [f"[bold red]Error loading details: {e}[/]"]
-            }
+            error_details = {"commit_history": [f"[bold red]Error loading details: {e}[/]"]}
             self.post_message(RepoDetailUpdate(repo_id, error_details))
 
     # Watch Methods
     def watch_show_detail_pane(self, show_detail: bool) -> None:
         """Update layout when detail pane visibility changes."""
         try:
-            detail_pane_container = self.query_one(
-                "#detail_pane_container", Container
-            )  # New ID
+            detail_pane_container = self.query_one("#detail_pane_container", Container)  # New ID
 
             if show_detail:
                 detail_pane_container.styles.display = "block"
             else:
                 detail_pane_container.styles.display = "none"
         except Exception as e:
-            log.error(
-                "Error updating detail pane visibility", error=str(e)
-            )  # Updated log message
+            log.error("Error updating detail pane visibility", error=str(e))  # Updated log message
 
     # Action Methods
     def action_select_repo_for_detail(self) -> None:
@@ -350,16 +341,14 @@ class SupsrcTuiApp(App):
                 self.selected_repo_id = str(row_key.value) if row_key else None
             except Exception:
                 self.selected_repo_id = None
-            
+
             if self.selected_repo_id:
                 self.show_detail_pane = True
 
                 if self._orchestrator and self.selected_repo_id:
                     detail_log = self.query_one("#repo_detail_log", TextualLog)
                     detail_log.clear()
-                    detail_log.write_line(
-                        f"Fetching details for [b]{self.selected_repo_id}[/b]..."
-                    )
+                    detail_log.write_line(f"Fetching details for [b]{self.selected_repo_id}[/b]...")
 
                     self.run_worker(
                         self._fetch_repo_details_worker(self.selected_repo_id),
@@ -404,10 +393,12 @@ class SupsrcTuiApp(App):
     def action_pause_monitoring(self) -> None:
         """Toggle pause state for monitoring."""
         self._is_paused = not self._is_paused
-        
+
         if self._is_paused:
             self._update_sub_title("⏸️  Monitoring PAUSED")
-            self.post_message(LogMessageUpdate(None, "WARNING", "⏸️  Monitoring PAUSED - Press 'p' to resume"))
+            self.post_message(
+                LogMessageUpdate(None, "WARNING", "⏸️  Monitoring PAUSED - Press 'p' to resume")
+            )
             # Tell orchestrator to pause
             if self._orchestrator:
                 self._orchestrator.pause_monitoring()
@@ -417,23 +408,45 @@ class SupsrcTuiApp(App):
             # Tell orchestrator to resume
             if self._orchestrator:
                 self._orchestrator.resume_monitoring()
-    
+
     def action_suspend_monitoring(self) -> None:
         """Suspend monitoring (stronger than pause)."""
         if not self._is_suspended:
             self._is_suspended = True
             self._update_sub_title("⏹️  Monitoring SUSPENDED")
-            self.post_message(LogMessageUpdate(None, "WARNING", "⏹️  Monitoring SUSPENDED - Press 's' to resume"))
+            self.post_message(
+                LogMessageUpdate(None, "WARNING", "⏹️  Monitoring SUSPENDED - Press 's' to resume")
+            )
             # Tell orchestrator to suspend
             if self._orchestrator:
                 self._orchestrator.suspend_monitoring()
         else:
             self._is_suspended = False
             self._update_sub_title("▶️  Monitoring RESUMED from suspension")
-            self.post_message(LogMessageUpdate(None, "INFO", "▶️  Monitoring RESUMED from suspension"))
+            self.post_message(
+                LogMessageUpdate(None, "INFO", "▶️  Monitoring RESUMED from suspension")
+            )
             # Tell orchestrator to resume from suspension
             if self._orchestrator:
                 self._orchestrator.resume_monitoring()
+
+    def action_reload_config(self) -> None:
+        """Reload configuration file."""
+        self.post_message(LogMessageUpdate(None, "INFO", "🔄 Reloading configuration..."))
+        if self._orchestrator:
+            # Create async task to reload config
+            async def _reload():
+                success = await self._orchestrator.reload_config()
+                if success:
+                    self.post_message(
+                        LogMessageUpdate(None, "SUCCESS", "✅ Configuration reloaded successfully")
+                    )
+                else:
+                    self.post_message(
+                        LogMessageUpdate(None, "ERROR", "❌ Configuration reload failed")
+                    )
+
+            asyncio.create_task(_reload())
 
     async def action_quit(self) -> None:
         """Quit the application gracefully."""
@@ -442,9 +455,7 @@ class SupsrcTuiApp(App):
             return
 
         self._is_shutting_down = True
-        log.info(
-            "Quit action triggered."
-        )  # Original log.info kept for sequence confirmation
+        log.info("Quit action triggered.")  # Original log.info kept for sequence confirmation
         self._update_sub_title("Quitting...")
 
         # Capture worker instance before any awaits that allow context switching
@@ -604,13 +615,9 @@ class SupsrcTuiApp(App):
 
                 commit_history = message.details.get("commit_history", [])
                 if not commit_history:
-                    detail_log.write_line(
-                        "No commit history found or an error occurred."
-                    )
+                    detail_log.write_line("No commit history found or an error occurred.")
                 else:
-                    detail_log.write_line(
-                        f"[b]Commit History for {message.repo_id}:[/b]\n"
-                    )
+                    detail_log.write_line(f"[b]Commit History for {message.repo_id}:[/b]\n")
                     for entry in commit_history:
                         detail_log.write_line(entry)
             except Exception as e:
