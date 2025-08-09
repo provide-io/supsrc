@@ -31,6 +31,7 @@ log: StructLogger = structlog.get_logger("cli.tail")
 # --- Global Shutdown Event & Signal Handler ---
 _shutdown_requested = asyncio.Event()
 
+
 async def _handle_signal_async(sig: int):
     """Handle shutdown signals asynchronously."""
     signame = signal.Signals(sig).name
@@ -45,11 +46,16 @@ async def _handle_signal_async(sig: int):
 
 @click.command(name="tail")
 @click.option(
-    "-c", "--config-path",
-    type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path),
+    "-c",
+    "--config-path",
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path
+    ),
     default=Path("supsrc.conf"),
-    show_default=True, envvar="SUPSRC_CONF",
-    help="Path to the supsrc configuration file (env var SUPSRC_CONF).", show_envvar=True,
+    show_default=True,
+    envvar="SUPSRC_CONF",
+    help="Path to the supsrc configuration file (env var SUPSRC_CONF).",
+    show_envvar=True,
 )
 @logging_options
 @click.pass_context
@@ -61,19 +67,19 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
         local_log_level=kwargs.get("log_level"),
         local_log_file=kwargs.get("log_file"),
         local_json_logs=kwargs.get("json_logs"),
-        local_file_only_logs=kwargs.get("file_only_logs", False)
+        local_file_only_logs=kwargs.get("file_only_logs", False),
     )
 
     # --- Standard Mode Logic (from old watch command) ---
     console = Console()
     console.print("[dim]INFO:[/] Initializing tail command...")
-    
+
     try:
         loop = asyncio.get_event_loop_policy().get_event_loop()
-        if loop.is_closed(): 
+        if loop.is_closed():
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-    except RuntimeError: 
+    except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
@@ -82,16 +88,23 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
     log.debug(f"Adding signal handlers to loop {id(loop)}")
     try:
         for sig in signals_to_handle:
-            loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(_handle_signal_async(s)))
+            loop.add_signal_handler(
+                sig, lambda s=sig: asyncio.create_task(_handle_signal_async(s))
+            )
         handlers_added = True
         log.debug("Added signal handlers")
     except Exception as e:
         log.error("Failed to add signal handlers", error=str(e), exc_info=True)
 
-    orchestrator = WatchOrchestrator(config_path=config_path, shutdown_event=_shutdown_requested, app=None, console=console)
+    orchestrator = WatchOrchestrator(
+        config_path=config_path,
+        shutdown_event=_shutdown_requested,
+        app=None,
+        console=console,
+    )
     exit_code = 0
     main_task: asyncio.Task | None = None
-    
+
     try:
         log.debug("Creating main orchestrator task...")
         main_task = loop.create_task(orchestrator.run(), name="OrchestratorRun")
@@ -99,7 +112,10 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
         loop.run_until_complete(main_task)
         log.debug("Orchestrator task completed normally.")
     except KeyboardInterrupt:
-        console.print("[bold yellow]KEYBOARD INTERRUPT:[/] Signal received. Initiating graceful shutdown...", highlight=False)
+        console.print(
+            "[bold yellow]KEYBOARD INTERRUPT:[/] Signal received. Initiating graceful shutdown...",
+            highlight=False,
+        )
         log.warning("KeyboardInterrupt caught. Signalling shutdown.")
         _shutdown_requested.set()
         exit_code = 130
@@ -109,7 +125,9 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
         exit_code = 1
     except Exception as e:
         log.critical("Orchestrator run failed", error=str(e), exc_info=True)
-        console.print(f"[bold red]CRITICAL:[/] Orchestrator run failed: {e}", highlight=False)
+        console.print(
+            f"[bold red]CRITICAL:[/] Orchestrator run failed: {e}", highlight=False
+        )
         _shutdown_requested.set()
         exit_code = 1
     finally:
@@ -123,27 +141,40 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
                     log.debug("Waiting briefly for main task cancellation...")
                     main_task.cancel()
                     with suppress(asyncio.CancelledError, asyncio.TimeoutError):
-                        loop.run_until_complete(asyncio.wait_for(main_task, timeout=1.0))
+                        loop.run_until_complete(
+                            asyncio.wait_for(main_task, timeout=1.0)
+                        )
 
                 # Gather all other remaining tasks
                 tasks = asyncio.all_tasks(loop=loop)  # type: ignore[var-annotated]
                 current_task = asyncio.current_task(loop=loop)
-                tasks_to_wait_for = {t for t in tasks if t is not current_task and t is not main_task and not t.done()}  # type: ignore[var-annotated]
+                tasks_to_wait_for = {
+                    t
+                    for t in tasks
+                    if t is not current_task and t is not main_task and not t.done()
+                }  # type: ignore[var-annotated]
 
                 if tasks_to_wait_for:
-                    log.debug(f"Gathering results for {len(tasks_to_wait_for)} remaining background tasks...",
-                                  task_names=[t.get_name() for t in tasks_to_wait_for])
+                    log.debug(
+                        f"Gathering results for {len(tasks_to_wait_for)} remaining background tasks...",
+                        task_names=[t.get_name() for t in tasks_to_wait_for],
+                    )
                     for task in tasks_to_wait_for:
                         if not task.cancelled():
                             task.cancel()
                     loop.run_until_complete(
                         asyncio.gather(*tasks_to_wait_for, return_exceptions=True)
                     )
-                    log.debug("Remaining background tasks gathered after potential cancellation.")
+                    log.debug(
+                        "Remaining background tasks gathered after potential cancellation."
+                    )
                 else:
                     log.debug("No remaining background tasks needed gathering.")
             except Exception as task_cleanup_exc:
-                log.error("Error during final task gathering/cleanup", error=str(task_cleanup_exc))
+                log.error(
+                    "Error during final task gathering/cleanup",
+                    error=str(task_cleanup_exc),
+                )
 
         # --- Cleanup ---
         if handlers_added and not loop.is_closed():
@@ -168,16 +199,25 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
                 log.info("Event loop closed.")
             except RuntimeError as e:
                 if "cannot schedule new futures after shutdown" in str(e):
-                    log.warning("Loop shutdown encountered scheduling issue, likely benign after cleanup.")
+                    log.warning(
+                        "Loop shutdown encountered scheduling issue, likely benign after cleanup."
+                    )
                 else:
-                    log.error("Error during final event loop close", error=str(e), exc_info=True)
+                    log.error(
+                        "Error during final event loop close",
+                        error=str(e),
+                        exc_info=True,
+                    )
             except Exception as e:
-                log.error("Error during final event loop close", error=str(e), exc_info=True)
+                log.error(
+                    "Error during final event loop close", error=str(e), exc_info=True
+                )
         else:
             log.warning("Event loop was already closed before final cleanup.")
 
     console.print("[dim]INFO:[/] 'tail' command finished.")
     if exit_code != 0:
         sys.exit(exit_code)
+
 
 # 🔼⚙️

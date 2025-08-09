@@ -21,7 +21,7 @@ class TestWatchCommand:
         """Test that watch command exists in CLI."""
         runner = CliRunner()
         result = runner.invoke(cli, ["--help"])
-        
+
         assert result.exit_code == 0
         assert "watch" in result.output
         # The help should indicate it's the interactive mode
@@ -31,7 +31,7 @@ class TestWatchCommand:
         """Test watch command help."""
         runner = CliRunner()
         result = runner.invoke(cli, ["watch", "--help"])
-        
+
         assert result.exit_code == 0
         assert "watch" in result.output
         assert "--config-path" in result.output
@@ -45,7 +45,7 @@ class TestWatchCommand:
         mock_app_instance = Mock()
         mock_app_instance.run = Mock()
         mock_tui_app.return_value = mock_app_instance
-        
+
         config_file = tmp_path / "test.conf"
         config_file.write_text("""
         [repositories.test]
@@ -59,19 +59,16 @@ class TestWatchCommand:
         [repositories.test.repository]
         type = "supsrc.engines.git"
         """)
-        
+
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "watch",
-            "--config-path", str(config_file)
-        ])
-        
+        result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
+
         # Should create and run TUI app
         mock_tui_app.assert_called_once()
         call_args = mock_tui_app.call_args
-        assert call_args[1]['config_path'] == config_file
+        assert call_args[1]["config_path"] == config_file
         # Should have cli_shutdown_event parameter
-        assert 'cli_shutdown_event' in call_args[1]
+        assert "cli_shutdown_event" in call_args[1]
         mock_app_instance.run.assert_called_once()
 
     @patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", False)
@@ -79,13 +76,10 @@ class TestWatchCommand:
         """Test watch command when textual is not available."""
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
-        
+
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "watch",
-            "--config-path", str(config_file)
-        ])
-        
+        result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
+
         assert result.exit_code == 1
         assert "textual" in result.output.lower()
         assert "install" in result.output.lower()
@@ -93,11 +87,10 @@ class TestWatchCommand:
     def test_watch_with_invalid_config(self) -> None:
         """Test watch command with invalid config path."""
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "watch",
-            "--config-path", "/nonexistent/config.conf"
-        ])
-        
+        result = runner.invoke(
+            cli, ["watch", "--config-path", "/nonexistent/config.conf"]
+        )
+
         assert result.exit_code != 0
 
     def test_watch_with_env_config(self, tmp_path: Path) -> None:
@@ -114,17 +107,17 @@ class TestWatchCommand:
         [repositories.env-test.repository]
         type = "supsrc.engines.git"
         """)
-        
+
         runner = CliRunner()
-        
+
         with patch.dict("os.environ", {"SUPSRC_CONF": str(config_file)}):
             with patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", True):
                 with patch("supsrc.cli.watch_cmds.SupsrcTuiApp") as mock_tui_app:
                     mock_app_instance = Mock()
                     mock_tui_app.return_value = mock_app_instance
-                    
+
                     result = runner.invoke(cli, ["watch"])
-                    
+
                     # Should use config from env var
                     mock_tui_app.assert_called_once()
                     # Config path should be the one from env var
@@ -137,18 +130,15 @@ class TestWatchCommand:
         """Test that watch command sets up logging correctly."""
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
-        
+
         runner = CliRunner()
-        
+
         with patch("supsrc.cli.watch_cmds.SupsrcTuiApp") as mock_tui_app:
             mock_app_instance = Mock()
             mock_tui_app.return_value = mock_app_instance
-            
-            result = runner.invoke(cli, [
-                "watch",
-                "--config-path", str(config_file)
-            ])
-        
+
+            result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
+
         # Should log startup message
         mock_log.info.assert_called()
 
@@ -156,19 +146,18 @@ class TestWatchCommand:
         """Test watch command handles TUI errors gracefully."""
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
-        
+
         runner = CliRunner()
-        
+
         with patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", True):
             with patch("supsrc.cli.watch_cmds.SupsrcTuiApp") as mock_tui_app:
                 # Simulate TUI crash
                 mock_tui_app.side_effect = Exception("TUI crashed!")
-                
-                result = runner.invoke(cli, [
-                    "watch",
-                    "--config-path", str(config_file)
-                ])
-        
+
+                result = runner.invoke(
+                    cli, ["watch", "--config-path", str(config_file)]
+                )
+
         assert result.exit_code != 0
         assert "Error" in result.output or "crashed" in result.output
 
@@ -176,21 +165,25 @@ class TestWatchCommand:
         """Test watch command handles keyboard interrupt gracefully."""
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
-        
+
         runner = CliRunner()
-        
+
         with patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", True):
             with patch("supsrc.cli.watch_cmds.SupsrcTuiApp") as mock_tui_app:
                 mock_app_instance = Mock()
                 mock_app_instance.run.side_effect = KeyboardInterrupt()
                 mock_tui_app.return_value = mock_app_instance
-                
-                result = runner.invoke(cli, [
-                    "watch",
-                    "--config-path", str(config_file)
-                ])
-        
+
+                result = runner.invoke(
+                    cli, ["watch", "--config-path", str(config_file)]
+                )
+
         # Should handle interrupt gracefully
-        assert "Stopping" in result.output or "Exiting" in result.output or result.exit_code == 0
+        assert (
+            "Stopping" in result.output
+            or "Exiting" in result.output
+            or result.exit_code == 0
+        )
+
 
 # 🧪👀

@@ -7,7 +7,7 @@ Stabilized TUI application with improved layout and proper timer management.
 
 import asyncio
 from pathlib import Path
-import sys # Ensure this import is present
+import sys  # Ensure this import is present
 from typing import Any
 
 import structlog
@@ -37,11 +37,7 @@ class TimerManager:
         self._logger = log.bind(component="TimerManager")
 
     def create_timer(
-        self,
-        name: str,
-        interval: float,
-        callback: callable,
-        repeat: bool = True
+        self, name: str, interval: float, callback: callable, repeat: bool = True
     ) -> Timer:
         """Create a new timer with proper tracking."""
         if name in self._timers:
@@ -60,11 +56,13 @@ class TimerManager:
         timer = self._timers[name]
         try:
             # Check if the timer is active by inspecting its internal handle
-            if hasattr(timer, '_Timer__handle') and timer._Timer__handle is not None:
+            if hasattr(timer, "_Timer__handle") and timer._Timer__handle is not None:
                 timer.stop()
             # No need to check is_cancelled, stop() should be idempotent or handle internal state.
             # Textual's stop() method on Timer sets _Timer__handle to None.
-            if name in self._timers: # Re-check as timer.stop() might have already removed it via a callback
+            if (
+                name in self._timers
+            ):  # Re-check as timer.stop() might have already removed it via a callback
                 del self._timers[name]
             self._logger.debug("Timer stopped or already inactive", name=name)
             return True
@@ -165,10 +163,7 @@ class SupsrcTuiApp(App):
     selected_repo_id: str | None = var(None)
 
     def __init__(
-        self,
-        config_path: Path,
-        cli_shutdown_event: asyncio.Event,
-        **kwargs: Any
+        self, config_path: Path, cli_shutdown_event: asyncio.Event, **kwargs: Any
     ) -> None:
         super().__init__(**kwargs)
         self._config_path = config_path
@@ -213,8 +208,12 @@ class SupsrcTuiApp(App):
             table = self.query_one(DataTable)
             table.cursor_type = "row"
             table.add_columns(
-                "Status", "Repository", "Last Change",
-                "Rule", "Current Action", "Last Commit / Message"
+                "Status",
+                "Repository",
+                "Last Change",
+                "Rule",
+                "Current Action",
+                "Last Commit / Message",
             )
 
             # Initialize logs
@@ -227,26 +226,25 @@ class SupsrcTuiApp(App):
 
             status_log_widget = self.query_one("#status_log", TextualLog)
             status_log_widget.write_line("[bold green]Supsrc TUI Started[/]")
-            status_log_widget.write_line("Press [bold]Tab[/] to navigate, [bold]Enter[/] for details, [bold]Q[/] to quit")
+            status_log_widget.write_line(
+                "Press [bold]Tab[/] to navigate, [bold]Enter[/] for details, [bold]Q[/] to quit"
+            )
 
             # Start orchestrator worker
             log.info("Starting orchestrator worker...")
             self._worker = self.run_worker(
-                self._run_orchestrator,
-                thread=True,
-                group="orchestrator"
+                self._run_orchestrator, thread=True, group="orchestrator"
             )
 
             # Start shutdown check timer
             self._timer_manager.create_timer(
                 "shutdown_check",
                 0.5,
-                self._check_external_shutdown_sync, # Updated callback
-                repeat=True
+                self._check_external_shutdown_sync,  # Updated callback
+                repeat=True,
             )
 
             self._update_sub_title("Monitoring...")
-
 
         except Exception as e:
             log.exception("Error during TUI mount")
@@ -257,9 +255,7 @@ class SupsrcTuiApp(App):
         log.info("Orchestrator worker started.")
         try:
             self._orchestrator = WatchOrchestrator(
-                self._config_path,
-                self._shutdown_event,
-                app=self
+                self._config_path, self._shutdown_event, app=self
             )
             await self._orchestrator.run()
         except Exception as e:
@@ -267,7 +263,7 @@ class SupsrcTuiApp(App):
             if not self._is_shutting_down:
                 self.call_later(
                     self.post_message,
-                    LogMessageUpdate(None, "CRITICAL", f"Orchestrator CRASHED: {e}")
+                    LogMessageUpdate(None, "CRITICAL", f"Orchestrator CRASHED: {e}"),
                 )
                 self._update_sub_title("Orchestrator CRASHED!")
                 # Auto-quit on orchestrator failure
@@ -276,35 +272,36 @@ class SupsrcTuiApp(App):
         finally:
             log.info("Orchestrator worker finished.")
 
-    async def _check_external_shutdown_async(self) -> None: # Renamed
+    async def _check_external_shutdown_async(self) -> None:  # Renamed
         """Async part of the shutdown check: performs actual shutdown actions."""
         # This part remains async: logging, subtitle update, and action_quit
-        log.warning("External shutdown detected (CLI signal). Processing async actions.")
+        log.warning(
+            "External shutdown detected (CLI signal). Processing async actions."
+        )
         self._update_sub_title("Shutdown requested...")
         await self.action_quit()
 
-    def _check_external_shutdown_sync(self) -> None: # New synchronous method
+    def _check_external_shutdown_sync(self) -> None:  # New synchronous method
         """
         Synchronous callback for the timer.
         Checks for shutdown conditions and schedules the async part if needed.
         """
-        if (self._cli_shutdown_event.is_set() and
-            not self._shutdown_event.is_set() and
-            not self._is_shutting_down):
+        if (
+            self._cli_shutdown_event.is_set()
+            and not self._shutdown_event.is_set()
+            and not self._is_shutting_down
+        ):
             # If conditions met, create a task for the async operations
             asyncio.create_task(self._check_external_shutdown_async())
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         """Handle worker state changes."""
-        log.debug(
-            "Worker state changed",
-            worker=event.worker.name,
-            state=event.state
-        )
-        if (event.worker == self._worker and
-            event.state in ("SUCCESS", "ERROR") and
-            not self._is_shutting_down):
-
+        log.debug("Worker state changed", worker=event.worker.name, state=event.state)
+        if (
+            event.worker == self._worker
+            and event.state in ("SUCCESS", "ERROR")
+            and not self._is_shutting_down
+        ):
             log.info(f"Orchestrator worker stopped: {event.state}")
             self.call_later(self.action_quit)
 
@@ -328,14 +325,18 @@ class SupsrcTuiApp(App):
     def watch_show_detail_pane(self, show_detail: bool) -> None:
         """Update layout when detail pane visibility changes."""
         try:
-            detail_pane_container = self.query_one("#detail_pane_container", Container) # New ID
+            detail_pane_container = self.query_one(
+                "#detail_pane_container", Container
+            )  # New ID
 
             if show_detail:
                 detail_pane_container.styles.display = "block"
             else:
                 detail_pane_container.styles.display = "none"
         except Exception as e:
-            log.error("Error updating detail pane visibility", error=str(e)) # Updated log message
+            log.error(
+                "Error updating detail pane visibility", error=str(e)
+            )  # Updated log message
 
     # Action Methods
     def action_select_repo_for_detail(self) -> None:
@@ -358,7 +359,7 @@ class SupsrcTuiApp(App):
                         self._fetch_repo_details_worker(self.selected_repo_id),
                         thread=True,
                         group="repo_detail_fetcher",
-                        name=f"fetch_details_{self.selected_repo_id}"
+                        name=f"fetch_details_{self.selected_repo_id}",
                     )
         except Exception as e:
             log.error("Error selecting repo for detail", error=str(e))
@@ -396,12 +397,14 @@ class SupsrcTuiApp(App):
 
     async def action_quit(self) -> None:
         """Quit the application gracefully."""
-        log.info("action_quit invoked.") # ADD THIS VERY FIRST
+        log.info("action_quit invoked.")  # ADD THIS VERY FIRST
         if self._is_shutting_down:
             return
 
         self._is_shutting_down = True
-        log.info("Quit action triggered.") # Original log.info kept for sequence confirmation
+        log.info(
+            "Quit action triggered."
+        )  # Original log.info kept for sequence confirmation
         self._update_sub_title("Quitting...")
 
         # Capture worker instance before any awaits that allow context switching
@@ -420,14 +423,26 @@ class SupsrcTuiApp(App):
 
             # Cancel worker if it was valid and is still running
             if worker_to_cancel and worker_to_cancel.is_running:
-                log.info("Cancelling orchestrator worker...", worker_name=getattr(worker_to_cancel, 'name', 'Unknown'))
+                log.info(
+                    "Cancelling orchestrator worker...",
+                    worker_name=getattr(worker_to_cancel, "name", "Unknown"),
+                )
                 try:
                     await worker_to_cancel.cancel()
                 except Exception as e:
-                    log.error("Error cancelling worker", worker_name=getattr(worker_to_cancel, 'name', 'Unknown'), error=str(e), exc_info=True)
-            elif worker_to_cancel: # Worker existed but was not running
-                log.info("Orchestrator worker existed but was not running.", worker_name=getattr(worker_to_cancel, 'name', 'Unknown'), worker_state=getattr(worker_to_cancel, 'state', 'Unknown'))
-            else: # Worker was None to begin with
+                    log.error(
+                        "Error cancelling worker",
+                        worker_name=getattr(worker_to_cancel, "name", "Unknown"),
+                        error=str(e),
+                        exc_info=True,
+                    )
+            elif worker_to_cancel:  # Worker existed but was not running
+                log.info(
+                    "Orchestrator worker existed but was not running.",
+                    worker_name=getattr(worker_to_cancel, "name", "Unknown"),
+                    worker_state=getattr(worker_to_cancel, "state", "Unknown"),
+                )
+            else:  # Worker was None to begin with
                 log.info("Orchestrator worker was None, no cancellation needed.")
 
             log.info("Exiting TUI application.")
@@ -443,7 +458,7 @@ class SupsrcTuiApp(App):
         log.debug(
             "TUI on_state_update received",
             num_states=len(message.repo_states),
-            repo_ids=list(message.repo_states.keys())
+            repo_ids=list(message.repo_states.keys()),
         )
         try:
             # The original debug log has been replaced by the more structured one above.
@@ -471,7 +486,8 @@ class SupsrcTuiApp(App):
                 repository_display = repo_id_str
                 last_change_display = (
                     state.last_change_time.strftime("%Y-%m-%d %H:%M:%S")
-                    if state.last_change_time else "N/A"
+                    if state.last_change_time
+                    else "N/A"
                 )
 
                 rule_emoji = state.rule_emoji or ""
@@ -479,10 +495,11 @@ class SupsrcTuiApp(App):
                 rule_display = f"{rule_emoji} {rule_indicator}".strip()
 
                 action_display = state.action_description or ""
-                if (state.action_description and
-                    state.action_progress_total is not None and
-                    state.action_progress_completed is not None):
-
+                if (
+                    state.action_description
+                    and state.action_progress_total is not None
+                    and state.action_progress_completed is not None
+                ):
                     total = state.action_progress_total
                     completed = state.action_progress_completed
                     if total > 0:
@@ -506,7 +523,7 @@ class SupsrcTuiApp(App):
                     last_change_display,
                     rule_display,
                     action_display,
-                    last_commit_display
+                    last_commit_display,
                 )
 
                 if repo_id_str in table.rows:
@@ -526,22 +543,29 @@ class SupsrcTuiApp(App):
             log_widget.write_line(message.message)
         except Exception as e:
             # Using the app's own logger here is fine for TUI-specific errors.
-            log.error("Failed to write to TUI log widget", error=str(e), raw_message_level=message.level, raw_message_content=message.message)
+            log.error(
+                "Failed to write to TUI log widget",
+                error=str(e),
+                raw_message_level=message.level,
+                raw_message_content=message.message,
+            )
 
     def on_repo_detail_update(self, message: RepoDetailUpdate) -> None:
         """Handle repository detail updates."""
-        if (self.show_detail_pane and
-            message.repo_id == self.selected_repo_id):
-
+        if self.show_detail_pane and message.repo_id == self.selected_repo_id:
             try:
                 detail_log = self.query_one("#repo_detail_log", TextualLog)
                 detail_log.clear()
 
                 commit_history = message.details.get("commit_history", [])
                 if not commit_history:
-                    detail_log.write_line("No commit history found or an error occurred.")
+                    detail_log.write_line(
+                        "No commit history found or an error occurred."
+                    )
                 else:
-                    detail_log.write_line(f"[b]Commit History for {message.repo_id}:[/b]\n")
+                    detail_log.write_line(
+                        f"[b]Commit History for {message.repo_id}:[/b]\n"
+                    )
                     for entry in commit_history:
                         detail_log.write_line(entry)
             except Exception as e:
@@ -564,8 +588,9 @@ class SupsrcTuiApp(App):
             "WARNING": "yellow",
             "INFO": "green",
             "DEBUG": "dim blue",
-            "SUCCESS": "bold green"
+            "SUCCESS": "bold green",
         }
         return styles.get(level, "white")
+
 
 # 🖥️✨

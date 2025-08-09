@@ -44,11 +44,15 @@ class TestMainCLI:
         runner = CliRunner()
 
         # Test valid log level
-        result = runner.invoke(cli, ["--log-level", "DEBUG", "config", "show", "--help"])
+        result = runner.invoke(
+            cli, ["--log-level", "DEBUG", "config", "show", "--help"]
+        )
         assert result.exit_code == 0
 
         # Test invalid log level
-        result = runner.invoke(cli, ["--log-level", "INVALID", "config", "show", "--help"])
+        result = runner.invoke(
+            cli, ["--log-level", "INVALID", "config", "show", "--help"]
+        )
         assert result.exit_code != 0
 
     def test_global_log_file_option(self) -> None:
@@ -56,20 +60,16 @@ class TestMainCLI:
         runner = CliRunner()
 
         with tempfile.NamedTemporaryFile() as tmp_file:
-            result = runner.invoke(cli, [
-                "--log-file", tmp_file.name,
-                "config", "show", "--help"
-            ])
+            result = runner.invoke(
+                cli, ["--log-file", tmp_file.name, "config", "show", "--help"]
+            )
             assert result.exit_code == 0
 
     def test_global_json_logs_option(self) -> None:
         """Test global JSON logs option."""
         runner = CliRunner()
 
-        result = runner.invoke(cli, [
-            "--json-logs",
-            "config", "show", "--help"
-        ])
+        result = runner.invoke(cli, ["--json-logs", "config", "show", "--help"])
         assert result.exit_code == 0
 
 
@@ -115,9 +115,9 @@ class TestConfigCommands:
     def test_config_show_nonexistent_file(self) -> None:
         """Test config show with non-existent file."""
         runner = CliRunner()
-        result = runner.invoke(config_cli, [
-            "show", "--config-path", "/nonexistent/config.conf"
-        ])
+        result = runner.invoke(
+            config_cli, ["show", "--config-path", "/nonexistent/config.conf"]
+        )
 
         assert result.exit_code == 1
         assert "Error" in result.output
@@ -175,10 +175,7 @@ class TestWatchCommands:
     @patch("supsrc.cli.watch_cmds.WatchOrchestrator")
     @patch("supsrc.cli.watch_cmds.load_config")
     def test_watch_normal_mode(
-        self,
-        mock_load_config: Mock,
-        mock_orchestrator_class: Mock,
-        tmp_path: Path
+        self, mock_load_config: Mock, mock_orchestrator_class: Mock, tmp_path: Path
     ) -> None:
         """Test watch command in normal mode."""
         # Mock configuration
@@ -202,9 +199,7 @@ class TestWatchCommands:
             mock_loop.is_closed.return_value = False
             mock_loop.run_until_complete.return_value = None
 
-            result = runner.invoke(watch_cli, [
-                "--config-path", str(config_file)
-            ])
+            result = runner.invoke(watch_cli, ["--config-path", str(config_file)])
 
         # Should attempt to load config and create orchestrator
         mock_load_config.assert_called_once()
@@ -222,10 +217,7 @@ class TestWatchCommands:
         config_file.write_text("[repositories]")
 
         runner = CliRunner()
-        result = runner.invoke(watch_cli, [
-            "--config-path", str(config_file),
-            "--tui"
-        ])
+        result = runner.invoke(watch_cli, ["--config-path", str(config_file), "--tui"])
 
         # Should create and run TUI app
         mock_tui_app.assert_called_once()
@@ -238,10 +230,7 @@ class TestWatchCommands:
         config_file.write_text("[repositories]")
 
         runner = CliRunner()
-        result = runner.invoke(watch_cli, [
-            "--config-path", str(config_file),
-            "--tui"
-        ])
+        result = runner.invoke(watch_cli, ["--config-path", str(config_file), "--tui"])
 
         assert result.exit_code == 1
         assert "TUI mode requires" in result.output
@@ -249,9 +238,7 @@ class TestWatchCommands:
     def test_watch_config_file_not_found(self) -> None:
         """Test watch command with non-existent config file."""
         runner = CliRunner()
-        result = runner.invoke(watch_cli, [
-            "--config-path", "/nonexistent/config.conf"
-        ])
+        result = runner.invoke(watch_cli, ["--config-path", "/nonexistent/config.conf"])
 
         assert result.exit_code != 0
 
@@ -267,13 +254,23 @@ class TestCLIIntegration:
 
         try:
             subprocess.run(["git", "--version"], check=True, capture_output=True)
-            subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True)
-            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True)
+            subprocess.run(
+                ["git", "init"], cwd=repo_path, check=True, capture_output=True
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Test User"], cwd=repo_path, check=True
+            )
+            subprocess.run(
+                ["git", "config", "user.email", "test@example.com"],
+                cwd=repo_path,
+                check=True,
+            )
 
             (repo_path / "README.md").write_text("Test repo")
             subprocess.run(["git", "add", "README.md"], cwd=repo_path, check=True)
-            subprocess.run(["git", "commit", "-m", "Initial"], cwd=repo_path, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", "Initial"], cwd=repo_path, check=True
+            )
 
         except (subprocess.CalledProcessError, FileNotFoundError):
             pytest.skip("Git not available for integration test")
@@ -301,11 +298,17 @@ class TestCLIIntegration:
 
         # Test config show
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "--log-level", "DEBUG",
-            "config", "show",
-            "--config-path", str(config_file)
-        ])
+        result = runner.invoke(
+            cli,
+            [
+                "--log-level",
+                "DEBUG",
+                "config",
+                "show",
+                "--config-path",
+                str(config_file),
+            ],
+        )
 
         assert result.exit_code == 0
         assert "integration-test" in result.output
@@ -323,10 +326,9 @@ class TestCLIIntegration:
         assert result.exit_code != 0
 
         # Test config show with invalid path
-        result = runner.invoke(cli, [
-            "config", "show",
-            "--config-path", "/invalid/path/config.conf"
-        ])
+        result = runner.invoke(
+            cli, ["config", "show", "--config-path", "/invalid/path/config.conf"]
+        )
         assert result.exit_code == 1
         assert "Error" in result.output
 
@@ -350,13 +352,20 @@ class TestCLIIntegration:
         log_file = tmp_path / "test.log"
 
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "--log-level", "DEBUG",
-            "--log-file", str(log_file),
-            "--json-logs",
-            "config", "show",
-            "--config-path", str(config_file)
-        ])
+        result = runner.invoke(
+            cli,
+            [
+                "--log-level",
+                "DEBUG",
+                "--log-file",
+                str(log_file),
+                "--json-logs",
+                "config",
+                "show",
+                "--config-path",
+                str(config_file),
+            ],
+        )
 
         # Should complete without error
         assert result.exit_code == 0
@@ -399,11 +408,11 @@ class TestCLIUtilities:
         runner = CliRunner()
 
         # Test that options are properly passed to subcommands
-        result = runner.invoke(cli, [
-            "--log-level", "DEBUG",
-            "config", "show", "--help"
-        ])
+        result = runner.invoke(
+            cli, ["--log-level", "DEBUG", "config", "show", "--help"]
+        )
 
         assert result.exit_code == 0
+
 
 # 🧪🖥️

@@ -12,12 +12,17 @@ import pytest
 
 from supsrc.config import load_config
 from supsrc.config.models import (
-    SupsrcConfig, GlobalConfig, RepositoryConfig,
-    InactivityRuleConfig, SaveCountRuleConfig, ManualRuleConfig
+    SupsrcConfig,
+    GlobalConfig,
+    RepositoryConfig,
+    InactivityRuleConfig,
+    SaveCountRuleConfig,
+    ManualRuleConfig,
 )
 from supsrc.exceptions import (
-    ConfigFileNotFoundError, ConfigParsingError,
-    ConfigValidationError
+    ConfigFileNotFoundError,
+    ConfigParsingError,
+    ConfigValidationError,
 )
 
 
@@ -203,5 +208,6 @@ class TestGlobalConfiguration:
 
         assert config.global_config.log_level == "DEBUG"
         assert config.global_config.numeric_log_level == 10
+
 
 # 🧪⚙️

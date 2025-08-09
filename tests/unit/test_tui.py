@@ -120,9 +120,7 @@ class TestSupsrcTuiApp:
 
     @pytest.fixture
     def tui_app(
-        self,
-        mock_config_path: Path,
-        mock_shutdown_event: asyncio.Event
+        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> SupsrcTuiApp:
         """Create a TUI app instance for testing."""
         return SupsrcTuiApp(mock_config_path, mock_shutdown_event)
@@ -144,10 +142,7 @@ class TestSupsrcTuiApp:
     @patch("supsrc.tui.app.DataTable")
     @patch("supsrc.tui.app.TextualLog")
     def test_compose_method(
-        self,
-        mock_log: Mock,
-        mock_table: Mock,
-        tui_app: SupsrcTuiApp
+        self, mock_log: Mock, mock_table: Mock, tui_app: SupsrcTuiApp
     ) -> None:
         """Test the compose method creates proper widget structure."""
         # Mock the widget creation
@@ -275,7 +270,7 @@ class TestTuiIntegration:
         self,
         mock_config_path: Path,
         mock_shutdown_event: asyncio.Event,
-        mock_orchestrator: Mock
+        mock_orchestrator: Mock,
     ) -> None:
         """Test repository detail fetching workflow."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
@@ -308,7 +303,7 @@ class TestTuiIntegration:
         self,
         mock_config_path: Path,
         mock_shutdown_event: asyncio.Event,
-        mock_orchestrator: Mock
+        mock_orchestrator: Mock,
     ) -> None:
         """Test error handling in repository detail fetching."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
@@ -329,9 +324,7 @@ class TestTuiIntegration:
         assert "Error loading details" in str(posted_message.details)
 
     def test_action_select_repo_for_detail(
-        self,
-        mock_config_path: Path,
-        mock_shutdown_event: asyncio.Event
+        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test repository selection for detail view."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
@@ -367,9 +360,7 @@ class TestTuiIntegration:
         tui_app.run_worker.assert_called_once()
 
     def test_action_hide_detail_pane(
-        self,
-        mock_config_path: Path,
-        mock_shutdown_event: asyncio.Event
+        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test hiding the detail pane."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
@@ -407,9 +398,7 @@ class TestTuiErrorHandling:
     """Test TUI error handling and resilience."""
 
     def test_widget_query_error_handling(
-        self,
-        mock_config_path: Path,
-        mock_shutdown_event: asyncio.Event
+        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test handling of widget query errors."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
@@ -425,9 +414,7 @@ class TestTuiErrorHandling:
         assert not tui_app._is_shutting_down
 
     def test_orchestrator_crash_handling(
-        self,
-        mock_config_path: Path,
-        mock_shutdown_event: asyncio.Event
+        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test handling of orchestrator crashes."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
@@ -442,6 +429,7 @@ class TestTuiErrorHandling:
 
         # Create state changed event for error
         from textual.worker import Worker
+
         state_event = Worker.StateChanged(mock_worker, "ERROR")
 
         tui_app._worker = mock_worker
@@ -453,9 +441,7 @@ class TestTuiErrorHandling:
         tui_app.call_later.assert_called_once()
 
     async def test_external_shutdown_handling(
-        self,
-        mock_config_path: Path,
-        mock_shutdown_event: asyncio.Event
+        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test handling of external shutdown signals."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
@@ -496,9 +482,7 @@ class TestTuiAccessibility:
     """Test TUI accessibility and usability features."""
 
     def test_keyboard_bindings(
-        self,
-        mock_config_path: Path,
-        mock_shutdown_event: asyncio.Event
+        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test that all keyboard bindings are properly defined."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
@@ -520,9 +504,7 @@ class TestTuiAccessibility:
             assert bindings[key] == action
 
     def test_widget_focus_management(
-        self,
-        mock_config_path: Path,
-        mock_shutdown_event: asyncio.Event
+        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test proper focus management between widgets."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
@@ -539,9 +521,7 @@ class TestTuiAccessibility:
         mock_table.focus.assert_called_once()
 
     def test_progress_bar_rendering(
-        self,
-        mock_config_path: Path,
-        mock_shutdown_event: asyncio.Event
+        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test progress bar rendering in action display."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
@@ -572,5 +552,6 @@ class TestTuiAccessibility:
         assert "Processing" in action_display
         assert "50%" in action_display  # 5/10 = 50%
         assert "❚" in action_display  # Progress bar character
+
 
 # 🧪💻

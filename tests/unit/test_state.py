@@ -120,4 +120,5 @@ class TestRepositoryStatusEnum:
         for status in RepositoryStatus:
             assert status in STATUS_EMOJI_MAP, f"Missing emoji for {status}"
 
+
 # 🧪📊

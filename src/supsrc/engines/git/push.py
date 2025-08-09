@@ -29,21 +29,19 @@ async def perform_git_push(
 ) -> PushResult:
     """
     Enhanced Git push with comprehensive authentication and error handling.
-    
+
     Args:
         repo: Initialized pygit2.Repository object
         working_dir: Repository's working directory path
         remote_name: Name of the remote to push to
         branch_name: Name of the local branch to push
         config: Engine-specific configuration dictionary
-        
+
     Returns:
         PushResult indicating success or failure
     """
     push_log = log.bind(
-        repo_path=str(working_dir),
-        remote=remote_name,
-        branch=branch_name
+        repo_path=str(working_dir), remote=remote_name, branch=branch_name
     )
     push_log.debug("Attempting git push")
 
@@ -53,8 +51,7 @@ async def perform_git_push(
             remote = await run_pygit2_async(repo.remotes.__getitem__, remote_name)
         except (KeyError, IndexError):
             raise GitRemoteError(
-                f"Remote '{remote_name}' not found.",
-                repo_path=str(working_dir)
+                f"Remote '{remote_name}' not found.", repo_path=str(working_dir)
             )
 
         push_log.debug("Found remote", remote_url=remote.url)
@@ -74,7 +71,7 @@ async def perform_git_push(
         except KeyError:
             raise GitPushError(
                 f"Local branch '{branch_name}' (ref: {local_ref}) not found.",
-                repo_path=str(working_dir)
+                repo_path=str(working_dir),
             )
 
         push_log.debug("Using refspec for push", refspec=refspec)
@@ -87,7 +84,7 @@ async def perform_git_push(
             success=True,
             message="Push completed successfully.",
             remote_name=remote_name,
-            branch_name=branch_name
+            branch_name=branch_name,
         )
 
     except pygit2.GitError as e:
@@ -95,32 +92,34 @@ async def perform_git_push(
         push_log.error("Git error during push", error=str(e))
 
         # Classify error types
-        if any(auth_term in error_msg for auth_term in
-               ["authentication", "permission denied", "access denied"]):
+        if any(
+            auth_term in error_msg
+            for auth_term in ["authentication", "permission denied", "access denied"]
+        ):
             raise GitAuthenticationError(
                 f"Push authentication failed: {e}",
                 repo_path=str(working_dir),
-                details=e
+                details=e,
             ) from e
-        elif any(net_term in error_msg for net_term in
-                ["network", "connection", "resolve host", "timeout"]):
+        elif any(
+            net_term in error_msg
+            for net_term in ["network", "connection", "resolve host", "timeout"]
+        ):
             raise GitPushError(
-                f"Push network error: {e}",
-                repo_path=str(working_dir),
-                details=e
+                f"Push network error: {e}", repo_path=str(working_dir), details=e
             ) from e
-        elif any(reject_term in error_msg for reject_term in
-                ["rejected", "non-fast-forward", "fetch first"]):
+        elif any(
+            reject_term in error_msg
+            for reject_term in ["rejected", "non-fast-forward", "fetch first"]
+        ):
             raise GitPushError(
                 f"Push rejected (may need pull/fetch): {e}",
                 repo_path=str(working_dir),
-                details=e
+                details=e,
             ) from e
         else:
             raise GitPushError(
-                f"Push failed: {e}",
-                repo_path=str(working_dir),
-                details=e
+                f"Push failed: {e}", repo_path=str(working_dir), details=e
             ) from e
 
     except Exception as e:
@@ -128,9 +127,8 @@ async def perform_git_push(
         if isinstance(e, GitPushError):
             raise
         raise GitPushError(
-            f"Push failed unexpectedly: {e}",
-            repo_path=str(working_dir),
-            details=e
+            f"Push failed unexpectedly: {e}", repo_path=str(working_dir), details=e
         ) from e
+
 
 # 🚀🔐
