@@ -14,7 +14,7 @@ import structlog
 
 from supsrc.cli.config_cmds import config_cli
 from supsrc.cli.watch_cmds import watch_cli
-from supsrc.cli.tui_cmds import tui_cli # Import the new TUI command
+from supsrc.cli.tail_cmds import tail_cli
 from supsrc.telemetry import StructLogger
 # Import logging utilities from the new cli.utils module
 from supsrc.cli.utils import logging_options, setup_logging_from_context
@@ -65,8 +65,8 @@ def cli(
 
 # Add command groups to the main CLI group
 cli.add_command(config_cli)
+cli.add_command(tail_cli)
 cli.add_command(watch_cli)
-cli.add_command(tui_cli) # Register the TUI command
 
 if __name__ == "__main__":
     cli()
