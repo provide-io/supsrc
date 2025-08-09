@@ -26,25 +26,6 @@ from supsrc.tui.messages import LogMessageUpdate, RepoDetailUpdate, StateUpdate
 from supsrc.types import RepositoryStatesMap
 
 log = structlog.get_logger("tui.app")
-    ALLOW_BUBBLE = True
-    def __init__(self, repo_states: RepositoryStatesMap) -> None:
-        self.repo_states = repo_states
-        super().__init__()
-
-class LogMessageUpdate(Message):
-    ALLOW_BUBBLE = True
-    def __init__(self, repo_id: str | None, level: str, message: str) -> None:
-        self.repo_id = repo_id
-        self.level = level
-        self.message = message
-        super().__init__()
-
-class RepoDetailUpdate(Message):
-    ALLOW_BUBBLE = True
-    def __init__(self, repo_id: str, details: dict[str, Any]) -> None:
-        self.repo_id = repo_id
-        self.details = details
-        super().__init__()
 
 
 class TimerManager:
