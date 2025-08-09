@@ -79,6 +79,13 @@ class RepositoryState:
     action_description: str | None = field(default=None)
     action_progress_total: int | None = field(default=None)
     action_progress_completed: int | None = field(default=None)
+    
+    # Individual repository pause/freeze state
+    is_paused: bool = field(default=False)  # Individual repository pause
+    pause_until: datetime | None = field(default=None)  # Time when pause expires
+    is_frozen: bool = field(default=False)  # Frozen due to conflict
+    freeze_reason: str | None = field(default=None)  # Why it was frozen
+    timer_seconds_left: int | None = field(default=None)  # Countdown for timer column
 
     # Consider adding:
     # last_commit_hash: Optional[str] = field(default=None) # This is now last_commit_short_hash
