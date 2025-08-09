@@ -89,6 +89,7 @@ class SupsrcTuiApp(App):
         ("p", "pause_monitoring", "Pause/Resume Monitoring"),
         ("s", "suspend_monitoring", "Suspend Monitoring"),
         ("c", "reload_config", "Reload Config"),
+        ("h", "show_help", "Show Help"),
         ("tab", "focus_next", "Next Panel"),
         ("shift+tab", "focus_previous", "Previous Panel"),
     ]
@@ -447,6 +448,46 @@ class SupsrcTuiApp(App):
                     )
 
             asyncio.create_task(_reload())
+
+    def action_show_help(self) -> None:
+        """Show help information about emojis and shortcuts."""
+        help_text = """
+🔄 EMOJI MEANINGS:
+  ⏸️  - Paused (monitoring temporarily halted)
+  ⏹️  - Suspended (monitoring stopped)
+  ▶️  - Running/Active
+  🔄 - Processing/Reloading
+  ⏳ - Inactivity timer running
+  ⏲️  - Timer active
+  ✅ - Success/Completed
+  ❌ - Error/Failed
+  ⚠️  - Warning
+  💾 - Committing changes
+  🚀 - Pushing to remote
+  ⏱️  - Timing/Duration
+  🔼⚙️ - Auto-commit marker
+
+📋 KEYBOARD SHORTCUTS:
+  h     - Show this help
+  p     - Pause/Resume monitoring
+  s     - Suspend monitoring (stops watchers)
+  c     - Reload configuration (90s pause)
+  d     - Toggle dark mode
+  q     - Quit application
+  Ctrl+L - Clear event log
+  Enter  - View repository details
+  Escape - Hide details pane
+  r     - Refresh repository details
+  Tab    - Focus next panel
+  Shift+Tab - Focus previous panel
+
+💡 NOTES:
+  • Pause keeps watchers active but queues events
+  • Suspend stops watchers completely
+  • Config reload pauses for 90 seconds
+  • Use 'p' to quickly pause/resume
+"""
+        self.post_message(LogMessageUpdate(None, "INFO", help_text))
 
     async def action_quit(self) -> None:
         """Quit the application gracefully."""
