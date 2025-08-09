@@ -46,7 +46,7 @@ dependencies = [
     "sshconf>=0.2.7",
     "rich>=13.7.1",
     "aioconsole>=0.8.1",
-    "wrkenv>=0.1.0",  # For environment management and bootstrap generation
+    "wrkenv @ file:///Users/tim/code/gh/provide-io/wrkenv",  # For environment management and bootstrap generation
 ]
 
 [project.urls]
@@ -90,6 +90,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "src/supsrc/__init__.py" # Ensure __version__ is defined here
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
 
 #[tool.hatch.metadata.hooks.custom] # Example: Add copyright year automatically
 #path = "hatch_hooks.py" # Requires creating this file
