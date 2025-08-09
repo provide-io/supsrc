@@ -8,12 +8,13 @@ Tests both async and sync patterns.
 
 import asyncio
 import tempfile
+from datetime import timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from supsrc.config import GlobalConfig, InactivityRuleConfig, RepositoryConfig, SupsrcConfig
+from supsrc.config.models import GlobalConfig, InactivityRuleConfig, RepositoryConfig, SupsrcConfig
 from supsrc.monitor import MonitoredEvent
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.state import RepositoryState, RepositoryStatus
@@ -50,8 +51,8 @@ def mock_config():
             "test-repo": RepositoryConfig(
                 enabled=True,
                 path=Path("/tmp/test-repo"),
-                engine="supsrc.engines.git",
-                rule=InactivityRuleConfig(type="inactivity", period="5s"),
+                rule=InactivityRuleConfig(period=timedelta(seconds=5)),
+                repository={"engine": "supsrc.engines.git"},
             )
         },
     )
@@ -87,8 +88,8 @@ class TestWatchOrchestratorHotReload:
                     "new-repo": RepositoryConfig(
                         enabled=True,
                         path=Path("/tmp/new-repo"),
-                        engine="supsrc.engines.git",
-                        rule=InactivityRuleConfig(type="inactivity", period="10s"),
+                        rule=InactivityRuleConfig(period=timedelta(seconds=10)),
+                        repository={"engine": "supsrc.engines.git"},
                     ),
                 },
             )
@@ -154,16 +155,27 @@ class TestWatchOrchestratorHotReload:
             repo_id="__config__",
             event_type="modified",
             src_path=orchestrator.config_path,
+            is_directory=False,
         )
         
         # Add event to queue
         await orchestrator.event_queue.put(config_event)
+        
+        # Mock the shutdown event to exit after processing one event
+        async def set_shutdown_after_delay():
+            await asyncio.sleep(0.1)
+            orchestrator.shutdown_event.set()
+        
+        # Start shutdown task
+        shutdown_task = asyncio.create_task(set_shutdown_after_delay())
         
         # Mock the event consumer processing
         with patch.object(orchestrator, "_running_tasks", set()):
             # Process the event
             await orchestrator._consume_events()
             
+        await shutdown_task
+        
         # Verify
         orchestrator.reload_config.assert_called_once()
 
@@ -179,9 +191,10 @@ class TestWatchOrchestratorHotReload:
             
             # Verify
             mock_create_task.assert_called_once()
-            # Verify the special __config__ repository was created
+            # Verify it was called with a coroutine
+            import inspect
             call_args = mock_create_task.call_args[0][0]
-            assert hasattr(call_args, "__name__")  # It's a coroutine
+            assert inspect.iscoroutine(call_args)
 
     async def test_resume_after_delay(self, orchestrator):
         """Test automatic resume after delay."""
@@ -274,6 +287,7 @@ class TestWatchOrchestratorEventProcessing:
             repo_id="test-repo",
             event_type="modified",
             src_path=Path("/tmp/test-repo/file.txt"),
+            is_directory=False,
         )
         
         # Add to queue
@@ -319,11 +333,19 @@ class TestWatchOrchestratorIntegration:
                         "test": RepositoryConfig(
                             enabled=True,
                             path=Path("/tmp/test"),
-                            engine="supsrc.engines.git",
-                            rule=InactivityRuleConfig(type="inactivity", period="5s"),
+                            rule=InactivityRuleConfig(period=timedelta(seconds=5)),
+                            repository={"engine": "supsrc.engines.git"},
                         )
                     },
                 )
+                
+                # Mock required methods for reload
+                orchestrator._initialize_repositories = AsyncMock(return_value=["test"])
+                orchestrator._setup_monitoring = Mock(return_value=["test"])
+                orchestrator._post_tui_state_update = Mock()
+                orchestrator._console_message = Mock()
+                orchestrator._post_tui_log = Mock()
+                orchestrator.monitor_service = mock_monitor
                 
                 # Test reload
                 with patch("supsrc.runtime.orchestrator.load_config") as mock_load:
@@ -339,10 +361,16 @@ class TestWatchOrchestratorIntegration:
         orchestrator.monitor_service = Mock()
         
         # Run concurrent operations
+        async def pause():
+            orchestrator.pause_monitoring()
+            
+        async def resume():
+            orchestrator.resume_monitoring()
+            
         tasks = [
             orchestrator.reload_config(),
-            asyncio.create_task(asyncio.coroutine(lambda: orchestrator.pause_monitoring())()),
-            asyncio.create_task(asyncio.coroutine(lambda: orchestrator.resume_monitoring())()),
+            pause(),
+            resume(),
         ]
         
         with patch("supsrc.runtime.orchestrator.load_config"):

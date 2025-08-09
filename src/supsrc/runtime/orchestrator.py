@@ -1418,14 +1418,13 @@ class WatchOrchestrator:
         watcher_log.info("Setting up config file watcher", path=str(self.config_path))
 
         # Create a special repository config for watching the config file
-        from supsrc.config import RepositoryConfig
+        from supsrc.config.models import ManualRuleConfig, RepositoryConfig
 
         config_repo = RepositoryConfig(
             enabled=True,
-            path=str(self.config_path.parent),
-            watch_patterns=[self.config_path.name],
-            # Use a special rule that triggers on any change
-            rules=[],
+            path=self.config_path.parent,
+            rule=ManualRuleConfig(),  # Use manual rule for config file
+            repository={},  # Empty repository config
         )
 
         # Add config watcher as a special monitored path
