@@ -7,7 +7,7 @@ Stabilized TUI application with improved layout and proper timer management.
 
 import asyncio
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import structlog
 from textual.app import App, ComposeResult
@@ -79,7 +79,7 @@ class SupsrcTuiApp(App):
 
     TITLE = "Supsrc Watcher"
     SUB_TITLE = "Monitoring filesystem events..."
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         ("d", "toggle_dark", "Toggle Dark Mode"),
         ("q", "quit", "Quit Application"),
         ("ctrl+c", "quit", "Quit Application"),

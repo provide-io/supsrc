@@ -1386,7 +1386,7 @@ class WatchOrchestrator:
 
                 raise
 
-        except Exception as e:
+        except Exception:
             reload_log.exception("Config reload error")
 
             # Resume original pause state on any error

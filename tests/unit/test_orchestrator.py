@@ -17,7 +17,6 @@ import pytest
 from supsrc.config.models import GlobalConfig, InactivityRuleConfig, RepositoryConfig, SupsrcConfig
 from supsrc.monitor import MonitoredEvent
 from supsrc.runtime.orchestrator import WatchOrchestrator
-from supsrc.state import RepositoryState, RepositoryStatus
 
 
 @pytest.fixture

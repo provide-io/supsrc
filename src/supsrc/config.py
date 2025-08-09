@@ -14,9 +14,8 @@ from typing import Any, Literal, TypeAlias
 
 # --- Third-party Libraries ---
 try:
-    import rich.pretty
-
-    RICH_AVAILABLE = True
+    import importlib.util
+    RICH_AVAILABLE = importlib.util.find_spec("rich") is not None
 except ImportError:
     RICH_AVAILABLE = False
 
