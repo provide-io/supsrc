@@ -5,6 +5,7 @@
 import asyncio
 import time  # Import time for unique task names
 from contextlib import suppress  # For cleaner task cancellation handling
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional, cast
 
@@ -34,7 +35,7 @@ from supsrc.protocols import (
     StageResult,
 )
 from supsrc.rules import check_trigger_condition
-from supsrc.state import RepositoryState, RepositoryStatus
+from supsrc.state import RepositoryState, RepositoryStatus, STATUS_EMOJI_MAP
 
 # --- Supsrc Imports ---
 from supsrc.telemetry import StructLogger
@@ -1308,6 +1309,63 @@ class WatchOrchestrator:
                 asyncio.create_task(self._restart_monitor_service())
         else:
             self._log.info("Monitoring RESUMED from pause")
+    
+    def toggle_repository_pause(self, repo_id: str) -> bool:
+        """Toggle pause state for an individual repository."""
+        repo_state = self.repo_states.get(repo_id)
+        if not repo_state:
+            return False
+            
+        repo_state.is_paused = not repo_state.is_paused
+        
+        if repo_state.is_paused:
+            repo_state.pause_until = datetime.now(UTC) + timedelta(hours=1)  # Default 1 hour pause
+            repo_state.display_status_emoji = "⏸️"
+            self._log.info(f"Repository {repo_id} PAUSED")
+            self._console_message(
+                f"Repository {repo_id} paused for 1 hour",
+                repo_id=repo_id,
+                style="yellow bold",
+                emoji="⏸️",
+            )
+        else:
+            repo_state.pause_until = None
+            # Restore normal emoji based on status
+            repo_state.display_status_emoji = STATUS_EMOJI_MAP.get(repo_state.status, "❓")
+            self._log.info(f"Repository {repo_id} RESUMED")
+            self._console_message(
+                f"Repository {repo_id} resumed",
+                repo_id=repo_id,
+                style="green bold",
+                emoji="▶️",
+            )
+            
+        self._post_tui_state_update()
+        return True
+    
+    def unfreeze_repository(self, repo_id: str) -> bool:
+        """Unfreeze a frozen repository."""
+        repo_state = self.repo_states.get(repo_id)
+        if not repo_state or not repo_state.is_frozen:
+            return False
+            
+        repo_state.is_frozen = False
+        repo_state.freeze_reason = None
+        repo_state.display_status_emoji = STATUS_EMOJI_MAP.get(repo_state.status, "❓")
+        
+        if repo_state.status == RepositoryStatus.ERROR:
+            repo_state.update_status(RepositoryStatus.IDLE)
+            
+        self._log.info(f"Repository {repo_id} UNFROZEN")
+        self._console_message(
+            f"Repository {repo_id} unfrozen",
+            repo_id=repo_id,
+            style="green bold",
+            emoji="✅",
+        )
+        
+        self._post_tui_state_update()
+        return True
 
     async def _restart_monitor_service(self) -> None:
         """Restart the monitor service after suspension."""
