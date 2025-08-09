@@ -523,7 +523,9 @@ class SupsrcTuiApp(App):
                 )
 
                 if repo_id_str in table.rows:
-                    table.update_row(repo_id_str, *row_data, update_width=False)
+                    # Update existing row by removing and re-adding
+                    table.remove_row(repo_id_str)
+                    table.add_row(*row_data, key=repo_id_str)
                 else:
                     table.add_row(*row_data, key=repo_id_str)
 

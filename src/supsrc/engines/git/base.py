@@ -395,7 +395,7 @@ class GitEngine(RepositoryEngine):
                     commit_log.debug(
                         "Comparing index to empty tree (unborn HEAD for diff)"
                     )
-                    diff = index.diff_to_tree(None) if not index.is_empty else None
+                    diff = index.diff_to_tree(None) if len(index) > 0 else None
                 else:
                     head_commit = repo.head.peel()
                     commit_log.debug(
@@ -412,7 +412,7 @@ class GitEngine(RepositoryEngine):
             if (
                 diff is not None
                 and not diff.deltas
-                and not (is_unborn and not index.is_empty)
+                and not (is_unborn and len(index) > 0)
             ):
                 commit_log.info("Commit skipped: No changes detected in diff.")
                 return CommitResult(
@@ -420,7 +420,7 @@ class GitEngine(RepositoryEngine):
                     message="Commit skipped: No changes detected.",
                     commit_hash=None,
                 )
-            elif diff is None and is_unborn and index.is_empty:
+            elif diff is None and is_unborn and len(index) == 0:
                 commit_log.info("Commit skipped: Unborn HEAD and empty index.")
                 return CommitResult(
                     success=True,
