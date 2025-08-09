@@ -615,3 +615,6 @@ class SupsrcEnhancedTuiApp(App):
 
 # For backward compatibility
 SupsrcTuiApp = SupsrcEnhancedTuiApp
+
+
+# 🖥️✨

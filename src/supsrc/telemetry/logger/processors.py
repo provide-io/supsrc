@@ -52,3 +52,6 @@ def remove_extra_keys_processor(logger, method_name: str, event_dict: dict) -> d
     """Removes keys used only for internal processing (like emoji_key)."""
     event_dict.pop("emoji_key", None)
     return event_dict
+
+
+# 🔼⚙️
