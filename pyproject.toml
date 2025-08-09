@@ -229,6 +229,7 @@ markers = [
     "tui: marks tests related to the TUI feature",
 ]
 asyncio_mode = "auto" # Required for pytest-asyncio
+asyncio_default_fixture_loop_scope = "function" # Prevent deprecation warning
 
 
 # --------------------------------------------------------------------------- #
