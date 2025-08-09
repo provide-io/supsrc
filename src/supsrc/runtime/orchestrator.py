@@ -42,10 +42,14 @@ from supsrc.telemetry import StructLogger
 # --- TUI Integration Imports (Conditional) ---
 try:
     from typing import TYPE_CHECKING
-    if TYPE_CHECKING:
-        from textual.app import App as TextualApp
+    
     from supsrc.tui.app import LogMessageUpdate, StateUpdate
     TEXTUAL_AVAILABLE_RUNTIME = True
+    
+    if TYPE_CHECKING:
+        from textual.app import App as TextualApp
+    else:
+        from textual.app import App as TextualApp
 except ImportError:
     TEXTUAL_AVAILABLE_RUNTIME = False
     TextualApp = None # type: ignore
