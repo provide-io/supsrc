@@ -44,7 +44,7 @@ from supsrc.telemetry import StructLogger
 try:
     from typing import TYPE_CHECKING
     
-    from supsrc.tui.app import LogMessageUpdate, StateUpdate
+    from supsrc.tui.messages import LogMessageUpdate, StateUpdate
     TEXTUAL_AVAILABLE_RUNTIME = True
     
     if TYPE_CHECKING:

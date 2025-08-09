@@ -10,17 +10,15 @@ from typing import TYPE_CHECKING, Any # Ensure Any is kept if details in RepoDet
 
 from textual.message import Message
 
-# Import for type hinting only to break circular dependency
-if TYPE_CHECKING:
-    from supsrc.runtime.orchestrator import RepositoryStatesMap
+# Import types
+from supsrc.types import RepositoryStatesMap
 
 
 class StateUpdate(Message):
     """Message to update the main repository status table in the TUI."""
     ALLOW_BUBBLE = True # Or False if only handled by App
 
-    # Use string literal for forward reference to RepositoryStatesMap
-    def __init__(self, repo_states: "RepositoryStatesMap") -> None:
+    def __init__(self, repo_states: RepositoryStatesMap) -> None:
         self.repo_states = repo_states
         super().__init__()
 

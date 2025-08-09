@@ -22,12 +22,10 @@ from textual.worker import Worker
 
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.state import RepositoryState, RepositoryStatus
+from supsrc.tui.messages import LogMessageUpdate, RepoDetailUpdate, StateUpdate
 from supsrc.types import RepositoryStatesMap
 
 log = structlog.get_logger("tui.app")
-
-# Custom Messages
-class StateUpdate(Message):
     ALLOW_BUBBLE = True
     def __init__(self, repo_states: RepositoryStatesMap) -> None:
         self.repo_states = repo_states
