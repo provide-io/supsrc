@@ -46,6 +46,7 @@ dependencies = [
     "sshconf>=0.2.7",
     "rich>=13.7.1",
     "aioconsole>=0.8.1",
+    "wrkenv>=0.1.0",  # For environment management and bootstrap generation
 ]
 
 [project.urls]
