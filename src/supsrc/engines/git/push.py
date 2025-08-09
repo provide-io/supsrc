@@ -49,10 +49,10 @@ async def perform_git_push(
         # Find the remote
         try:
             remote = await run_pygit2_async(repo.remotes.__getitem__, remote_name)
-        except (KeyError, IndexError):
+        except (KeyError, IndexError) as err:
             raise GitRemoteError(
                 f"Remote '{remote_name}' not found.", repo_path=str(working_dir)
-            )
+            ) from err
 
         push_log.debug("Found remote", remote_url=remote.url)
 
@@ -68,11 +68,11 @@ async def perform_git_push(
         # Verify local ref exists
         try:
             await run_pygit2_async(repo.references.get, local_ref)
-        except KeyError:
+        except KeyError as err:
             raise GitPushError(
                 f"Local branch '{branch_name}' (ref: {local_ref}) not found.",
                 repo_path=str(working_dir),
-            )
+            ) from err
 
         push_log.debug("Using refspec for push", refspec=refspec)
 

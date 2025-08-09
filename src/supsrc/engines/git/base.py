@@ -277,9 +277,8 @@ class GitEngine(RepositoryEngine):
                         or flags & pygit2.GIT_STATUS_INDEX_RENAMED
                         or flags & pygit2.GIT_STATUS_WT_TYPECHANGE
                         or flags & pygit2.GIT_STATUS_INDEX_TYPECHANGE
-                    ):
-                        if not repo.path_is_ignored(filepath):
-                            files_to_add.append(filepath)
+                    ) and not repo.path_is_ignored(filepath):
+                        files_to_add.append(filepath)
 
                 if files_to_add:
                     stage_log.debug("Adding files to index", files=files_to_add)
@@ -396,10 +395,7 @@ class GitEngine(RepositoryEngine):
                     commit_log.debug(
                         "Comparing index to empty tree (unborn HEAD for diff)"
                     )
-                    if not index.is_empty:
-                        diff = index.diff_to_tree(None)
-                    else:
-                        diff = None
+                    diff = index.diff_to_tree(None) if not index.is_empty else None
                 else:
                     head_commit = repo.head.peel()
                     commit_log.debug(

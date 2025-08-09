@@ -5,11 +5,9 @@
 Tests for the new 'tail' command (formerly 'watch' in non-TUI mode).
 """
 
-import asyncio
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from supsrc.cli.main import cli
@@ -61,11 +59,11 @@ class TestTailCommand:
         [repositories.test]
         path = "/tmp/test"
         enabled = true
-        
+
         [repositories.test.rule]
         type = "supsrc.rules.inactivity"
         period = "30s"
-        
+
         [repositories.test.repository]
         type = "supsrc.engines.git"
         """)
@@ -79,7 +77,7 @@ class TestTailCommand:
             mock_loop.is_closed.return_value = False
             mock_loop.run_until_complete.return_value = None
 
-            result = runner.invoke(cli, ["tail", "--config-path", str(config_file)])
+            runner.invoke(cli, ["tail", "--config-path", str(config_file)])
 
         # Should load config and create orchestrator
         mock_load_config.assert_called_once()
@@ -102,10 +100,10 @@ class TestTailCommand:
         [repositories.env-test]
         path = "/tmp/env-test"
         enabled = true
-        
+
         [repositories.env-test.rule]
         type = "supsrc.rules.manual"
-        
+
         [repositories.env-test.repository]
         type = "supsrc.engines.git"
         """)
@@ -114,11 +112,11 @@ class TestTailCommand:
 
         # Test with SUPSRC_CONF environment variable
         with patch.dict("os.environ", {"SUPSRC_CONF": str(config_file)}):
-            with patch("supsrc.cli.tail_cmds.WatchOrchestrator") as mock_orchestrator:
+            with patch("supsrc.cli.tail_cmds.WatchOrchestrator"):
                 with patch("supsrc.cli.tail_cmds.load_config") as mock_load_config:
                     mock_load_config.return_value = Mock()
 
-                    result = runner.invoke(cli, ["tail"])
+                    runner.invoke(cli, ["tail"])
 
                     # Should use config from env var
                     assert mock_load_config.called
@@ -135,7 +133,7 @@ class TestTailCommand:
             with patch("supsrc.cli.tail_cmds.load_config") as mock_load_config:
                 mock_load_config.return_value = Mock()
 
-                result = runner.invoke(cli, ["tail", "--config-path", str(config_file)])
+                runner.invoke(cli, ["tail", "--config-path", str(config_file)])
 
         # Should log startup message
         mock_logger.info.assert_called()

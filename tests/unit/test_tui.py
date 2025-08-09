@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from textual.widgets import DataTable
 
 from supsrc.state import RepositoryState
 from supsrc.tui.app import LogMessageUpdate, StateUpdate, SupsrcTuiApp, TimerManager

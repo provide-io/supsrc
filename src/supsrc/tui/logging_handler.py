@@ -6,12 +6,11 @@ Custom logging handler for integrating structlog output with the Textual TUI.
 """
 
 import logging
-import sys
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING
 
 import structlog  # For ConsoleRenderer
-# from structlog.dev import ConsoleRenderer # Could be more specific
 
+# from structlog.dev import ConsoleRenderer # Could be more specific
 # Assuming LogMessageUpdate is in supsrc.tui.messages
 from supsrc.tui.messages import LogMessageUpdate
 
@@ -81,22 +80,15 @@ class TextualLogHandler(logging.Handler):
                 self.app.post_message(log_update_msg)
             else:
                 # Fallback if app is not available or misconfigured (should not happen in normal operation)
-                print(
-                    f"TextualLogHandler: TUI app not available for message: {message_str}",
-                    file=sys.stderr,
-                )
+                pass
 
-        except Exception as e:
+        except Exception:
             # Fallback for any errors during log emission to TUI
             # (e.g., if TUI is closing or an unexpected error occurs)
             # We print to stderr to avoid a loop if this handler itself is part of the failing logging chain.
-            print(
-                f"TextualLogHandler: Error emitting log to TUI: {e}\nRecord: {record.__dict__}",
-                file=sys.stderr,
-            )
             # Optionally, print the original message as well if self.format(record) failed
             try:
-                print(f"Original log message: {record.getMessage()}", file=sys.stderr)
+                pass
             except Exception:
                 pass  # Avoid further errors if getMessage itself fails
 

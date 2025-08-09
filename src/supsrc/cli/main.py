@@ -6,19 +6,18 @@ Main CLI entry point for supsrc using Click.
 Handles global options like logging level.
 """
 
-import sys
 from importlib.metadata import PackageNotFoundError, version
 
 import click
 import structlog
 
 from supsrc.cli.config_cmds import config_cli
-from supsrc.cli.watch_cmds import watch_cli
 from supsrc.cli.tail_cmds import tail_cli
-from supsrc.telemetry import StructLogger
 
 # Import logging utilities from the new cli.utils module
 from supsrc.cli.utils import logging_options, setup_logging_from_context
+from supsrc.cli.watch_cmds import watch_cli
+from supsrc.telemetry import StructLogger
 
 try:
     __version__ = version("supsrc")

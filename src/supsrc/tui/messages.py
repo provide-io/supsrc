@@ -6,11 +6,10 @@ Defines custom messages for the Textual User Interface (TUI).
 """
 
 from typing import (
-    TYPE_CHECKING,
     Any,
 )  # Ensure Any is kept if details in RepoDetailUpdate uses it, or other classes.
-# If not, Any can be removed. For now, keeping it.
 
+# If not, Any can be removed. For now, keeping it.
 from textual.message import Message
 
 # Import types

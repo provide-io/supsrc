@@ -8,7 +8,6 @@ Tests for the new 'watch' command (formerly 'tui' command).
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from supsrc.cli.main import cli
@@ -51,17 +50,17 @@ class TestWatchCommand:
         [repositories.test]
         path = "/tmp/test"
         enabled = true
-        
+
         [repositories.test.rule]
         type = "supsrc.rules.inactivity"
         period = "30s"
-        
+
         [repositories.test.repository]
         type = "supsrc.engines.git"
         """)
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
+        runner.invoke(cli, ["watch", "--config-path", str(config_file)])
 
         # Should create and run TUI app
         mock_tui_app.assert_called_once()
@@ -100,10 +99,10 @@ class TestWatchCommand:
         [repositories.env-test]
         path = "/tmp/env-test"
         enabled = true
-        
+
         [repositories.env-test.rule]
         type = "supsrc.rules.manual"
-        
+
         [repositories.env-test.repository]
         type = "supsrc.engines.git"
         """)
@@ -116,7 +115,7 @@ class TestWatchCommand:
                     mock_app_instance = Mock()
                     mock_tui_app.return_value = mock_app_instance
 
-                    result = runner.invoke(cli, ["watch"])
+                    runner.invoke(cli, ["watch"])
 
                     # Should use config from env var
                     mock_tui_app.assert_called_once()
@@ -137,7 +136,7 @@ class TestWatchCommand:
             mock_app_instance = Mock()
             mock_tui_app.return_value = mock_app_instance
 
-            result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
+            runner.invoke(cli, ["watch", "--config-path", str(config_file)])
 
         # Should log startup message
         mock_log.info.assert_called()

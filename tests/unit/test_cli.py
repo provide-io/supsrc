@@ -199,7 +199,7 @@ class TestWatchCommands:
             mock_loop.is_closed.return_value = False
             mock_loop.run_until_complete.return_value = None
 
-            result = runner.invoke(watch_cli, ["--config-path", str(config_file)])
+            runner.invoke(watch_cli, ["--config-path", str(config_file)])
 
         # Should attempt to load config and create orchestrator
         mock_load_config.assert_called_once()
@@ -217,7 +217,7 @@ class TestWatchCommands:
         config_file.write_text("[repositories]")
 
         runner = CliRunner()
-        result = runner.invoke(watch_cli, ["--config-path", str(config_file), "--tui"])
+        runner.invoke(watch_cli, ["--config-path", str(config_file), "--tui"])
 
         # Should create and run TUI app
         mock_tui_app.assert_called_once()
@@ -392,7 +392,7 @@ class TestCLIUtilities:
 
         # Test that commands have expected options
         config_cmd = cli.commands["config"]
-        assert any("show" in str(cmd) for cmd in config_cmd.commands.keys())
+        assert any("show" in str(cmd) for cmd in config_cmd.commands)
 
     def test_environment_variable_integration(self) -> None:
         """Test environment variable integration."""

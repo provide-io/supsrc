@@ -7,13 +7,11 @@ Stabilized TUI application with improved layout and proper timer management.
 
 import asyncio
 from pathlib import Path
-import sys  # Ensure this import is present
 from typing import Any
 
 import structlog
 from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal, Vertical
-from textual.message import Message
+from textual.containers import Container
 from textual.reactive import var
 from textual.timer import Timer
 from textual.widgets import DataTable, Footer, Header
@@ -21,9 +19,7 @@ from textual.widgets import Log as TextualLog
 from textual.worker import Worker
 
 from supsrc.runtime.orchestrator import WatchOrchestrator
-from supsrc.state import RepositoryState, RepositoryStatus
 from supsrc.tui.messages import LogMessageUpdate, RepoDetailUpdate, StateUpdate
-from supsrc.types import RepositoryStatesMap
 
 log = structlog.get_logger("tui.app")
 

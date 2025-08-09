@@ -148,12 +148,7 @@ def check_trigger_condition(
             )
             return False
 
-    log.debug(
-        "Rule check completed",
-        repo_id=repo_id,
-        rule_type=rule_type_str,
-        result=final_result,
-    )
+    # This logging statement is unreachable - removed
 
 
 # 🔼⚙️

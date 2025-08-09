@@ -6,7 +6,7 @@ import asyncio
 import time  # Import time for unique task names
 from contextlib import suppress  # For cleaner task cancellation handling
 from pathlib import Path
-from typing import Any, Optional, TypeAlias, cast
+from typing import Any, Optional, cast
 
 import attrs
 import cattrs  # Needed for config validation exceptions
@@ -14,10 +14,10 @@ import structlog
 from rich.console import Console
 
 from supsrc.config import (
-    load_config,
-    SupsrcConfig,
     InactivityRuleConfig,
     RuleConfig,
+    SupsrcConfig,
+    load_config,
 )
 
 # --- Specific Engine Import (replace with plugin loading later) ---
@@ -35,10 +35,10 @@ from supsrc.protocols import (
 )
 from supsrc.rules import check_trigger_condition
 from supsrc.state import RepositoryState, RepositoryStatus
-from supsrc.types import RepositoryStatesMap
 
 # --- Supsrc Imports ---
 from supsrc.telemetry import StructLogger
+from supsrc.types import RepositoryStatesMap
 
 # --- TUI Integration Imports (Conditional) ---
 try:
@@ -645,7 +645,7 @@ class WatchOrchestrator:
                         if rule_met:
                             event_log.info(
                                 "Rule condition met, scheduling action",
-                                rule_type=rule_type_str,
+                                rule_type=rule_type_str_lc,
                             )
                             # Use time.monotonic() for potentially more unique task names
                             action_task = asyncio.create_task(

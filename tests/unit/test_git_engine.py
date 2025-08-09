@@ -5,20 +5,18 @@
 Comprehensive tests for the Git engine implementation.
 """
 
-import tempfile
+import subprocess
 from pathlib import Path
 from unittest.mock import Mock, patch
-import subprocess
-import shutil
 
-import pytest
 import pygit2
+import pytest
 
+from supsrc.config.models import GlobalConfig
 from supsrc.engines.git import GitEngine, GitRepoSummary
 from supsrc.engines.git.credentials import GitCredentialManager
-from supsrc.config.models import GlobalConfig
+from supsrc.protocols import CommitResult, PushResult, RepoStatusResult, StageResult
 from supsrc.state import RepositoryState
-from supsrc.protocols import RepoStatusResult, StageResult, CommitResult, PushResult
 
 
 @pytest.fixture

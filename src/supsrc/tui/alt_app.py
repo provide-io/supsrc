@@ -5,8 +5,9 @@
 
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
+import structlog
 from rich.text import Text
 from textual import on
 from textual.app import App, ComposeResult
@@ -15,21 +16,19 @@ from textual.message import Message
 from textual.reactive import var
 from textual.timer import Timer
 from textual.widgets import (
-    DataTable,
     Footer,
     Header,
     Label,
     ListItem,
     ListView,
-    Log as TextualLog,
-    ProgressBar,
     Static,
     TabbedContent,
     TabPane,
 )
+from textual.widgets import (
+    Log as TextualLog,
+)
 from textual.worker import Worker
-
-import structlog
 
 from supsrc.runtime.orchestrator import RepositoryStatesMap, WatchOrchestrator
 from supsrc.state import RepositoryState, RepositoryStatus
@@ -55,7 +54,7 @@ class LogMessageUpdate(Message):
     ALLOW_BUBBLE = True
 
     def __init__(
-        self, repo_id: str | None, level: str, message: str, timestamp: str = None
+        self, repo_id: str | None, level: str, message: str, timestamp: str | None = None
     ) -> None:
         self.repo_id = repo_id
         self.level = level
@@ -335,46 +334,46 @@ class SupsrcEnhancedTuiApp(App):
     Screen {
         layout: vertical;
     }
-    
+
     #main-container {
         height: 1fr;
         layout: horizontal;
     }
-    
+
     #left-panel {
         width: 50%;
         layout: vertical;
     }
-    
+
     #right-panel {
         width: 50%;
         layout: vertical;
     }
-    
+
     #repo-list {
         height: 60%;
         border: thick $accent;
         border-title: "Repositories";
     }
-    
+
     #dashboard {
         height: 40%;
         border: thick $accent;
         border-title: "Dashboard";
     }
-    
+
     #repo-details {
         height: 70%;
         border: thick $accent;
         border-title: "Repository Details";
     }
-    
+
     #activity-log {
         height: 30%;
         border: thick $accent;
         border-title: "Activity Log";
     }
-    
+
     .dashboard-section {
         width: 1fr;
         height: 1fr;
@@ -382,11 +381,11 @@ class SupsrcEnhancedTuiApp(App):
         padding: 1;
         border: round $primary;
     }
-    
+
     ListView > .list--option {
         padding: 0 1;
     }
-    
+
     ListView > .list--option-highlighted {
         background: $accent;
     }

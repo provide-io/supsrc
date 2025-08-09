@@ -3,21 +3,15 @@
 #
 
 import asyncio
-import logging
 import signal
-import sys
-from contextlib import suppress
 from pathlib import Path
 
 import click
 import structlog
 
 # --- Rich Imports ---
-from rich.console import Console
-
 # Import logging utilities
 from supsrc.cli.utils import logging_options, setup_logging_from_context
-from supsrc.runtime.orchestrator import WatchOrchestrator
 
 # Use absolute imports
 from supsrc.telemetry import StructLogger
@@ -77,7 +71,7 @@ async def _handle_signal_async(sig: int):
 def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
     """Interactive dashboard for monitoring repositories."""
     # Setup logging for TUI mode
-    log_file_in_ctx = ctx.obj.get("LOG_FILE")  # Check if global --log-file was set
+    ctx.obj.get("LOG_FILE")  # Check if global --log-file was set
 
     # For TUI mode, always default to file_only_logs=True to prevent console log pollution
     effective_file_only_logs = kwargs.get("file_only_logs")
