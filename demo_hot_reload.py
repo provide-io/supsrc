@@ -47,7 +47,7 @@ enabled = true
 path = "{repo_path}"
 
 [repositories.test-repo.rule]
-type = "inactivity"
+type = "supsrc.rules.inactivity"
 period = "30s"
 
 [repositories.test-repo.repository]
@@ -78,7 +78,7 @@ enabled = true
 path = "{repo_path}"
 
 [repositories.test-repo.rule]
-type = "inactivity"
+type = "supsrc.rules.inactivity"
 period = "10s"  # Changed from 30s
 
 [repositories.test-repo.repository]
@@ -91,7 +91,7 @@ enabled = true
 path = "{repo_path}"
 
 [repositories.another-repo.rule]
-type = "save_count"
+type = "supsrc.rules.save_count"
 count = 5
 
 [repositories.another-repo.repository]
