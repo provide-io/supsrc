@@ -339,9 +339,15 @@ class SupsrcTuiApp(App):
         """Show detail pane for the selected repository."""
         try:
             table = self.query_one(DataTable)
-            row_key = table.get_row_key(table.cursor_row)
-            if row_key is not None:
-                self.selected_repo_id = str(row_key)
+            # Get the row key using coordinate_to_cell_key
+            try:
+                cell_key = table.coordinate_to_cell_key((table.cursor_row, 0))
+                row_key = cell_key.row_key
+                self.selected_repo_id = str(row_key.value) if row_key else None
+            except Exception:
+                self.selected_repo_id = None
+            
+            if self.selected_repo_id:
                 self.show_detail_pane = True
 
                 if self._orchestrator and self.selected_repo_id:
@@ -470,8 +476,11 @@ class SupsrcTuiApp(App):
 
             # Remove obsolete rows
             for key_to_remove in current_keys - incoming_keys:
-                if table.is_valid_row_key(key_to_remove):
+                try:
                     table.remove_row(key_to_remove)
+                except Exception:
+                    # Row may have already been removed
+                    pass
 
             # Update/add rows
             for repo_id_obj, state in message.repo_states.items():
