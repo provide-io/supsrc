@@ -40,9 +40,7 @@ async def perform_git_push(
     Returns:
         PushResult indicating success or failure
     """
-    push_log = log.bind(
-        repo_path=str(working_dir), remote=remote_name, branch=branch_name
-    )
+    push_log = log.bind(repo_path=str(working_dir), remote=remote_name, branch=branch_name)
     push_log.debug("Attempting git push")
 
     try:
@@ -118,9 +116,7 @@ async def perform_git_push(
                 details=e,
             ) from e
         else:
-            raise GitPushError(
-                f"Push failed: {e}", repo_path=str(working_dir), details=e
-            ) from e
+            raise GitPushError(f"Push failed: {e}", repo_path=str(working_dir), details=e) from e
 
     except Exception as e:
         push_log.error("Unexpected error during push", error=str(e), exc_info=True)

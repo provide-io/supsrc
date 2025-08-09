@@ -55,9 +55,7 @@ WARN_STYLE = "yellow"
 _CURRENT_CONFIG_PATH_CONTEXT: Path | None = None
 
 
-def _parse_duration(
-    duration_str: str, config_path_context: Path | None = None
-) -> timedelta:
+def _parse_duration(duration_str: str, config_path_context: Path | None = None) -> timedelta:
     """Parses duration string. Raises DurationValidationError."""
     log.debug("Parsing duration", duration_str=duration_str, emoji_key="time")
     pattern = re.compile(
@@ -86,17 +84,11 @@ def _parse_duration(
             exc_info=True,
             emoji_key="fail",
         )
-        raise DurationValidationError(
-            f"{msg}: {e}", duration_str, str(config_path_context)
-        ) from e
+        raise DurationValidationError(f"{msg}: {e}", duration_str, str(config_path_context)) from e
     if duration <= timedelta(0):
         msg = "Duration must be positive"
-        log.error(
-            msg, result=str(duration), duration_str=duration_str, emoji_key="fail"
-        )
-        raise DurationValidationError(
-            f"{msg}: {duration}", duration_str, str(config_path_context)
-        )
+        log.error(msg, result=str(duration), duration_str=duration_str, emoji_key="fail")
+        raise DurationValidationError(f"{msg}: {duration}", duration_str, str(config_path_context))
     log.debug(
         "Parsed duration",
         duration_str=duration_str,
@@ -114,9 +106,7 @@ converter = cattrs.Converter()
 def _structure_path_simple(path_str: str, type_hint: type[Path]) -> Path:
     """Cattrs structure hook for Path: Expands/resolves ONLY."""
     if not isinstance(path_str, str):
-        raise ConfigValidationError(
-            f"Path must be string, got: {type(path_str).__name__}"
-        )
+        raise ConfigValidationError(f"Path must be string, got: {type(path_str).__name__}")
     log.debug("Structuring path string", path_str=path_str, emoji_key="path")
     try:
         p = Path(path_str).expanduser().resolve()
@@ -138,9 +128,7 @@ def structure_rule_hook(data: Mapping[str, Any], cl: type[RuleConfig]) -> RuleCo
 
     rule_type = data.get("type")
     if not rule_type or not isinstance(rule_type, str):
-        raise ConfigValidationError(
-            "Rule configuration missing or invalid 'type' field."
-        )
+        raise ConfigValidationError("Rule configuration missing or invalid 'type' field.")
 
     # Map type string to the actual class (adjust paths if needed)
     type_map: dict[str, type[RuleConfig]] = {
@@ -205,9 +193,7 @@ def load_config(config_path: Path) -> SupsrcConfig:
         log.debug("TOML read OK.")
     except tomllib.TOMLDecodeError as e:
         msg = "Invalid TOML syntax"
-        log.error(
-            msg, path=str(config_path), error=str(e), exc_info=True, emoji_key="fail"
-        )
+        log.error(msg, path=str(config_path), error=str(e), exc_info=True, emoji_key="fail")
         raise ConfigParsingError(str(e), path=str(config_path), details=e) from e
 
     try:
@@ -241,9 +227,7 @@ def load_config(config_path: Path) -> SupsrcConfig:
             )
             try:
                 new_global_config = attrs.evolve(global_config, **global_overrides)
-                final_config_object = attrs.evolve(
-                    config_object, global_config=new_global_config
-                )
+                final_config_object = attrs.evolve(config_object, global_config=new_global_config)
             except Exception as evolve_exc:
                 log.error(
                     "Failed to apply environment variable overrides",

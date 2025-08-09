@@ -233,14 +233,10 @@ class GlobalDashboardWidget(Static):
         """Generate metrics content"""
         total_repos = len(self.repo_states)
         active_repos = sum(
-            1
-            for state in self.repo_states.values()
-            if state.status != RepositoryStatus.IDLE
+            1 for state in self.repo_states.values() if state.status != RepositoryStatus.IDLE
         )
         error_repos = sum(
-            1
-            for state in self.repo_states.values()
-            if state.status == RepositoryStatus.ERROR
+            1 for state in self.repo_states.values() if state.status == RepositoryStatus.ERROR
         )
         total_saves = sum(state.save_count for state in self.repo_states.values())
 
@@ -255,9 +251,7 @@ Saves: {total_saves}"""
             1
             for state in self.repo_states.values()
             if state.last_change_time
-            and (
-                state.status in [RepositoryStatus.CHANGED, RepositoryStatus.PROCESSING]
-            )
+            and (state.status in [RepositoryStatus.CHANGED, RepositoryStatus.PROCESSING])
         )
 
         return f"""Recent: {recent_changes}
@@ -416,9 +410,7 @@ class SupsrcEnhancedTuiApp(App):
                 yield GlobalDashboardWidget(id="dashboard")
             with Vertical(id="right-panel"):
                 yield RepositoryDetailWidget(id="repo-details")
-                yield EnhancedLogWidget(
-                    id="activity-log", highlight=True, max_lines=1000
-                )
+                yield EnhancedLogWidget(id="activity-log", highlight=True, max_lines=1000)
         yield Footer()
 
     def on_mount(self) -> None:
@@ -427,9 +419,7 @@ class SupsrcEnhancedTuiApp(App):
         self._update_sub_title("Initializing...")
 
         # Start orchestrator worker
-        self._worker = self.run_worker(
-            self._run_orchestrator, thread=True, group="orchestrator"
-        )
+        self._worker = self.run_worker(self._run_orchestrator, thread=True, group="orchestrator")
 
         # Start shutdown check timer
         self._shutdown_check_timer = self.set_interval(
@@ -441,9 +431,7 @@ class SupsrcEnhancedTuiApp(App):
     async def _run_orchestrator(self) -> None:
         """Run the orchestrator in a worker thread"""
         log.info("Orchestrator worker started.")
-        self._orchestrator = WatchOrchestrator(
-            self._config_path, self._shutdown_event, app=self
-        )
+        self._orchestrator = WatchOrchestrator(self._config_path, self._shutdown_event, app=self)
         try:
             await self._orchestrator.run()
         except Exception as e:
@@ -455,10 +443,7 @@ class SupsrcEnhancedTuiApp(App):
             self._update_sub_title("Orchestrator CRASHED!")
         finally:
             log.info("Orchestrator worker finished.")
-            if (
-                not self._shutdown_event.is_set()
-                and not self._cli_shutdown_event.is_set()
-            ):
+            if not self._shutdown_event.is_set() and not self._cli_shutdown_event.is_set():
                 log.warning("Orchestrator stopped unexpectedly, requesting TUI quit.")
                 self._update_sub_title("Orchestrator Stopped.")
                 self.call_later(self.action_quit)
@@ -466,9 +451,7 @@ class SupsrcEnhancedTuiApp(App):
     async def _check_external_shutdown(self) -> None:
         """Check for external shutdown signal"""
         if self._cli_shutdown_event.is_set() and not self._shutdown_event.is_set():
-            log.warning(
-                "External shutdown detected (CLI signal), stopping TUI and orchestrator."
-            )
+            log.warning("External shutdown detected (CLI signal), stopping TUI and orchestrator.")
             self._update_sub_title("Shutdown requested...")
             await self.action_quit()
 
@@ -477,10 +460,7 @@ class SupsrcEnhancedTuiApp(App):
         log.debug(f"Worker {event.worker.name!r} state changed to {event.state!r}")
         if event.worker == self._worker and event.state in ("SUCCESS", "ERROR"):
             log.info(f"Orchestrator worker stopped with state: {event.state!r}")
-            if (
-                not self._shutdown_event.is_set()
-                and not self._cli_shutdown_event.is_set()
-            ):
+            if not self._shutdown_event.is_set() and not self._cli_shutdown_event.is_set():
                 self.call_later(self.action_quit)
 
     # Action Methods

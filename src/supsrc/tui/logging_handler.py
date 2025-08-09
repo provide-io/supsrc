@@ -41,9 +41,7 @@ class TextualLogHandler(logging.Handler):
         # to provide the already formatted string via self.format(record).
         # So, an explicit renderer instance here might not be strictly needed for formatting,
         # but it was in the requirements. Let's keep it for now.
-        self.renderer = structlog.dev.ConsoleRenderer(
-            colors=True
-        )  # As per requirements
+        self.renderer = structlog.dev.ConsoleRenderer(colors=True)  # As per requirements
 
     def emit(self, record: logging.LogRecord) -> None:
         """

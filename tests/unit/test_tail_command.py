@@ -86,9 +86,7 @@ class TestTailCommand:
     def test_tail_with_invalid_config(self) -> None:
         """Test tail command with invalid config path."""
         runner = CliRunner()
-        result = runner.invoke(
-            cli, ["tail", "--config-path", "/nonexistent/config.conf"]
-        )
+        result = runner.invoke(cli, ["tail", "--config-path", "/nonexistent/config.conf"])
 
         assert result.exit_code != 0
         assert "Error" in result.output or "does not exist" in result.output

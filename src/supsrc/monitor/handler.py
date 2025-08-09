@@ -76,9 +76,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
         if gitignore_path.is_file():
             try:
                 with open(gitignore_path, encoding="utf-8") as f:
-                    spec = pathspec.PathSpec.from_lines(
-                        pathspec.patterns.GitWildMatchPattern, f
-                    )
+                    spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, f)
                 self.logger.info("Loaded .gitignore patterns", path=str(gitignore_path))
             except OSError as e:
                 self.logger.error(
@@ -105,23 +103,17 @@ class SupsrcEventHandler(FileSystemEventHandler):
         if norm_path_str.startswith(
             os.path.join(repo_path_str, ".git") + os.sep
         ) or norm_path_str == os.path.join(repo_path_str, ".git"):
-            self.logger.debug(
-                "Ignoring event inside .git directory", path=str(file_path)
-            )
+            self.logger.debug("Ignoring event inside .git directory", path=str(file_path))
             return True
 
         if self.gitignore_spec:
             try:
                 relative_path = file_path.relative_to(self.repo_path)
                 if self.gitignore_spec.match_file(str(relative_path)):
-                    self.logger.debug(
-                        "Ignoring event due to .gitignore match", path=str(file_path)
-                    )
+                    self.logger.debug("Ignoring event due to .gitignore match", path=str(file_path))
                     return True
             except ValueError:
-                self.logger.warning(
-                    "Event path not relative to repo path", path=str(file_path)
-                )
+                self.logger.warning("Event path not relative to repo path", path=str(file_path))
                 return True  # Ignore paths outside the repo being watched
         return False
 
@@ -135,9 +127,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
                 event_type=monitored_event.event_type,
                 path=str(monitored_event.src_path),
                 is_dir=monitored_event.is_directory,
-                dest=str(monitored_event.dest_path)
-                if monitored_event.dest_path
-                else None,
+                dest=str(monitored_event.dest_path) if monitored_event.dest_path else None,
             )
         except asyncio.QueueFull:
             self.logger.error(
@@ -191,9 +181,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
 
         # --- FIX: Use loop.call_soon_threadsafe ---
         if self.loop.is_running():
-            self.loop.call_soon_threadsafe(
-                self._queue_event_threadsafe, monitored_event
-            )
+            self.loop.call_soon_threadsafe(self._queue_event_threadsafe, monitored_event)
         else:
             # Should not happen if orchestrator is running, but log as warning
             self.logger.warning(
@@ -210,9 +198,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
         if not event.is_directory:
             self._process_and_queue_event(event)
         else:
-            self.logger.debug(
-                "Ignoring directory modification event", path=event.src_path
-            )
+            self.logger.debug("Ignoring directory modification event", path=event.src_path)
 
     def on_deleted(self, event: FileSystemEvent):
         self._process_and_queue_event(event)

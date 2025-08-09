@@ -120,9 +120,7 @@ class TestSupsrcTuiApp:
     """Test the main TUI application."""
 
     @pytest.fixture
-    def tui_app(
-        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
-    ) -> SupsrcTuiApp:
+    def tui_app(self, mock_config_path: Path, mock_shutdown_event: asyncio.Event) -> SupsrcTuiApp:
         """Create a TUI app instance for testing."""
         return SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
@@ -198,10 +196,12 @@ class TestSupsrcTuiApp:
 
     def test_on_state_update(self, tui_app: SupsrcTuiApp) -> None:
         """Test state update message handling."""
-        # Mock table
+        # Mock table with proper rows behavior
         mock_table = Mock()
-        mock_table.rows.keys.return_value = set()
-        mock_table.is_valid_row_key.return_value = False
+        mock_rows = Mock()
+        mock_rows.keys.return_value = set()
+        mock_rows.__contains__ = Mock(return_value=False)  # repo_id not in table
+        mock_table.rows = mock_rows
         tui_app.query_one = Mock(return_value=mock_table)
 
         # Create test state
@@ -220,6 +220,15 @@ class TestSupsrcTuiApp:
 
         # Should add row for new repository
         mock_table.add_row.assert_called_once()
+        # Verify the data contains expected information (permissive matching)
+        call_args = mock_table.add_row.call_args
+        row_data = call_args[0]  # positional args
+
+        # Check that essential data is present without exact matching
+        assert "✅" in str(row_data)  # Status emoji
+        assert "test-repo" in str(row_data)  # Repository name
+        assert "abc123" in str(row_data)  # Commit hash
+        assert "Test commit" in str(row_data)  # Commit message
 
     def test_on_log_message_update(self, tui_app: SupsrcTuiApp) -> None:
         """Test log message update handling."""
@@ -485,10 +494,15 @@ class TestTuiAccessibility:
         expected_bindings = {
             "d": "toggle_dark",
             "q": "quit",
+            "ctrl+c": "quit",
             "ctrl+l": "clear_log",
             "enter": "select_repo_for_detail",
             "escape": "hide_detail_pane",
             "r": "refresh_details",
+            "p": "pause_monitoring",
+            "s": "suspend_monitoring",
+            "c": "reload_config",
+            "h": "show_help",
         }
 
         for key, action in expected_bindings.items():

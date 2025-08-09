@@ -27,12 +27,8 @@ async def monitoring_setup(tmp_path: Path):
 
     # Initialize Git repository
     subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-    subprocess.run(
-        ["git", "config", "user.name", "Test User"], cwd=repo_path, check=True
-    )
-    subprocess.run(
-        ["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True
-    )
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True)
 
     # Create initial commit
     (repo_path / "README.md").write_text("Initial commit")
@@ -202,8 +198,7 @@ class TestMonitoringIntegration:
                 check=True,
             )
             assert (
-                "🔼⚙️ [skip ci] auto-commit" in result.stdout
-                or len(result.stdout.splitlines()) == 2
+                "🔼⚙️ [skip ci] auto-commit" in result.stdout or len(result.stdout.splitlines()) == 2
             )
 
         finally:
@@ -308,12 +303,8 @@ class TestConcurrency:
             repo_path = tmp_path / f"repo_{i}"
             repo_path.mkdir()
 
-            subprocess.run(
-                ["git", "init"], cwd=repo_path, check=True, capture_output=True
-            )
-            subprocess.run(
-                ["git", "config", "user.name", "Test User"], cwd=repo_path, check=True
-            )
+            subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True)
             subprocess.run(
                 ["git", "config", "user.email", "test@example.com"],
                 cwd=repo_path,

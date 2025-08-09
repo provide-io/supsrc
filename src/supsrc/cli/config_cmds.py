@@ -40,9 +40,7 @@ def config_cli():
 @click.option(
     "-c",
     "--config-path",
-    type=click.Path(
-        exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path
-    ),
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path),
     default=Path("supsrc.conf"),
     show_default=True,
     envvar="SUPSRC_CONF",  # <<< Added Environment Variable Support
@@ -51,9 +49,7 @@ def config_cli():
 )
 @logging_options  # Add decorator
 @click.pass_context  # Get context from the parent group (for log level etc)
-def show_config(
-    ctx: click.Context, config_path: Path, **kwargs
-):  # Add **kwargs to accept options
+def show_config(ctx: click.Context, config_path: Path, **kwargs):  # Add **kwargs to accept options
     """Load, validate, and display the configuration."""
     # Setup logging for this command
     setup_logging_from_context(
@@ -78,9 +74,7 @@ def show_config(
             pass
 
         # Check for disabled repos and inform user
-        disabled_count = sum(
-            1 for repo in config.repositories.values() if not repo._path_valid
-        )
+        disabled_count = sum(1 for repo in config.repositories.values() if not repo._path_valid)
         if disabled_count > 0:
             log.warning(
                 f"{disabled_count} repository path(s) were invalid and auto-disabled.",
@@ -90,9 +84,7 @@ def show_config(
             log.info("All repository paths validated successfully.")
 
     except ConfigurationError as e:
-        log.error(
-            "Failed to load or validate configuration", error=str(e), exc_info=True
-        )
+        log.error("Failed to load or validate configuration", error=str(e), exc_info=True)
         # Use click.echo for consistent CLI output, especially for errors
         click.echo(f"Error: Configuration problem in '{config_path}':\n{e}", err=True)
         ctx.exit(1)  # Exit with error code

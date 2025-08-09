@@ -86,9 +86,7 @@ class TestWatchCommand:
     def test_watch_with_invalid_config(self) -> None:
         """Test watch command with invalid config path."""
         runner = CliRunner()
-        result = runner.invoke(
-            cli, ["watch", "--config-path", "/nonexistent/config.conf"]
-        )
+        result = runner.invoke(cli, ["watch", "--config-path", "/nonexistent/config.conf"])
 
         assert result.exit_code != 0
 
@@ -153,9 +151,7 @@ class TestWatchCommand:
                 # Simulate TUI crash
                 mock_tui_app.side_effect = Exception("TUI crashed!")
 
-                result = runner.invoke(
-                    cli, ["watch", "--config-path", str(config_file)]
-                )
+                result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
 
         assert result.exit_code != 0
         assert "Error" in result.output or "crashed" in result.output
@@ -173,16 +169,10 @@ class TestWatchCommand:
                 mock_app_instance.run.side_effect = KeyboardInterrupt()
                 mock_tui_app.return_value = mock_app_instance
 
-                result = runner.invoke(
-                    cli, ["watch", "--config-path", str(config_file)]
-                )
+                result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
 
         # Should handle interrupt gracefully
-        assert (
-            "Stopping" in result.output
-            or "Exiting" in result.output
-            or result.exit_code == 0
-        )
+        assert "Stopping" in result.output or "Exiting" in result.output or result.exit_code == 0
 
 
 # 🧪👀

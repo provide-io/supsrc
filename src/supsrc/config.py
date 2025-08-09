@@ -58,9 +58,7 @@ WARN_STYLE = "yellow"
 # --- Helper Functions & Validators ---
 
 
-def _parse_duration(
-    duration_str: str, config_path_context: Path | None = None
-) -> timedelta:
+def _parse_duration(duration_str: str, config_path_context: Path | None = None) -> timedelta:
     """Parses duration string. Raises DurationValidationError."""
     log.debug("Parsing duration string", duration_str=duration_str, emoji_key="time")
     pattern = re.compile(
@@ -91,9 +89,7 @@ def _parse_duration(
             exc_info=True,
             emoji_key="fail",
         )
-        raise DurationValidationError(
-            f"{msg}: {e}", duration_str, str(config_path_context)
-        ) from e
+        raise DurationValidationError(f"{msg}: {e}", duration_str, str(config_path_context)) from e
 
     if duration <= timedelta(0):
         msg = "Duration must be positive"
@@ -103,9 +99,7 @@ def _parse_duration(
             duration_str=duration_str,
             emoji_key="fail",
         )
-        raise DurationValidationError(
-            f"{msg}: {duration}", duration_str, str(config_path_context)
-        )
+        raise DurationValidationError(f"{msg}: {duration}", duration_str, str(config_path_context))
 
     log.debug(
         "Parsed duration",
@@ -207,9 +201,7 @@ class SupsrcConfig:
     """Root configuration object for the supsrc application."""
 
     repositories: dict[str, RepositoryConfig] = field(factory=dict)
-    global_config: GlobalConfig = field(
-        factory=GlobalConfig, metadata={"toml_name": "global"}
-    )
+    global_config: GlobalConfig = field(factory=GlobalConfig, metadata={"toml_name": "global"})
 
 
 # --- Cattrs Converter and Hooks ---
@@ -221,9 +213,7 @@ _CURRENT_CONFIG_PATH_CONTEXT: Path | None = None  # Context for hooks
 def _structure_path_simple(path_str: str, type_hint: type[Path]) -> Path:
     """Cattrs structure hook for Path: Expands/resolves ONLY."""
     if not isinstance(path_str, str):
-        raise ConfigValidationError(
-            f"Path must be string, got: {type(path_str).__name__}"
-        )
+        raise ConfigValidationError(f"Path must be string, got: {type(path_str).__name__}")
     log.debug("Structuring path string", path_str=path_str, emoji_key="path")
     try:
         p = Path(path_str).expanduser().resolve()
@@ -325,9 +315,7 @@ def load_config(config_path: Path) -> SupsrcConfig:
         notes = getattr(e, "__notes__", None)
         if notes:
             details_str = "\nDetails:\n" + "\n".join(notes)
-        raise ConfigValidationError(
-            f"{e}{details_str}", path=str(config_path), details=e
-        ) from e
+        raise ConfigValidationError(f"{e}{details_str}", path=str(config_path), details=e) from e
     except Exception as e:
         log.critical(
             "Unexpected error during config structuring",

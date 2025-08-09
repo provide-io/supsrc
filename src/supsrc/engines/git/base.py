@@ -56,14 +56,10 @@ class GitEngine(RepositoryEngine):
             repo = pygit2.Repository(repo_path)
             return repo
         except pygit2.GitError as e:
-            self._log.error(
-                "Failed to open Git repository", path=str(working_dir), error=str(e)
-            )
+            self._log.error("Failed to open Git repository", path=str(working_dir), error=str(e))
             raise
 
-    def _get_config_value(
-        self, key: str, config: dict[str, Any], default: Any = None
-    ) -> Any:
+    def _get_config_value(self, key: str, config: dict[str, Any], default: Any = None) -> Any:
         """Safely gets a value from the engine-specific config dict."""
         return config.get(key, default)
 
@@ -86,9 +82,7 @@ class GitEngine(RepositoryEngine):
                 cred_log.info("Using SSH agent credentials.")
                 return credentials
             except pygit2.GitError as e:
-                cred_log.debug(
-                    "SSH agent authentication failed or not available", error=str(e)
-                )
+                cred_log.debug("SSH agent authentication failed or not available", error=str(e))
             except Exception as e:
                 cred_log.error(
                     "Unexpected error during SSH agent auth attempt",
@@ -129,16 +123,10 @@ class GitEngine(RepositoryEngine):
                 head_commit_message_summary=commit_msg_summary,
             )
         except pygit2.GitError as e:
-            self._log.error(
-                "Failed to get Git summary", path=str(working_dir), error=str(e)
-            )
-            return GitRepoSummary(
-                head_ref_name="ERROR", head_commit_message_summary=str(e)
-            )
+            self._log.error("Failed to get Git summary", path=str(working_dir), error=str(e))
+            return GitRepoSummary(head_ref_name="ERROR", head_commit_message_summary=str(e))
         except Exception as e:
-            self._log.exception(
-                "Unexpected error getting Git summary", path=str(working_dir)
-            )
+            self._log.exception("Unexpected error getting Git summary", path=str(working_dir))
             return GitRepoSummary(
                 head_ref_name="ERROR", head_commit_message_summary=f"Unexpected: {e}"
             )
@@ -172,9 +160,7 @@ class GitEngine(RepositoryEngine):
             pygit2_status = repo.status()
             if not pygit2_status and not repo.head_is_unborn:
                 status_log.debug("Repository is clean.")
-                return RepoStatusResult(
-                    success=True, is_clean=True, current_branch=current_branch
-                )
+                return RepoStatusResult(success=True, is_clean=True, current_branch=current_branch)
 
             has_staged = any(
                 s & pygit2.GIT_STATUS_INDEX_NEW
@@ -191,9 +177,7 @@ class GitEngine(RepositoryEngine):
                 or s & pygit2.GIT_STATUS_WT_RENAMED
                 for s in pygit2_status.values()
             )
-            has_untracked = any(
-                s & pygit2.GIT_STATUS_WT_NEW for s in pygit2_status.values()
-            )
+            has_untracked = any(s & pygit2.GIT_STATUS_WT_NEW for s in pygit2_status.values())
             is_clean = not (has_staged or has_unstaged or has_untracked)
 
             status_log.debug(
@@ -219,9 +203,7 @@ class GitEngine(RepositoryEngine):
             return RepoStatusResult(success=False, message=f"Git status error: {e}")
         except Exception as e:
             status_log.exception("Unexpected error getting Git status")
-            return RepoStatusResult(
-                success=False, message=f"Unexpected status error: {e}"
-            )
+            return RepoStatusResult(success=False, message=f"Unexpected status error: {e}")
 
     async def stage_changes(
         self,
@@ -328,9 +310,7 @@ class GitEngine(RepositoryEngine):
         summary_lines = []
         if added:
             summary_lines.append(f"Added ({len(added)}):")
-        summary_lines.extend(
-            [f"  {SUMMARY_ADDED_PREFIX}{f}" for f in added[:MAX_SUMMARY_FILES]]
-        )
+        summary_lines.extend([f"  {SUMMARY_ADDED_PREFIX}{f}" for f in added[:MAX_SUMMARY_FILES]])
         if len(added) > MAX_SUMMARY_FILES:
             summary_lines.append(f"  ... ({len(added) - MAX_SUMMARY_FILES} more)")
 
@@ -361,10 +341,7 @@ class GitEngine(RepositoryEngine):
         if typechanged:
             summary_lines.append(f"Type Changed ({len(typechanged)}):")
         summary_lines.extend(
-            [
-                f"  {SUMMARY_TYPECHANGE_PREFIX}{f}"
-                for f in typechanged[:MAX_SUMMARY_FILES]
-            ]
+            [f"  {SUMMARY_TYPECHANGE_PREFIX}{f}" for f in typechanged[:MAX_SUMMARY_FILES]]
         )
         if len(typechanged) > MAX_SUMMARY_FILES:
             summary_lines.append(f"  ... ({len(typechanged) - MAX_SUMMARY_FILES} more)")
@@ -392,9 +369,7 @@ class GitEngine(RepositoryEngine):
             diff: pygit2.Diff | None = None
             try:
                 if is_unborn:
-                    commit_log.debug(
-                        "Comparing index to empty tree (unborn HEAD for diff)"
-                    )
+                    commit_log.debug("Comparing index to empty tree (unborn HEAD for diff)")
                     diff = index.diff_to_tree(None) if len(index) > 0 else None
                 else:
                     head_commit = repo.head.peel()
@@ -409,11 +384,7 @@ class GitEngine(RepositoryEngine):
                     error=str(diff_err),
                 )
 
-            if (
-                diff is not None
-                and not diff.deltas
-                and not (is_unborn and len(index) > 0)
-            ):
+            if diff is not None and not diff.deltas and not (is_unborn and len(index) > 0):
                 commit_log.info("Commit skipped: No changes detected in diff.")
                 return CommitResult(
                     success=True,
@@ -432,24 +403,18 @@ class GitEngine(RepositoryEngine):
             try:
                 signature = repo.default_signature
             except pygit2.GitError:
-                commit_log.warning(
-                    "Git user name/email not configured, using fallback."
-                )
+                commit_log.warning("Git user name/email not configured, using fallback.")
                 fallback_name = "Supsrc Automation"
                 fallback_email = "supsrc@example.com"
                 timestamp = int(datetime.now(UTC).timestamp())
                 offset = 0  # UTC
-                signature = pygit2.Signature(
-                    fallback_name, fallback_email, timestamp, offset
-                )
+                signature = pygit2.Signature(fallback_name, fallback_email, timestamp, offset)
 
             # Commit message
             change_summary_str = ""
             if diff is not None:
                 change_summary_str = self._generate_change_summary(diff)
-                commit_log.debug(
-                    "Generated change summary", summary_length=len(change_summary_str)
-                )
+                commit_log.debug("Generated change summary", summary_length=len(change_summary_str))
             else:
                 commit_log.debug(
                     "Skipping change summary generation as diff was not available/empty."
@@ -461,16 +426,10 @@ class GitEngine(RepositoryEngine):
                 "🔼⚙️ [skip ci] auto-commit\n\n{{change_summary}}",
             )
             timestamp_str = datetime.now(UTC).isoformat()
-            commit_message = commit_message_template_str.replace(
-                "{{timestamp}}", timestamp_str
-            )
+            commit_message = commit_message_template_str.replace("{{timestamp}}", timestamp_str)
             commit_message = commit_message.replace("{{repo_id}}", state.repo_id)
-            commit_message = commit_message.replace(
-                "{{save_count}}", str(state.save_count)
-            )
-            commit_message = commit_message.replace(
-                "{{change_summary}}", change_summary_str
-            )
+            commit_message = commit_message.replace("{{save_count}}", str(state.save_count))
+            commit_message = commit_message.replace("{{change_summary}}", change_summary_str)
             commit_message = commit_message.rstrip()
 
             # Parents
@@ -490,18 +449,12 @@ class GitEngine(RepositoryEngine):
                 is_unborn_check=is_unborn,
             )
             if tree_oid is None:
-                commit_log.error(
-                    "tree_oid is None before create_commit, this will fail."
-                )
-                raise ValueError(
-                    "Cannot create commit: tree_oid is None after index.write_tree()."
-                )
+                commit_log.error("tree_oid is None before create_commit, this will fail.")
+                raise ValueError("Cannot create commit: tree_oid is None after index.write_tree().")
 
             commit_hash: str
             if is_unborn:
-                commit_log.info(
-                    "Performing explicit initial commit sequence for unborn HEAD."
-                )
+                commit_log.info("Performing explicit initial commit sequence for unborn HEAD.")
                 commit_oid_obj = repo.create_commit(
                     None, signature, signature, commit_message, tree_oid, parents
                 )
@@ -524,9 +477,7 @@ class GitEngine(RepositoryEngine):
                 )
             else:
                 ref_to_update = "HEAD"
-                commit_log.info(
-                    f"Performing commit, updating reference: {ref_to_update}"
-                )
+                commit_log.info(f"Performing commit, updating reference: {ref_to_update}")
                 commit_oid_obj = repo.create_commit(
                     ref_to_update,
                     signature,
@@ -561,9 +512,7 @@ class GitEngine(RepositoryEngine):
             )
             return CommitResult(success=False, message=str(e))
         except Exception as e:
-            commit_log.exception(
-                "Unexpected error performing commit", is_unborn=is_unborn
-            )
+            commit_log.exception("Unexpected error performing commit", is_unborn=is_unborn)
             return CommitResult(success=False, message=f"Unexpected commit error: {e}")
 
     async def perform_push(
@@ -579,9 +528,7 @@ class GitEngine(RepositoryEngine):
         auto_push = self._get_config_value("auto_push", config, False)
         if not auto_push:
             push_log.info("Push skipped (disabled by configuration).")
-            return PushResult(
-                success=True, message="Push skipped (disabled).", skipped=True
-            )
+            return PushResult(success=True, message="Push skipped (disabled).", skipped=True)
 
         remote_name = self._get_config_value("remote", config, "origin")
         branch_name = self._get_config_value("branch", config, None)
@@ -613,9 +560,7 @@ class GitEngine(RepositoryEngine):
             refspec = f"refs/heads/{branch_name}"
 
             callbacks = pygit2.RemoteCallbacks(credentials=self._credentials_callback)
-            push_log.debug(
-                "Attempting push with callbacks", remote=remote_name, refspec=refspec
-            )
+            push_log.debug("Attempting push with callbacks", remote=remote_name, refspec=refspec)
             remote.push([refspec], callbacks=callbacks)
 
             push_log.info(f"Push successful to {remote_name}/{branch_name}.")
@@ -636,7 +581,9 @@ class GitEngine(RepositoryEngine):
         except pygit2.GitError as e:
             push_log.error("Failed to perform push", error=str(e))
             if "authentication required" in str(e).lower():
-                msg = "Git push error: Authentication failed (check SSH agent or credential config)."
+                msg = (
+                    "Git push error: Authentication failed (check SSH agent or credential config)."
+                )
             elif "could not resolve host" in str(e).lower():
                 msg = "Git push error: Network error or invalid remote."
             elif "rejected" in str(e).lower():

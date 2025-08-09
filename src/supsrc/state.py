@@ -93,9 +93,7 @@ class RepositoryState:
             initial_status=self.status.name,
         )
 
-    def update_status(
-        self, new_status: RepositoryStatus, error_msg: str | None = None
-    ) -> None:
+    def update_status(self, new_status: RepositoryStatus, error_msg: str | None = None) -> None:
         """Safely updates the status and optionally logs errors or recovery."""
         old_status = self.status
         if old_status == new_status:
@@ -114,10 +112,7 @@ class RepositoryState:
             self.error_message = error_msg or "Unknown error"
             log_func = log.warning  # Elevate log level for errors
             # Optionally set last_error_time here
-        elif (
-            old_status == RepositoryStatus.ERROR
-            and new_status != RepositoryStatus.ERROR
-        ):
+        elif old_status == RepositoryStatus.ERROR and new_status != RepositoryStatus.ERROR:
             log.info(  # Log recovery specifically at INFO level
                 "Repository status recovered from ERROR",
                 repo_id=self.repo_id,
@@ -133,11 +128,7 @@ class RepositoryState:
             repo_id=self.repo_id,
             old_status=old_status.name,
             new_status=new_status.name,
-            **(
-                {"error": self.error_message}
-                if new_status == RepositoryStatus.ERROR
-                else {}
-            ),
+            **({"error": self.error_message} if new_status == RepositoryStatus.ERROR else {}),
         )
 
         # Reset relevant fields on transition back to IDLE or CHANGED?
@@ -167,9 +158,7 @@ class RepositoryState:
         self.save_count = 0
         # Keep last_change_time as the time of the action, or clear it?
         # Clearing might be simpler for inactivity logic.
-        self.last_change_time = (
-            None  # Cleared to allow inactivity rule to reset properly
-        )
+        self.last_change_time = None  # Cleared to allow inactivity rule to reset properly
         self.active_rule_description = None  # Clear specific action/wait messages
         # self.error_message is cleared by update_status if moving out of ERROR
 
@@ -189,9 +178,7 @@ class RepositoryState:
         # Cancel any previous timer before setting a new one
         self.cancel_inactivity_timer()
         self.inactivity_timer_handle = handle
-        log.debug(
-            "Inactivity timer set", repo_id=self.repo_id, timer_handle=repr(handle)
-        )
+        log.debug("Inactivity timer set", repo_id=self.repo_id, timer_handle=repr(handle))
 
     def cancel_inactivity_timer(self) -> None:
         """Cancels the pending inactivity timer, if one exists."""

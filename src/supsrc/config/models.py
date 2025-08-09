@@ -108,9 +108,7 @@ class SupsrcConfig:
     """Root configuration object for the supsrc application."""
 
     repositories: dict[str, RepositoryConfig] = field(factory=dict)
-    global_config: GlobalConfig = field(
-        factory=GlobalConfig, metadata={"toml_name": "global"}
-    )
+    global_config: GlobalConfig = field(factory=GlobalConfig, metadata={"toml_name": "global"})
 
 
 # 🔼⚙️

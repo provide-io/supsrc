@@ -33,25 +33,19 @@ class ConfigurationError(SupsrcError):
 class ConfigFileNotFoundError(ConfigurationError, FileNotFoundError):
     """Raised when the specified configuration file cannot be found."""
 
-    def __init__(
-        self, message: str = "Configuration file not found", path: str | None = None
-    ):
+    def __init__(self, message: str = "Configuration file not found", path: str | None = None):
         super().__init__(message, path=path)
 
 
 class ConfigParsingError(ConfigurationError):
     """Raised when the configuration file has invalid syntax (e.g., invalid TOML)."""
 
-    def __init__(
-        self, message: str, path: str | None = None, details: Exception | None = None
-    ):
+    def __init__(self, message: str, path: str | None = None, details: Exception | None = None):
         self.details = details  # Store original parsing exception if available
         full_message = f"Failed to parse configuration file: {message}"
         super().__init__(full_message, path=path)
         if details and hasattr(self, "add_note"):
-            self.add_note(
-                f"Original parsing error: {type(details).__name__}: {details}"
-            )
+            self.add_note(f"Original parsing error: {type(details).__name__}: {details}")
 
 
 class ConfigValidationError(ConfigurationError):
@@ -60,16 +54,12 @@ class ConfigValidationError(ConfigurationError):
     but fails semantic validation (e.g., missing required fields, invalid values).
     """
 
-    def __init__(
-        self, message: str, path: str | None = None, details: Exception | None = None
-    ):
+    def __init__(self, message: str, path: str | None = None, details: Exception | None = None):
         self.details = details  # Store original validation exception if available
         full_message = f"Configuration validation failed: {message}"
         super().__init__(full_message, path=path)
         if details and hasattr(self, "add_note"):
-            self.add_note(
-                f"Original validation error: {type(details).__name__}: {details}"
-            )
+            self.add_note(f"Original validation error: {type(details).__name__}: {details}")
 
 
 class PathValidationError(ConfigValidationError):
@@ -96,9 +86,7 @@ class DurationValidationError(ConfigValidationError):
 class MonitoringError(SupsrcError):
     """Base class for errors related to file system monitoring."""
 
-    def __init__(
-        self, message: str, repo_id: str | None = None, path: str | None = None
-    ):
+    def __init__(self, message: str, repo_id: str | None = None, path: str | None = None):
         self.repo_id = repo_id
         self.path = path
         full_message = f"{message}"

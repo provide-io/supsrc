@@ -18,9 +18,7 @@ from supsrc.telemetry.logger import setup_logging as core_setup_logging
 log = structlog.get_logger("cli.utils")
 
 # Define choices based on standard logging levels
-LOG_LEVEL_CHOICES = click.Choice(
-    list(logging._nameToLevel.keys()), case_sensitive=False
-)
+LOG_LEVEL_CHOICES = click.Choice(list(logging._nameToLevel.keys()), case_sensitive=False)
 
 
 def logging_options(f):
@@ -77,9 +75,7 @@ def setup_logging_from_context(
     # For flags, None means "not set by this command", so check context
     # If context also has None (meaning not set by global CLI option), then use a default (False).
     use_json_logs = (
-        local_json_logs
-        if local_json_logs is not None
-        else ctx.obj.get("JSON_LOGS", False)
+        local_json_logs if local_json_logs is not None else ctx.obj.get("JSON_LOGS", False)
     )
 
     # file_only_logs: True if this command sets it, else check context, else default to False.

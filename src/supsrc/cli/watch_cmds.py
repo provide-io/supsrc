@@ -57,9 +57,7 @@ async def _handle_signal_async(sig: int):
 @click.option(
     "-c",
     "--config-path",
-    type=click.Path(
-        exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path
-    ),
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path),
     default=Path("supsrc.conf"),
     show_default=True,
     envvar="SUPSRC_CONF",
@@ -88,12 +86,8 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
 
     # Always run in TUI mode
     if not TEXTUAL_AVAILABLE or SupsrcTuiApp is None:
-        click.echo(
-            "Error: watch command requires 'supsrc[tui]' to be installed.", err=True
-        )
-        click.echo(
-            "Hint: pip install 'supsrc[tui]' or uv tool install -e '.[tui]'", err=True
-        )
+        click.echo("Error: watch command requires 'supsrc[tui]' to be installed.", err=True)
+        click.echo("Hint: pip install 'supsrc[tui]' or uv tool install -e '.[tui]'", err=True)
         ctx.exit(1)
 
     log.info("Initializing interactive dashboard...")

@@ -72,9 +72,7 @@ class GitCredentialManager:
         if allowed_types & pygit2.GIT_CREDENTIAL_DEFAULT:
             cred_log.debug("Attempting default credential resolution")
             try:
-                return pygit2.credentials.Username(
-                    username_from_url or getpass.getuser()
-                )
+                return pygit2.credentials.Username(username_from_url or getpass.getuser())
             except Exception as e:
                 cred_log.debug("Default credentials failed", error=str(e))
 
@@ -142,9 +140,7 @@ class GitCredentialManager:
             return None
 
         try:
-            cred_log.debug(
-                "Attempting username/password authentication", username=git_username
-            )
+            cred_log.debug("Attempting username/password authentication", username=git_username)
             return pygit2.credentials.UserPass(git_username, git_password)
 
         except Exception as e:
@@ -185,13 +181,9 @@ class RemoteCallbacks(pygit2.RemoteCallbacks):
             allowed_types=allowed_types,
         )
 
-        return self.credential_manager.get_credentials(
-            url, username_from_url, allowed_types
-        )
+        return self.credential_manager.get_credentials(url, username_from_url, allowed_types)
 
-    def update_tips(
-        self, refname: str, old_oid: pygit2.Oid, new_oid: pygit2.Oid
-    ) -> None:
+    def update_tips(self, refname: str, old_oid: pygit2.Oid, new_oid: pygit2.Oid) -> None:
         """Log reference updates."""
         self._log.debug(
             "Reference updated",

@@ -70,9 +70,7 @@ def setup_logging(
         structlog.contextvars.merge_contextvars,  # Merge contextvars if used
         structlog.stdlib.add_logger_name,  # Adds logger name (e.g., 'supsrc.config.loader')
         structlog.stdlib.add_log_level,  # Adds log level name (e.g., 'info')
-        structlog.processors.TimeStamper(
-            fmt="iso", utc=True
-        ),  # Add ISO timestamp in UTC
+        structlog.processors.TimeStamper(fmt="iso", utc=True),  # Add ISO timestamp in UTC
         # --- Custom processors ---
         add_emoji_processor,  # Custom: Add emoji based on level or key
         # add_padded_logger_processor,         # <<< REMOVED >>>
@@ -175,16 +173,12 @@ def setup_logging(
 
         textual_handler = TextualLogHandler(app=tui_app_instance)
         textual_handler.setLevel(level)  # Use the same overall log level
-        textual_handler.setFormatter(
-            formatter
-        )  # Use the same formatter as the console handler
+        textual_handler.setFormatter(formatter)  # Use the same formatter as the console handler
 
         root_logger.addHandler(textual_handler)
         slog.info("TextualLogHandler added to root logger for TUI.")
     elif _is_tui_active and not tui_app_instance:
-        slog.warning(
-            "TUI mode is active but no TUI app instance was provided to logging setup."
-        )
+        slog.warning("TUI mode is active but no TUI app instance was provided to logging setup.")
 
     # Final log message about initialization status
     slog.info(

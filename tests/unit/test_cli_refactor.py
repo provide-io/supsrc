@@ -54,16 +54,11 @@ class TestCLIRefactoring:
 
         # tail should be for following changes
         assert "tail" in result.output
-        assert (
-            "follow" in result.output.lower() or "changes" in result.output.lower()
-        )
+        assert "follow" in result.output.lower() or "changes" in result.output.lower()
 
         # watch should be for interactive monitoring
         assert "watch" in result.output
-        assert (
-            "interactive" in result.output.lower()
-            or "dashboard" in result.output.lower()
-        )
+        assert "interactive" in result.output.lower() or "dashboard" in result.output.lower()
 
     def test_command_descriptions_are_clear(self) -> None:
         """Test that command descriptions clearly differentiate tail vs watch."""

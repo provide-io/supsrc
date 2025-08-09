@@ -83,9 +83,7 @@ class PushResult(PluginResultBase):
 class Rule(Protocol):
     """Protocol for a rule that determines if an action should trigger."""
 
-    def check(
-        self, state: RepositoryState, config: Any, global_config: GlobalConfig
-    ) -> bool:
+    def check(self, state: RepositoryState, config: Any, global_config: GlobalConfig) -> bool:
         """
         Checks if the rule's condition is met based on state and config.
 

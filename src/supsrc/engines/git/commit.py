@@ -88,9 +88,7 @@ async def perform_git_commit(
 
         # Get necessary references
         index = await run_pygit2_async(repo.index)
-        tree_oid = await run_pygit2_async(
-            index.write_tree
-        )  # Create tree object from index
+        tree_oid = await run_pygit2_async(index.write_tree)  # Create tree object from index
         log.debug("Created tree for commit", oid=str(tree_oid))
 
         try:
@@ -103,9 +101,7 @@ async def perform_git_commit(
             log.debug("Found parent commit", oid=str(parent_commit_oid), ref=head_ref)
         except pygit2.GitError as head_error:
             # Handle case for initial commit (no HEAD or unborn branch)
-            log.warning(
-                "Could not resolve HEAD, likely initial commit.", error=str(head_error)
-            )
+            log.warning("Could not resolve HEAD, likely initial commit.", error=str(head_error))
             parents = []  # No parents for the first commit
             # Determine the ref to update (e.g., refs/heads/main) - might need config
             head_ref = config.get("initial_commit_ref", "refs/heads/main")
@@ -120,9 +116,7 @@ async def perform_git_commit(
                     "No changes detected between index and parent commit, skipping empty commit.",
                     repo_path=str(working_dir),
                 )
-                return CommitResult(
-                    success=True, message="No changes to commit.", commit_hash=None
-                )
+                return CommitResult(success=True, message="No changes to commit.", commit_hash=None)
 
         # Create the commit object
         commit_oid = await run_pygit2_async(
@@ -135,13 +129,9 @@ async def perform_git_commit(
             parents,  # List of parent commit OIDs
         )
         commit_hash = str(commit_oid)
-        log.info(
-            "Commit created successfully", repo_path=str(working_dir), hash=commit_hash
-        )
+        log.info("Commit created successfully", repo_path=str(working_dir), hash=commit_hash)
 
-        return CommitResult(
-            success=True, message="Commit successful.", commit_hash=commit_hash
-        )
+        return CommitResult(success=True, message="Commit successful.", commit_hash=commit_hash)
 
     except Exception as e:
         log.error(
@@ -152,9 +142,7 @@ async def perform_git_commit(
         )
         if isinstance(e, GitCommitError):
             raise
-        raise GitCommitError(
-            f"Failed to commit: {e}", repo_path=str(working_dir), details=e
-        ) from e
+        raise GitCommitError(f"Failed to commit: {e}", repo_path=str(working_dir), details=e) from e
 
 
 # 🔼⚙️

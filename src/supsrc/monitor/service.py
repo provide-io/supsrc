@@ -62,9 +62,7 @@ class MonitoringService:
                 path=str(repo_path),
             )
 
-        self._logger.info(
-            "Adding repository to monitor", repo_id=repo_id, path=str(repo_path)
-        )
+        self._logger.info("Adding repository to monitor", repo_id=repo_id, path=str(repo_path))
         # --- FIX: Pass the loop to the handler ---
         handler = SupsrcEventHandler(
             repo_id=repo_id,
@@ -108,9 +106,7 @@ class MonitoringService:
             log.debug("Calling observer.start()")
             self._observer.start()
             self._is_running = True
-            self._logger.info(
-                "Monitoring service started", num_handlers=len(self._handlers)
-            )
+            self._logger.info("Monitoring service started", num_handlers=len(self._handlers))
             log.debug("observer.start() finished")
         except Exception as e:
             self._logger.critical(
@@ -141,9 +137,7 @@ class MonitoringService:
                     timeout=7.0,  # Outer timeout for the to_thread operation itself
                 )
                 join_success = True
-                log.debug(
-                    "asyncio.to_thread(observer.join) completed within outer timeout."
-                )
+                log.debug("asyncio.to_thread(observer.join) completed within outer timeout.")
             except TimeoutError:
                 log.error(
                     "Outer timeout (7s) reached while waiting for observer.join via asyncio.to_thread.",
@@ -158,9 +152,7 @@ class MonitoringService:
                 )
                 # join_success remains False
             if self._observer.is_alive():
-                self._logger.warning(
-                    "Observer thread did not stop within timeout or failed join."
-                )
+                self._logger.warning("Observer thread did not stop within timeout or failed join.")
             else:
                 if join_success:
                     thread_stopped = True
@@ -168,9 +160,7 @@ class MonitoringService:
                 else:
                     self._logger.warning("Observer thread stopped but join failed.")
         except Exception as e:
-            self._logger.error(
-                "Error stopping monitoring observer", error=str(e), exc_info=True
-            )
+            self._logger.error("Error stopping monitoring observer", error=str(e), exc_info=True)
         finally:
             self._is_running = False
             if thread_stopped:
@@ -185,9 +175,7 @@ class MonitoringService:
         """Returns True if the observer thread is currently active."""
         # (Implementation remains the same)
         observer_alive = (
-            hasattr(self, "_observer")
-            and self._observer is not None
-            and self._observer.is_alive()
+            hasattr(self, "_observer") and self._observer is not None and self._observer.is_alive()
         )
         return self._is_running and observer_alive
 
