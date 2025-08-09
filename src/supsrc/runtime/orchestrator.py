@@ -107,6 +107,8 @@ class WatchOrchestrator:
         self._running_tasks: set[asyncio.Task[Any]] = set()
         self._log = log.bind(orchestrator_id=id(self))
         self._is_tui_active = bool(self.app)  # Flag for easier checking
+        self._is_paused = False
+        self._is_suspended = False
 
     # --- Console and TUI Update Helpers ---
 
@@ -560,6 +562,19 @@ class WatchOrchestrator:
                     shutdown_wait_task.cancel()
                     with suppress(asyncio.CancelledError):
                         await shutdown_wait_task
+
+                # --- Check if paused ---
+                if self._is_paused:
+                    consumer_log.info(
+                        "Monitoring is PAUSED, skipping event processing",
+                        repo_id=repo_id,
+                        event_type=event.event_type,
+                    )
+                    # Put the event back in the queue for later processing
+                    await self.event_queue.put(event)
+                    # Sleep a bit to avoid busy loop while paused
+                    await asyncio.sleep(0.5)
+                    continue
 
                 # --- Process Event ---
                 processed_event_count += 1
@@ -1269,6 +1284,53 @@ class WatchOrchestrator:
             "commit_history": commit_history,
             # Add other details here in the future if needed
         }
+    
+    # --- Pause/Suspend Control Methods ---
+    
+    def pause_monitoring(self) -> None:
+        """Pause monitoring - events are queued but not processed."""
+        self._is_paused = True
+        self._log.info("Monitoring PAUSED")
+        if self.monitor_service:
+            # We'll still receive events but not process them
+            pass
+    
+    def suspend_monitoring(self) -> None:
+        """Suspend monitoring - stronger than pause, stops file watching."""
+        self._is_suspended = True
+        self._is_paused = True  # Suspend implies pause
+        self._log.info("Monitoring SUSPENDED")
+        if self.monitor_service:
+            # Actually stop the watchers
+            self.monitor_service.stop()
+    
+    def resume_monitoring(self) -> None:
+        """Resume monitoring from pause or suspend state."""
+        was_suspended = self._is_suspended
+        self._is_paused = False
+        self._is_suspended = False
+        
+        if was_suspended:
+            self._log.info("Monitoring RESUMED from suspension")
+            # Restart the monitor service if it was suspended
+            if self.monitor_service and self.config:
+                self._log.info("Restarting monitor service...")
+                asyncio.create_task(self._restart_monitor_service())
+        else:
+            self._log.info("Monitoring RESUMED from pause")
+    
+    async def _restart_monitor_service(self) -> None:
+        """Restart the monitor service after suspension."""
+        if not self.config:
+            return
+            
+        # Start fresh monitor service
+        self.monitor_service = MonitoringService(self.event_queue, self.config)
+        
+        # Restart monitoring for each repository
+        for repo_id, repo_config in self.config.repositories.items():
+            if repo_config.enabled:
+                await self.monitor_service.start_monitoring(repo_id, repo_config)
 
 
 # 🔼⚙️

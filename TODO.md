@@ -26,7 +26,7 @@
 ## 🎯 Medium Priority - Enhanced Features
 
 ### Git Operations
-- [ ] **Commit Composer (LLM Integration)** - Send git diff to LLM for intelligent commit message suggestions
+- [ ] **Commit Cook (LLM Integration)** - Cook up intelligent commit messages from git diffs
 - [ ] **Auto-save to different sessions** - Based on time period between last commit and save
 - [ ] **Advanced tqdm integration** - Status spinner when pushing/pulling
 - [ ] **Auto-freeze on conflict** - Push notification (macOS corner notification) when issues arise

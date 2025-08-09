@@ -86,6 +86,8 @@ class SupsrcTuiApp(App):
         ("enter", "select_repo_for_detail", "View Details"),
         ("escape", "hide_detail_pane", "Hide Details"),
         ("r", "refresh_details", "Refresh Details"),
+        ("p", "pause_monitoring", "Pause/Resume Monitoring"),
+        ("s", "suspend_monitoring", "Suspend Monitoring"),
         ("tab", "focus_next", "Next Panel"),
         ("shift+tab", "focus_previous", "Previous Panel"),
     ]
@@ -169,6 +171,8 @@ class SupsrcTuiApp(App):
         self._worker: Worker | None = None
         self._timer_manager = TimerManager(self)
         self._is_shutting_down = False
+        self._is_paused = False
+        self._is_suspended = False
 
     def compose(self) -> ComposeResult:
         """Compose the TUI layout with improved structure."""
@@ -396,6 +400,40 @@ class SupsrcTuiApp(App):
             self.post_message(LogMessageUpdate(None, "INFO", "Log cleared."))
         except Exception as e:
             log.error("Failed to clear TUI log", error=str(e))
+
+    def action_pause_monitoring(self) -> None:
+        """Toggle pause state for monitoring."""
+        self._is_paused = not self._is_paused
+        
+        if self._is_paused:
+            self._update_sub_title("⏸️  Monitoring PAUSED")
+            self.post_message(LogMessageUpdate(None, "WARNING", "⏸️  Monitoring PAUSED - Press 'p' to resume"))
+            # Tell orchestrator to pause
+            if self._orchestrator:
+                self._orchestrator.pause_monitoring()
+        else:
+            self._update_sub_title("▶️  Monitoring RESUMED")
+            self.post_message(LogMessageUpdate(None, "INFO", "▶️  Monitoring RESUMED"))
+            # Tell orchestrator to resume
+            if self._orchestrator:
+                self._orchestrator.resume_monitoring()
+    
+    def action_suspend_monitoring(self) -> None:
+        """Suspend monitoring (stronger than pause)."""
+        if not self._is_suspended:
+            self._is_suspended = True
+            self._update_sub_title("⏹️  Monitoring SUSPENDED")
+            self.post_message(LogMessageUpdate(None, "WARNING", "⏹️  Monitoring SUSPENDED - Press 's' to resume"))
+            # Tell orchestrator to suspend
+            if self._orchestrator:
+                self._orchestrator.suspend_monitoring()
+        else:
+            self._is_suspended = False
+            self._update_sub_title("▶️  Monitoring RESUMED from suspension")
+            self.post_message(LogMessageUpdate(None, "INFO", "▶️  Monitoring RESUMED from suspension"))
+            # Tell orchestrator to resume from suspension
+            if self._orchestrator:
+                self._orchestrator.resume_monitoring()
 
     async def action_quit(self) -> None:
         """Quit the application gracefully."""
