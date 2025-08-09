@@ -130,8 +130,9 @@ class WatchOrchestrator:
             try:
                 # Create a copy for thread safety/mutability concerns
                 states_copy = {rid: attrs.evolve(state) for rid, state in self.repo_states.items()}
-                # Directly post the message without call_later as post_message is thread-safe
-                self.app.post_message(StateUpdate(states_copy))
+                self._safe_log("debug", f"Posting state update to TUI with {len(states_copy)} repositories")
+                # Use call_later for thread safety from worker thread
+                self.app.call_later(self.app.post_message, StateUpdate(states_copy))
             except Exception as e:
                  self._safe_log("warning", "Failed to post state update to TUI", error=str(e))
 
