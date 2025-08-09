@@ -252,19 +252,31 @@ class WatchOrchestrator:
                 raise SupsrcError(f"Failed to get repository status: {status_result.message}")
 
             if status_result.is_conflicted:
-                callback_log.warning("Action Skipped: Repository has conflicts.")
-                repo_state.action_description = "Skipped (conflicts)"
-                repo_state.action_progress_total = None
-                repo_state.action_progress_completed = None
-                repo_state.display_status_emoji = "❌"
+                callback_log.warning("Repository has merge conflicts. Auto-freezing repository.")
                 self._console_message(
-                    "Action failed: Conflicts detected. See logs for details.",
+                    "⚠️ CONFLICT DETECTED! Repository frozen.",
                     repo_id=repo_id,
-                    style="red bold",
-                    emoji="❌",
+                    style="bold yellow on red",
+                    emoji="🧊",
                 )
-                # self._post_tui_log(repo_id, "ERROR", "Action skipped: Conflicts detected!") # Redundant
-                repo_state.update_status(RepositoryStatus.ERROR, "Conflicts detected")
+                
+                # Auto-freeze the repository
+                repo_state.is_frozen = True
+                repo_state.freeze_reason = "Merge conflicts detected"
+                repo_state.display_status_emoji = "🧊"
+                repo_state.action_description = "Frozen (conflicts)"
+                repo_state.update_status(RepositoryStatus.ERROR, "Frozen: Merge conflicts")
+                
+                # Send macOS notification if available
+                try:
+                    import subprocess
+                    subprocess.run([
+                        "osascript", "-e",
+                        f'display notification "Merge conflicts in {repo_id}" with title "Supsrc: Repository Frozen" sound name "Basso"'
+                    ], check=False)
+                except Exception:
+                    pass  # Ignore notification errors
+                    
                 self._post_tui_state_update()
                 return
 
@@ -551,6 +563,21 @@ class WatchOrchestrator:
                     # Put the event back in the queue for later processing
                     await self.event_queue.put(event)
                     # Sleep a bit to avoid busy loop while paused
+                    await asyncio.sleep(0.5)
+                    continue
+
+                # --- Check if repository is individually paused/frozen ---
+                repo_state = self.repo_states.get(repo_id) if repo_id != "__config__" else None
+                if repo_state and (repo_state.is_paused or repo_state.is_frozen):
+                    consumer_log.info(
+                        "Repository is individually paused/frozen, skipping event",
+                        repo_id=repo_id,
+                        is_paused=repo_state.is_paused,
+                        is_frozen=repo_state.is_frozen,
+                        freeze_reason=repo_state.freeze_reason,
+                    )
+                    # Put the event back in the queue for later processing
+                    await self.event_queue.put(event)
                     await asyncio.sleep(0.5)
                     continue
 
