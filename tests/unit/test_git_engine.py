@@ -65,9 +65,7 @@ class TestGitEngine:
     """Test GitEngine functionality."""
 
     async def test_get_summary_normal_repo(
-        self,
-        git_engine: GitEngine,
-        git_repo_path: Path
+        self, git_engine: GitEngine, git_repo_path: Path
     ) -> None:
         """Test getting summary from a normal repository."""
         summary = await git_engine.get_summary(git_repo_path)
@@ -80,9 +78,7 @@ class TestGitEngine:
         assert summary.head_commit_message_summary == "Initial commit"
 
     async def test_get_summary_nonexistent_repo(
-        self,
-        git_engine: GitEngine,
-        tmp_path: Path
+        self, git_engine: GitEngine, tmp_path: Path
     ) -> None:
         """Test getting summary from a non-existent repository."""
         nonexistent_path = tmp_path / "nonexistent"
@@ -97,7 +93,7 @@ class TestGitEngine:
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test getting status from a clean repository."""
         config = {"type": "supsrc.engines.git"}
@@ -119,7 +115,7 @@ class TestGitEngine:
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test getting status from a repository with changes."""
         config = {"type": "supsrc.engines.git"}
@@ -145,7 +141,7 @@ class TestGitEngine:
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test staging all changes."""
         config = {"type": "supsrc.engines.git"}
@@ -169,12 +165,12 @@ class TestGitEngine:
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test successful commit operation."""
         config = {
             "type": "supsrc.engines.git",
-            "commit_message_template": "Test commit: {{timestamp}}"
+            "commit_message_template": "Test commit: {{timestamp}}",
         }
 
         # Create and stage changes
@@ -186,7 +182,7 @@ class TestGitEngine:
             mock_repo_state,
             config,
             mock_global_config,
-            git_repo_path
+            git_repo_path,
         )
 
         assert isinstance(result, CommitResult)
@@ -199,17 +195,13 @@ class TestGitEngine:
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test commit with no staged changes."""
         config = {"type": "supsrc.engines.git"}
 
         result = await git_engine.perform_commit(
-            "Test commit",
-            mock_repo_state,
-            config,
-            mock_global_config,
-            git_repo_path
+            "Test commit", mock_repo_state, config, mock_global_config, git_repo_path
         )
 
         assert result.success
@@ -221,13 +213,10 @@ class TestGitEngine:
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test push when auto_push is disabled."""
-        config = {
-            "type": "supsrc.engines.git",
-            "auto_push": False
-        }
+        config = {"type": "supsrc.engines.git", "auto_push": False}
 
         result = await git_engine.perform_push(
             mock_repo_state, config, mock_global_config, git_repo_path
@@ -242,16 +231,13 @@ class TestGitEngine:
 class TestGitCredentialManager:
     """Test Git credential management functionality."""
 
-    @patch.object(GitCredentialManager, '_try_ssh_agent_auth', return_value=None)
-    def test_ssh_key_auth_missing_files(self, mock_agent_auth: Mock) -> None:
+    def test_ssh_key_auth_missing_files(self) -> None:
         """Test SSH key authentication with missing key files."""
         config = {"ssh_key_path": "/nonexistent/key"}
         manager = GitCredentialManager(config)
 
         result = manager.get_credentials(
-            "git@github.com:user/repo.git",
-            "git",
-            pygit2.GIT_CREDENTIAL_SSH_KEY
+            "git@github.com:user/repo.git", "git", pygit2.GIT_CREDENTIAL_SSH_KEY
         )
 
         assert result is None
@@ -261,7 +247,7 @@ class TestGitCredentialManager:
         """Test successful username/password authentication."""
         mock_getenv.side_effect = lambda key: {
             "GIT_USERNAME": "testuser",
-            "GIT_PASSWORD": "testpass"
+            "GIT_PASSWORD": "testpass",
         }.get(key)
 
         config = {}
@@ -273,7 +259,7 @@ class TestGitCredentialManager:
             result = manager.get_credentials(
                 "https://github.com/user/repo.git",
                 None,
-                pygit2.GIT_CREDENTIAL_USERPASS_PLAINTEXT
+                pygit2.GIT_CREDENTIAL_USERPASS_PLAINTEXT,
             )
 
             assert result is not None
@@ -290,7 +276,7 @@ class TestGitCredentialManager:
         result = manager.get_credentials(
             "https://github.com/user/repo.git",
             None,
-            pygit2.GIT_CREDENTIAL_USERPASS_PLAINTEXT
+            pygit2.GIT_CREDENTIAL_USERPASS_PLAINTEXT,
         )
 
         assert result is None
@@ -304,12 +290,11 @@ class TestGitCredentialManager:
         manager = GitCredentialManager(config)
 
         result = manager.get_credentials(
-            "git@github.com:user/repo.git",
-            "git",
-            pygit2.GIT_CREDENTIAL_SSH_KEY
+            "git@github.com:user/repo.git", "git", pygit2.GIT_CREDENTIAL_SSH_KEY
         )
 
         # Should fall back to other methods or return None
         assert result is None
+
 
 # 🧪🔧

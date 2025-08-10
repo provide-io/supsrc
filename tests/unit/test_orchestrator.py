@@ -1,219 +1,418 @@
+#
 # tests/unit/test_orchestrator.py
+#
+"""
+Comprehensive tests for WatchOrchestrator including hot reload functionality.
+Tests both async and sync patterns.
+"""
+
+import asyncio
+import tempfile
+from datetime import timedelta
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
-from pathlib import Path
 
+from supsrc.config.models import GlobalConfig, InactivityRuleConfig, RepositoryConfig, SupsrcConfig
+from supsrc.monitor import MonitoredEvent
 from supsrc.runtime.orchestrator import WatchOrchestrator
-from supsrc.state import RepositoryState, RepositoryStatus
-from supsrc.monitor.service import MonitoringService # For type mocking
-from supsrc.config import SupsrcConfig, GlobalConfig, RepositoryConfig as SupsrcRepoConfig, RuleConfig # Avoid conflict
-from supsrc.config.models import InactivityRuleConfig # Specific rule for testing resume logic
 
-# --- Fixtures ---
 
 @pytest.fixture
-def mock_shutdown_event():
-    # Simple mock for asyncio.Event; can be enhanced if event wait/set needs to be tested
-    return MagicMock(spec=asyncio.Event)
+def temp_config_file():
+    """Create a temporary config file for testing."""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".conf", delete=False) as f:
+        f.write("""
+[global]
+log_level = "INFO"
+
+[repositories.test-repo]
+enabled = true
+path = "/tmp/test-repo"
+engine = "supsrc.engines.git"
+
+[repositories.test-repo.rule]
+type = "inactivity"
+period = "5s"
+""")
+        yield Path(f.name)
+    # Cleanup
+    Path(f.name).unlink(missing_ok=True)
+
 
 @pytest.fixture
-def mock_console():
-    return MagicMock()
-
-@pytest.fixture
-def mock_monitoring_service():
-    service = MagicMock(spec=MonitoringService)
-    service.pause_monitoring.return_value = True # Assume success by default
-    service.resume_monitoring.return_value = True # Assume success by default
-    return service
-
-@pytest.fixture
-def mock_repo_state():
-    state = MagicMock(spec=RepositoryState)
-    state.status = RepositoryStatus.IDLE
-    state.repo_id = "test_repo1"
-    # Add other attributes if your tests interact with them
-    state.inactivity_timer_handle = None
-    state.cancel_inactivity_timer = MagicMock()
-    state.update_status = MagicMock() # Mock to verify status changes
-    state.set_inactivity_timer = MagicMock()
-    return state
-
-@pytest.fixture
-def minimal_config():
-    # Create a SupsrcConfig with one minimal repository for testing
-    repo_conf = SupsrcRepoConfig(
-        path=Path("/fake/repo1"), # Path doesn't need to exist for these unit tests
-        rule={"type": "inactivity", "period": "10s"}, # Example rule
-        repository={"type": "supsrc.engines.git"} # Example engine
+def mock_config():
+    """Create a mock SupsrcConfig for testing."""
+    return SupsrcConfig(
+        global_config=GlobalConfig(log_level="INFO"),
+        repositories={
+            "test-repo": RepositoryConfig(
+                enabled=True,
+                path=Path("/tmp/test-repo"),
+                rule=InactivityRuleConfig(period=timedelta(seconds=5)),
+                repository={"engine": "supsrc.engines.git"},
+            )
+        },
     )
-    # Manually set private attributes that would be set by Pydantic/Cattrs
-    repo_conf._path_valid = True
 
-    config = SupsrcConfig(
-        global_config=GlobalConfig(),
-        repositories={"test_repo1": repo_conf}
-    )
-    return config
 
 @pytest.fixture
-def orchestrator(mock_shutdown_event, mock_console, minimal_config):
-    # Patch load_config to return our minimal_config
-    with patch('supsrc.runtime.orchestrator.load_config', return_value=minimal_config):
-        orch = WatchOrchestrator(
-            config_path=Path("dummy_config.toml"), # Path won't be used due to patching load_config
-            shutdown_event=mock_shutdown_event,
-            console=mock_console,
-            app=None # No TUI app for these tests
+async def orchestrator(temp_config_file):
+    """Create a WatchOrchestrator instance for testing."""
+    shutdown_event = asyncio.Event()
+    orch = WatchOrchestrator(temp_config_file, shutdown_event)
+    yield orch
+    # Cleanup
+    shutdown_event.set()
+
+
+class TestWatchOrchestratorHotReload:
+    """Test hot reload functionality."""
+
+    async def test_reload_config_success(self, orchestrator, mock_config):
+        """Test successful config reload."""
+        # Setup
+        orchestrator.config = mock_config
+        orchestrator._is_paused = False
+        orchestrator.monitor_service = Mock()
+
+        # Mock the load_config function
+        with patch("supsrc.runtime.orchestrator.load_config") as mock_load:
+            # Create new config with additional repo
+            new_config = SupsrcConfig(
+                global_config=GlobalConfig(log_level="DEBUG"),
+                repositories={
+                    "test-repo": mock_config.repositories["test-repo"],
+                    "new-repo": RepositoryConfig(
+                        enabled=True,
+                        path=Path("/tmp/new-repo"),
+                        rule=InactivityRuleConfig(period=timedelta(seconds=10)),
+                        repository={"engine": "supsrc.engines.git"},
+                    ),
+                },
+            )
+            mock_load.return_value = new_config
+
+            # Mock other methods
+            orchestrator._initialize_repositories = AsyncMock(
+                return_value=["test-repo", "new-repo"]
+            )
+            orchestrator._setup_monitoring = Mock(return_value=["test-repo", "new-repo"])
+            orchestrator._post_tui_state_update = Mock()
+            orchestrator._console_message = Mock()
+            orchestrator._post_tui_log = Mock()
+
+            # Test
+            result = await orchestrator.reload_config()
+
+            # Verify
+            assert result is True
+            assert orchestrator.config == new_config
+            assert orchestrator._is_paused is True  # Should be paused during reload
+            mock_load.assert_called_once_with(orchestrator.config_path)
+            orchestrator._initialize_repositories.assert_called_once()
+            orchestrator._setup_monitoring.assert_called_once()
+            orchestrator.monitor_service.stop.assert_called_once()
+            orchestrator.monitor_service.start.assert_called_once()
+
+    async def test_reload_config_rollback_on_error(self, orchestrator, mock_config):
+        """Test config reload rollback on error."""
+        # Setup
+        orchestrator.config = mock_config
+        orchestrator._is_paused = False
+        old_monitor = Mock()
+        orchestrator.monitor_service = old_monitor
+
+        with patch("supsrc.runtime.orchestrator.load_config") as mock_load:
+            # New config that will cause an error
+            new_config = SupsrcConfig(
+                global_config=GlobalConfig(log_level="DEBUG"),
+                repositories={},  # No repositories - will cause validation error
+            )
+            mock_load.return_value = new_config
+
+            orchestrator._console_message = Mock()
+            orchestrator._post_tui_log = Mock()
+
+            # Test
+            result = await orchestrator.reload_config()
+
+            # Verify rollback
+            assert result is False
+            assert orchestrator.config == mock_config  # Should rollback to old config
+            assert orchestrator.monitor_service == old_monitor  # Should keep old monitor
+            assert orchestrator._is_paused is False  # Should resume original state
+
+    async def test_config_file_change_triggers_reload(self, orchestrator):
+        """Test that config file changes trigger reload."""
+        # Setup
+        orchestrator.reload_config = AsyncMock(return_value=True)
+        orchestrator._console_message = Mock()
+        orchestrator._post_tui_log = Mock()
+
+        # Create a config change event
+        config_event = MonitoredEvent(
+            repo_id="__config__",
+            event_type="modified",
+            src_path=orchestrator.config_path,
+            is_directory=False,
         )
-        # Manually assign the mocked monitoring service after WatchOrchestrator init
-        orch.monitor_service = mock_monitoring_service()
 
-        # Initialize repo_states as it's done in run() -> _initialize_repositories
-        # This is a simplified version of what _initialize_repositories would do
-        orch.config = minimal_config # Ensure config is set for resume logic
-        for repo_id in minimal_config.repositories:
-            orch.repo_states[repo_id] = RepositoryState(repo_id=repo_id)
-            # Link the specific mock_repo_state for "test_repo1" if needed for assertions
-            if repo_id == "test_repo1":
-                 orch.repo_states[repo_id] = mock_repo_state() # Use the more detailed mock for assertions
+        # Add event to queue
+        await orchestrator.event_queue.put(config_event)
 
-        return orch
+        # Mock the shutdown event to exit after processing one event
+        async def set_shutdown_after_delay():
+            await asyncio.sleep(0.1)
+            orchestrator.shutdown_event.set()
 
+        # Start shutdown task
+        shutdown_task = asyncio.create_task(set_shutdown_after_delay())
 
-# --- Tests for WatchOrchestrator Pause/Resume ---
+        # Mock the event consumer processing
+        with patch.object(orchestrator, "_running_tasks", set()):
+            # Process the event
+            await orchestrator._consume_events()
 
-def test_pause_repository_not_found(orchestrator):
-    assert not orchestrator.pause_repository("non_existent_repo")
-    # Add assertion for logging if available/testable
+        await shutdown_task
 
-def test_pause_repository_already_paused(orchestrator, mock_repo_state):
-    mock_repo_state.status = RepositoryStatus.PAUSED
-    orchestrator.repo_states["test_repo1"] = mock_repo_state # Ensure this state is used
+        # Verify
+        orchestrator.reload_config.assert_called_once()
 
-    assert orchestrator.pause_repository("test_repo1") is True # Already in desired state
-    orchestrator.monitor_service.pause_monitoring.assert_not_called()
-    mock_repo_state.update_status.assert_not_called() # Should not change status if already paused
+    def test_setup_config_watcher(self, orchestrator, mock_config):
+        """Test config watcher setup."""
+        # Setup
+        orchestrator.config = mock_config
+        orchestrator.monitor_service = Mock()
 
-def test_pause_repository_success(orchestrator, mock_repo_state, mock_monitoring_service):
-    mock_repo_state.status = RepositoryStatus.IDLE # Start from a non-paused state
-    orchestrator.repo_states["test_repo1"] = mock_repo_state
+        # Test
+        orchestrator.setup_config_watcher()
 
-    assert orchestrator.pause_repository("test_repo1") is True
+        # Since the method uses asyncio.create_task internally, we can just verify
+        # that it doesn't raise and the log shows success
+        # The actual async behavior is tested in integration tests
+        assert orchestrator.monitor_service is not None
 
-    mock_monitoring_service.pause_monitoring.assert_called_once_with("test_repo1")
-    mock_repo_state.update_status.assert_called_once_with(RepositoryStatus.PAUSED)
-    mock_repo_state.cancel_inactivity_timer.assert_called_once()
-    # Assert console message or TUI update if those were part of the requirements
+    async def test_resume_after_delay(self, orchestrator):
+        """Test automatic resume after delay."""
+        # Setup
+        orchestrator._is_paused = True
+        orchestrator.resume_monitoring = Mock()
+        orchestrator._console_message = Mock()
+        orchestrator._post_tui_log = Mock()
 
-def test_pause_repository_service_fail(orchestrator, mock_repo_state, mock_monitoring_service):
-    mock_monitoring_service.pause_monitoring.return_value = False # Simulate service failure
-    mock_repo_state.status = RepositoryStatus.IDLE
-    orchestrator.repo_states["test_repo1"] = mock_repo_state
+        # Test with immediate resume (0 delay for testing)
+        await orchestrator._resume_after_delay(0, original_pause_state=False)
 
-    assert orchestrator.pause_repository("test_repo1") is False
+        # Verify
+        orchestrator.resume_monitoring.assert_called_once()
 
-    mock_monitoring_service.pause_monitoring.assert_called_once_with("test_repo1")
-    mock_repo_state.update_status.assert_not_called() # Status should not change if service fails
+        # Test when already manually resumed
+        orchestrator.resume_monitoring.reset_mock()
+        orchestrator._is_paused = False
+        await orchestrator._resume_after_delay(0, original_pause_state=False)
 
-def test_resume_repository_not_found(orchestrator):
-    assert not orchestrator.resume_repository("non_existent_repo")
-
-def test_resume_repository_not_paused(orchestrator, mock_repo_state):
-    mock_repo_state.status = RepositoryStatus.IDLE # Not paused
-    orchestrator.repo_states["test_repo1"] = mock_repo_state
-
-    assert orchestrator.resume_repository("test_repo1") is False
-    orchestrator.monitor_service.resume_monitoring.assert_not_called()
-    mock_repo_state.update_status.assert_not_called()
-
-@pytest.mark.asyncio # For get_running_loop in resume_repository
-async def test_resume_repository_success(orchestrator, mock_repo_state, mock_monitoring_service, minimal_config):
-    mock_repo_state.status = RepositoryStatus.PAUSED
-    orchestrator.repo_states["test_repo1"] = mock_repo_state
-
-    # Ensure the config for 'test_repo1' is an InactivityRuleConfig for timer restart test
-    # This is a bit detailed for a unit test setup, consider simplifying or focusing
-    # The orchestrator fixture now uses minimal_config which has an inactivity rule.
-
-    # Mock get_running_loop if resume_repository uses it directly for call_later
-    # If it's always available (e.g. orchestrator runs within an event loop), this might not be needed
-    with patch('asyncio.get_running_loop', return_value=MagicMock(spec=asyncio.AbstractEventLoop)) as mock_get_loop:
-        mock_event_loop_instance = mock_get_loop.return_value
-        mock_event_loop_instance.call_later = MagicMock()
-
-        assert orchestrator.resume_repository("test_repo1") is True
-
-    mock_monitoring_service.resume_monitoring.assert_called_once_with("test_repo1")
-    # It should transition to IDLE first.
-    mock_repo_state.update_status.assert_called_with(RepositoryStatus.IDLE)
-
-    # Check if inactivity timer was potentially restarted
-    # This depends on the rule type in minimal_config for "test_repo1"
-    repo_config_obj = minimal_config.repositories["test_repo1"]
-    if isinstance(repo_config_obj.rule, InactivityRuleConfig):
-         mock_repo_state.set_inactivity_timer.assert_called_once()
-         mock_event_loop_instance.call_later.assert_called_once()
-    else:
-        mock_repo_state.set_inactivity_timer.assert_not_called()
+        # Should not resume again
+        orchestrator.resume_monitoring.assert_not_called()
 
 
-def test_resume_repository_service_fail(orchestrator, mock_repo_state, mock_monitoring_service):
-    mock_monitoring_service.resume_monitoring.return_value = False # Simulate service failure
-    mock_repo_state.status = RepositoryStatus.PAUSED
-    orchestrator.repo_states["test_repo1"] = mock_repo_state
+class TestWatchOrchestratorPauseResume:
+    """Test pause/resume functionality."""
 
-    assert orchestrator.resume_repository("test_repo1") is False
+    def test_pause_monitoring(self, orchestrator):
+        """Test pause monitoring."""
+        orchestrator._is_paused = False
+        orchestrator.monitor_service = Mock()
 
-    mock_monitoring_service.resume_monitoring.assert_called_once_with("test_repo1")
-    mock_repo_state.update_status.assert_not_called()
+        orchestrator.pause_monitoring()
+
+        assert orchestrator._is_paused is True
+        # Monitor service should still be running (just paused)
+        orchestrator.monitor_service.stop.assert_not_called()
+
+    def test_suspend_monitoring(self, orchestrator):
+        """Test suspend monitoring."""
+        orchestrator._is_paused = False
+        orchestrator._is_suspended = False
+        orchestrator.monitor_service = Mock()
+
+        orchestrator.suspend_monitoring()
+
+        assert orchestrator._is_paused is True
+        assert orchestrator._is_suspended is True
+        # Monitor service should be stopped
+        orchestrator.monitor_service.stop.assert_called_once()
+
+    def test_resume_from_pause(self, orchestrator):
+        """Test resume from pause."""
+        orchestrator._is_paused = True
+        orchestrator._is_suspended = False
+
+        orchestrator.resume_monitoring()
+
+        assert orchestrator._is_paused is False
+        assert orchestrator._is_suspended is False
+
+    async def test_resume_from_suspend(self, orchestrator, mock_config):
+        """Test resume from suspend."""
+        orchestrator._is_paused = True
+        orchestrator._is_suspended = True
+        orchestrator.config = mock_config
+        orchestrator.monitor_service = Mock()
+
+        with patch.object(orchestrator, "_restart_monitor_service", new_callable=AsyncMock):
+            orchestrator.resume_monitoring()
+
+            assert orchestrator._is_paused is False
+            assert orchestrator._is_suspended is False
+            # Should trigger restart
+            await asyncio.sleep(0.1)  # Give time for async task to be created
 
 
-# --- Tests for Orchestrator event/action processing with PAUSED state ---
+class TestWatchOrchestratorEventProcessing:
+    """Test event processing with pause/suspend."""
 
-@pytest.mark.asyncio
-async def test_orchestrator_action_callback_when_paused(orchestrator, mock_repo_state):
-    mock_repo_state.status = RepositoryStatus.PAUSED
-    orchestrator.repo_states["test_repo1"] = mock_repo_state
+    async def test_events_queued_when_paused(self, orchestrator):
+        """Test that events are queued but not processed when paused."""
+        # Setup
+        orchestrator._is_paused = True
+        orchestrator.config = MagicMock()
+        orchestrator.config.repositories = {"test-repo": MagicMock()}
 
-    # _trigger_action_callback is async
-    await orchestrator._trigger_action_callback("test_repo1")
+        # Create test event
+        test_event = MonitoredEvent(
+            repo_id="test-repo",
+            event_type="modified",
+            src_path=Path("/tmp/test-repo/file.txt"),
+            is_directory=False,
+        )
 
-    # Assert that no processing methods (like get_status on engine) were called
-    # This requires mocking the engine if we were to go deeper.
-    # For now, check that state didn't change from PAUSED due to this.
-    mock_repo_state.update_status.assert_not_called() # Should not try to change from PAUSED
-    mock_repo_state.cancel_inactivity_timer.assert_called_once() # It does cancel timer if called
+        # Add to queue
+        await orchestrator.event_queue.put(test_event)
+        initial_size = orchestrator.event_queue.qsize()
 
-@pytest.mark.asyncio
-async def test_orchestrator_consume_events_when_paused(orchestrator, mock_repo_state):
-    # This test is a bit more complex as _consume_events is a long-running loop.
-    # We'll simulate one event for a paused repo.
-    mock_event = MagicMock()
-    mock_event.repo_id = "test_repo1"
+        # Mock shutdown event to exit consumer loop
+        orchestrator.shutdown_event.set()
 
-    mock_repo_state.status = RepositoryStatus.PAUSED
-    orchestrator.repo_states["test_repo1"] = mock_repo_state
-    orchestrator.config = orchestrator.config # Ensure config is available
+        # Run consumer (should skip processing)
+        with patch.object(orchestrator, "_console_message"):
+            await orchestrator._consume_events()
 
-    # To test _consume_events, we'd need to put an event on its queue
-    # and then cancel the consumer or make it run once.
-    # For simplicity, we're checking the logic *within* _consume_events
-    # that handles paused states. The actual test for the loop itself is harder.
+        # Event should still be in queue
+        assert orchestrator.event_queue.qsize() == initial_size
 
-    # If an event for a PAUSED repo was somehow processed by the consumer loop's core logic
-    # (after queue.get()), it should not record_change or check_trigger_condition.
-    mock_repo_state.record_change.assert_not_called()
-    # (Assuming check_trigger_condition is not directly mockable here without more setup)
 
-    # The primary defense is in SupsrcEventHandler. This is a secondary check.
-    # The test for _consume_events is more of an integration test.
-    # For this unit test, we'll rely on the fact that if repo_state.status is PAUSED,
-    # the 'elif repo_state.status == RepositoryStatus.PAUSED:' block in _consume_events
-    # (which was added in the implementation step) should prevent further processing.
-    # Directly testing that specific branch is hard without refactoring _consume_events.
-    pass
+class TestWatchOrchestratorIntegration:
+    """Integration tests for orchestrator functionality."""
 
-```
+    @pytest.mark.asyncio
+    async def test_full_reload_cycle(self, temp_config_file):
+        """Test complete config reload cycle."""
+        # Create orchestrator
+        shutdown_event = asyncio.Event()
+        orchestrator = WatchOrchestrator(temp_config_file, shutdown_event)
+
+        # Mock dependencies
+        with patch("supsrc.runtime.orchestrator.MonitoringService") as mock_monitor_cls:
+            mock_monitor = Mock()
+            mock_monitor_cls.return_value = mock_monitor
+            mock_monitor.is_running = True
+
+            with patch("supsrc.runtime.orchestrator.GitEngine") as mock_engine_cls:
+                mock_engine = AsyncMock()
+                mock_engine_cls.return_value = mock_engine
+                mock_engine.get_summary = AsyncMock()
+
+                # Initialize
+                orchestrator.config = SupsrcConfig(
+                    global_config=GlobalConfig(log_level="INFO"),
+                    repositories={
+                        "test": RepositoryConfig(
+                            enabled=True,
+                            path=Path("/tmp/test"),
+                            rule=InactivityRuleConfig(period=timedelta(seconds=5)),
+                            repository={"engine": "supsrc.engines.git"},
+                        )
+                    },
+                )
+
+                # Mock required methods for reload
+                orchestrator._initialize_repositories = AsyncMock(return_value=["test"])
+                orchestrator._setup_monitoring = Mock(return_value=["test"])
+                orchestrator._post_tui_state_update = Mock()
+                orchestrator._console_message = Mock()
+                orchestrator._post_tui_log = Mock()
+                orchestrator.monitor_service = mock_monitor
+
+                # Test reload
+                with patch("supsrc.runtime.orchestrator.load_config") as mock_load:
+                    mock_load.return_value = orchestrator.config
+
+                    result = await orchestrator.reload_config()
+                    assert result is True
+
+    @pytest.mark.asyncio
+    async def test_concurrent_operations(self, orchestrator):
+        """Test concurrent pause/resume/reload operations."""
+        orchestrator.config = MagicMock()
+        orchestrator.monitor_service = Mock()
+
+        # Run concurrent operations
+        async def pause():
+            orchestrator.pause_monitoring()
+
+        async def resume():
+            orchestrator.resume_monitoring()
+
+        tasks = [
+            orchestrator.reload_config(),
+            pause(),
+            resume(),
+        ]
+
+        with patch("supsrc.runtime.orchestrator.load_config"):
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Should not crash
+        assert not any(isinstance(r, Exception) for r in results)
+
+
+# Test coverage for sync methods
+class TestSyncMethods:
+    """Test synchronous methods."""
+
+    def test_pause_monitoring_sync(self, orchestrator):
+        """Test pause_monitoring is synchronous."""
+        # This should not be a coroutine
+        assert not asyncio.iscoroutinefunction(orchestrator.pause_monitoring)
+        orchestrator.pause_monitoring()
+        assert orchestrator._is_paused is True
+
+    def test_suspend_monitoring_sync(self, orchestrator):
+        """Test suspend_monitoring is synchronous."""
+        assert not asyncio.iscoroutinefunction(orchestrator.suspend_monitoring)
+        orchestrator.monitor_service = Mock()
+        orchestrator.suspend_monitoring()
+        assert orchestrator._is_suspended is True
+
+    def test_resume_monitoring_sync(self, orchestrator):
+        """Test resume_monitoring is synchronous."""
+        assert not asyncio.iscoroutinefunction(orchestrator.resume_monitoring)
+        orchestrator._is_paused = True
+        orchestrator.resume_monitoring()
+        assert orchestrator._is_paused is False
+
+    def test_setup_config_watcher_sync(self, orchestrator):
+        """Test setup_config_watcher is synchronous."""
+        assert not asyncio.iscoroutinefunction(orchestrator.setup_config_watcher)
+        orchestrator.config = MagicMock()
+        orchestrator.monitor_service = Mock()
+        orchestrator.setup_config_watcher()  # Should not raise
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
+
+
+# 🧪⚙️

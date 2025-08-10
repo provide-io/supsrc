@@ -62,7 +62,7 @@ async def monitoring_setup(tmp_path: Path):
         "repo_path": repo_path,
         "config_file": config_file,
         "config": config,
-        "tmp_path": tmp_path
+        "tmp_path": tmp_path,
     }
 
 
@@ -195,9 +195,11 @@ class TestMonitoringIntegration:
                 cwd=repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
-            assert "🔼⚙️ [skip ci] auto-commit" in result.stdout or len(result.stdout.splitlines()) == 2
+            assert (
+                "🔼⚙️ [skip ci] auto-commit" in result.stdout or len(result.stdout.splitlines()) == 2
+            )
 
         finally:
             # Shutdown orchestrator
@@ -235,13 +237,11 @@ class TestErrorHandling:
 
         # Should handle invalid path gracefully
         try:
-            await asyncio.wait_for(
-                orchestrator._initialize_repositories(),
-                timeout=5.0
-            )
+            await asyncio.wait_for(orchestrator._initialize_repositories(), timeout=5.0)
             # Should have no enabled repositories
             enabled_repos = [
-                repo_id for repo_id, state in orchestrator.repo_states.items()
+                repo_id
+                for repo_id, state in orchestrator.repo_states.items()
                 if orchestrator.config.repositories[repo_id].enabled
             ]
             assert len(enabled_repos) == 0
@@ -305,11 +305,19 @@ class TestConcurrency:
 
             subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
             subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True)
-            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "test@example.com"],
+                cwd=repo_path,
+                check=True,
+            )
 
             (repo_path / "README.md").write_text(f"Repo {i}")
             subprocess.run(["git", "add", "README.md"], cwd=repo_path, check=True)
-            subprocess.run(["git", "commit", "-m", f"Initial commit {i}"], cwd=repo_path, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", f"Initial commit {i}"],
+                cwd=repo_path,
+                check=True,
+            )
 
             repos[f"repo-{i}"] = repo_path
 
@@ -346,6 +354,7 @@ class TestConcurrency:
             # Create concurrent changes in all repositories
             change_tasks = []
             for repo_id, repo_path in repos.items():
+
                 async def create_change(path: Path, name: str) -> None:
                     (path / f"change_{name}.txt").write_text(f"Change in {name}")
 
@@ -373,5 +382,6 @@ class TestConcurrency:
             except TimeoutError:
                 orchestrator_task.cancel()
                 await asyncio.gather(orchestrator_task, return_exceptions=True)
+
 
 # 🧪🔗

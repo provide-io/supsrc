@@ -25,7 +25,9 @@ from textual.widgets import (
     TabbedContent,
     TabPane,
 )
-from textual.widgets import Log as TextualLog
+from textual.widgets import (
+    Log as TextualLog,
+)
 from textual.worker import Worker
 
 from supsrc.runtime.orchestrator import RepositoryStatesMap, WatchOrchestrator
@@ -38,27 +40,36 @@ else:
 
 log = structlog.get_logger("tui.alt_app")
 
+
 # Enhanced Messages
 class StateUpdate(Message):
     ALLOW_BUBBLE = True
+
     def __init__(self, repo_states: RepositoryStatesMap) -> None:
         self.repo_states = repo_states
         super().__init__()
 
+
 class LogMessageUpdate(Message):
     ALLOW_BUBBLE = True
-    def __init__(self, repo_id: str | None, level: str, message: str, timestamp: str | None = None) -> None:
+
+    def __init__(
+        self, repo_id: str | None, level: str, message: str, timestamp: str | None = None
+    ) -> None:
         self.repo_id = repo_id
         self.level = level
         self.message = message
         self.timestamp = timestamp or ""
         super().__init__()
 
+
 class RepositorySelected(Message):
     ALLOW_BUBBLE = True
+
     def __init__(self, repo_id: str | None) -> None:
         self.repo_id = repo_id
         super().__init__()
+
 
 # Custom Widgets
 class RepositoryListWidget(ListView):
@@ -76,7 +87,11 @@ class RepositoryListWidget(ListView):
         for repo_id, state in repo_states.items():
             status_icon, status_style = self._get_status_display(state.status)
             save_count = f"💾 {state.save_count}"
-            last_change = state.last_change_time.strftime("%H:%M:%S") if state.last_change_time else "--:--:--"
+            last_change = (
+                state.last_change_time.strftime("%H:%M:%S")
+                if state.last_change_time
+                else "--:--:--"
+            )
 
             # Create rich text for the list item
             repo_text = Text()
@@ -107,6 +122,7 @@ class RepositoryListWidget(ListView):
         """Handle repository selection"""
         if hasattr(event.item, "repo_id"):
             self.post_message(RepositorySelected(event.item.repo_id))
+
 
 class RepositoryDetailWidget(Static):
     """Detailed view of selected repository"""
@@ -140,7 +156,11 @@ class RepositoryDetailWidget(Static):
     def _generate_overview_content(self, repo_id: str, state: RepositoryState) -> str:
         """Generate overview content for repository"""
         status_icon, _ = self._get_status_display(state.status)
-        last_change = state.last_change_time.strftime("%Y-%m-%d %H:%M:%S") if state.last_change_time else "Never"
+        last_change = (
+            state.last_change_time.strftime("%Y-%m-%d %H:%M:%S")
+            if state.last_change_time
+            else "Never"
+        )
 
         content = f"""[bold]🏠 {repo_id}[/bold]
 
@@ -169,6 +189,7 @@ class RepositoryDetailWidget(Static):
             RepositoryStatus.ERROR: ("❌", "red"),
         }
         return status_map.get(status, ("❓", "dim"))
+
 
 class GlobalDashboardWidget(Static):
     """Global dashboard showing metrics and system status"""
@@ -211,10 +232,12 @@ class GlobalDashboardWidget(Static):
     def _generate_metrics_content(self) -> str:
         """Generate metrics content"""
         total_repos = len(self.repo_states)
-        active_repos = sum(1 for state in self.repo_states.values()
-                          if state.status != RepositoryStatus.IDLE)
-        error_repos = sum(1 for state in self.repo_states.values()
-                         if state.status == RepositoryStatus.ERROR)
+        active_repos = sum(
+            1 for state in self.repo_states.values() if state.status != RepositoryStatus.IDLE
+        )
+        error_repos = sum(
+            1 for state in self.repo_states.values() if state.status == RepositoryStatus.ERROR
+        )
         total_saves = sum(state.save_count for state in self.repo_states.values())
 
         return f"""Total: {total_repos}
@@ -224,9 +247,12 @@ Saves: {total_saves}"""
 
     def _generate_activity_content(self) -> str:
         """Generate activity content"""
-        recent_changes = sum(1 for state in self.repo_states.values()
-                           if state.last_change_time and
-                           (state.status in [RepositoryStatus.CHANGED, RepositoryStatus.PROCESSING]))
+        recent_changes = sum(
+            1
+            for state in self.repo_states.values()
+            if state.last_change_time
+            and (state.status in [RepositoryStatus.CHANGED, RepositoryStatus.PROCESSING])
+        )
 
         return f"""Recent: {recent_changes}
 Processing: {sum(1 for state in self.repo_states.values() if state.status == RepositoryStatus.PROCESSING)}
@@ -238,6 +264,7 @@ Idle: {sum(1 for state in self.repo_states.values() if state.status == Repositor
 Memory: Normal
 Network: Connected"""
 
+
 class EnhancedLogWidget(TextualLog):
     """Enhanced log widget with better formatting and filtering"""
 
@@ -246,11 +273,14 @@ class EnhancedLogWidget(TextualLog):
         self.max_lines = 1000
         self.auto_scroll = True
 
-    def write_enhanced_log(self, repo_id: str | None, level: str, message: str, timestamp: str = "") -> None:
+    def write_enhanced_log(
+        self, repo_id: str | None, level: str, message: str, timestamp: str = ""
+    ) -> None:
         """Write a formatted log message"""
         # Create timestamp if not provided
         if not timestamp:
             from datetime import datetime
+
             timestamp = datetime.now().strftime("%H:%M:%S")
 
         # Get level styling
@@ -280,6 +310,7 @@ class EnhancedLogWidget(TextualLog):
         }
         return styles.get(level_name.upper(), "white")
 
+
 class SupsrcEnhancedTuiApp(App):
     """Enhanced Supsrc TUI Application with split view design"""
 
@@ -297,46 +328,46 @@ class SupsrcEnhancedTuiApp(App):
     Screen {
         layout: vertical;
     }
-    
+
     #main-container {
         height: 1fr;
         layout: horizontal;
     }
-    
+
     #left-panel {
         width: 50%;
         layout: vertical;
     }
-    
+
     #right-panel {
         width: 50%;
         layout: vertical;
     }
-    
+
     #repo-list {
         height: 60%;
         border: thick $accent;
         border-title: "Repositories";
     }
-    
+
     #dashboard {
         height: 40%;
         border: thick $accent;
         border-title: "Dashboard";
     }
-    
+
     #repo-details {
         height: 70%;
         border: thick $accent;
         border-title: "Repository Details";
     }
-    
+
     #activity-log {
         height: 30%;
         border: thick $accent;
         border-title: "Activity Log";
     }
-    
+
     .dashboard-section {
         width: 1fr;
         height: 1fr;
@@ -344,11 +375,11 @@ class SupsrcEnhancedTuiApp(App):
         padding: 1;
         border: round $primary;
     }
-    
+
     ListView > .list--option {
         padding: 0 1;
     }
-    
+
     ListView > .list--option-highlighted {
         background: $accent;
     }
@@ -391,7 +422,9 @@ class SupsrcEnhancedTuiApp(App):
         self._worker = self.run_worker(self._run_orchestrator, thread=True, group="orchestrator")
 
         # Start shutdown check timer
-        self._shutdown_check_timer = self.set_interval(0.5, self._check_external_shutdown, name="ExternalShutdownCheck")
+        self._shutdown_check_timer = self.set_interval(
+            0.5, self._check_external_shutdown, name="ExternalShutdownCheck"
+        )
 
         self._update_sub_title("Monitoring...")
 
@@ -403,7 +436,10 @@ class SupsrcEnhancedTuiApp(App):
             await self._orchestrator.run()
         except Exception as e:
             log.exception("Orchestrator failed within TUI worker")
-            self.call_later(self.post_message, LogMessageUpdate(None, "CRITICAL", f"Orchestrator CRASHED: {e}"))
+            self.call_later(
+                self.post_message,
+                LogMessageUpdate(None, "CRITICAL", f"Orchestrator CRASHED: {e}"),
+            )
             self._update_sub_title("Orchestrator CRASHED!")
         finally:
             log.info("Orchestrator worker finished.")
@@ -509,7 +545,9 @@ class SupsrcEnhancedTuiApp(App):
             # Update details if a repo is selected
             if self.selected_repo and self.selected_repo in message.repo_states:
                 detail_widget = self.query_one("#repo-details", RepositoryDetailWidget)
-                detail_widget.update_repository(self.selected_repo, message.repo_states[self.selected_repo])
+                detail_widget.update_repository(
+                    self.selected_repo, message.repo_states[self.selected_repo]
+                )
 
             # Store current states
             self.repo_states_data = dict(message.repo_states)
@@ -521,7 +559,9 @@ class SupsrcEnhancedTuiApp(App):
         """Handle log message updates"""
         try:
             log_widget = self.query_one("#activity-log", EnhancedLogWidget)
-            log_widget.write_enhanced_log(message.repo_id, message.level, message.message, message.timestamp)
+            log_widget.write_enhanced_log(
+                message.repo_id, message.level, message.message, message.timestamp
+            )
         except Exception as e:
             log.error("Failed to write to TUI log", error=str(e))
 
@@ -533,10 +573,14 @@ class SupsrcEnhancedTuiApp(App):
 
             if message.repo_id and message.repo_id in self.repo_states_data:
                 detail_widget = self.query_one("#repo-details", RepositoryDetailWidget)
-                detail_widget.update_repository(message.repo_id, self.repo_states_data[message.repo_id])
+                detail_widget.update_repository(
+                    message.repo_id, self.repo_states_data[message.repo_id]
+                )
 
                 log_widget = self.query_one("#activity-log", EnhancedLogWidget)
-                log_widget.write_enhanced_log(None, "INFO", f"Selected repository: {message.repo_id}")
+                log_widget.write_enhanced_log(
+                    None, "INFO", f"Selected repository: {message.repo_id}"
+                )
 
         except Exception as e:
             log.error("Failed to handle repository selection", error=str(e))
@@ -548,5 +592,9 @@ class SupsrcEnhancedTuiApp(App):
         except Exception as e:
             log.warning("Failed to update TUI sub-title", error=str(e))
 
+
 # For backward compatibility
 SupsrcTuiApp = SupsrcEnhancedTuiApp
+
+
+# 🖥️✨
