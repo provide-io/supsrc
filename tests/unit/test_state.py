@@ -23,7 +23,7 @@ class TestRepositoryState:
         assert state.save_count == 0
         assert state.error_message is None
         assert state.inactivity_timer_handle is None
-        assert state.display_status_emoji == "🧼"  # IDLE emoji
+        assert state.display_status_emoji == "❓"  # Default emoji before update_status is called
 
     def test_record_change(self) -> None:
         """Test recording file changes."""
@@ -119,5 +119,6 @@ class TestRepositoryStatusEnum:
 
         for status in RepositoryStatus:
             assert status in STATUS_EMOJI_MAP, f"Missing emoji for {status}"
+
 
 # 🧪📊

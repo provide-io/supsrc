@@ -315,6 +315,3 @@ $RECYCLE.BIN/
 
 # bfiles
 *.bf.txt
-*.pdf
-supsrc.conf
-*.log.json

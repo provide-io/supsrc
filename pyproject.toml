@@ -4,7 +4,7 @@
 
 [project]
 name = "supsrc"
-version = "0.1.4"
+version = "0.1.3"
 description = "Automated Git commit/push utility based on filesystem events and rules."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -46,8 +46,7 @@ dependencies = [
     "sshconf>=0.2.7",
     "rich>=13.7.1",
     "aioconsole>=0.8.1",
-    "textual>=0.8.1",
-    "prompt-toolkit>=3.0.0,<4.0.0",
+    "wrkenv>=0.1.0",  # For environment management and bootstrap generation
 ]
 
 [project.urls]
@@ -140,7 +139,7 @@ scripts = { check = "pyre check .." }
 # Ruff Linter/Formatter Configuration                                         #
 # --------------------------------------------------------------------------- #
 [tool.ruff]
-line-length = 88
+line-length = 100
 target-version = "py311" # Match requires-python lower bound
 
 [tool.ruff.lint]
@@ -230,6 +229,7 @@ markers = [
     "tui: marks tests related to the TUI feature",
 ]
 asyncio_mode = "auto" # Required for pytest-asyncio
+asyncio_default_fixture_loop_scope = "function" # Prevent deprecation warning
 
 
 # --------------------------------------------------------------------------- #
@@ -278,16 +278,12 @@ output = "coverage.xml"
 [dependency-groups]
 dev = [
     "hypothesis>=6.131.9",
-    "mypy>=1.16.0",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=6.1.1",
     "pytest-xdist>=3.6.1",
     "ruff>=0.11.8",
     "ty>=0.0.1a6",
     "uv>=0.7.2",
-]
-tui = [
-    "rich-click>=1.8.9",
 ]
 
 # 🔼⚙️
