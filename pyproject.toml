@@ -46,7 +46,99 @@ dependencies = [
     "sshconf>=0.2.7",
     "rich>=13.7.1",
     "aioconsole>=0.8.1",
-    "wrkenv @ file:///Users/tim/code/gh/provide-io/wrkenv",  # For environment management and bootstrap generation
+    "    "wrkenv @ file:///Users/tim/code/gh/provide-io/wrkenv",  # For environment management and bootstrap generation
+]
+
+[project.urls]
+Homepage = "https://github.com/provide-io/supsrc"
+Repository = "https://github.com/provide-io/supsrc"
+Issues = "https://github.com/provide-io/supsrc/issues"
+
+# --- Optional Features (Extras) ---
+[project.optional-dependencies]
+tui = [
+    "rich>=14.0.0",   # Required for TUI and optional pretty-printing
+    "textual>=0.70.0", # Use a recent stable version
+]
+dev = [
+    # Core Dev Tools
+    "hatch>=1.14.1",
+    "ruff>=0.11.8",
+    "pyre-check>=0.9.20", # <<< Added Pyre
+    # Testing Frameworks & Helpers
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=6.1.1",
+    "pytest-mock>=3.14.0",
+    "hypothesis>=6.131.9",
+    "freezegun>=1.5.1",
+    # BDD (if used)
+    "behave>=1.2.6",
+    # Include TUI deps for testing TUI features
+    "supsrc[tui]",
+]
+
+[project.scripts]
+supsrc = "supsrc.cli.main:cli"
+
+# --------------------------------------------------------------------------- #
+# Build System Configuration (Hatch)                                          #
+# --------------------------------------------------------------------------- #
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/supsrc/__init__.py" # Ensure __version__ is defined here
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[project.urls]
+Homepage = "https://github.com/provide-io/supsrc"
+Repository = "https://github.com/provide-io/supsrc"
+Issues = "https://github.com/provide-io/supsrc/issues"
+
+# --- Optional Features (Extras) ---
+[project.optional-dependencies]
+tui = [
+    "rich>=14.0.0",   # Required for TUI and optional pretty-printing
+    "textual>=0.70.0", # Use a recent stable version
+]
+dev = [
+    # Core Dev Tools
+    "hatch>=1.14.1",
+    "ruff>=0.11.8",
+    "pyre-check>=0.9.20", # <<< Added Pyre
+    # Testing Frameworks & Helpers
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=6.1.1",
+    "pytest-mock>=3.14.0",
+    "hypothesis>=6.131.9",
+    "freezegun>=1.5.1",
+    # BDD (if used)
+    "behave>=1.2.6",
+    # Include TUI deps for testing TUI features
+    "supsrc[tui]",
+]
+
+[project.scripts]
+supsrc = "supsrc.cli.main:cli"
+
+# --------------------------------------------------------------------------- #
+# Build System Configuration (Hatch)                                          #
+# --------------------------------------------------------------------------- #
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/supsrc/__init__.py" # Ensure __version__ is defined here
+
+[tool.hatch.metadata]
+allow-direct-references = true
+",  # For environment management and bootstrap generation
 ]
 
 [project.urls]
