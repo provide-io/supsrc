@@ -51,6 +51,12 @@ class RepoStatusResult(PluginResultBase):
     is_conflicted: bool = False
     is_unborn: bool = False
     current_branch: str | None = None
+    # File statistics
+    total_files: int = 0
+    changed_files: int = 0
+    added_files: int = 0
+    deleted_files: int = 0
+    modified_files: int = 0
 
 
 @attrs.define(frozen=True, slots=True)
