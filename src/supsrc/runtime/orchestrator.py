@@ -1514,7 +1514,7 @@ class WatchOrchestrator:
 
         # Add config watcher as a special monitored path
         try:
-            asyncio.create_task(self.monitor_service.start_monitoring("__config__", config_repo))
+            asyncio.create_task(self.monitor_service.add_repository("__config__", config_repo, asyncio.get_running_loop()))
             watcher_log.info("Config file watcher setup complete")
         except Exception as e:
             watcher_log.error("Failed to setup config watcher", error=str(e))
