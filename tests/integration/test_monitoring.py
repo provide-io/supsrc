@@ -146,9 +146,14 @@ class TestMonitoringIntegration:
             except TimeoutError:
                 pass  # Expected if ignored files don't generate events
 
-            # Should only receive event for normal file
-            assert len(events) == 1
-            assert events[0].src_path == normal_file
+            # Should receive events for normal file (created and modified)
+            assert len(events) == 2
+            assert all(e.src_path == normal_file for e in events)
+            assert any(e.event_type == "created" for e in events)
+            assert any(e.event_type == "modified" for e in events)
+
+            # Should not receive any events for the ignored file
+            assert not any(e.src_path == ignored_file for e in events)
 
         finally:
             await monitoring_service.stop()
