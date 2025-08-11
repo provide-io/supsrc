@@ -166,7 +166,7 @@ class TestWatchCommands:
         assert "Monitor configured repositories" in result.output
         assert "--tui" in result.output
 
-    @patch("supsrc.cli.watch_cmds.WatchOrchestrator")
+    @patch("supsrc.tui.app.WatchOrchestrator")
     @patch("supsrc.config.loader.load_config")
     def test_watch_normal_mode(
         self, mock_load_config: Mock, mock_orchestrator_class: Mock, tmp_path: Path
@@ -200,7 +200,7 @@ class TestWatchCommands:
         mock_orchestrator_class.assert_called_once()
 
     @patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", True)
-    @patch("supsrc.cli.watch_cmds.SupsrcTuiApp")
+    @patch("supsrc.tui.app.SupsrcTuiApp")
     def test_watch_tui_mode(self, mock_tui_app: Mock, tmp_path: Path) -> None:
         """Test watch command in TUI mode."""
         mock_app_instance = Mock()
