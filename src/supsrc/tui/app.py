@@ -286,12 +286,13 @@ class SupsrcTuiApp(App):
                 "📊",  # Status emoji header
                 "⏱️",   # Timer/countdown column
                 "Repository",
-                "Last Commit",
+                "Branch",  # New branch column
                 "📁",  # Total files
                 "📝",  # Changed files count
                 "➕",  # Added files
                 "➖",  # Deleted files
                 "✏️",  # Modified files
+                "Last Commit",  # Moved after modified
                 "Rule",
             )
 
@@ -696,16 +697,20 @@ class SupsrcTuiApp(App):
                     deleted_display = f"[dim]{state.deleted_files}[/dim]" if state.deleted_files > 0 else "0"
                     modified_display = f"[dim]{state.modified_files}[/dim]" if state.modified_files > 0 else "0"
 
+                # Get branch display
+                branch_display = state.current_branch or "main"
+                
                 row_data = (
                     status_display,
                     timer_display,
                     repository_display,
-                    last_change_display,
+                    branch_display,  # New branch column
                     total_files_display,
                     changed_files_display,
                     added_display,
                     deleted_display,
                     modified_display,
+                    last_change_display,  # Moved after modified
                     rule_display,
                 )
 

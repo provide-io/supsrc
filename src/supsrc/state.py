@@ -73,6 +73,7 @@ class RepositoryState:
     )  # May become redundant with new fields
     last_commit_short_hash: str | None = field(default=None)
     last_commit_message_summary: str | None = field(default=None)
+    current_branch: str | None = field(default=None)  # Current git branch
 
     # New fields for advanced TUI (rule emojis, dynamic indicators, progress bars)
     rule_emoji: str | None = field(default=None)

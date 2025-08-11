@@ -259,6 +259,7 @@ class WatchOrchestrator:
             repo_state.deleted_files = status_result.deleted_files
             repo_state.modified_files = status_result.modified_files
             repo_state.has_uncommitted_changes = not status_result.is_clean
+            repo_state.current_branch = status_result.current_branch
 
             if status_result.is_conflicted:
                 callback_log.warning("Repository has merge conflicts. Auto-freezing repository.")
