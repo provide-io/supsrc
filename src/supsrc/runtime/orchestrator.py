@@ -764,7 +764,7 @@ class WatchOrchestrator:
                                         self._trigger_action_callback(rid)
                                     ),
                                 )
-                                repo_state.set_inactivity_timer(timer_handle)
+                                repo_state.set_inactivity_timer(timer_handle, int(delay))
                             # else: Rule not met, but not inactivity, so emoji/description might reset or stay 'Evaluating'
                             # The next event or state change will update it. Or reset to default rule description.
                             # For now, if not rule_met and not inactivity, it implicitly goes back to its base status emoji on next cycle.

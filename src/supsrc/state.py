@@ -214,10 +214,22 @@ class RepositoryState:
                 )
             finally:
                 self.inactivity_timer_handle = None
+                self._timer_total_seconds = None
+                self._timer_start_time = None
+                self.timer_seconds_left = None
         else:
             # This is normal operation, no need to log unless debugging timing issues
             # log.debug("No active inactivity timer to cancel", repo_id=self.repo_id)
             pass
+    
+    def update_timer_countdown(self) -> None:
+        """Updates the timer_seconds_left based on elapsed time."""
+        if self.inactivity_timer_handle and self._timer_start_time and self._timer_total_seconds:
+            elapsed = asyncio.get_event_loop().time() - self._timer_start_time
+            seconds_left = max(0, int(self._timer_total_seconds - elapsed))
+            self.timer_seconds_left = seconds_left
+        else:
+            self.timer_seconds_left = None
 
 
 # 🔼⚙️
