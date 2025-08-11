@@ -216,13 +216,15 @@ class SupsrcTuiApp(App):
     
     /* Make branch column shrinkable on small terminals */
     DataTable > .datatable--column-3 {
-        width: 1fr 0.5 20;  /* flexible width, can shrink to 50%, min 20 chars */
-        overflow: ellipsis;
+        width: 1fr;
+        min-width: 10;
+        max-width: 25;
     }
     
     /* Ensure Repository column gets priority space */
     DataTable > .datatable--column-2 {
-        width: 1fr 1 30;  /* flexible width, full priority, min 30 chars */
+        width: 2fr;
+        min-width: 20;
     }
 
     /* .panel-title can be removed if no longer used, or kept if it is.

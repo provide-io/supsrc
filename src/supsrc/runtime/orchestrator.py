@@ -504,19 +504,30 @@ class WatchOrchestrator:
                 
                 # Don't reset the change counts - just mark as committed
                 # The numbers should stay visible but will be shown in grey
-                # Only update total_files and branch as those don't change with commit status
+                # Adjust total files based on what was added/deleted
+                if repo_state.added_files > 0 or repo_state.deleted_files > 0:
+                    # Adjust the cached total instead of recalculating
+                    repo_state.total_files = repo_state.total_files + repo_state.added_files - repo_state.deleted_files
+                    callback_log.debug(
+                        "Adjusted total file count",
+                        previous=repo_state.total_files - repo_state.added_files + repo_state.deleted_files,
+                        added=repo_state.added_files,
+                        deleted=repo_state.deleted_files,
+                        new_total=repo_state.total_files
+                    )
+                
+                # Just mark as no uncommitted changes - the counts remain for grey display
+                repo_state.has_uncommitted_changes = False
+                
+                # Update branch if needed
                 try:
                     final_status = await repo_engine.get_status(
                         repo_state, engine_config_dict, global_config, working_dir
                     )
                     if final_status.success:
-                        # Only update total files and branch - keep the change counts for display
-                        repo_state.total_files = final_status.total_files
                         repo_state.current_branch = final_status.current_branch
-                        # Just mark as no uncommitted changes - the counts remain for grey display
-                        repo_state.has_uncommitted_changes = False
                 except Exception as e:
-                    callback_log.debug("Could not update final status", error=str(e))
+                    callback_log.debug("Could not update branch", error=str(e))
                 
                 self._post_tui_state_update()
                 repo_state.reset_after_action()
@@ -700,9 +711,14 @@ class WatchOrchestrator:
                         )
                         
                         # Update file statistics after change
+                        # Only recalculate total files if we haven't set it yet
                         try:
                             repo_engine = self.repo_engines.get(repo_id)
                             if repo_engine:
+                                # Store previous counts to detect actual changes
+                                prev_added = repo_state.added_files
+                                prev_deleted = repo_state.deleted_files
+                                
                                 status_result = await repo_engine.get_status(
                                     repo_state, 
                                     repo_config.repository,
@@ -710,18 +726,20 @@ class WatchOrchestrator:
                                     repo_config.path
                                 )
                                 if status_result.success:
-                                    repo_state.total_files = status_result.total_files
+                                    # Update change counts
                                     repo_state.changed_files = status_result.changed_files
                                     repo_state.added_files = status_result.added_files
                                     repo_state.deleted_files = status_result.deleted_files
                                     repo_state.modified_files = status_result.modified_files
                                     repo_state.has_uncommitted_changes = not status_result.is_clean
                                     repo_state.current_branch = status_result.current_branch
+                                    
+                                    # Update total files from status
+                                    repo_state.total_files = status_result.total_files
                                     event_log.debug(
                                         "Updated file statistics",
                                         total=repo_state.total_files,
-                                        changed=repo_state.changed_files,
-                                        branch=repo_state.current_branch
+                                        changed=repo_state.changed_files
                                     )
                         except Exception as e:
                             event_log.debug("Could not update file statistics", error=str(e))

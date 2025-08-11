@@ -208,23 +208,38 @@ class GitEngine(RepositoryEngine):
             # Count total files in repository
             total_files = 0
             try:
-                # For performance, let's count tracked files using the index
-                # This is much faster than walking the entire tree
+                # Always count files - len(repo.index) is very fast
                 if not repo.is_empty:
                     total_files = len(repo.index)
-                    status_log.debug(f"Counted {total_files} files in index")
+                    status_log.debug(f"Counted {total_files} tracked files from index")
+                    
+                    # Sanity check: non-empty repo should have at least 1 file
+                    if total_files == 0 and not repo.head_is_unborn:
+                        status_log.warning("Index shows 0 files but repo is not empty, attempting recount")
+                        # Try refreshing the index
+                        try:
+                            repo.index.read()
+                            total_files = len(repo.index)
+                            status_log.debug(f"After index refresh: {total_files} files")
+                        except Exception as refresh_err:
+                            status_log.debug(f"Index refresh failed: {refresh_err}")
+                        
+                        # If still 0, try counting from HEAD tree as last resort
+                        if total_files == 0:
+                            try:
+                                head_tree = repo.head.peel().tree
+                                file_count = 0
+                                for entry in head_tree:
+                                    if entry.type == pygit2.GIT_OBJ_BLOB:
+                                        file_count += 1
+                                if file_count > 0:
+                                    total_files = file_count
+                                    status_log.info(f"Counted {total_files} files from HEAD tree")
+                            except Exception as tree_err:
+                                status_log.debug(f"Tree count failed: {tree_err}")
             except Exception as e:
                 status_log.debug("Could not count total files", error=str(e))
-                # Fallback: try to count from working directory
-                try:
-                    import os
-                    workdir = Path(repo.workdir)
-                    total_files = sum(1 for root, dirs, files in os.walk(workdir) 
-                                     for f in files 
-                                     if not any(part.startswith('.') for part in Path(root).relative_to(workdir).parts)
-                                     and not f.startswith('.'))
-                except Exception as e2:
-                    status_log.debug("Fallback file count also failed", error=str(e2))
+                total_files = 0
 
             status_log.debug(
                 "Repository status check",
