@@ -1068,6 +1068,9 @@ class WatchOrchestrator:
                         init_log.warning(f"Error checking initial status: {e}")
                         # Still set to IDLE if we can't determine status
                         repo_state.update_status(RepositoryStatus.IDLE)
+                    
+                    # Update TUI to show initial file statistics
+                    self._post_tui_state_update()
 
             else:  # Not enabled or path not valid
                 init_log.info(
