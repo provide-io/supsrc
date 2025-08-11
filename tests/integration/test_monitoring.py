@@ -8,6 +8,7 @@ Integration tests for the complete monitoring system.
 import asyncio
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -42,35 +43,43 @@ async def monitoring_setup(tmp_path: Path):
     """
     (repo_path / ".gitignore").write_text(gitignore_content)
 
+    # Create a separate temporary directory for the config file
+    config_dir = Path(tempfile.mkdtemp())
+    config_file = config_dir / "test.conf"
+
     # Create configuration
     config_content = f"""
     [global]
-    log_level = "DEBUG"
+    log_level = \"DEBUG\"
 
     [repositories.test-repo]
-    path = "{repo_path}"
+    path = \"{repo_path}\" 
     enabled = true
 
     [repositories.test-repo.rule]
-    type = "supsrc.rules.save_count"
+    type = \"supsrc.rules.save_count\"
     count = 2
 
     [repositories.test-repo.repository]
-    type = "supsrc.engines.git"
+    type = \"supsrc.engines.git\"
     auto_push = false
     """
 
-    config_file = tmp_path / "test.conf"
     config_file.write_text(config_content)
 
     config = load_config(config_file)
 
-    return {
+    yield {
         "repo_path": repo_path,
         "config_file": config_file,
         "config": config,
-        "tmp_path": tmp_path,
+        "tmp_path": tmp_path, # This tmp_path is for the repo
+        "config_dir": config_dir, # Add config_dir to cleanup
     }
+
+    # Teardown: Clean up the separate config directory
+    if config_dir.exists():
+        shutil.rmtree(config_dir)
 
 
 class TestMonitoringIntegration:
@@ -346,20 +355,21 @@ class TestConcurrency:
 
             repos[f"repo-{i}"] = repo_path
 
+
         # Create configuration for all repositories
-        config_content = '[global]\nlog_level = "DEBUG"\n\n[repositories]\n'
+        config_content = '[global]\nlog_level = \"DEBUG\"\n\n[repositories]\n'
         for repo_id, repo_path in repos.items():
             config_content += f"""
             [repositories.{repo_id}]
-            path = "{repo_path}"
+            path = \"{repo_path}\" 
             enabled = true
 
             [repositories.{repo_id}.rule]
-            type = "supsrc.rules.save_count"
+            type = \"supsrc.rules.save_count\"
             count = 1
 
             [repositories.{repo_id}.repository]
-            type = "supsrc.engines.git"
+            type = \"supsrc.engines.git\"
             auto_push = false
             """
 
