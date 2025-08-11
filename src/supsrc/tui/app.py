@@ -242,6 +242,13 @@ class SupsrcTuiApp(App):
         try:
             log.info("TUI Mounted. Initializing UI components.")
             self._update_sub_title("Initializing...")
+            
+            # Save original terminal settings
+            try:
+                import termios
+                self._original_terminal_settings = termios.tcgetattr(0)
+            except Exception:
+                pass  # Not a terminal or termios not available
 
             # Initialize table
             table = self.query_one(DataTable)
@@ -564,9 +571,26 @@ class SupsrcTuiApp(App):
                 log.error(f"Error cancelling worker: {e}", exc_info=True)
 
         log.info("Exiting TUI application.")
+        
+        # Ensure terminal is properly restored
+        try:
+            # Reset terminal to normal mode
+            import os
+            import termios
+            import tty
+            
+            # Restore terminal settings
+            if hasattr(self, '_original_terminal_settings'):
+                termios.tcsetattr(0, termios.TCSANOW, self._original_terminal_settings)
+            
+            # Clear screen and reset cursor
+            os.system('clear')
+            os.system('stty sane')
+            
+        except Exception as e:
+            log.debug(f"Error restoring terminal: {e}")
+        
         self.exit(0)
-        import sys
-        sys.exit(0)
 
     # Message Handlers
     def on_state_update(self, message: StateUpdate) -> None:
