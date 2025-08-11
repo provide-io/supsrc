@@ -35,6 +35,13 @@ async def monitoring_setup(tmp_path: Path):
     subprocess.run(["git", "add", "README.md"], cwd=repo_path, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo_path, check=True)
 
+    # Add .gitignore file for testing
+    gitignore_content = """
+    *.log
+    temp/
+    """
+    (repo_path / ".gitignore").write_text(gitignore_content)
+
     # Create configuration
     config_content = f"""
     [global]
@@ -107,13 +114,7 @@ class TestMonitoringIntegration:
         """Test that .gitignore patterns are properly respected."""
         repo_path = monitoring_setup["repo_path"]
         config = monitoring_setup["config"]
-
-        # Create .gitignore file
-        gitignore_content = """
-        *.log
-        temp/
-        """
-        (repo_path / ".gitignore").write_text(gitignore_content)
+        # .gitignore file is now created in the monitoring_setup fixture
 
         # Create event queue and monitoring service
         event_queue = asyncio.Queue()
