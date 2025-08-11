@@ -667,7 +667,9 @@ class SupsrcTuiApp(App):
                         'last_change_threshold_hours', 
                         3.0
                     )
-                last_change_display = format_last_commit_time(state.last_change_time, threshold)
+                # Use actual Git commit timestamp if available, fallback to last_change_time
+                timestamp = state.last_commit_timestamp or state.last_change_time
+                last_change_display = format_last_commit_time(timestamp, threshold)
 
                 rule_emoji = state.rule_emoji or ""
                 rule_indicator = state.rule_dynamic_indicator or "N/A"

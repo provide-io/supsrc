@@ -59,6 +59,7 @@ class RepositoryState:
     repo_id: str = field()  # The unique identifier for the repository
     status: RepositoryStatus = field(default=RepositoryStatus.IDLE)
     last_change_time: datetime | None = field(default=None)  # Timezone-aware (UTC)
+    last_commit_timestamp: datetime | None = field(default=None)  # Actual Git commit timestamp
     save_count: int = field(default=0)
     error_message: str | None = field(default=None)
     # Holds the handle for the asyncio timer used by inactivity triggers.
