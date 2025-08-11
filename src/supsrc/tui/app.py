@@ -662,7 +662,11 @@ class SupsrcTuiApp(App):
                 # Get threshold from config if available
                 threshold = 3.0  # default
                 if hasattr(self, "_orchestrator") and self._orchestrator and self._orchestrator.config:
-                    threshold = self._orchestrator.config.global_config.last_change_threshold_hours
+                    threshold = getattr(
+                        self._orchestrator.config.global_config, 
+                        'last_change_threshold_hours', 
+                        3.0
+                    )
                 last_change_display = format_last_commit_time(state.last_change_time, threshold)
 
                 rule_emoji = state.rule_emoji or ""

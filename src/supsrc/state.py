@@ -171,9 +171,9 @@ class RepositoryState:
         """Resets state fields typically after a successful commit/push sequence."""
         log.debug("Resetting state after action", repo_id=self.repo_id)
         self.save_count = 0
-        # Keep last_change_time as the time of the action, or clear it?
-        # Clearing might be simpler for inactivity logic.
-        self.last_change_time = None  # Cleared to allow inactivity rule to reset properly
+        # Keep last_change_time - it represents when we last saw changes,
+        # which is useful for the UI to show "time since last activity"
+        # Don't clear: self.last_change_time = None
         self.active_rule_description = None  # Clear specific action/wait messages
         # self.error_message is cleared by update_status if moving out of ERROR
 

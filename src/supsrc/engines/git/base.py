@@ -116,11 +116,16 @@ class GitEngine(RepositoryEngine):
             head_ref = repo.head
             head_commit = head_ref.peel()
             commit_msg_summary = (head_commit.message or "").split("\n", 1)[0]
+            
+            # Convert commit time to datetime with UTC timezone
+            from datetime import datetime, timezone
+            commit_timestamp = datetime.fromtimestamp(head_commit.commit_time, tz=timezone.utc)
 
             return GitRepoSummary(
                 head_ref_name=head_ref.shorthand,
                 head_commit_hash=str(head_commit.id),
                 head_commit_message_summary=commit_msg_summary,
+                head_commit_timestamp=commit_timestamp,
             )
         except pygit2.GitError as e:
             self._log.error("Failed to get Git summary", path=str(working_dir), error=str(e))

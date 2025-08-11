@@ -986,6 +986,9 @@ class WatchOrchestrator:
                         if init_status.success:
                             if init_status.has_unstaged_changes or init_status.has_staged_changes:
                                 repo_state.update_status(RepositoryStatus.CHANGED)
+                                # Set initial last_change_time to now for repos with changes
+                                from datetime import datetime, UTC
+                                repo_state.last_change_time = datetime.now(UTC)
                                 init_log.info("Repository has uncommitted changes")
                             else:
                                 repo_state.update_status(RepositoryStatus.IDLE)
