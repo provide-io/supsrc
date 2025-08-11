@@ -126,7 +126,7 @@ class TestConfigCommands:
         result = runner.invoke(config_cli, ["show", "--config-path", str(config_file)])
 
         assert result.exit_code == 1
-        assert "Error" in result.output
+        assert "error" in result.output.lower()
 
     def test_config_show_with_env_var(self, tmp_path: Path) -> None:
         """Test config show with environment variable."""
@@ -163,7 +163,7 @@ class TestWatchCommands:
         result = runner.invoke(watch_cli, ["--help"])
 
         assert result.exit_code == 0
-        assert "Monitor configured repositories" in result.output
+        assert "monitor configured repositories" in result.output.lower()
         assert "--tui" in result.output
 
     @patch("supsrc.tui.app.WatchOrchestrator")

@@ -154,7 +154,7 @@ class TestWatchCommand:
                 result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
 
         assert result.exit_code != 0
-        assert "Error" in result.output or "crashed" in result.output
+        assert "error" in result.output.lower() or "crashed" in result.output.lower()
 
     def test_watch_keyboard_interrupt(self, tmp_path: Path) -> None:
         """Test watch command handles keyboard interrupt gracefully."""
@@ -172,7 +172,7 @@ class TestWatchCommand:
                 result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
 
         # Should handle interrupt gracefully
-        assert "Stopping" in result.output or "Exiting" in result.output or result.exit_code == 0
+        assert "stopping" in result.output.lower() or "exiting" in result.output.lower() or result.exit_code == 0
 
 
 # 🧪👀

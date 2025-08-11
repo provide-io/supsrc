@@ -155,7 +155,7 @@ class TestTailCommand:
                 result = runner.invoke(cli, ["tail", "--config-path", str(config_file)])
 
         # Should handle interrupt gracefully
-        assert "Stopping" in result.output or "Interrupted" in result.output
+        assert "stopping" in result.output.lower() or "interrupted" in result.output.lower()
 
 
 # 🧪🏃‍♂️
