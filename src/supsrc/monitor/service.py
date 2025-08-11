@@ -44,26 +44,6 @@ class MonitoringService:
             self._observer.unschedule(handler)
         self._handlers.clear()
         self._logger.debug("Cleared all monitoring handlers.")
-    """
-    Manages the filesystem monitoring using watchdog.
-
-    Creates and manages event handlers for each repository and runs the
-    watchdog observer in a separate thread.
-    """
-
-    def __init__(self, event_queue: asyncio.Queue[MonitoredEvent]):
-        """
-        Initializes the MonitoringService.
-
-        Args:
-            event_queue: The asyncio Queue where filtered events will be placed.
-        """
-        self._event_queue = event_queue
-        self._observer = Observer()
-        self._handlers: dict[str, SupsrcEventHandler] = {}
-        self._logger = log
-        self._is_running = False
-        log.debug("MonitoringService initialized")
 
     def add_repository(
         self,
