@@ -515,6 +515,7 @@ class WatchOrchestrator:
                         repo_state.modified_files = final_status.modified_files
                         # Keep total_files as is - it doesn't change with commits
                         repo_state.total_files = final_status.total_files
+                        repo_state.current_branch = final_status.current_branch
                 except Exception as e:
                     callback_log.debug("Could not update final status", error=str(e))
                 
@@ -716,10 +717,12 @@ class WatchOrchestrator:
                                     repo_state.deleted_files = status_result.deleted_files
                                     repo_state.modified_files = status_result.modified_files
                                     repo_state.has_uncommitted_changes = not status_result.is_clean
+                                    repo_state.current_branch = status_result.current_branch
                                     event_log.debug(
                                         "Updated file statistics",
                                         total=repo_state.total_files,
-                                        changed=repo_state.changed_files
+                                        changed=repo_state.changed_files,
+                                        branch=repo_state.current_branch
                                     )
                         except Exception as e:
                             event_log.debug("Could not update file statistics", error=str(e))
@@ -1047,16 +1050,17 @@ class WatchOrchestrator:
                             repo_state.deleted_files = init_status.deleted_files
                             repo_state.modified_files = init_status.modified_files
                             repo_state.has_uncommitted_changes = not init_status.is_clean
+                            repo_state.current_branch = init_status.current_branch
                             
                             if init_status.has_unstaged_changes or init_status.has_staged_changes:
                                 repo_state.update_status(RepositoryStatus.CHANGED)
                                 # Set initial last_change_time to now for repos with changes
                                 from datetime import datetime, UTC
                                 repo_state.last_change_time = datetime.now(UTC)
-                                init_log.info("Repository has uncommitted changes")
+                                init_log.info(f"Repository has uncommitted changes (branch: {repo_state.current_branch}, files: {repo_state.total_files})")
                             else:
                                 repo_state.update_status(RepositoryStatus.IDLE)
-                                init_log.info("Repository is clean")
+                                init_log.info(f"Repository is clean (branch: {repo_state.current_branch}, files: {repo_state.total_files})")
                         else:
                             init_log.warning(f"Failed to get initial status: {init_status.message}")
                             repo_state.update_status(RepositoryStatus.IDLE)
