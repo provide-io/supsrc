@@ -16,7 +16,7 @@ from supsrc.monitor.handler import SupsrcEventHandler
 log = structlog.get_logger("monitor.service")
 
 
-    class MonitoringService:
+class MonitoringService:
     """
     Manages the filesystem monitoring using watchdog.
 

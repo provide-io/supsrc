@@ -71,6 +71,7 @@ dev = [
     "behave>=1.2.6",
     # Include TUI deps for testing TUI features
     "supsrc[tui]",
+    "pytest-xdist>=3.8.0",
 ]
 
 # --- Optional Features (Extras) ---
