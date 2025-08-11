@@ -86,6 +86,10 @@ class RepositoryState:
     is_frozen: bool = field(default=False)  # Frozen due to conflict
     freeze_reason: str | None = field(default=None)  # Why it was frozen
     timer_seconds_left: int | None = field(default=None)  # Countdown for timer column
+    
+    # Internal timer tracking fields (not exposed via attrs)
+    _timer_total_seconds: int | None = field(default=None, init=False)
+    _timer_start_time: float | None = field(default=None, init=False)
 
     # Consider adding:
     # last_commit_hash: Optional[str] = field(default=None) # This is now last_commit_short_hash
@@ -180,12 +184,14 @@ class RepositoryState:
         self.update_status(RepositoryStatus.IDLE)  # Back to idle state
         # Note: last_commit_short_hash and last_commit_message_summary are intentionally persisted
 
-    def set_inactivity_timer(self, handle: asyncio.TimerHandle) -> None:
+    def set_inactivity_timer(self, handle: asyncio.TimerHandle, total_seconds: int) -> None:
         """Stores the handle for a scheduled inactivity timer, cancelling any previous one."""
         # Cancel any previous timer before setting a new one
         self.cancel_inactivity_timer()
         self.inactivity_timer_handle = handle
-        log.debug("Inactivity timer set", repo_id=self.repo_id, timer_handle=repr(handle))
+        self._timer_total_seconds = total_seconds
+        self._timer_start_time = asyncio.get_event_loop().time()
+        log.debug("Inactivity timer set", repo_id=self.repo_id, timer_handle=repr(handle), total_seconds=total_seconds)
 
     def cancel_inactivity_timer(self) -> None:
         """Cancels the pending inactivity timer, if one exists."""
