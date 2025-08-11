@@ -425,6 +425,9 @@ class WatchOrchestrator:
                 repo_state.last_commit_short_hash = commit_result.commit_hash[:7]
                 repo_state.action_description = f"Committed: {repo_state.last_commit_short_hash}"
                 repo_state.display_status_emoji = "✅"
+                # Update the commit timestamp to now since we just made a commit
+                from datetime import datetime, UTC
+                repo_state.last_commit_timestamp = datetime.now(UTC)
                 self._console_message(
                     f"Commit complete. Hash: {repo_state.last_commit_short_hash}",
                     repo_id=repo_id,
@@ -948,6 +951,8 @@ class WatchOrchestrator:
                                 repo_state.last_commit_message_summary = (
                                     summary.head_commit_message_summary
                                 )
+                                # Set the actual Git commit timestamp
+                                repo_state.last_commit_timestamp = summary.head_commit_timestamp
                                 commit_short_hash = repo_state.last_commit_short_hash or "N/A"
                                 commit_msg_summary = (
                                     repo_state.last_commit_message_summary or "No commit message"
