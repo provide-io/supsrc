@@ -98,10 +98,14 @@ class RepositoryState:
 
     def __attrs_post_init__(self):
         """Log the initial state upon creation."""
+        # Set initial emoji based on status
+        self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
+        
         log.debug(
             "Initialized repository state",
             repo_id=self.repo_id,
             initial_status=self.status.name,
+            emoji=self.display_status_emoji,
         )
 
     def update_status(self, new_status: RepositoryStatus, error_msg: str | None = None) -> None:
