@@ -193,11 +193,8 @@ class RepositoryState:
         self.action_progress_total = None
         self.action_progress_completed = None
         
-        # Reset file change counters after commit
-        self.changed_files = 0
-        self.added_files = 0
-        self.deleted_files = 0
-        self.modified_files = 0
+        # Don't reset file counters - just mark as committed
+        # The numbers should remain visible but will be shown in grey
         self.has_uncommitted_changes = False
 
         self.cancel_inactivity_timer()  # Ensure timer is gone
