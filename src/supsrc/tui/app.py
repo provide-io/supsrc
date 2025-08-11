@@ -61,6 +61,35 @@ def get_countdown_display(seconds_left: int | None) -> str:
         return "💥"  # Zero/trigger
 
 
+def format_last_commit_time(last_change_time, threshold_hours=3):
+    """Format last commit time as relative or absolute based on age."""
+    if not last_change_time:
+        return "Never"
+    
+    from datetime import datetime, UTC
+    now = datetime.now(UTC)
+    delta = now - last_change_time
+    total_seconds = int(delta.total_seconds())
+    
+    # If older than threshold, show full date
+    if delta.total_seconds() > (threshold_hours * 3600):
+        return last_change_time.strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Otherwise show relative time
+    if total_seconds < 60:
+        return f"{total_seconds}s ago"
+    elif total_seconds < 3600:
+        minutes = total_seconds // 60
+        return f"{minutes}m ago"
+    else:
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        if minutes > 0:
+            return f"{hours}h {minutes}m ago"
+        else:
+            return f"{hours}h ago"
+
+
 class TimerManager:
     """Manages application timers with proper lifecycle handling."""
 
@@ -628,11 +657,9 @@ class SupsrcTuiApp(App):
                 status_display = state.display_status_emoji
                 timer_display = get_countdown_display(state.timer_seconds_left)
                 repository_display = repo_id_str
-                last_change_display = (
-                    state.last_change_time.strftime("%Y-%m-%d %H:%M:%S")
-                    if state.last_change_time
-                    else "N/A"
-                )
+                
+                # Use relative time for recent changes, full date for older ones
+                last_change_display = format_last_commit_time(state.last_change_time)
 
                 rule_emoji = state.rule_emoji or ""
                 rule_indicator = state.rule_dynamic_indicator or "N/A"
