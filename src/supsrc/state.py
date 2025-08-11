@@ -34,14 +34,14 @@ class RepositoryStatus(Enum):
 # might be derived in the TUI or Orchestrator based on a combination of
 # RepositoryStatus and other state fields (e.g., error_message, last_commit_hash).
 STATUS_EMOJI_MAP = {
-    RepositoryStatus.IDLE: "🧼",
-    RepositoryStatus.CHANGED: "✏️",
-    RepositoryStatus.TRIGGERED: "🎯",  # Rule met, action pending
-    RepositoryStatus.PROCESSING: "🔄",  # General processing (e.g. status check)
+    RepositoryStatus.IDLE: "✅",      # Clean/normal state
+    RepositoryStatus.CHANGED: "📝",   # Uncommitted changes
+    RepositoryStatus.TRIGGERED: "🎯", # Rule met, action pending
+    RepositoryStatus.PROCESSING: "🔄", # General processing (e.g. status check)
     RepositoryStatus.STAGING: "📦",
     RepositoryStatus.COMMITTING: "💾",
-    RepositoryStatus.PUSHING: "🅿️",
-    RepositoryStatus.ERROR: "❌",
+    RepositoryStatus.PUSHING: "🚀",
+    RepositoryStatus.ERROR: "❌",     # Error state
     # Specific states like 'Evaluating' or 'Waiting' will be set directly by Orchestrator
     # as they are not direct RepositoryStatus enum members.
 }
