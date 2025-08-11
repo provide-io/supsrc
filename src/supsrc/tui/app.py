@@ -679,12 +679,33 @@ class SupsrcTuiApp(App):
                 rule_emoji = state.rule_emoji or ""
                 rule_indicator = state.rule_dynamic_indicator or "N/A"
                 rule_display = f"{rule_emoji} {rule_indicator}".strip()
+                
+                # Format file statistics with color based on commit status
+                if state.has_uncommitted_changes:
+                    # Active colors for uncommitted changes
+                    total_files_display = str(state.total_files)
+                    changed_files_display = f"[bold yellow]{state.changed_files}[/bold yellow]" if state.changed_files > 0 else "0"
+                    added_display = f"[bold green]{state.added_files}[/bold green]" if state.added_files > 0 else "0"
+                    deleted_display = f"[bold red]{state.deleted_files}[/bold red]" if state.deleted_files > 0 else "0"
+                    modified_display = f"[bold blue]{state.modified_files}[/bold blue]" if state.modified_files > 0 else "0"
+                else:
+                    # Grey/dim for committed state
+                    total_files_display = str(state.total_files)
+                    changed_files_display = f"[dim]{state.changed_files}[/dim]" if state.changed_files > 0 else "0"
+                    added_display = f"[dim]{state.added_files}[/dim]" if state.added_files > 0 else "0"
+                    deleted_display = f"[dim]{state.deleted_files}[/dim]" if state.deleted_files > 0 else "0"
+                    modified_display = f"[dim]{state.modified_files}[/dim]" if state.modified_files > 0 else "0"
 
                 row_data = (
                     status_display,
                     timer_display,
                     repository_display,
                     last_change_display,
+                    total_files_display,
+                    changed_files_display,
+                    added_display,
+                    deleted_display,
+                    modified_display,
                     rule_display,
                 )
 
