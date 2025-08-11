@@ -174,6 +174,7 @@ class TestMonitoringIntegration:
 
         shutdown_event = asyncio.Event()
         orchestrator = WatchOrchestrator(config_file, shutdown_event)
+        orchestrator.setup_config_watcher = Mock() # Prevent config watcher from interfering
 
         # Start orchestrator in background
         orchestrator_task = asyncio.create_task(orchestrator.run())
