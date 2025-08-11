@@ -332,12 +332,8 @@ class SupsrcTuiApp(App):
                 for repo_state in self._orchestrator.repo_states.values():
                     repo_state.update_timer_countdown()
                 
-                # Trigger a state update to refresh the display
-                states_snapshot = {
-                    repo_id: attrs.asdict(state)
-                    for repo_id, state in self._orchestrator.repo_states.items()
-                }
-                self.post_message(StateUpdate(states_snapshot))
+                # Trigger a state update to refresh the display with actual state objects
+                self.post_message(StateUpdate(self._orchestrator.repo_states))
         except Exception as e:
             log.debug(f"Error updating countdown: {e}")
 
