@@ -185,10 +185,13 @@ class TestMonitoringIntegration:
             # Wait for save_count to become 1
             timeout = 5.0
             start_time = asyncio.get_event_loop().time()
-            while repo_state.save_count < 2:
+            while True:
+                repo_state = orchestrator.repo_states["test-repo"]
+                if repo_state.save_count >= 2:
+                    break
                 await asyncio.sleep(0.1)
                 if asyncio.get_event_loop().time() - start_time > timeout:
-                    raise TimeoutError("Timed out waiting for save_count to become 1")
+                    raise TimeoutError(f"Timed out waiting for save_count to become 2. Current: {repo_state.save_count}")
                 repo_state = orchestrator.repo_states["test-repo"]
 
             # Verify state update
