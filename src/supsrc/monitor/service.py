@@ -16,6 +16,14 @@ from supsrc.monitor.handler import SupsrcEventHandler
 log = structlog.get_logger("monitor.service")
 
 
+    def clear_handlers(self) -> None:
+        """Unschedules all existing handlers from the observer."""
+        for handler in self._handlers.values():
+            self._observer.unschedule(handler)
+        self._handlers.clear()
+        self._logger.debug("Cleared all monitoring handlers.")
+
+
 class MonitoringService:
     """
     Manages the filesystem monitoring using watchdog.
