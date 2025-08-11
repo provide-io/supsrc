@@ -198,17 +198,16 @@ class TestMonitoringIntegration:
             timeout = 5.0
             start_time = asyncio.get_event_loop().time()
             while True:
-                repo_state = orchestrator.repo_states["test-repo"]
-                if repo_state.save_count >= 2:
+                current_repo_state = orchestrator.repo_states["test-repo"]
+                if current_repo_state.save_count >= 2:
                     break
                 await asyncio.sleep(0.1)
                 if asyncio.get_event_loop().time() - start_time > timeout:
-                    raise TimeoutError(f"Timed out waiting for save_count to become 2. Current: {repo_state.save_count}")
-                repo_state = orchestrator.repo_states["test-repo"]
+                    raise TimeoutError(f"Timed out waiting for save_count to become 2. Current: {current_repo_state.save_count}")
 
             # Verify state update
-            assert repo_state.save_count == 1
-            assert repo_state.status == RepositoryStatus.CHANGED
+            assert current_repo_state.save_count == 1
+            assert current_repo_state.status == RepositoryStatus.CHANGED
 
             # Create second file change (should trigger save count rule)
             (repo_path / "change2.txt").write_text("Second change")
@@ -216,15 +215,15 @@ class TestMonitoringIntegration:
             # Wait for save_count to become 0 (after action and reset)
             timeout = 5.0
             start_time = asyncio.get_event_loop().time()
-            while repo_state.save_count > 0 or repo_state.status != RepositoryStatus.IDLE:
+            while current_repo_state.save_count > 0 or current_repo_state.status != RepositoryStatus.IDLE:
                 await asyncio.sleep(0.1)
                 if asyncio.get_event_loop().time() - start_time > timeout:
                     raise TimeoutError("Timed out waiting for save_count to reset or status to become IDLE")
-                repo_state = orchestrator.repo_states["test-repo"]
+                current_repo_state = orchestrator.repo_states["test-repo"]
 
             # Verify action was triggered
-            assert repo_state.save_count == 0  # Reset after action
-            assert repo_state.status == RepositoryStatus.IDLE
+            assert current_repo_state.save_count == 0  # Reset after action
+            assert current_repo_state.status == RepositoryStatus.IDLE
 
             # Verify Git commit was created
             result = subprocess.run(
