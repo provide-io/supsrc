@@ -997,6 +997,14 @@ class WatchOrchestrator:
                             repo_config.path
                         )
                         if init_status.success:
+                            # Update file statistics from initial status
+                            repo_state.total_files = init_status.total_files
+                            repo_state.changed_files = init_status.changed_files
+                            repo_state.added_files = init_status.added_files
+                            repo_state.deleted_files = init_status.deleted_files
+                            repo_state.modified_files = init_status.modified_files
+                            repo_state.has_uncommitted_changes = not init_status.is_clean
+                            
                             if init_status.has_unstaged_changes or init_status.has_staged_changes:
                                 repo_state.update_status(RepositoryStatus.CHANGED)
                                 # Set initial last_change_time to now for repos with changes

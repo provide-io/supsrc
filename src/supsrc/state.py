@@ -192,6 +192,13 @@ class RepositoryState:
         self.action_description = None
         self.action_progress_total = None
         self.action_progress_completed = None
+        
+        # Reset file change counters after commit
+        self.changed_files = 0
+        self.added_files = 0
+        self.deleted_files = 0
+        self.modified_files = 0
+        self.has_uncommitted_changes = False
 
         self.cancel_inactivity_timer()  # Ensure timer is gone
         self.update_status(RepositoryStatus.IDLE)  # Back to idle state
