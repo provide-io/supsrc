@@ -145,7 +145,7 @@ class GitEngine(RepositoryEngine):
     ) -> RepoStatusResult:
         # (Implementation remains the same)
         status_log = self._log.bind(repo_id=state.repo_id, path=str(working_dir))
-        status_log.debug("Getting repository status...")
+        status_log.warning(f"GET_STATUS CALLED for {working_dir.name}")
         try:
             repo = self._get_repo(working_dir)
             current_branch = "UNBORN" if repo.head_is_unborn else repo.head.shorthand
@@ -206,31 +206,31 @@ class GitEngine(RepositoryEngine):
             changed_files = added_files + deleted_files + modified_files
             
             # Count total files in repository
-            # Just use subprocess to call git ls-files
+            # Always try to count files - don't skip based on repo state
             total_files = 0
             try:
-                if repo.is_empty:
-                    status_log.debug("Repository is empty")
-                    total_files = 0
-                elif repo.head_is_unborn:
-                    status_log.debug("Repository HEAD is unborn") 
-                    total_files = 0
+                # Use git ls-files to count tracked files
+                import subprocess
+                result = subprocess.run(
+                    ['git', 'ls-files'], 
+                    cwd=working_dir,
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode == 0:
+                    # Count non-empty lines
+                    files = [f for f in result.stdout.strip().split('\n') if f]
+                    total_files = len(files)
+                    status_log.info(f"File count for {working_dir.name}: {total_files}")
                 else:
-                    # Use git ls-files to count tracked files
-                    import subprocess
-                    result = subprocess.run(
-                        ['git', 'ls-files'], 
-                        cwd=working_dir,
-                        capture_output=True,
-                        text=True
-                    )
-                    if result.returncode == 0:
-                        # Count non-empty lines
-                        files = [f for f in result.stdout.strip().split('\n') if f]
-                        total_files = len(files)
-                        status_log.info(f"Counted {total_files} tracked files in {working_dir.name}")
-                    else:
-                        status_log.error(f"git ls-files failed: {result.stderr}")
+                    status_log.error(f"git ls-files failed for {working_dir.name}: {result.stderr}")
+                    # Try alternative if ls-files fails
+                    if repo and not repo.is_empty:
+                        try:
+                            total_files = len(repo.index)
+                            status_log.info(f"Used index length fallback: {total_files} files")
+                        except:
+                            pass
             except Exception as e:
                 status_log.error(f"Error counting files: {e}")
                 total_files = 0
