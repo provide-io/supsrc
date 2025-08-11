@@ -659,7 +659,11 @@ class SupsrcTuiApp(App):
                 repository_display = repo_id_str
                 
                 # Use relative time for recent changes, full date for older ones
-                last_change_display = format_last_commit_time(state.last_change_time)
+                # Get threshold from config if available
+                threshold = 3.0  # default
+                if hasattr(self, "_orchestrator") and self._orchestrator and self._orchestrator.config:
+                    threshold = self._orchestrator.config.global_config.last_change_threshold_hours
+                last_change_display = format_last_commit_time(state.last_change_time, threshold)
 
                 rule_emoji = state.rule_emoji or ""
                 rule_indicator = state.rule_dynamic_indicator or "N/A"
