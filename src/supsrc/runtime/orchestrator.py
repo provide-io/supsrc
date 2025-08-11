@@ -974,11 +974,29 @@ class WatchOrchestrator:
                         # self._post_tui_log(repo_id, "ERROR", f"Failed to get summary: {summary_exc}") # Redundant
                         # repo_state.update_status(RepositoryStatus.ERROR, f"Summary failed: {summary_exc}") # Potentially set error
 
-                # Ensure emoji is updated based on initial status (typically IDLE)
-                if repo_state:
-                    repo_state.update_status(
-                        repo_state.status
-                    )  # This will set the emoji via STATUS_EMOJI_MAP
+                # Check initial repository status (clean vs uncommitted changes)
+                if repo_state and engine_instance:
+                    try:
+                        init_status = await engine_instance.get_status(
+                            repo_state, 
+                            repo_config.repository, 
+                            self.config.global_config if self.config else {}, 
+                            repo_config.path
+                        )
+                        if init_status.success:
+                            if init_status.has_unstaged_changes or init_status.has_staged_changes:
+                                repo_state.update_status(RepositoryStatus.CHANGED)
+                                init_log.info("Repository has uncommitted changes")
+                            else:
+                                repo_state.update_status(RepositoryStatus.IDLE)
+                                init_log.info("Repository is clean")
+                        else:
+                            init_log.warning(f"Failed to get initial status: {init_status.message}")
+                            repo_state.update_status(RepositoryStatus.IDLE)
+                    except Exception as e:
+                        init_log.warning(f"Error checking initial status: {e}")
+                        # Still set to IDLE if we can't determine status
+                        repo_state.update_status(RepositoryStatus.IDLE)
 
             else:  # Not enabled or path not valid
                 init_log.info(
