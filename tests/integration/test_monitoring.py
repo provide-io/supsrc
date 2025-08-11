@@ -194,6 +194,9 @@ class TestMonitoringIntegration:
             (repo_path / "change2.txt").write_text("Second change")
             await asyncio.sleep(2.0)  # Allow rule processing and actions
 
+            # Retrieve updated repo_state after actions
+            repo_state = orchestrator.repo_states["test-repo"]
+
             # Verify action was triggered
             assert repo_state.save_count == 0  # Reset after action
             assert repo_state.status == RepositoryStatus.IDLE
