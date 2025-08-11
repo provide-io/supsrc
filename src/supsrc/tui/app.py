@@ -257,7 +257,7 @@ class SupsrcTuiApp(App):
                 "📊",  # Status emoji header
                 "⏱️",   # Timer/countdown column
                 "Repository",
-                "Last Change",
+                "Last Commit",
                 "Rule",
             )
 
