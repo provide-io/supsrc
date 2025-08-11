@@ -697,6 +697,31 @@ class WatchOrchestrator:
                             style="magenta bold",
                             emoji="✏️",
                         )
+                        
+                        # Update file statistics after change
+                        try:
+                            repo_engine = self.repo_engines.get(repo_id)
+                            if repo_engine:
+                                status_result = await repo_engine.get_status(
+                                    repo_state, 
+                                    repo_config.repository,
+                                    self.config.global_config if self.config else {},
+                                    repo_config.path
+                                )
+                                if status_result.success:
+                                    repo_state.total_files = status_result.total_files
+                                    repo_state.changed_files = status_result.changed_files
+                                    repo_state.added_files = status_result.added_files
+                                    repo_state.deleted_files = status_result.deleted_files
+                                    repo_state.modified_files = status_result.modified_files
+                                    repo_state.has_uncommitted_changes = not status_result.is_clean
+                                    event_log.debug(
+                                        "Updated file statistics",
+                                        total=repo_state.total_files,
+                                        changed=repo_state.changed_files
+                                    )
+                        except Exception as e:
+                            event_log.debug("Could not update file statistics", error=str(e))
                         # self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}") # Redundant
 
                         rule_config_obj: RuleConfig = repo_config.rule
