@@ -500,6 +500,23 @@ class WatchOrchestrator:
                 repo_state.action_description = "Completed"
                 repo_state.action_progress_total = None
                 repo_state.action_progress_completed = None
+                
+                # Get updated status to reset file change counts to 0
+                try:
+                    final_status = await repo_engine.get_status(
+                        repo_state, engine_config_dict, global_config, working_dir
+                    )
+                    if final_status.success:
+                        # Update file counts (should all be 0 after commit)
+                        repo_state.changed_files = final_status.changed_files
+                        repo_state.added_files = final_status.added_files
+                        repo_state.deleted_files = final_status.deleted_files
+                        repo_state.modified_files = final_status.modified_files
+                        # Keep total_files as is - it doesn't change with commits
+                        repo_state.total_files = final_status.total_files
+                except Exception as e:
+                    callback_log.debug("Could not update final status", error=str(e))
+                
                 self._post_tui_state_update()
                 repo_state.reset_after_action()
 
