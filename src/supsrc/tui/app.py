@@ -581,6 +581,7 @@ class SupsrcTuiApp(App):
 
                 # Format display data
                 status_display = state.display_status_emoji
+                timer_display = get_countdown_display(state.timer_seconds_left)
                 repository_display = repo_id_str
                 last_change_display = (
                     state.last_change_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -592,36 +593,12 @@ class SupsrcTuiApp(App):
                 rule_indicator = state.rule_dynamic_indicator or "N/A"
                 rule_display = f"{rule_emoji} {rule_indicator}".strip()
 
-                action_display = state.action_description or ""
-                if (
-                    state.action_description
-                    and state.action_progress_total is not None
-                    and state.action_progress_completed is not None
-                ):
-                    total = state.action_progress_total
-                    completed = state.action_progress_completed
-                    if total > 0:
-                        percentage = (completed / total) * 100
-                        bar_width = 10
-                        filled_width = int(bar_width * completed // total)
-                        bar_text = "❚" * filled_width + "-" * (bar_width - filled_width)
-                        action_display = (
-                            f"{state.action_description} [{bar_text}] {percentage:.0f}%"
-                        )
-
-                commit_hash = state.last_commit_short_hash or "-------"
-                commit_msg = state.last_commit_message_summary or "No commit info"
-                if len(commit_msg) > 30:
-                    commit_msg = commit_msg[:27] + "..."
-                last_commit_display = f"{commit_hash} - {commit_msg}"
-
                 row_data = (
                     status_display,
+                    timer_display,
                     repository_display,
                     last_change_display,
                     rule_display,
-                    action_display,
-                    last_commit_display,
                 )
 
                 if repo_id_str in table.rows:
