@@ -1069,14 +1069,8 @@ class WatchOrchestrator:
                             repo_state.has_uncommitted_changes = not init_status.is_clean
                             repo_state.current_branch = init_status.current_branch
                             
-                            init_log.warning(
-                                f"CRITICAL: Initial status for {repo_id}",
-                                status_total_files=init_status.total_files,
-                                state_total_files_before=getattr(repo_state, 'total_files', 'NO_ATTR'),
-                                state_total_files_after=repo_state.total_files,
-                                changed=repo_state.changed_files,
-                                branch=repo_state.current_branch,
-                                is_clean=init_status.is_clean
+                            init_log.info(
+                                f"Initial status for {repo_id}: {repo_state.total_files} files, branch={repo_state.current_branch}, clean={init_status.is_clean}"
                             )
                             
                             if init_status.has_unstaged_changes or init_status.has_staged_changes:
@@ -1114,16 +1108,6 @@ class WatchOrchestrator:
             num_states=len(self.repo_states),
             repo_ids=list(self.repo_states.keys()),
         )
-        
-        # Log file counts for all repos to debug
-        for repo_id, repo_state in self.repo_states.items():
-            self._log.info(
-                f"Repo state summary for {repo_id}",
-                total_files=repo_state.total_files,
-                branch=repo_state.current_branch,
-                status=repo_state.status.name
-            )
-        
         self._post_tui_state_update()
         self._safe_log("info", "--- Repo Initialization Complete ---", count=len(enabled_repo_ids))
         # self._post_tui_log(None, "INFO", f"{len(enabled_repo_ids)} repos initialized.") # Redundant

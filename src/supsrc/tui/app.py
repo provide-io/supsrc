@@ -695,10 +695,6 @@ class SupsrcTuiApp(App):
                 rule_display = f"{rule_emoji} {rule_indicator}".strip()
                 
                 # Format file statistics with color based on commit status
-                # DEBUG: Log what we're getting
-                if state.total_files == 0:
-                    log.warning(f"Zero file count for {repo_id_str}, status: {state.status.name}, has_changes: {state.has_uncommitted_changes}")
-                
                 if state.has_uncommitted_changes:
                     # Active colors for uncommitted changes
                     total_files_display = str(state.total_files) if state.total_files > 0 else "?"

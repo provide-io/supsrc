@@ -206,26 +206,33 @@ class GitEngine(RepositoryEngine):
             changed_files = added_files + deleted_files + modified_files
             
             # Count total files in repository
-            # ALWAYS count files - don't rely on caching for clean repos
+            # Just use subprocess to call git ls-files
             total_files = 0
             try:
                 if repo.is_empty:
                     status_log.debug("Repository is empty")
                     total_files = 0
                 elif repo.head_is_unborn:
-                    status_log.debug("Repository HEAD is unborn")
+                    status_log.debug("Repository HEAD is unborn") 
                     total_files = 0
                 else:
-                    # Count files in the index
-                    index_files = list(repo.index)
-                    total_files = len(index_files)
-                    status_log.warning(f"FILE COUNT for {working_dir.name}: {total_files} files in index")
-                    
-                    # Double check with status if we get 0
-                    if total_files == 0:
-                        status_log.error(f"Got 0 files from index for {working_dir.name}, this seems wrong!")
+                    # Use git ls-files to count tracked files
+                    import subprocess
+                    result = subprocess.run(
+                        ['git', 'ls-files'], 
+                        cwd=working_dir,
+                        capture_output=True,
+                        text=True
+                    )
+                    if result.returncode == 0:
+                        # Count non-empty lines
+                        files = [f for f in result.stdout.strip().split('\n') if f]
+                        total_files = len(files)
+                        status_log.info(f"Counted {total_files} tracked files in {working_dir.name}")
+                    else:
+                        status_log.error(f"git ls-files failed: {result.stderr}")
             except Exception as e:
-                status_log.error(f"Error counting files: {e}", exc_info=True)
+                status_log.error(f"Error counting files: {e}")
                 total_files = 0
 
             status_log.debug(
