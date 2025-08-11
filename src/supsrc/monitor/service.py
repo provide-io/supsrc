@@ -16,15 +16,34 @@ from supsrc.monitor.handler import SupsrcEventHandler
 log = structlog.get_logger("monitor.service")
 
 
-    def clear_handlers(self) -> None:
+    class MonitoringService:
+    """
+    Manages the filesystem monitoring using watchdog.
+
+    Creates and manages event handlers for each repository and runs the
+    watchdog observer in a separate thread.
+    """
+
+    def __init__(self, event_queue: asyncio.Queue[MonitoredEvent]):
+        """
+        Initializes the MonitoringService.
+
+        Args:
+            event_queue: The asyncio Queue where filtered events will be placed.
+        """
+        self._event_queue = event_queue
+        self._observer = Observer()
+        self._handlers: dict[str, SupsrcEventHandler] = {}
+        self._logger = log
+        self._is_running = False
+        log.debug("MonitoringService initialized")
+
+    def clear_handlers(self, ) -> None:
         """Unschedules all existing handlers from the observer."""
         for handler in self._handlers.values():
             self._observer.unschedule(handler)
         self._handlers.clear()
         self._logger.debug("Cleared all monitoring handlers.")
-
-
-class MonitoringService:
     """
     Manages the filesystem monitoring using watchdog.
 
