@@ -210,22 +210,21 @@ class GitEngine(RepositoryEngine):
             try:
                 # Walk the repository tree to count files
                 if not repo.is_empty and not repo.head_is_unborn:
-                    tree = repo.head.peel().tree
-                    for entry in tree:
-                        if entry.type == pygit2.GIT_OBJ_BLOB:
-                            total_files += 1
-                        elif entry.type == pygit2.GIT_OBJ_TREE:
-                            # Recursively count files in subdirectories
-                            subtree = repo[entry.id]
-                            def count_files_in_tree(tree_obj):
-                                count = 0
-                                for item in tree_obj:
-                                    if item.type == pygit2.GIT_OBJ_BLOB:
-                                        count += 1
-                                    elif item.type == pygit2.GIT_OBJ_TREE:
-                                        count += count_files_in_tree(repo[item.id])
-                                return count
-                            total_files += count_files_in_tree(subtree)
+                    head_commit = repo.head.peel()
+                    tree = head_commit.tree
+                    
+                    def count_files_in_tree(tree_obj):
+                        count = 0
+                        for entry in tree_obj:
+                            if entry.type == pygit2.GIT_OBJ_BLOB:
+                                count += 1
+                            elif entry.type == pygit2.GIT_OBJ_TREE:
+                                # Recursively count files in subdirectories
+                                subtree = repo[entry.id]
+                                count += count_files_in_tree(subtree)
+                        return count
+                    
+                    total_files = count_files_in_tree(tree)
             except Exception as e:
                 status_log.debug("Could not count total files", error=str(e))
 
