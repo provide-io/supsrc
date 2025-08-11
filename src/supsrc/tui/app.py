@@ -281,6 +281,14 @@ class SupsrcTuiApp(App):
                 self._check_external_shutdown,
                 repeat=True,
             )
+            
+            # Start countdown update timer
+            self._timer_manager.create_timer(
+                "countdown_update",
+                1.0,
+                self._update_countdown_display,
+                repeat=True,
+            )
 
             self._update_sub_title("Monitoring...")
 
@@ -315,6 +323,23 @@ class SupsrcTuiApp(App):
         if self._cli_shutdown_event.is_set() and not self._is_shutting_down:
             log.warning("External shutdown detected (CLI signal). Triggering quit.")
             self.action_quit()
+    
+    def _update_countdown_display(self) -> None:
+        """Update countdown displays for all repositories."""
+        try:
+            if hasattr(self, "_orchestrator") and self._orchestrator:
+                # Update countdown for each repository state
+                for repo_state in self._orchestrator.repo_states.values():
+                    repo_state.update_timer_countdown()
+                
+                # Trigger a state update to refresh the display
+                states_snapshot = {
+                    repo_id: attrs.asdict(state)
+                    for repo_id, state in self._orchestrator.repo_states.items()
+                }
+                self.post_message(StateUpdate(states_snapshot))
+        except Exception as e:
+            log.debug(f"Error updating countdown: {e}")
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         """Handle worker state changes."""
