@@ -16,6 +16,7 @@ from click.testing import CliRunner
 from supsrc.cli.config_cmds import config_cli
 from supsrc.cli.main import cli
 from supsrc.cli.watch_cmds import watch_cli
+from supsrc.config.loader import load_config
 
 
 class TestMainCLI:
@@ -166,7 +167,7 @@ class TestWatchCommands:
         assert "--tui" in result.output
 
     @patch("supsrc.cli.watch_cmds.WatchOrchestrator")
-    @patch("supsrc.cli.watch_cmds.load_config")
+    @patch("supsrc.config.loader.load_config")
     def test_watch_normal_mode(
         self, mock_load_config: Mock, mock_orchestrator_class: Mock, tmp_path: Path
     ) -> None:
