@@ -1,0 +1,14 @@
+[workenv.tools]
+python = "3.11"
+uv = "latest"
+mypy = "latest"
+bandit = "latest"
+ruff = "latest"
+pytest = "latest"
+pytest-cov = "latest"
+pytest-asyncio = "latest"
+pytest-xdist = "latest"
+
+[workenv.settings]
+verify_checksums = true
+install_path = ".wrkenv/tools"
