@@ -183,6 +183,9 @@ class TestMonitoringIntegration:
             (repo_path / "change1.txt").write_text("First change")
             await asyncio.sleep(0.5)  # Allow event processing
 
+            # Retrieve updated repo_state after changes
+            repo_state = orchestrator.repo_states["test-repo"]
+
             # Verify state update
             assert repo_state.save_count == 1
             assert repo_state.status == RepositoryStatus.CHANGED
