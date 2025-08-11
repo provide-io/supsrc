@@ -206,48 +206,26 @@ class GitEngine(RepositoryEngine):
             changed_files = added_files + deleted_files + modified_files
             
             # Count total files in repository
+            # ALWAYS count files - don't rely on caching for clean repos
             total_files = 0
             try:
-                # Always count files - len(repo.index) is very fast
-                if not repo.is_empty:
-                    # Count files directly from the repository
+                if repo.is_empty:
+                    status_log.debug("Repository is empty")
                     total_files = 0
+                elif repo.head_is_unborn:
+                    status_log.debug("Repository HEAD is unborn")
+                    total_files = 0
+                else:
+                    # Count files in the index
+                    index_files = list(repo.index)
+                    total_files = len(index_files)
+                    status_log.warning(f"FILE COUNT for {working_dir.name}: {total_files} files in index")
                     
-                    # Method 1: Try counting from index
-                    try:
-                        index = repo.index
-                        index.read()  # Force refresh of index
-                        total_files = len(index)
-                        status_log.info(f"Git index count for {working_dir.name}: {total_files} files")
-                    except Exception as idx_err:
-                        status_log.debug(f"Index count failed: {idx_err}")
-                    
-                    # Method 2: If index gives 0, count from HEAD tree
-                    if total_files == 0 and not repo.head_is_unborn:
-                        status_log.warning("Index shows 0 files but repo is not empty, attempting recount")
-                        # Try refreshing the index
-                        try:
-                            repo.index.read()
-                            total_files = len(repo.index)
-                            status_log.debug(f"After index refresh: {total_files} files")
-                        except Exception as refresh_err:
-                            status_log.debug(f"Index refresh failed: {refresh_err}")
-                        
-                        # If still 0, try counting from HEAD tree as last resort
-                        if total_files == 0:
-                            try:
-                                head_tree = repo.head.peel().tree
-                                file_count = 0
-                                for entry in head_tree:
-                                    if entry.type == pygit2.GIT_OBJ_BLOB:
-                                        file_count += 1
-                                if file_count > 0:
-                                    total_files = file_count
-                                    status_log.info(f"Counted {total_files} files from HEAD tree")
-                            except Exception as tree_err:
-                                status_log.debug(f"Tree count failed: {tree_err}")
+                    # Double check with status if we get 0
+                    if total_files == 0:
+                        status_log.error(f"Got 0 files from index for {working_dir.name}, this seems wrong!")
             except Exception as e:
-                status_log.debug("Could not count total files", error=str(e))
+                status_log.error(f"Error counting files: {e}", exc_info=True)
                 total_files = 0
 
             status_log.debug(

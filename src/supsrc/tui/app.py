@@ -695,16 +695,20 @@ class SupsrcTuiApp(App):
                 rule_display = f"{rule_emoji} {rule_indicator}".strip()
                 
                 # Format file statistics with color based on commit status
+                # DEBUG: Log what we're getting
+                if state.total_files == 0:
+                    log.warning(f"Zero file count for {repo_id_str}, status: {state.status.name}, has_changes: {state.has_uncommitted_changes}")
+                
                 if state.has_uncommitted_changes:
                     # Active colors for uncommitted changes
-                    total_files_display = str(state.total_files)
+                    total_files_display = str(state.total_files) if state.total_files > 0 else "?"
                     changed_files_display = f"[bold yellow]{state.changed_files}[/bold yellow]" if state.changed_files > 0 else "0"
                     added_display = f"[bold green]{state.added_files}[/bold green]" if state.added_files > 0 else "0"
                     deleted_display = f"[bold red]{state.deleted_files}[/bold red]" if state.deleted_files > 0 else "0"
                     modified_display = f"[bold blue]{state.modified_files}[/bold blue]" if state.modified_files > 0 else "0"
                 else:
                     # Grey/dim for committed state
-                    total_files_display = str(state.total_files)
+                    total_files_display = str(state.total_files) if state.total_files > 0 else "?"
                     changed_files_display = f"[dim]{state.changed_files}[/dim]" if state.changed_files > 0 else "0"
                     added_display = f"[dim]{state.added_files}[/dim]" if state.added_files > 0 else "0"
                     deleted_display = f"[dim]{state.deleted_files}[/dim]" if state.deleted_files > 0 else "0"

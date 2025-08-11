@@ -1069,9 +1069,11 @@ class WatchOrchestrator:
                             repo_state.has_uncommitted_changes = not init_status.is_clean
                             repo_state.current_branch = init_status.current_branch
                             
-                            init_log.info(
-                                f"Initial status loaded for {repo_id}",
-                                total_files=repo_state.total_files,
+                            init_log.warning(
+                                f"CRITICAL: Initial status for {repo_id}",
+                                status_total_files=init_status.total_files,
+                                state_total_files_before=getattr(repo_state, 'total_files', 'NO_ATTR'),
+                                state_total_files_after=repo_state.total_files,
                                 changed=repo_state.changed_files,
                                 branch=repo_state.current_branch,
                                 is_clean=init_status.is_clean
@@ -1086,14 +1088,6 @@ class WatchOrchestrator:
                             else:
                                 repo_state.update_status(RepositoryStatus.IDLE)
                                 init_log.info(f"Repository is clean (branch: {repo_state.current_branch}, files: {repo_state.total_files})")
-                                
-                                # Log warning if clean repo has 0 files
-                                if repo_state.total_files == 0:
-                                    init_log.warning(
-                                        "Clean repository reports 0 files - this is likely an error",
-                                        repo_id=repo_id,
-                                        branch=repo_state.current_branch
-                                    )
                         else:
                             init_log.warning(f"Failed to get initial status: {init_status.message}")
                             repo_state.update_status(RepositoryStatus.IDLE)
