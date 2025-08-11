@@ -251,6 +251,14 @@ class WatchOrchestrator:
 
             if not status_result.success:
                 raise SupsrcError(f"Failed to get repository status: {status_result.message}")
+            
+            # Update file statistics in repository state
+            repo_state.total_files = status_result.total_files
+            repo_state.changed_files = status_result.changed_files
+            repo_state.added_files = status_result.added_files
+            repo_state.deleted_files = status_result.deleted_files
+            repo_state.modified_files = status_result.modified_files
+            repo_state.has_uncommitted_changes = not status_result.is_clean
 
             if status_result.is_conflicted:
                 callback_log.warning("Repository has merge conflicts. Auto-freezing repository.")

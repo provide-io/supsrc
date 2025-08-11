@@ -184,6 +184,50 @@ class GitEngine(RepositoryEngine):
             )
             has_untracked = any(s & pygit2.GIT_STATUS_WT_NEW for s in pygit2_status.values())
             is_clean = not (has_staged or has_unstaged or has_untracked)
+            
+            # Count file statistics
+            added_files = 0
+            deleted_files = 0
+            modified_files = 0
+            
+            for filepath, flags in pygit2_status.items():
+                # Count added files (new in working tree or index)
+                if (flags & pygit2.GIT_STATUS_WT_NEW) or (flags & pygit2.GIT_STATUS_INDEX_NEW):
+                    added_files += 1
+                # Count deleted files
+                elif (flags & pygit2.GIT_STATUS_WT_DELETED) or (flags & pygit2.GIT_STATUS_INDEX_DELETED):
+                    deleted_files += 1
+                # Count modified files (modified, renamed, or type changed)
+                elif ((flags & pygit2.GIT_STATUS_WT_MODIFIED) or (flags & pygit2.GIT_STATUS_INDEX_MODIFIED) or
+                      (flags & pygit2.GIT_STATUS_WT_RENAMED) or (flags & pygit2.GIT_STATUS_INDEX_RENAMED) or
+                      (flags & pygit2.GIT_STATUS_WT_TYPECHANGE) or (flags & pygit2.GIT_STATUS_INDEX_TYPECHANGE)):
+                    modified_files += 1
+            
+            changed_files = added_files + deleted_files + modified_files
+            
+            # Count total files in repository
+            total_files = 0
+            try:
+                # Walk the repository tree to count files
+                if not repo.is_empty and not repo.head_is_unborn:
+                    tree = repo.head.peel().tree
+                    for entry in tree:
+                        if entry.type == pygit2.GIT_OBJ_BLOB:
+                            total_files += 1
+                        elif entry.type == pygit2.GIT_OBJ_TREE:
+                            # Recursively count files in subdirectories
+                            subtree = repo[entry.id]
+                            def count_files_in_tree(tree_obj):
+                                count = 0
+                                for item in tree_obj:
+                                    if item.type == pygit2.GIT_OBJ_BLOB:
+                                        count += 1
+                                    elif item.type == pygit2.GIT_OBJ_TREE:
+                                        count += count_files_in_tree(repo[item.id])
+                                return count
+                            total_files += count_files_in_tree(subtree)
+            except Exception as e:
+                status_log.debug("Could not count total files", error=str(e))
 
             status_log.debug(
                 "Repository status check",
@@ -192,6 +236,11 @@ class GitEngine(RepositoryEngine):
                 untracked=has_untracked,
                 is_clean=is_clean,
                 is_unborn=repo.head_is_unborn,
+                total_files=total_files,
+                changed_files=changed_files,
+                added=added_files,
+                deleted=deleted_files,
+                modified=modified_files,
             )
             return RepoStatusResult(
                 success=True,
@@ -201,6 +250,11 @@ class GitEngine(RepositoryEngine):
                 has_unstaged_changes=has_unstaged,
                 has_untracked_changes=has_untracked,
                 current_branch=current_branch,
+                total_files=total_files,
+                changed_files=changed_files,
+                added_files=added_files,
+                deleted_files=deleted_files,
+                modified_files=modified_files,
             )
 
         except pygit2.GitError as e:
