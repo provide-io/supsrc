@@ -39,9 +39,7 @@ class MonitoringService:
         log.debug("MonitoringService initialized")
 
     def clear_handlers(self) -> None:
-        """Unschedules all existing handlers from the observer."""
-        for handler in self._handlers.values():
-            self._observer.unschedule(handler)
+        """Clears all internal handler references. Note: Watchdog's Observer.stop() handles unscheduling from the observer itself."""
         self._handlers.clear()
         self._logger.debug("Cleared all monitoring handlers.")
 
