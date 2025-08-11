@@ -38,7 +38,7 @@ log = structlog.get_logger("monitor.service")
         self._is_running = False
         log.debug("MonitoringService initialized")
 
-    def clear_handlers(self, ) -> None:
+    def clear_handlers(self) -> None:
         """Unschedules all existing handlers from the observer."""
         for handler in self._handlers.values():
             self._observer.unschedule(handler)
