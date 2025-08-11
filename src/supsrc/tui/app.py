@@ -213,6 +213,17 @@ class SupsrcTuiApp(App):
         background: $accent;
         color: $text;
     }
+    
+    /* Make branch column shrinkable on small terminals */
+    DataTable > .datatable--column-3 {
+        width: 1fr 0.5 20;  /* flexible width, can shrink to 50%, min 20 chars */
+        overflow: ellipsis;
+    }
+    
+    /* Ensure Repository column gets priority space */
+    DataTable > .datatable--column-2 {
+        width: 1fr 1 30;  /* flexible width, full priority, min 30 chars */
+    }
 
     /* .panel-title can be removed if no longer used, or kept if it is.
        For now, I'll keep it commented out as its usage is unclear
@@ -697,8 +708,12 @@ class SupsrcTuiApp(App):
                     deleted_display = f"[dim]{state.deleted_files}[/dim]" if state.deleted_files > 0 else "0"
                     modified_display = f"[dim]{state.modified_files}[/dim]" if state.modified_files > 0 else "0"
 
-                # Get branch display
-                branch_display = state.current_branch or "main"
+                # Get branch display - truncate if too long
+                branch_name = state.current_branch or "main"
+                if len(branch_name) > 20:
+                    branch_display = branch_name[:17] + "..."
+                else:
+                    branch_display = branch_name
                 
                 row_data = (
                     status_display,
