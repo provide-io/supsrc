@@ -24,6 +24,43 @@ from supsrc.tui.messages import LogMessageUpdate, RepoDetailUpdate, StateUpdate
 log = structlog.get_logger("tui.app")
 
 
+def get_countdown_display(seconds_left: int | None) -> str:
+    """Generate countdown display with hand emojis for last 10 seconds."""
+    if seconds_left is None:
+        return ""
+    
+    if seconds_left > 10:
+        # Show regular countdown
+        minutes = seconds_left // 60
+        secs = seconds_left % 60
+        if minutes > 0:
+            return f"{minutes}:{secs:02d}"
+        else:
+            return f"{secs}s"
+    elif seconds_left == 10:
+        return "🙌"  # Both hands open (10)
+    elif seconds_left == 9:
+        return "🖐️✋"  # 5 + 4
+    elif seconds_left == 8:
+        return "✋✌️"  # 5 + 3
+    elif seconds_left == 7:
+        return "✋🤘"  # 5 + 2
+    elif seconds_left == 6:
+        return "✋☝️"  # 5 + 1
+    elif seconds_left == 5:
+        return "🖐️"  # One hand (5)
+    elif seconds_left == 4:
+        return "🖖"  # Four fingers
+    elif seconds_left == 3:
+        return "🤟"  # Three fingers
+    elif seconds_left == 2:
+        return "✌️"  # Peace sign (2)
+    elif seconds_left == 1:
+        return "☝️"  # One finger
+    else:
+        return "💥"  # Zero/trigger
+
+
 class TimerManager:
     """Manages application timers with proper lifecycle handling."""
 
@@ -210,12 +247,11 @@ class SupsrcTuiApp(App):
             table = self.query_one(DataTable)
             table.cursor_type = "row"
             table.add_columns(
-                "Status",
+                "📊",  # Status emoji header
+                "⏱️",   # Timer/countdown column
                 "Repository",
                 "Last Change",
                 "Rule",
-                "Current Action",
-                "Last Commit / Message",
             )
 
             # Initialize logs
