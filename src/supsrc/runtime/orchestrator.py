@@ -1069,6 +1069,14 @@ class WatchOrchestrator:
                             repo_state.has_uncommitted_changes = not init_status.is_clean
                             repo_state.current_branch = init_status.current_branch
                             
+                            init_log.info(
+                                f"Initial status loaded for {repo_id}",
+                                total_files=repo_state.total_files,
+                                changed=repo_state.changed_files,
+                                branch=repo_state.current_branch,
+                                is_clean=init_status.is_clean
+                            )
+                            
                             if init_status.has_unstaged_changes or init_status.has_staged_changes:
                                 repo_state.update_status(RepositoryStatus.CHANGED)
                                 # Set initial last_change_time to now for repos with changes
@@ -1078,6 +1086,14 @@ class WatchOrchestrator:
                             else:
                                 repo_state.update_status(RepositoryStatus.IDLE)
                                 init_log.info(f"Repository is clean (branch: {repo_state.current_branch}, files: {repo_state.total_files})")
+                                
+                                # Log warning if clean repo has 0 files
+                                if repo_state.total_files == 0:
+                                    init_log.warning(
+                                        "Clean repository reports 0 files - this is likely an error",
+                                        repo_id=repo_id,
+                                        branch=repo_state.current_branch
+                                    )
                         else:
                             init_log.warning(f"Failed to get initial status: {init_status.message}")
                             repo_state.update_status(RepositoryStatus.IDLE)
@@ -1104,6 +1120,16 @@ class WatchOrchestrator:
             num_states=len(self.repo_states),
             repo_ids=list(self.repo_states.keys()),
         )
+        
+        # Log file counts for all repos to debug
+        for repo_id, repo_state in self.repo_states.items():
+            self._log.info(
+                f"Repo state summary for {repo_id}",
+                total_files=repo_state.total_files,
+                branch=repo_state.current_branch,
+                status=repo_state.status.name
+            )
+        
         self._post_tui_state_update()
         self._safe_log("info", "--- Repo Initialization Complete ---", count=len(enabled_repo_ids))
         # self._post_tui_log(None, "INFO", f"{len(enabled_repo_ids)} repos initialized.") # Redundant

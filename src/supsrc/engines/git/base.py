@@ -210,10 +210,19 @@ class GitEngine(RepositoryEngine):
             try:
                 # Always count files - len(repo.index) is very fast
                 if not repo.is_empty:
-                    total_files = len(repo.index)
-                    status_log.debug(f"Counted {total_files} tracked files from index")
+                    # Count files directly from the repository
+                    total_files = 0
                     
-                    # Sanity check: non-empty repo should have at least 1 file
+                    # Method 1: Try counting from index
+                    try:
+                        index = repo.index
+                        index.read()  # Force refresh of index
+                        total_files = len(index)
+                        status_log.info(f"Git index count for {working_dir.name}: {total_files} files")
+                    except Exception as idx_err:
+                        status_log.debug(f"Index count failed: {idx_err}")
+                    
+                    # Method 2: If index gives 0, count from HEAD tree
                     if total_files == 0 and not repo.head_is_unborn:
                         status_log.warning("Index shows 0 files but repo is not empty, attempting recount")
                         # Try refreshing the index
