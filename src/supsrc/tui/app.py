@@ -287,6 +287,11 @@ class SupsrcTuiApp(App):
                 "⏱️",   # Timer/countdown column
                 "Repository",
                 "Last Commit",
+                "📁",  # Total files
+                "📝",  # Changed files count
+                "➕",  # Added files
+                "➖",  # Deleted files
+                "✏️",  # Modified files
                 "Rule",
             )
 

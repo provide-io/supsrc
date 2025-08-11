@@ -88,6 +88,14 @@ class RepositoryState:
     freeze_reason: str | None = field(default=None)  # Why it was frozen
     timer_seconds_left: int | None = field(default=None)  # Countdown for timer column
     
+    # File statistics
+    total_files: int = field(default=0)  # Total number of files in repo
+    changed_files: int = field(default=0)  # Number of files with changes
+    added_files: int = field(default=0)  # Number of added files
+    deleted_files: int = field(default=0)  # Number of deleted files
+    modified_files: int = field(default=0)  # Number of modified files
+    has_uncommitted_changes: bool = field(default=False)  # Whether there are uncommitted changes
+    
     # Internal timer tracking fields (not exposed via attrs)
     _timer_total_seconds: int | None = field(default=None, init=False)
     _timer_start_time: float | None = field(default=None, init=False)
