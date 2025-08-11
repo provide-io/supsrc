@@ -126,7 +126,7 @@ if [ -d "${VENV_DIR}" ] && [ -f "${VENV_DIR}/bin/activate" ] && [ -f "${VENV_DIR
     print_success "Virtual environment exists"
 else
     echo -n "Creating virtual environment..."
-    uv venv "${VENV_DIR}" > /tmp/uv_venv.log 2>&1 &
+    uv venv "${VENV_DIR}" --python 3.12 > /tmp/uv_venv.log 2>&1 &
     spinner $!
     print_success "Virtual environment created"
 fi
