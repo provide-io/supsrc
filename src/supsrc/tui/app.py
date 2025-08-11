@@ -708,10 +708,10 @@ class SupsrcTuiApp(App):
                     deleted_display = f"[dim]{state.deleted_files}[/dim]" if state.deleted_files > 0 else "0"
                     modified_display = f"[dim]{state.modified_files}[/dim]" if state.modified_files > 0 else "0"
 
-                # Get branch display - truncate if too long
+                # Get branch display - truncate from beginning if too long
                 branch_name = state.current_branch or "main"
                 if len(branch_name) > 20:
-                    branch_display = branch_name[:17] + "..."
+                    branch_display = "..." + branch_name[-17:]
                 else:
                     branch_display = branch_name
                 
