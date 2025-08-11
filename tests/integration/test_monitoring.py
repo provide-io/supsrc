@@ -181,10 +181,15 @@ class TestMonitoringIntegration:
 
             # Create first file change
             (repo_path / "change1.txt").write_text("First change")
-            await asyncio.sleep(0.5)  # Allow event processing
 
-            # Retrieve updated repo_state after changes
-            repo_state = orchestrator.repo_states["test-repo"]
+            # Wait for save_count to become 1
+            timeout = 5.0
+            start_time = asyncio.get_event_loop().time()
+            while repo_state.save_count < 1:
+                await asyncio.sleep(0.1)
+                if asyncio.get_event_loop().time() - start_time > timeout:
+                    raise TimeoutError("Timed out waiting for save_count to become 1")
+                repo_state = orchestrator.repo_states["test-repo"]
 
             # Verify state update
             assert repo_state.save_count == 1
@@ -192,10 +197,15 @@ class TestMonitoringIntegration:
 
             # Create second file change (should trigger save count rule)
             (repo_path / "change2.txt").write_text("Second change")
-            await asyncio.sleep(2.0)  # Allow rule processing and actions
 
-            # Retrieve updated repo_state after actions
-            repo_state = orchestrator.repo_states["test-repo"]
+            # Wait for save_count to become 0 (after action and reset)
+            timeout = 5.0
+            start_time = asyncio.get_event_loop().time()
+            while repo_state.save_count > 0 or repo_state.status != RepositoryStatus.IDLE:
+                await asyncio.sleep(0.1)
+                if asyncio.get_event_loop().time() - start_time > timeout:
+                    raise TimeoutError("Timed out waiting for save_count to reset or status to become IDLE")
+                repo_state = orchestrator.repo_states["test-repo"]
 
             # Verify action was triggered
             assert repo_state.save_count == 0  # Reset after action
