@@ -355,13 +355,48 @@ class WatchOrchestrator:
             # self._post_tui_log(repo_id, "INFO", "Performing commit...") # Redundant
             self._post_tui_state_update()
 
-            commit_result: CommitResult = await repo_engine.perform_commit(
-                message_template="unused",
-                state=repo_state,
-                config=engine_config_dict,
-                global_config=global_config,
-                working_dir=working_dir,
-            )
+            # Try commit with retry for race conditions
+            commit_retries = 3
+            commit_attempt = 0
+            commit_result: CommitResult | None = None
+            
+            while commit_attempt < commit_retries:
+                try:
+                    commit_result = await repo_engine.perform_commit(
+                        message_template="unused",
+                        state=repo_state,
+                        config=engine_config_dict,
+                        global_config=global_config,
+                        working_dir=working_dir,
+                    )
+                    break  # Success, exit retry loop
+                except Exception as e:
+                    commit_attempt += 1
+                    error_msg = str(e)
+                    
+                    # Check if this is a race condition error
+                    if "current tip is not the first parent" in error_msg and commit_attempt < commit_retries:
+                        callback_log.warning(
+                            f"Commit failed due to race condition, retrying ({commit_attempt}/{commit_retries})",
+                            error=error_msg,
+                            repo_id=repo_id,
+                        )
+                        self._console_message(
+                            f"Repository HEAD changed, retrying commit ({commit_attempt}/{commit_retries})...",
+                            repo_id=repo_id,
+                            style="yellow",
+                            emoji="⚠️",
+                        )
+                        # Brief delay before retry
+                        await asyncio.sleep(0.5)
+                        continue
+                    else:
+                        # Not a race condition or out of retries
+                        raise
+            
+            if commit_result is None:
+                raise SupsrcError("Failed to commit after multiple attempts")
+                
             if not commit_result.success:
                 raise SupsrcError(f"Commit failed: {commit_result.message}")
 
