@@ -832,8 +832,8 @@ class WatchOrchestrator:
                         # Only update change counts, not total files (to avoid flashing)
                         try:
                             repo_engine = self.repo_engines.get(repo_id)
-                            if repo_engine and repo_state.total_files == 0:
-                                # Only get full status if we don't have a file count yet
+                            if repo_engine:
+                                # Always get current status to check if repository is clean
                                 status_result = await repo_engine.get_status(
                                     repo_state, 
                                     repo_config.repository,
@@ -841,29 +841,47 @@ class WatchOrchestrator:
                                     repo_config.path
                                 )
                                 if status_result.success:
-                                    # Update all counts including total
+                                    # Update all counts
                                     repo_state.changed_files = status_result.changed_files
                                     repo_state.added_files = status_result.added_files
                                     repo_state.deleted_files = status_result.deleted_files
                                     repo_state.modified_files = status_result.modified_files
                                     repo_state.has_uncommitted_changes = not status_result.is_clean
                                     repo_state.current_branch = status_result.current_branch
-                                    repo_state.total_files = status_result.total_files
+                                    if repo_state.total_files == 0:
+                                        repo_state.total_files = status_result.total_files
+                                    
+                                    # If repository is now clean (e.g., file added then deleted), skip timer setup
+                                    if status_result.is_clean:
+                                        event_log.info("Repository is clean after change, no timer needed")
+                                        repo_state.update_status(RepositoryStatus.IDLE)
+                                        self._post_tui_log(
+                                            repo_id,
+                                            "INFO",
+                                            "✅ Repository clean - no changes to commit"
+                                        )
+                                        self._post_tui_state_update()
+                                        continue  # Skip the rest of the processing
+                                    
                                     event_log.debug(
-                                        "Initial file statistics loaded",
+                                        "File statistics updated",
                                         total=repo_state.total_files,
-                                        changed=repo_state.changed_files
+                                        changed=repo_state.changed_files,
+                                        is_clean=status_result.is_clean
                                     )
+                                else:
+                                    # If status check failed, assume there are changes
+                                    repo_state.has_uncommitted_changes = True
+                                    
+                                # Update refresh timestamp
+                                self._last_stats_refresh[repo_id] = time.time()
                             else:
-                                # For subsequent changes, just mark as having uncommitted changes
-                                # Don't recalculate everything to avoid flashing
+                                # No engine available, assume there are changes
                                 repo_state.has_uncommitted_changes = True
-                                # Schedule a deferred update if we haven't updated recently
-                                last_refresh = self._last_stats_refresh.get(repo_id, 0)
-                                if time.time() - last_refresh > 5.0:  # Only refresh every 5 seconds
-                                    asyncio.create_task(self._refresh_file_stats(repo_id))
                         except Exception as e:
                             event_log.debug("Could not update file statistics", error=str(e))
+                            # On error, assume there are changes
+                            repo_state.has_uncommitted_changes = True
                         # self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}") # Redundant
 
                         rule_config_obj: RuleConfig = repo_config.rule
