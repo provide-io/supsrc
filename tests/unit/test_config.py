@@ -52,6 +52,7 @@ class TestConfigLoading:
 
         assert isinstance(config, SupsrcConfig)
         assert config.global_config.log_level == "DEBUG"
+        assert config.global_config.log_level == "DEBUG"
         assert len(config.repositories) == 1
 
         repo_config = config.repositories["test-repo"]
