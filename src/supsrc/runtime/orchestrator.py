@@ -900,6 +900,14 @@ class WatchOrchestrator:
                             action_task.add_done_callback(self._running_tasks.discard)
                         else:
                             if isinstance(rule_config_obj, InactivityRuleConfig):
+                                # Don't schedule timer if repository is paused
+                                if repo_state.is_paused:
+                                    event_log.debug("Skipping timer scheduling - repository is paused")
+                                    repo_state.display_status_emoji = "⏸️"
+                                    repo_state.rule_dynamic_indicator = "Paused"
+                                    self._post_tui_state_update()
+                                    continue
+                                    
                                 delay = rule_config_obj.period.total_seconds()
                                 event_log.debug(
                                     "Rescheduling inactivity check", delay_seconds=delay
@@ -1613,6 +1621,12 @@ class WatchOrchestrator:
         
         if repo_state.is_paused:
             repo_state.pause_until = datetime.now(UTC) + timedelta(hours=1)  # Default 1 hour pause
+            
+            # Cancel any existing timer when pausing
+            if repo_state.inactivity_timer_handle:
+                self._log.debug(f"Canceling inactivity timer for paused repository {repo_id}")
+                repo_state.cancel_inactivity_timer()
+                
             repo_state._update_display_emoji()  # Update the emoji
             self._log.info(f"Repository {repo_id} PAUSED")
             self._console_message(
@@ -1624,7 +1638,7 @@ class WatchOrchestrator:
             self._post_tui_log(
                 repo_id,
                 "WARNING",
-                "⏸️ Repository paused - commits disabled for 1 hour"
+                "⏸️ Repository paused - commits disabled for 1 hour, timer stopped"
             )
         else:
             repo_state.pause_until = None
@@ -1636,11 +1650,43 @@ class WatchOrchestrator:
                 style="green bold",
                 emoji="▶️",
             )
-            self._post_tui_log(
-                repo_id,
-                "INFO",
-                "▶️ Repository resumed - commits enabled"
-            )
+            
+            # If there are uncommitted changes, restart the inactivity timer
+            if repo_state.has_uncommitted_changes and self.config:
+                repo_config = self.config.repositories.get(repo_id)
+                if repo_config and isinstance(repo_config.rule, InactivityRuleConfig):
+                    delay = repo_config.rule.period.total_seconds()
+                    self._log.debug(f"Restarting inactivity timer for {repo_id} with {delay}s delay")
+                    
+                    # Schedule the timer
+                    current_loop = asyncio.get_running_loop()
+                    timer_handle = current_loop.call_later(
+                        delay,
+                        lambda rid=repo_id: asyncio.create_task(
+                            self._trigger_action_callback(rid)
+                        ),
+                    )
+                    repo_state.set_inactivity_timer(timer_handle, int(delay))
+                    repo_state.display_status_emoji = "😴"
+                    repo_state.rule_dynamic_indicator = f"({int(delay)}s left)"
+                    
+                    self._post_tui_log(
+                        repo_id,
+                        "INFO",
+                        f"▶️ Repository resumed - timer restarted ({int(delay)}s)"
+                    )
+                else:
+                    self._post_tui_log(
+                        repo_id,
+                        "INFO",
+                        "▶️ Repository resumed - commits enabled"
+                    )
+            else:
+                self._post_tui_log(
+                    repo_id,
+                    "INFO",
+                    "▶️ Repository resumed - commits enabled"
+                )
             
         self._post_tui_state_update()
         return True
