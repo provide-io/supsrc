@@ -792,6 +792,29 @@ class WatchOrchestrator:
                         )
 
                     else:
+                        # Check for duplicate delete events from move operations
+                        if event.event_type == "deleted":
+                            # Check if we recently saw a move event for this file
+                            move_key = f"{repo_id}:{event.src_path}"
+                            current_time = time.time()
+                            
+                            # Clean up old move events (older than 2 seconds)
+                            self._recent_moves = {
+                                k: v for k, v in self._recent_moves.items() 
+                                if current_time - v < 2.0
+                            }
+                            
+                            if move_key in self._recent_moves:
+                                event_log.debug(
+                                    "Ignoring delete event that's part of a recent move",
+                                    file=event.src_path.name
+                                )
+                                continue
+                        elif event.event_type == "moved":
+                            # Record this move to suppress duplicate delete events
+                            move_key = f"{repo_id}:{event.src_path}"
+                            self._recent_moves[move_key] = time.time()
+                        
                         # Record change, check rules, schedule actions/timers
                         repo_state.record_change()  # This calls update_status, which sets emoji for CHANGED
                         event_log = event_log.bind(
