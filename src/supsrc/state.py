@@ -258,6 +258,7 @@ class RepositoryState:
 
     def _update_display_emoji(self) -> None:
         """Internal method to update the display_status_emoji based on current state."""
+        old_emoji = self.display_status_emoji
         if self.is_stopped:
             self.display_status_emoji = "⏹️"
         elif self.is_paused:
@@ -267,6 +268,12 @@ class RepositoryState:
         else:
             # Fallback to status-based emoji if not stopped, paused, or refreshing
             self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
+        
+        if old_emoji != self.display_status_emoji:
+            log.debug(
+                f"Updated emoji for {self.repo_id}: '{old_emoji}' -> '{self.display_status_emoji}' "
+                f"(paused={self.is_paused}, stopped={self.is_stopped}, status={self.status.name})"
+            )
 
 
 # 🔼⚙️
