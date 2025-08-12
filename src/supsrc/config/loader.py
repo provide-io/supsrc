@@ -63,12 +63,14 @@ def _parse_duration(duration_str: str, config_path_context: Path | None = None) 
     )
     match = pattern.match(duration_str)
     if not match or not duration_str.strip():
+        log.debug("No match or empty string", duration_str=duration_str, match=match)
         msg = "Invalid duration format. Use '1h', '30m', '15s'."
         log.error(msg, received=duration_str, emoji_key="fail")
         raise DurationValidationError(msg, duration_str, str(config_path_context))
 
     parts = match.groupdict()
     time_params = {k: int(v) for k, v in parts.items() if v}
+    log.debug("Extracted time parameters", time_params=time_params, emoji_key="time")
     if not time_params:
         msg = "Empty duration string provided"
         log.error(msg, received=duration_str, emoji_key="fail")
