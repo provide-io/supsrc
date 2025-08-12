@@ -241,6 +241,11 @@ class WatchOrchestrator:
         # Allow triggering from IDLE (e.g., timer fired before any new change) or CHANGED
         if repo_state.is_paused:
             callback_log.info("Action Triggered: Repository is paused, skipping action.", repo_id=repo_id)
+            self._post_tui_log(
+                repo_id,
+                "WARNING",
+                "⏸️ Commit skipped - repository is paused"
+            )
             repo_state.cancel_inactivity_timer()
             return
 
@@ -711,13 +716,12 @@ class WatchOrchestrator:
                     await asyncio.sleep(0.5)
                     continue
 
-                # --- Check if repository is individually paused/frozen/stopped ---
+                # --- Check if repository is individually frozen/stopped (but not just paused) ---
                 repo_state = self.repo_states.get(repo_id) if repo_id != "__config__" else None
-                if repo_state and (repo_state.is_paused or repo_state.is_frozen or repo_state.is_stopped):
+                if repo_state and (repo_state.is_frozen or repo_state.is_stopped):
                     consumer_log.info(
-                        "Repository is individually paused/frozen/stopped, skipping event",
+                        "Repository is frozen/stopped, skipping event",
                         repo_id=repo_id,
-                        is_paused=repo_state.is_paused,
                         is_frozen=repo_state.is_frozen,
                         is_stopped=repo_state.is_stopped,
                         freeze_reason=repo_state.freeze_reason,
@@ -778,6 +782,12 @@ class WatchOrchestrator:
                             repo_id=repo_id,
                             style="magenta bold",
                             emoji="✏️",
+                        )
+                        # Also post to TUI log
+                        self._post_tui_log(
+                            repo_id, 
+                            "INFO", 
+                            f"✏️ File changed: {event.src_path.name}"
                         )
                         
                         # Update file statistics after change
