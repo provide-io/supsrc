@@ -1635,76 +1635,71 @@ class WatchOrchestrator:
             old_config = self.config
             old_monitor_service = self.monitor_service
 
-            try:
-                # Apply new config
-                self.config = new_config
-                reload_log.info("New config loaded successfully", enabled_repos=len(enabled_repos))
+            # Apply new config
+            self.config = new_config
+            reload_log.info("New config loaded successfully", enabled_repos=len(enabled_repos))
 
-                # Stop current monitoring (if running)
-                if self.monitor_service and self.monitor_service.is_running:
-                    await self.monitor_service.stop() # Ensure it's fully stopped
-                    self.monitor_service.clear_handlers() # Clear handlers from the old observer
+            # Stop current monitoring (if running)
+            if self.monitor_service and self.monitor_service.is_running:
+                await self.monitor_service.stop() # Ensure it's fully stopped
+                self.monitor_service.clear_handlers() # Clear handlers from the old observer
 
-                # Re-initialize repositories with new config
-                reload_log.debug("Re-initializing repositories")
-                enabled_repo_ids = await self._initialize_repositories()
+            # Re-initialize repositories with new config
+            reload_log.debug("Re-initializing repositories")
+            enabled_repo_ids = await self._initialize_repositories()
 
-                # Setup new monitoring with new config (reuse existing monitor_service)
-                reload_log.debug("Setting up monitoring with new config")
-                # Ensure monitor_service exists, if not, create it (should exist from run())
-                if not self.monitor_service:
-                    self.monitor_service = MonitoringService(self.event_queue)
+            # Setup new monitoring with new config (reuse existing monitor_service)
+            reload_log.debug("Setting up monitoring with new config")
+            # Ensure monitor_service exists, if not, create it (should exist from run())
+            if not self.monitor_service:
+                self.monitor_service = MonitoringService(self.event_queue)
 
-                successfully_added_ids = self._setup_monitoring(enabled_repo_ids)
+            successfully_added_ids = self._setup_monitoring(enabled_repo_ids)
 
-                if not successfully_added_ids:
-                    raise MonitoringSetupError("Failed to setup monitoring with new config")
+            if not successfully_added_ids:
+                raise MonitoringSetupError("Failed to setup monitoring with new config")
 
-                # Start new monitor service (if not already running)
-                if self.monitor_service and not self.monitor_service.is_running:
-                    self.monitor_service.start()
-                    reload_log.info("Monitor service restarted with new config")
+            # Start new monitor service (if not already running)
+            if self.monitor_service and not self.monitor_service.is_running:
+                self.monitor_service.start()
+                reload_log.info("Monitor service restarted with new config")
 
-                # Update TUI
-                self._post_tui_state_update()
+            # Update TUI
+            self._post_tui_state_update()
 
-                # Success message
-                self._console_message(
-                    f"✅ Config reloaded successfully ({len(successfully_added_ids)} repositories)",
-                    style="green bold",
-                    emoji="🔄",
-                )
-                self._post_tui_log(
-                    None,
-                    "SUCCESS",
-                    f"✅ Config reloaded: monitoring {len(successfully_added_ids)} repositories",
-                )
+            # Success message
+            self._console_message(
+                f"✅ Config reloaded successfully ({len(successfully_added_ids)} repositories)",
+                style="green bold",
+                emoji="🔄",
+            )
+            self._post_tui_log(
+                None,
+                "SUCCESS",
+                f"✅ Config reloaded: monitoring {len(successfully_added_ids)} repositories",
+            )
 
-                return True
-
-            except Exception as e:
-                # Rollback on error
-                reload_log.error("Config reload failed, rolling back", error=str(e))
-                self.config = old_config
-                self.monitor_service = old_monitor_service
-
-                self._console_message(f"❌ Config reload failed: {e}", style="red bold", emoji="⚠️")
-                self._post_tui_log(None, "ERROR", f"❌ Config reload failed: {e}")
-                
-                # If rollback fails, we are in a bad state.
-                # For now, we resume monitoring with the old config.
-                if not original_pause_state:
-                    self.resume_monitoring()
-                raise
-            
             # If successful, resume monitoring if it wasn't paused before
             if not original_pause_state:
                 self.resume_monitoring()
-            
+
             return True
 
-        except Exception:
-            reload_log.exception("Config reload error")
+        except Exception as e:
+            # Rollback on error
+            reload_log.error("Config reload failed, rolling back", error=str(e))
+            if 'old_config' in locals():
+                self.config = old_config
+            if 'old_monitor_service' in locals():
+                self.monitor_service = old_monitor_service
+
+            self._console_message(f"❌ Config reload failed: {e}", style="red bold", emoji="⚠️")
+            self._post_tui_log(None, "ERROR", f"❌ Config reload failed: {e}")
+
+            # Resume monitoring if it wasn't paused before
+            if not original_pause_state:
+                self.resume_monitoring()
+
             return False
 
     def setup_config_watcher(self) -> None:
