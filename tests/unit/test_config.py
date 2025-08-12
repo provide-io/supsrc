@@ -57,6 +57,7 @@ class TestConfigLoading:
         repo_config = config.repositories["test-repo"]
         assert repo_config.enabled is True
         assert isinstance(repo_config.rule, InactivityRuleConfig)
+        assert repo_config.rule.period == timedelta(seconds=30)
         assert config.global_config.log_level == "DEBUG"
         assert len(config.repositories) == 1
 
