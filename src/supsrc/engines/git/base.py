@@ -116,11 +116,16 @@ class GitEngine(RepositoryEngine):
             head_ref = repo.head
             head_commit = head_ref.peel()
             commit_msg_summary = (head_commit.message or "").split("\n", 1)[0]
+            
+            # Convert commit time to datetime with UTC timezone
+            from datetime import datetime, timezone
+            commit_timestamp = datetime.fromtimestamp(head_commit.commit_time, tz=timezone.utc)
 
             return GitRepoSummary(
                 head_ref_name=head_ref.shorthand,
                 head_commit_hash=str(head_commit.id),
                 head_commit_message_summary=commit_msg_summary,
+                head_commit_timestamp=commit_timestamp,
             )
         except pygit2.GitError as e:
             self._log.error("Failed to get Git summary", path=str(working_dir), error=str(e))
@@ -140,7 +145,7 @@ class GitEngine(RepositoryEngine):
     ) -> RepoStatusResult:
         # (Implementation remains the same)
         status_log = self._log.bind(repo_id=state.repo_id, path=str(working_dir))
-        status_log.debug("Getting repository status...")
+        status_log.warning(f"GET_STATUS CALLED for {working_dir.name}")
         try:
             repo = self._get_repo(working_dir)
             current_branch = "UNBORN" if repo.head_is_unborn else repo.head.shorthand
@@ -179,6 +184,56 @@ class GitEngine(RepositoryEngine):
             )
             has_untracked = any(s & pygit2.GIT_STATUS_WT_NEW for s in pygit2_status.values())
             is_clean = not (has_staged or has_unstaged or has_untracked)
+            
+            # Count file statistics
+            added_files = 0
+            deleted_files = 0
+            modified_files = 0
+            
+            for filepath, flags in pygit2_status.items():
+                # Count added files (new in working tree or index)
+                if (flags & pygit2.GIT_STATUS_WT_NEW) or (flags & pygit2.GIT_STATUS_INDEX_NEW):
+                    added_files += 1
+                # Count deleted files
+                elif (flags & pygit2.GIT_STATUS_WT_DELETED) or (flags & pygit2.GIT_STATUS_INDEX_DELETED):
+                    deleted_files += 1
+                # Count modified files (modified, renamed, or type changed)
+                elif ((flags & pygit2.GIT_STATUS_WT_MODIFIED) or (flags & pygit2.GIT_STATUS_INDEX_MODIFIED) or
+                      (flags & pygit2.GIT_STATUS_WT_RENAMED) or (flags & pygit2.GIT_STATUS_INDEX_RENAMED) or
+                      (flags & pygit2.GIT_STATUS_WT_TYPECHANGE) or (flags & pygit2.GIT_STATUS_INDEX_TYPECHANGE)):
+                    modified_files += 1
+            
+            changed_files = added_files + deleted_files + modified_files
+            
+            # Count total files in repository
+            # Always try to count files - don't skip based on repo state
+            total_files = 0
+            try:
+                # Use git ls-files to count tracked files
+                import subprocess
+                result = subprocess.run(
+                    ['git', 'ls-files'], 
+                    cwd=working_dir,
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode == 0:
+                    # Count non-empty lines
+                    files = [f for f in result.stdout.strip().split('\n') if f]
+                    total_files = len(files)
+                    status_log.info(f"File count for {working_dir.name}: {total_files}")
+                else:
+                    status_log.error(f"git ls-files failed for {working_dir.name}: {result.stderr}")
+                    # Try alternative if ls-files fails
+                    if repo and not repo.is_empty:
+                        try:
+                            total_files = len(repo.index)
+                            status_log.info(f"Used index length fallback: {total_files} files")
+                        except:
+                            pass
+            except Exception as e:
+                status_log.error(f"Error counting files: {e}")
+                total_files = 0
 
             status_log.debug(
                 "Repository status check",
@@ -187,6 +242,11 @@ class GitEngine(RepositoryEngine):
                 untracked=has_untracked,
                 is_clean=is_clean,
                 is_unborn=repo.head_is_unborn,
+                total_files=total_files,
+                changed_files=changed_files,
+                added=added_files,
+                deleted=deleted_files,
+                modified=modified_files,
             )
             return RepoStatusResult(
                 success=True,
@@ -196,6 +256,11 @@ class GitEngine(RepositoryEngine):
                 has_unstaged_changes=has_unstaged,
                 has_untracked_changes=has_untracked,
                 current_branch=current_branch,
+                total_files=total_files,
+                changed_files=changed_files,
+                added_files=added_files,
+                deleted_files=deleted_files,
+                modified_files=modified_files,
             )
 
         except pygit2.GitError as e:

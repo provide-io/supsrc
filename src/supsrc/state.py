@@ -34,14 +34,14 @@ class RepositoryStatus(Enum):
 # might be derived in the TUI or Orchestrator based on a combination of
 # RepositoryStatus and other state fields (e.g., error_message, last_commit_hash).
 STATUS_EMOJI_MAP = {
-    RepositoryStatus.IDLE: "🧼",
-    RepositoryStatus.CHANGED: "✏️",
-    RepositoryStatus.TRIGGERED: "🎯",  # Rule met, action pending
-    RepositoryStatus.PROCESSING: "🔄",  # General processing (e.g. status check)
+    RepositoryStatus.IDLE: "✅",      # Clean/normal state
+    RepositoryStatus.CHANGED: "📝",   # Uncommitted changes
+    RepositoryStatus.TRIGGERED: "🎯", # Rule met, action pending
+    RepositoryStatus.PROCESSING: "🔄", # General processing (e.g. status check)
     RepositoryStatus.STAGING: "📦",
     RepositoryStatus.COMMITTING: "💾",
-    RepositoryStatus.PUSHING: "🅿️",
-    RepositoryStatus.ERROR: "❌",
+    RepositoryStatus.PUSHING: "🚀",
+    RepositoryStatus.ERROR: "❌",     # Error state
     # Specific states like 'Evaluating' or 'Waiting' will be set directly by Orchestrator
     # as they are not direct RepositoryStatus enum members.
 }
@@ -59,6 +59,7 @@ class RepositoryState:
     repo_id: str = field()  # The unique identifier for the repository
     status: RepositoryStatus = field(default=RepositoryStatus.IDLE)
     last_change_time: datetime | None = field(default=None)  # Timezone-aware (UTC)
+    last_commit_timestamp: datetime | None = field(default=None)  # Actual Git commit timestamp
     save_count: int = field(default=0)
     error_message: str | None = field(default=None)
     # Holds the handle for the asyncio timer used by inactivity triggers.
@@ -72,6 +73,7 @@ class RepositoryState:
     )  # May become redundant with new fields
     last_commit_short_hash: str | None = field(default=None)
     last_commit_message_summary: str | None = field(default=None)
+    current_branch: str | None = field(default=None)  # Current git branch
 
     # New fields for advanced TUI (rule emojis, dynamic indicators, progress bars)
     rule_emoji: str | None = field(default=None)
@@ -86,6 +88,18 @@ class RepositoryState:
     is_frozen: bool = field(default=False)  # Frozen due to conflict
     freeze_reason: str | None = field(default=None)  # Why it was frozen
     timer_seconds_left: int | None = field(default=None)  # Countdown for timer column
+    
+    # File statistics
+    total_files: int = field(default=0)  # Total number of files in repo
+    changed_files: int = field(default=0)  # Number of files with changes
+    added_files: int = field(default=0)  # Number of added files
+    deleted_files: int = field(default=0)  # Number of deleted files
+    modified_files: int = field(default=0)  # Number of modified files
+    has_uncommitted_changes: bool = field(default=False)  # Whether there are uncommitted changes
+    
+    # Internal timer tracking fields (not exposed via attrs)
+    _timer_total_seconds: int | None = field(default=None, init=False)
+    _timer_start_time: float | None = field(default=None, init=False)
 
     # Consider adding:
     # last_commit_hash: Optional[str] = field(default=None) # This is now last_commit_short_hash
@@ -94,10 +108,14 @@ class RepositoryState:
 
     def __attrs_post_init__(self):
         """Log the initial state upon creation."""
+        # Set initial emoji based on status
+        self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
+        
         log.debug(
             "Initialized repository state",
             repo_id=self.repo_id,
             initial_status=self.status.name,
+            emoji=self.display_status_emoji,
         )
 
     def update_status(self, new_status: RepositoryStatus, error_msg: str | None = None) -> None:
@@ -163,9 +181,9 @@ class RepositoryState:
         """Resets state fields typically after a successful commit/push sequence."""
         log.debug("Resetting state after action", repo_id=self.repo_id)
         self.save_count = 0
-        # Keep last_change_time as the time of the action, or clear it?
-        # Clearing might be simpler for inactivity logic.
-        self.last_change_time = None  # Cleared to allow inactivity rule to reset properly
+        # Keep last_change_time - it represents when we last saw changes,
+        # which is useful for the UI to show "time since last activity"
+        # Don't clear: self.last_change_time = None
         self.active_rule_description = None  # Clear specific action/wait messages
         # self.error_message is cleared by update_status if moving out of ERROR
 
@@ -175,17 +193,23 @@ class RepositoryState:
         self.action_description = None
         self.action_progress_total = None
         self.action_progress_completed = None
+        
+        # Don't reset file counters - just mark as committed
+        # The numbers should remain visible but will be shown in grey
+        self.has_uncommitted_changes = False
 
         self.cancel_inactivity_timer()  # Ensure timer is gone
         self.update_status(RepositoryStatus.IDLE)  # Back to idle state
         # Note: last_commit_short_hash and last_commit_message_summary are intentionally persisted
 
-    def set_inactivity_timer(self, handle: asyncio.TimerHandle) -> None:
+    def set_inactivity_timer(self, handle: asyncio.TimerHandle, total_seconds: int) -> None:
         """Stores the handle for a scheduled inactivity timer, cancelling any previous one."""
         # Cancel any previous timer before setting a new one
         self.cancel_inactivity_timer()
         self.inactivity_timer_handle = handle
-        log.debug("Inactivity timer set", repo_id=self.repo_id, timer_handle=repr(handle))
+        self._timer_total_seconds = total_seconds
+        self._timer_start_time = asyncio.get_event_loop().time()
+        log.debug("Inactivity timer set", repo_id=self.repo_id, timer_handle=repr(handle), total_seconds=total_seconds)
 
     def cancel_inactivity_timer(self) -> None:
         """Cancels the pending inactivity timer, if one exists."""
@@ -208,10 +232,22 @@ class RepositoryState:
                 )
             finally:
                 self.inactivity_timer_handle = None
+                self._timer_total_seconds = None
+                self._timer_start_time = None
+                self.timer_seconds_left = None
         else:
             # This is normal operation, no need to log unless debugging timing issues
             # log.debug("No active inactivity timer to cancel", repo_id=self.repo_id)
             pass
+    
+    def update_timer_countdown(self) -> None:
+        """Updates the timer_seconds_left based on elapsed time."""
+        if self.inactivity_timer_handle and self._timer_start_time and self._timer_total_seconds:
+            elapsed = asyncio.get_event_loop().time() - self._timer_start_time
+            seconds_left = max(0, int(self._timer_total_seconds - elapsed))
+            self.timer_seconds_left = seconds_left
+        else:
+            self.timer_seconds_left = None
 
 
 # 🔼⚙️

@@ -92,7 +92,23 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
 
     log.info("Initializing interactive dashboard...")
     app = SupsrcTuiApp(config_path=config_path, cli_shutdown_event=_shutdown_requested)
-    app.run()
+    
+    try:
+        app.run()
+    except KeyboardInterrupt:
+        log.info("Keyboard interrupt received")
+    except Exception as e:
+        log.error(f"TUI error: {e}")
+    finally:
+        # Ensure terminal is restored even if app crashes
+        import os
+        try:
+            os.system('stty sane')
+            os.system('clear')
+            print("\n")  # Add a newline for cleaner exit
+        except Exception:
+            pass
+    
     log.info("Interactive dashboard finished.")
 
 

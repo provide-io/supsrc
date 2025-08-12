@@ -24,6 +24,72 @@ from supsrc.tui.messages import LogMessageUpdate, RepoDetailUpdate, StateUpdate
 log = structlog.get_logger("tui.app")
 
 
+def get_countdown_display(seconds_left: int | None) -> str:
+    """Generate countdown display with hand emojis for last 10 seconds."""
+    if seconds_left is None:
+        return ""
+    
+    if seconds_left > 10:
+        # Show regular countdown
+        minutes = seconds_left // 60
+        secs = seconds_left % 60
+        if minutes > 0:
+            return f"{minutes}:{secs:02d}"
+        else:
+            return f"{secs}s"
+    elif seconds_left == 10:
+        return "🙌"  # Both hands open (10)
+    elif seconds_left == 9:
+        return "🖐️✋"  # 5 + 4
+    elif seconds_left == 8:
+        return "✋✌️"  # 5 + 3
+    elif seconds_left == 7:
+        return "✋🤘"  # 5 + 2
+    elif seconds_left == 6:
+        return "✋☝️"  # 5 + 1
+    elif seconds_left == 5:
+        return "🖐️"  # One hand (5)
+    elif seconds_left == 4:
+        return "🖖"  # Four fingers
+    elif seconds_left == 3:
+        return "🤟"  # Three fingers
+    elif seconds_left == 2:
+        return "✌️"  # Peace sign (2)
+    elif seconds_left == 1:
+        return "☝️"  # One finger
+    else:
+        return "💥"  # Zero/trigger
+
+
+def format_last_commit_time(last_change_time, threshold_hours=3):
+    """Format last commit time as relative or absolute based on age."""
+    if not last_change_time:
+        return "Never"
+    
+    from datetime import datetime, UTC
+    now = datetime.now(UTC)
+    delta = now - last_change_time
+    total_seconds = int(delta.total_seconds())
+    
+    # If older than threshold, show full date
+    if delta.total_seconds() > (threshold_hours * 3600):
+        return last_change_time.strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Otherwise show relative time
+    if total_seconds < 60:
+        return f"{total_seconds}s ago"
+    elif total_seconds < 3600:
+        minutes = total_seconds // 60
+        return f"{minutes}m ago"
+    else:
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        if minutes > 0:
+            return f"{hours}h {minutes}m ago"
+        else:
+            return f"{hours}h ago"
+
+
 class TimerManager:
     """Manages application timers with proper lifecycle handling."""
 
@@ -147,6 +213,19 @@ class SupsrcTuiApp(App):
         background: $accent;
         color: $text;
     }
+    
+    /* Make branch column shrinkable on small terminals */
+    DataTable > .datatable--column-3 {
+        width: 1fr;
+        min-width: 10;
+        max-width: 25;
+    }
+    
+    /* Ensure Repository column gets priority space */
+    DataTable > .datatable--column-2 {
+        width: 2fr;
+        min-width: 20;
+    }
 
     /* .panel-title can be removed if no longer used, or kept if it is.
        For now, I'll keep it commented out as its usage is unclear
@@ -205,17 +284,29 @@ class SupsrcTuiApp(App):
         try:
             log.info("TUI Mounted. Initializing UI components.")
             self._update_sub_title("Initializing...")
+            
+            # Save original terminal settings
+            try:
+                import termios
+                self._original_terminal_settings = termios.tcgetattr(0)
+            except Exception:
+                pass  # Not a terminal or termios not available
 
             # Initialize table
             table = self.query_one(DataTable)
             table.cursor_type = "row"
             table.add_columns(
-                "Status",
+                "📊",  # Status emoji header
+                "⏱️",   # Timer/countdown column
                 "Repository",
-                "Last Change",
+                "Branch",  # New branch column
+                "📁",  # Total files
+                "📝",  # Changed files count
+                "➕",  # Added files
+                "➖",  # Deleted files
+                "✏️",  # Modified files
+                "Last Commit",  # Moved after modified
                 "Rule",
-                "Current Action",
-                "Last Commit / Message",
             )
 
             # Initialize logs
@@ -243,6 +334,14 @@ class SupsrcTuiApp(App):
                 "shutdown_check",
                 0.5,
                 self._check_external_shutdown,
+                repeat=True,
+            )
+            
+            # Start countdown update timer
+            self._timer_manager.create_timer(
+                "countdown_update",
+                1.0,
+                self._update_countdown_display,
                 repeat=True,
             )
 
@@ -279,6 +378,19 @@ class SupsrcTuiApp(App):
         if self._cli_shutdown_event.is_set() and not self._is_shutting_down:
             log.warning("External shutdown detected (CLI signal). Triggering quit.")
             self.action_quit()
+    
+    def _update_countdown_display(self) -> None:
+        """Update countdown displays for all repositories."""
+        try:
+            if hasattr(self, "_orchestrator") and self._orchestrator:
+                # Update countdown for each repository state
+                for repo_state in self._orchestrator.repo_states.values():
+                    repo_state.update_timer_countdown()
+                
+                # Trigger a state update to refresh the display with actual state objects
+                self.post_message(StateUpdate(self._orchestrator.repo_states))
+        except Exception as e:
+            log.debug(f"Error updating countdown: {e}")
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         """Handle worker state changes."""
@@ -507,9 +619,26 @@ class SupsrcTuiApp(App):
                 log.error(f"Error cancelling worker: {e}", exc_info=True)
 
         log.info("Exiting TUI application.")
+        
+        # Ensure terminal is properly restored
+        try:
+            # Reset terminal to normal mode
+            import os
+            import termios
+            import tty
+            
+            # Restore terminal settings
+            if hasattr(self, '_original_terminal_settings'):
+                termios.tcsetattr(0, termios.TCSANOW, self._original_terminal_settings)
+            
+            # Clear screen and reset cursor
+            os.system('clear')
+            os.system('stty sane')
+            
+        except Exception as e:
+            log.debug(f"Error restoring terminal: {e}")
+        
         self.exit(0)
-        import sys
-        sys.exit(0)
 
     # Message Handlers
     def on_state_update(self, message: StateUpdate) -> None:
@@ -545,47 +674,61 @@ class SupsrcTuiApp(App):
 
                 # Format display data
                 status_display = state.display_status_emoji
+                timer_display = get_countdown_display(state.timer_seconds_left)
                 repository_display = repo_id_str
-                last_change_display = (
-                    state.last_change_time.strftime("%Y-%m-%d %H:%M:%S")
-                    if state.last_change_time
-                    else "N/A"
-                )
+                
+                # Use relative time for recent changes, full date for older ones
+                # Get threshold from config if available
+                threshold = 3.0  # default
+                if hasattr(self, "_orchestrator") and self._orchestrator and self._orchestrator.config:
+                    threshold = getattr(
+                        self._orchestrator.config.global_config, 
+                        'last_change_threshold_hours', 
+                        3.0
+                    )
+                # Use actual Git commit timestamp if available, fallback to last_change_time
+                timestamp = state.last_commit_timestamp or state.last_change_time
+                last_change_display = format_last_commit_time(timestamp, threshold)
 
                 rule_emoji = state.rule_emoji or ""
                 rule_indicator = state.rule_dynamic_indicator or "N/A"
                 rule_display = f"{rule_emoji} {rule_indicator}".strip()
+                
+                # Format file statistics with color based on commit status
+                if state.has_uncommitted_changes:
+                    # Active colors for uncommitted changes
+                    total_files_display = str(state.total_files)
+                    changed_files_display = f"[bold yellow]{state.changed_files}[/bold yellow]" if state.changed_files > 0 else "0"
+                    added_display = f"[bold green]{state.added_files}[/bold green]" if state.added_files > 0 else "0"
+                    deleted_display = f"[bold red]{state.deleted_files}[/bold red]" if state.deleted_files > 0 else "0"
+                    modified_display = f"[bold blue]{state.modified_files}[/bold blue]" if state.modified_files > 0 else "0"
+                else:
+                    # Grey/dim for committed state
+                    total_files_display = str(state.total_files)
+                    changed_files_display = f"[dim]{state.changed_files}[/dim]" if state.changed_files > 0 else "0"
+                    added_display = f"[dim]{state.added_files}[/dim]" if state.added_files > 0 else "0"
+                    deleted_display = f"[dim]{state.deleted_files}[/dim]" if state.deleted_files > 0 else "0"
+                    modified_display = f"[dim]{state.modified_files}[/dim]" if state.modified_files > 0 else "0"
 
-                action_display = state.action_description or ""
-                if (
-                    state.action_description
-                    and state.action_progress_total is not None
-                    and state.action_progress_completed is not None
-                ):
-                    total = state.action_progress_total
-                    completed = state.action_progress_completed
-                    if total > 0:
-                        percentage = (completed / total) * 100
-                        bar_width = 10
-                        filled_width = int(bar_width * completed // total)
-                        bar_text = "❚" * filled_width + "-" * (bar_width - filled_width)
-                        action_display = (
-                            f"{state.action_description} [{bar_text}] {percentage:.0f}%"
-                        )
-
-                commit_hash = state.last_commit_short_hash or "-------"
-                commit_msg = state.last_commit_message_summary or "No commit info"
-                if len(commit_msg) > 30:
-                    commit_msg = commit_msg[:27] + "..."
-                last_commit_display = f"{commit_hash} - {commit_msg}"
-
+                # Get branch display - truncate from beginning if too long
+                branch_name = state.current_branch or "main"
+                if len(branch_name) > 20:
+                    branch_display = "..." + branch_name[-17:]
+                else:
+                    branch_display = branch_name
+                
                 row_data = (
                     status_display,
+                    timer_display,
                     repository_display,
-                    last_change_display,
+                    branch_display,  # New branch column
+                    total_files_display,
+                    changed_files_display,
+                    added_display,
+                    deleted_display,
+                    modified_display,
+                    last_change_display,  # Moved after modified
                     rule_display,
-                    action_display,
-                    last_commit_display,
                 )
 
                 if repo_id_str in table.rows:
