@@ -906,41 +906,40 @@ class WatchOrchestrator:
                                     repo_state.display_status_emoji = "⏸️"
                                     repo_state.rule_dynamic_indicator = "Paused"
                                     self._post_tui_state_update()
-                                    continue
-                                    
-                                delay = rule_config_obj.period.total_seconds()
-                                event_log.debug(
-                                    "Rescheduling inactivity check", delay_seconds=delay
-                                )
-                                # Update state for "Waiting"
-                                repo_state.display_status_emoji = (
-                                    "😴"  # Already done by worker (this is a specific state)
-                                )
-                                repo_state.active_rule_description = (
-                                    f"Inactivity ({delay:.0f}s waiting)"
-                                )
-                                repo_state.rule_emoji = RULE_EMOJI_MAP.get("inactivity", "⏳")
-                                repo_state.rule_dynamic_indicator = (
-                                    f"({int(delay)}s left)"  # Placeholder, real countdown later
-                                )
-                                self._console_message(
-                                    f"Waiting for inactivity period ({delay:.0f}s)...",
-                                    repo_id=repo_id,
-                                    style="italic yellow",
-                                    emoji="⏳",
-                                )
-                                # self._post_tui_log(repo_id, "DEBUG", f"Activity detected, rescheduling check in {delay:.1f}s.") # Redundant
-                                self._post_tui_state_update()  # Update TUI for waiting state
+                                else:
+                                    delay = rule_config_obj.period.total_seconds()
+                                    event_log.debug(
+                                        "Rescheduling inactivity check", delay_seconds=delay
+                                    )
+                                    # Update state for "Waiting"
+                                    repo_state.display_status_emoji = (
+                                        "😴"  # Already done by worker (this is a specific state)
+                                    )
+                                    repo_state.active_rule_description = (
+                                        f"Inactivity ({delay:.0f}s waiting)"
+                                    )
+                                    repo_state.rule_emoji = RULE_EMOJI_MAP.get("inactivity", "⏳")
+                                    repo_state.rule_dynamic_indicator = (
+                                        f"({int(delay)}s left)"  # Placeholder, real countdown later
+                                    )
+                                    self._console_message(
+                                        f"Waiting for inactivity period ({delay:.0f}s)...",
+                                        repo_id=repo_id,
+                                        style="italic yellow",
+                                        emoji="⏳",
+                                    )
+                                    # self._post_tui_log(repo_id, "DEBUG", f"Activity detected, rescheduling check in {delay:.1f}s.") # Redundant
+                                    self._post_tui_state_update()  # Update TUI for waiting state
 
-                                current_loop = asyncio.get_running_loop()
-                                # Ensure the callback lambda creates a task
-                                timer_handle = current_loop.call_later(
-                                    delay,
-                                    lambda rid=repo_id: asyncio.create_task(
-                                        self._trigger_action_callback(rid)
-                                    ),
-                                )
-                                repo_state.set_inactivity_timer(timer_handle, int(delay))
+                                    current_loop = asyncio.get_running_loop()
+                                    # Ensure the callback lambda creates a task
+                                    timer_handle = current_loop.call_later(
+                                        delay,
+                                        lambda rid=repo_id: asyncio.create_task(
+                                            self._trigger_action_callback(rid)
+                                        ),
+                                    )
+                                    repo_state.set_inactivity_timer(timer_handle, int(delay))
                             # else: Rule not met, but not inactivity, so emoji/description might reset or stay 'Evaluating'
                             # The next event or state change will update it. Or reset to default rule description.
                             # For now, if not rule_met and not inactivity, it implicitly goes back to its base status emoji on next cycle.
