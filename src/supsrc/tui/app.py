@@ -687,6 +687,10 @@ class SupsrcTuiApp(App):
         # Signal orchestrator shutdown
         if not self._shutdown_event.is_set():
             self._shutdown_event.set()
+        
+        # Also signal CLI shutdown to exit the main process
+        if not self._cli_shutdown_event.is_set():
+            self._cli_shutdown_event.set()
 
         # Stop all timers
         self._timer_manager.stop_all_timers()
@@ -703,6 +707,10 @@ class SupsrcTuiApp(App):
         
         # Exit immediately - Textual will handle terminal restoration
         self.exit(0)
+        
+        # Force immediate exit without waiting for cleanup
+        import os
+        os._exit(0)
 
     # Message Handlers
     def on_state_update(self, message: StateUpdate) -> None:
