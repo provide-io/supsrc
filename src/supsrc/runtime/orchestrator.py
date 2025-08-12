@@ -111,6 +111,7 @@ class WatchOrchestrator:
         self._is_paused = False
         self._is_suspended = False
         self._last_stats_refresh = {}  # Track last refresh time per repo
+        self._recent_moves = {}  # Track recent move events for deduplication
 
     # --- Console and TUI Update Helpers ---
 
