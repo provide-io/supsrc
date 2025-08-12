@@ -95,21 +95,18 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
     
     try:
         app.run()
+        log.info("Interactive dashboard finished.")
     except KeyboardInterrupt:
         log.info("Keyboard interrupt received")
+        # Let Textual handle the cleanup
     except Exception as e:
         log.error(f"TUI error: {e}")
-    finally:
-        # Ensure terminal is restored even if app crashes
+        # Only restore terminal on crash
         import os
         try:
             os.system('stty sane')
-            os.system('clear')
-            print("\n")  # Add a newline for cleaner exit
         except Exception:
             pass
-    
-    log.info("Interactive dashboard finished.")
 
 
 # 🔼⚙️

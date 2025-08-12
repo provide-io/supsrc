@@ -145,7 +145,7 @@ class GitEngine(RepositoryEngine):
     ) -> RepoStatusResult:
         # (Implementation remains the same)
         status_log = self._log.bind(repo_id=state.repo_id, path=str(working_dir))
-        status_log.warning(f"GET_STATUS CALLED for {working_dir.name}")
+        status_log.debug(f"get_status called for {working_dir.name}")
         try:
             repo = self._get_repo(working_dir)
             current_branch = "UNBORN" if repo.head_is_unborn else repo.head.shorthand
@@ -163,45 +163,50 @@ class GitEngine(RepositoryEngine):
                 )
 
             pygit2_status = repo.status()
-            if not pygit2_status and not repo.head_is_unborn:
-                status_log.debug("Repository is clean.")
-                return RepoStatusResult(success=True, is_clean=True, current_branch=current_branch)
+            is_clean = not pygit2_status and not repo.head_is_unborn
 
-            has_staged = any(
-                s & pygit2.GIT_STATUS_INDEX_NEW
-                or s & pygit2.GIT_STATUS_INDEX_MODIFIED
-                or s & pygit2.GIT_STATUS_INDEX_DELETED
-                or s & pygit2.GIT_STATUS_INDEX_RENAMED
-                or s & pygit2.GIT_STATUS_INDEX_TYPECHANGE
-                for s in pygit2_status.values()
-            )
-            has_unstaged = any(
-                s & pygit2.GIT_STATUS_WT_MODIFIED
-                or s & pygit2.GIT_STATUS_WT_DELETED
-                or s & pygit2.GIT_STATUS_WT_TYPECHANGE
-                or s & pygit2.GIT_STATUS_WT_RENAMED
-                for s in pygit2_status.values()
-            )
-            has_untracked = any(s & pygit2.GIT_STATUS_WT_NEW for s in pygit2_status.values())
-            is_clean = not (has_staged or has_unstaged or has_untracked)
+            if is_clean:
+                # For clean repos, we still need to count files
+                has_staged = False
+                has_unstaged = False
+                has_untracked = False
+            else:
+                has_staged = any(
+                    s & pygit2.GIT_STATUS_INDEX_NEW
+                    or s & pygit2.GIT_STATUS_INDEX_MODIFIED
+                    or s & pygit2.GIT_STATUS_INDEX_DELETED
+                    or s & pygit2.GIT_STATUS_INDEX_RENAMED
+                    or s & pygit2.GIT_STATUS_INDEX_TYPECHANGE
+                    for s in pygit2_status.values()
+                )
+                has_unstaged = any(
+                    s & pygit2.GIT_STATUS_WT_MODIFIED
+                    or s & pygit2.GIT_STATUS_WT_DELETED
+                    or s & pygit2.GIT_STATUS_WT_TYPECHANGE
+                    or s & pygit2.GIT_STATUS_WT_RENAMED
+                    for s in pygit2_status.values()
+                )
+                has_untracked = any(s & pygit2.GIT_STATUS_WT_NEW for s in pygit2_status.values())
+                is_clean = not (has_staged or has_unstaged or has_untracked)
             
             # Count file statistics
             added_files = 0
             deleted_files = 0
             modified_files = 0
             
-            for filepath, flags in pygit2_status.items():
-                # Count added files (new in working tree or index)
-                if (flags & pygit2.GIT_STATUS_WT_NEW) or (flags & pygit2.GIT_STATUS_INDEX_NEW):
-                    added_files += 1
-                # Count deleted files
-                elif (flags & pygit2.GIT_STATUS_WT_DELETED) or (flags & pygit2.GIT_STATUS_INDEX_DELETED):
-                    deleted_files += 1
-                # Count modified files (modified, renamed, or type changed)
-                elif ((flags & pygit2.GIT_STATUS_WT_MODIFIED) or (flags & pygit2.GIT_STATUS_INDEX_MODIFIED) or
-                      (flags & pygit2.GIT_STATUS_WT_RENAMED) or (flags & pygit2.GIT_STATUS_INDEX_RENAMED) or
-                      (flags & pygit2.GIT_STATUS_WT_TYPECHANGE) or (flags & pygit2.GIT_STATUS_INDEX_TYPECHANGE)):
-                    modified_files += 1
+            if not is_clean:
+                for filepath, flags in pygit2_status.items():
+                    # Count added files (new in working tree or index)
+                    if (flags & pygit2.GIT_STATUS_WT_NEW) or (flags & pygit2.GIT_STATUS_INDEX_NEW):
+                        added_files += 1
+                    # Count deleted files
+                    elif (flags & pygit2.GIT_STATUS_WT_DELETED) or (flags & pygit2.GIT_STATUS_INDEX_DELETED):
+                        deleted_files += 1
+                    # Count modified files (modified, renamed, or type changed)
+                    elif ((flags & pygit2.GIT_STATUS_WT_MODIFIED) or (flags & pygit2.GIT_STATUS_INDEX_MODIFIED) or
+                          (flags & pygit2.GIT_STATUS_WT_RENAMED) or (flags & pygit2.GIT_STATUS_INDEX_RENAMED) or
+                          (flags & pygit2.GIT_STATUS_WT_TYPECHANGE) or (flags & pygit2.GIT_STATUS_INDEX_TYPECHANGE)):
+                        modified_files += 1
             
             changed_files = added_files + deleted_files + modified_files
             
@@ -221,14 +226,14 @@ class GitEngine(RepositoryEngine):
                     # Count non-empty lines
                     files = [f for f in result.stdout.strip().split('\n') if f]
                     total_files = len(files)
-                    status_log.info(f"File count for {working_dir.name}: {total_files}")
+                    status_log.debug(f"File count for {working_dir.name}: {total_files}")
                 else:
                     status_log.error(f"git ls-files failed for {working_dir.name}: {result.stderr}")
                     # Try alternative if ls-files fails
                     if repo and not repo.is_empty:
                         try:
                             total_files = len(repo.index)
-                            status_log.info(f"Used index length fallback: {total_files} files")
+                            status_log.debug(f"Used index length fallback: {total_files} files")
                         except:
                             pass
             except Exception as e:
