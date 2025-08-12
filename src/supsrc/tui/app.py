@@ -219,6 +219,13 @@ class SupsrcTuiApp(App):
         color: $text;
     }
     
+    /* Status emoji column - fixed width */
+    DataTable > .datatable--column-0 {
+        width: 1;
+        min-width: 2;
+        max-width: 2;
+    }
+    
     /* Make branch column shrinkable on small terminals */
     DataTable > .datatable--column-3 {
         width: 1fr;
@@ -294,7 +301,7 @@ class SupsrcTuiApp(App):
             table = self.query_one(DataTable)
             table.cursor_type = "row"
             table.add_columns(
-                "",  # Action/Status emoji header (was 📊)
+                "📊",  # Action/Status emoji header
                 "⏱️",   # Timer/countdown column
                 "Repository",
                 "Branch",  # New branch column
