@@ -46,240 +46,13 @@ dependencies = [
     "sshconf>=0.2.7",
     "rich>=13.7.1",
     "aioconsole>=0.8.1",
-    "    "wrkenv @ file:///REDACTED_ABS_PATH",  # For environment management and bootstrap generation
+    "wrkenv @ {root:uri}/../wrkenv",  # For environment management and bootstrap generation
 ]
 
 [project.urls]
 Homepage = "https://github.com/provide-io/supsrc"
 Repository = "https://github.com/provide-io/supsrc"
 Issues = "https://github.com/provide-io/supsrc/issues"
-
-# --- Optional Features (Extras) ---
-[project.optional-dependencies]
-tui = [
-    "rich>=14.0.0",   # Required for TUI and optional pretty-printing
-    "textual>=0.70.0", # Use a recent stable version
-]
-dev = [
-    # Core Dev Tools
-    "hatch>=1.14.1",
-    "ruff>=0.11.8",
-    "pyre-check>=0.9.20", # <<< Added Pyre
-    # Testing Frameworks & Helpers
-    "pytest>=8.3.5",
-    "pytest-asyncio>=0.26.0",
-    "pytest-cov>=6.1.1",
-    "pytest-mock>=3.14.0",
-    "hypothesis>=6.131.9",
-    "freezegun>=1.5.1",
-    # BDD (if used)
-    "behave>=1.2.6",
-    # Include TUI deps for testing TUI features
-    "supsrc[tui]",
-]
-
-[project.scripts]
-supsrc = "supsrc.cli.main:cli"
-
-# --------------------------------------------------------------------------- #
-# Build System Configuration (Hatch)                                          #
-# --------------------------------------------------------------------------- #
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.version]
-path = "src/supsrc/__init__.py" # Ensure __version__ is defined here
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[project.urls]
-Homepage = "https://github.com/provide-io/supsrc"
-Repository = "https://github.com/provide-io/supsrc"
-Issues = "https://github.com/provide-io/supsrc/issues"
-
-# --- Optional Features (Extras) ---
-[project.optional-dependencies]
-tui = [
-    "rich>=14.0.0",   # Required for TUI and optional pretty-printing
-    "textual>=0.70.0", # Use a recent stable version
-]
-dev = [
-    # Core Dev Tools
-    "hatch>=1.14.1",
-    "ruff>=0.11.8",
-    "pyre-check>=0.9.20", # <<< Added Pyre
-    # Testing Frameworks & Helpers
-    "pytest>=8.3.5",
-    "pytest-asyncio>=0.26.0",
-    "pytest-cov>=6.1.1",
-    "pytest-mock>=3.14.0",
-    "hypothesis>=6.131.9",
-    "freezegun>=1.5.1",
-    # BDD (if used)
-    "behave>=1.2.6",
-    # Include TUI deps for testing TUI features
-    "supsrc[tui]",
-]
-
-[project.scripts]
-supsrc = "supsrc.cli.main:cli"
-
-# --------------------------------------------------------------------------- #
-# Build System Configuration (Hatch)                                          #
-# --------------------------------------------------------------------------- #
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.version]
-path = "src/supsrc/__init__.py" # Ensure __version__ is defined here
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[project.urls]
-Homepage = "https://github.com/provide-io/supsrc"
-Repository = "https://github.com/provide-io/supsrc"
-Issues = "https://github.com/provide-io/supsrc/issues"
-
-# --- Optional Features (Extras) ---
-[project.optional-dependencies]
-tui = [
-    "rich>=14.0.0",   # Required for TUI and optional pretty-printing
-    "textual>=0.70.0", # Use a recent stable version
-]
-dev = [
-    # Core Dev Tools
-    "hatch>=1.14.1",
-    "ruff>=0.11.8",
-    "pyre-check>=0.9.20", # <<< Added Pyre
-    # Testing Frameworks & Helpers
-    "pytest>=8.3.5",
-    "pytest-asyncio>=0.26.0",
-    "pytest-cov>=6.1.1",
-    "pytest-mock>=3.14.0",
-    "hypothesis>=6.131.9",
-    "freezegun>=1.5.1",
-    # BDD (if used)
-    "behave>=1.2.6",
-    # Include TUI deps for testing TUI features
-    "supsrc[tui]",
-]
-
-[project.scripts]
-supsrc = "supsrc.cli.main:cli"
-
-# --------------------------------------------------------------------------- #
-# Build System Configuration (Hatch)                                          #
-# --------------------------------------------------------------------------- #
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.version]
-path = "src/supsrc/__init__.py" # Ensure __version__ is defined here
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[project.urls]
-Homepage = "https://github.com/provide-io/supsrc"
-Repository = "https://github.com/provide-io/supsrc"
-Issues = "https://github.com/provide-io/supsrc/issues"
-
-# --- Optional Features (Extras) ---
-[project.optional-dependencies]
-tui = [
-    "rich>=14.0.0",   # Required for TUI and optional pretty-printing
-    "textual>=0.70.0", # Use a recent stable version
-]
-dev = [
-    # Core Dev Tools
-    "hatch>=1.14.1",
-    "ruff>=0.11.8",
-    "pyre-check>=0.9.20", # <<< Added Pyre
-    # Testing Frameworks & Helpers
-    "pytest>=8.3.5",
-    "pytest-asyncio>=0.26.0",
-    "pytest-cov>=6.1.1",
-    "pytest-mock>=3.14.0",
-    "hypothesis>=6.131.9",
-    "freezegun>=1.5.1",
-    # BDD (if used)
-    "behave>=1.2.6",
-    # Include TUI deps for testing TUI features
-    "supsrc[tui]",
-]
-
-[project.scripts]
-supsrc = "supsrc.cli.main:cli"
-
-# --------------------------------------------------------------------------- #
-# Build System Configuration (Hatch)                                          #
-# --------------------------------------------------------------------------- #
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.version]
-path = "src/supsrc/__init__.py" # Ensure __version__ is defined here
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[project.urls]
-Homepage = "https://github.com/provide-io/supsrc"
-Repository = "https://github.com/provide-io/supsrc"
-Issues = "https://github.com/provide-io/supsrc/issues"
-
-# --- Optional Features (Extras) ---
-[project.optional-dependencies]
-tui = [
-    "rich>=14.0.0",   # Required for TUI and optional pretty-printing
-    "textual>=0.70.0", # Use a recent stable version
-]
-dev = [
-    # Core Dev Tools
-    "hatch>=1.14.1",
-    "ruff>=0.11.8",
-    "pyre-check>=0.9.20", # <<< Added Pyre
-    # Testing Frameworks & Helpers
-    "pytest>=8.3.5",
-    "pytest-asyncio>=0.26.0",
-    "pytest-cov>=6.1.1",
-    "pytest-mock>=3.14.0",
-    "hypothesis>=6.131.9",
-    "freezegun>=1.5.1",
-    # BDD (if used)
-    "behave>=1.2.6",
-    # Include TUI deps for testing TUI features
-    "supsrc[tui]",
-]
-
-[project.scripts]
-supsrc = "supsrc.cli.main:cli"
-
-# --------------------------------------------------------------------------- #
-# Build System Configuration (Hatch)                                          #
-# --------------------------------------------------------------------------- #
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.version]
-path = "src/supsrc/__init__.py" # Ensure __version__ is defined here
-
-[tool.hatch.metadata]
-allow-direct-references = true
-",  # For environment management and bootstrap generation
-]
-
-[project.urls]
-Homepage = "https://projects.provide.io/supsrc"
-Repository = "https://github.com/provide-io/supsrc"
-Issues = "https://code.provide.io/supsrc/issues"
 
 # --- Optional Features (Extras) ---
 [project.optional-dependencies]
@@ -334,30 +107,30 @@ description = "Default development environment (includes dev & tui extras)"
 # dependencies = []
 skip-install = false
 dev-mode = true # Ensures editable install by default in hatch shell
-# scripts = {
+# scripts = { 
 #     # --- Quality Checks ---
-#     check = "hatch run lint && hatch run typecheck && hatch run test", \
-#     lint = "ruff check . && ruff format . --check", \
-#     typecheck = "pyre check", \
+#     check = "hatch run lint && hatch run typecheck && hatch run test", \ 
+#     lint = "ruff check . && ruff format . --check", \ 
+#     typecheck = "pyre check", \ 
 #     # --- Formatting ---
-#     fmt = "ruff format . && ruff check . --fix", \
+#     fmt = "ruff format . && ruff check . --fix", \ 
 #     # --- Testing ---
-#     test = "pytest tests/ {args}", \
-#     cov = "pytest --cov=src/supsrc --cov-report=term-missing --cov-report=xml --cov-report=html tests/ {args}", \
-#     cov-no-fail = "cov --cov-fail-under=0 {args}", \
+#     test = "pytest tests/ {args}", \ 
+#     cov = "pytest --cov=src/supsrc --cov-report=term-missing --cov-report=xml --cov-report=html tests/ {args}", \ 
+#     cov-no-fail = "cov --cov-fail-under=0 {args}", \ 
 #     # --- Misc ---
-#     clean = "rm -rf .pyre/ .pytest_cache/ .ruff_cache/ build/ dist/ *.egg-info/ coverage.xml coverage_html_report/", \
-#     build = "hatch build", \
-#     all = "hatch run clean && hatch run check && hatch run cov", \
+#     clean = "rm -rf .pyre/ .pytest_cache/ .ruff_cache/ build/ dist/ *.egg-info/ coverage.xml coverage_html_report/", \ 
+#     build = "hatch build", \ 
+#     all = "hatch run clean && hatch run check && hatch run cov", \ 
 # }
 
 # Example separate environment for linting only (faster if needed)
 [tool.hatch.envs.lint]
 detached = true
 dependencies = ["ruff"]
-# scripts = {
-#     lint = "ruff check .. && ruff format .. --check", \
-#     fmt = "ruff format .. && ruff check .. --fix", \
+# scripts = { 
+#     lint = "ruff check .. && ruff format .. --check", \ 
+#     fmt = "ruff format .. && ruff check .. --fix", \ 
 # }
 
 # Example separate environment for type checking only
@@ -487,7 +260,7 @@ exclude_lines = [
     "pragma: no cover",
     # Standard typing/protocol boilerplate
     "if TYPE_CHECKING:",
-    "\\.\\.\\.", # Ellipsis placeholder
+    "\\\\.\\.\\.\\.", # Ellipsis placeholder
     "@(abc\\.)?abstractmethod",
     "pass",
     # Common debugging/error handling
@@ -505,16 +278,3 @@ title = "Supsrc Coverage Report"
 
 [tool.coverage.xml]
 output = "coverage.xml"
-
-[dependency-groups]
-dev = [
-    "hypothesis>=6.131.9",
-    "pytest-asyncio>=0.26.0",
-    "pytest-cov>=6.1.1",
-    "pytest-xdist>=3.6.1",
-    "ruff>=0.11.8",
-    "ty>=0.0.1a6",
-    "uv>=0.7.2",
-]
-
-# 🔼⚙️
