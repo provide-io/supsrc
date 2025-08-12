@@ -107,6 +107,10 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
             os.system('stty sane')
         except Exception:
             pass
+    finally:
+        # Force exit to ensure all threads are terminated
+        import os
+        os._exit(0)
 
 
 # 🔼⚙️
