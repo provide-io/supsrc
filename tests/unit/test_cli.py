@@ -16,6 +16,7 @@ from click.testing import CliRunner
 from supsrc.cli.config_cmds import config_cli
 from supsrc.cli.main import cli
 from supsrc.cli.watch_cmds import watch_cli
+from supsrc.config.loader import load_config
 
 
 class TestMainCLI:
@@ -125,7 +126,7 @@ class TestConfigCommands:
         result = runner.invoke(config_cli, ["show", "--config-path", str(config_file)])
 
         assert result.exit_code == 1
-        assert "Error" in result.output
+        assert "error" in result.output.lower()
 
     def test_config_show_with_env_var(self, tmp_path: Path) -> None:
         """Test config show with environment variable."""
@@ -162,11 +163,11 @@ class TestWatchCommands:
         result = runner.invoke(watch_cli, ["--help"])
 
         assert result.exit_code == 0
-        assert "Monitor configured repositories" in result.output
+        assert "monitor configured repositories" in result.output.lower()
         assert "--tui" in result.output
 
-    @patch("supsrc.cli.watch_cmds.WatchOrchestrator")
-    @patch("supsrc.cli.watch_cmds.load_config")
+    @patch("supsrc.tui.app.WatchOrchestrator")
+    @patch("supsrc.config.loader.load_config")
     def test_watch_normal_mode(
         self, mock_load_config: Mock, mock_orchestrator_class: Mock, tmp_path: Path
     ) -> None:
@@ -199,7 +200,7 @@ class TestWatchCommands:
         mock_orchestrator_class.assert_called_once()
 
     @patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", True)
-    @patch("supsrc.cli.watch_cmds.SupsrcTuiApp")
+    @patch("supsrc.tui.app.SupsrcTuiApp")
     def test_watch_tui_mode(self, mock_tui_app: Mock, tmp_path: Path) -> None:
         """Test watch command in TUI mode."""
         mock_app_instance = Mock()

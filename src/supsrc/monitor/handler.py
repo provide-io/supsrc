@@ -161,6 +161,10 @@ class SupsrcEventHandler(FileSystemEventHandler):
             )
             return
 
+        if src_path.name == ".gitignore":
+            self.logger.debug("Ignoring .gitignore file event", path=str(src_path))
+            return
+
         if self._is_ignored(src_path):
             return
 

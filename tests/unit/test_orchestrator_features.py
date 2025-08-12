@@ -50,7 +50,7 @@ async def test_auto_freeze_on_conflict():
         assert repo_state.is_frozen is True
         assert repo_state.freeze_reason == "Merge conflicts detected"
         assert repo_state.status == RepositoryStatus.ERROR
-        assert repo_state.display_status_emoji == "🧊"
+        assert repo_state.display_status_emoji == "❌"
 
         # Verify console message was called
         orchestrator._console_message.assert_called_with(

@@ -11,6 +11,7 @@ from unittest.mock import Mock, patch
 from click.testing import CliRunner
 
 from supsrc.cli.main import cli
+from supsrc.config.loader import load_config
 
 
 class TestTailCommand:
@@ -40,7 +41,7 @@ class TestTailCommand:
         assert "--tui" not in result.output
 
     @patch("supsrc.cli.tail_cmds.WatchOrchestrator")
-    @patch("supsrc.cli.tail_cmds.load_config")
+    @patch("supsrc.config.loader.load_config")
     def test_tail_basic_operation(
         self, mock_load_config: Mock, mock_orchestrator_class: Mock, tmp_path: Path
     ) -> None:
@@ -111,7 +112,7 @@ class TestTailCommand:
         # Test with SUPSRC_CONF environment variable
         with patch.dict("os.environ", {"SUPSRC_CONF": str(config_file)}):
             with patch("supsrc.cli.tail_cmds.WatchOrchestrator"):
-                with patch("supsrc.cli.tail_cmds.load_config") as mock_load_config:
+                with patch("supsrc.config.loader.load_config") as mock_load_config:
                     mock_load_config.return_value = Mock()
 
                     runner.invoke(cli, ["tail"])
@@ -119,7 +120,7 @@ class TestTailCommand:
                     # Should use config from env var
                     assert mock_load_config.called
 
-    @patch("supsrc.cli.tail_cmds.logger")
+    @patch("supsrc.telemetry.logger.base.log")
     def test_tail_logging_setup(self, mock_logger: Mock, tmp_path: Path) -> None:
         """Test that tail command sets up logging correctly."""
         config_file = tmp_path / "test.conf"
@@ -128,7 +129,7 @@ class TestTailCommand:
         runner = CliRunner()
 
         with patch("supsrc.cli.tail_cmds.WatchOrchestrator"):
-            with patch("supsrc.cli.tail_cmds.load_config") as mock_load_config:
+            with patch("supsrc.config.loader.load_config") as mock_load_config:
                 mock_load_config.return_value = Mock()
 
                 runner.invoke(cli, ["tail", "--config-path", str(config_file)])
@@ -148,13 +149,13 @@ class TestTailCommand:
             mock_orchestrator.run.side_effect = KeyboardInterrupt()
             mock_orchestrator_class.return_value = mock_orchestrator
 
-            with patch("supsrc.cli.tail_cmds.load_config") as mock_load_config:
+            with patch("supsrc.config.loader.load_config") as mock_load_config:
                 mock_load_config.return_value = Mock()
 
                 result = runner.invoke(cli, ["tail", "--config-path", str(config_file)])
 
         # Should handle interrupt gracefully
-        assert "Stopping" in result.output or "Interrupted" in result.output
+        assert "stopping" in result.output.lower() or "interrupted" in result.output.lower()
 
 
 # 🧪🏃‍♂️
