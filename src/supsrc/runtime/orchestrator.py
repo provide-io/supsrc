@@ -797,17 +797,35 @@ class WatchOrchestrator:
                             save_count=repo_state.save_count,
                             status=repo_state.status.name,
                         )
+                        # Map event types to human-readable descriptions and emojis
+                        event_descriptions = {
+                            "created": ("added", "➕"),
+                            "modified": ("modified", "✏️"),
+                            "deleted": ("deleted", "➖"),
+                            "moved": ("moved", "➡️")
+                        }
+                        
+                        event_desc, event_emoji = event_descriptions.get(
+                            event.event_type, ("changed", "📝")
+                        )
+                        
+                        # Format message based on event type
+                        if event.event_type == "moved" and event.dest_path:
+                            display_msg = f"File {event_desc}: {event.src_path.name} → {event.dest_path.name}"
+                        else:
+                            display_msg = f"File {event_desc}: {event.src_path.name}"
+                        
                         self._console_message(
-                            f"Change detected: {event.src_path.name}",
+                            display_msg,
                             repo_id=repo_id,
                             style="magenta bold",
-                            emoji="✏️",
+                            emoji=event_emoji,
                         )
                         # Also post to TUI log
                         self._post_tui_log(
                             repo_id, 
                             "INFO", 
-                            f"✏️ File changed: {event.src_path.name}"
+                            f"{event_emoji} {display_msg}"
                         )
                         
                         # Update file statistics after change
