@@ -1692,6 +1692,7 @@ class WatchOrchestrator:
                 self._post_tui_log(None, "ERROR", f"❌ Config reload failed: {e}")
                 raise
             finally:
+                print(f"resume_monitoring type: {type(self.resume_monitoring)}")
                 # Always attempt to resume monitoring after the reload attempt
                 self.resume_monitoring()
 
