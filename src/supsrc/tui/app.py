@@ -241,7 +241,7 @@ class SupsrcTuiApp(App):
             self._timer_manager.create_timer(
                 "shutdown_check",
                 0.5,
-                self._check_external_shutdown_sync,  # Updated callback
+                self._check_external_shutdown,
                 repeat=True,
             )
 
@@ -273,25 +273,11 @@ class SupsrcTuiApp(App):
         finally:
             log.info("Orchestrator worker finished.")
 
-    async def _check_external_shutdown_async(self) -> None:  # Renamed
-        """Async part of the shutdown check: performs actual shutdown actions."""
-        # This part remains async: logging, subtitle update, and action_quit
-        log.warning("External shutdown detected (CLI signal). Processing async actions.")
-        self._update_sub_title("Shutdown requested...")
-        await self.action_quit()
-
-    def _check_external_shutdown_sync(self) -> None:  # New synchronous method
-        """
-        Synchronous callback for the timer.
-        Checks for shutdown conditions and schedules the async part if needed.
-        """
-        if (
-            self._cli_shutdown_event.is_set()
-            and not self._shutdown_event.is_set()
-            and not self._is_shutting_down
-        ):
-            # If conditions met, create a task for the async operations
-            asyncio.create_task(self._check_external_shutdown_async())
+    def _check_external_shutdown(self) -> None:
+        """Check for external shutdown signals and quit if detected."""
+        if self._cli_shutdown_event.is_set() and not self._is_shutting_down:
+            log.warning("External shutdown detected (CLI signal). Triggering quit.")
+            self.action_quit()
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         """Handle worker state changes."""
@@ -491,60 +477,38 @@ class SupsrcTuiApp(App):
 """
         self.post_message(LogMessageUpdate(None, "INFO", help_text))
 
-    async def action_quit(self) -> None:
+    def action_quit(self) -> None:
         """Quit the application gracefully."""
-        log.info("action_quit invoked.")  # ADD THIS VERY FIRST
         if self._is_shutting_down:
             return
 
         self._is_shutting_down = True
-        log.info("Quit action triggered.")  # Original log.info kept for sequence confirmation
+        log.info("Quit action triggered.")
         self._update_sub_title("Quitting...")
 
-        # Capture worker instance before any awaits that allow context switching
-        worker_to_cancel = self._worker
+        # Signal orchestrator shutdown
+        if not self._shutdown_event.is_set():
+            self._shutdown_event.set()
 
-        try:
-            # Signal orchestrator shutdown
-            if not self._shutdown_event.is_set():
-                self._shutdown_event.set()
+        # Stop all timers
+        self._timer_manager.stop_all_timers()
 
-            # Stop all timers
-            self._timer_manager.stop_all_timers()
+        # Give worker time to react
+        import time
+        time.sleep(0.5)
 
-            # Give worker time to react (and other tasks to run)
-            await asyncio.sleep(0.3)
+        # Cancel worker
+        if self._worker and self._worker.is_running:
+            log.info("Cancelling orchestrator worker...")
+            try:
+                self._worker.cancel()
+            except Exception as e:
+                log.error(f"Error cancelling worker: {e}", exc_info=True)
 
-            # Cancel worker if it was valid and is still running
-            if worker_to_cancel and worker_to_cancel.is_running:
-                log.info(
-                    "Cancelling orchestrator worker...",
-                    worker_name=getattr(worker_to_cancel, "name", "Unknown"),
-                )
-                try:
-                    await worker_to_cancel.cancel()
-                except Exception as e:
-                    log.error(
-                        "Error cancelling worker",
-                        worker_name=getattr(worker_to_cancel, "name", "Unknown"),
-                        error=str(e),
-                        exc_info=True,
-                    )
-            elif worker_to_cancel:  # Worker existed but was not running
-                log.info(
-                    "Orchestrator worker existed but was not running.",
-                    worker_name=getattr(worker_to_cancel, "name", "Unknown"),
-                    worker_state=getattr(worker_to_cancel, "state", "Unknown"),
-                )
-            else:  # Worker was None to begin with
-                log.info("Orchestrator worker was None, no cancellation needed.")
-
-            log.info("Exiting TUI application.")
-            self.exit(0)
-
-        except Exception:
-            log.exception("Error during quit action")
-            self.exit(1)
+        log.info("Exiting TUI application.")
+        self.exit(0)
+        import sys
+        sys.exit(0)
 
     # Message Handlers
     def on_state_update(self, message: StateUpdate) -> None:

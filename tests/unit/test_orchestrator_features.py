@@ -65,6 +65,7 @@ async def test_auto_freeze_on_conflict():
         assert "display notification" in mock_subprocess_run.call_args[0][0][2]
 
 
+@pytest.mark.slow
 @pytest.mark.asyncio
 async def test_event_consumption_for_paused_repository():
     """
