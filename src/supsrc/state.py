@@ -35,7 +35,7 @@ class RepositoryStatus(Enum):
 # might be derived in the TUI or Orchestrator based on a combination of
 # RepositoryStatus and other state fields (e.g., error_message, last_commit_hash).
 STATUS_EMOJI_MAP = {
-    RepositoryStatus.IDLE: "✅",      # Clean/normal state
+    RepositoryStatus.IDLE: "▶️",      # Clean/normal state - ready to monitor
     RepositoryStatus.CHANGED: "📝",   # Uncommitted changes
     RepositoryStatus.TRIGGERED: "🎯", # Rule met, action pending
     RepositoryStatus.PROCESSING: "🔄", # General processing (e.g. status check)
