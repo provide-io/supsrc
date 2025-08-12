@@ -1409,6 +1409,7 @@ class WatchOrchestrator:
 
             # Store old config for rollback
             old_config = self.config
+            old_monitor_service = self.monitor_service
 
             try:
                 # Apply new config
