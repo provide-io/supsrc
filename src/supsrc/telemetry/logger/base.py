@@ -21,7 +21,14 @@ from supsrc.telemetry.logger.processors import (
     # add_padded_logger_processor, # Removed
     remove_extra_keys_processor,
 )
-from supsrc.tui.logging_handler import TextualLogHandler
+
+# Conditional import for TUI handler
+try:
+    from supsrc.tui.logging_handler import TextualLogHandler
+    HAS_TUI = True
+except ImportError:
+    TextualLogHandler = None  # type: ignore
+    HAS_TUI = False
 
 # --- Constants ---
 BASE_LOGGER_NAME = "supsrc"  # Used for filtering/formatting
@@ -169,14 +176,17 @@ def setup_logging(
 
     # Add TextualLogHandler if TUI mode is active
     if _is_tui_active and tui_app_instance:
-        slog.debug("TUI mode active, attempting to add TextualLogHandler.")
+        if HAS_TUI:
+            slog.debug("TUI mode active, attempting to add TextualLogHandler.")
 
-        textual_handler = TextualLogHandler(app=tui_app_instance)
-        textual_handler.setLevel(level)  # Use the same overall log level
-        textual_handler.setFormatter(formatter)  # Use the same formatter as the console handler
+            textual_handler = TextualLogHandler(app=tui_app_instance)
+            textual_handler.setLevel(level)  # Use the same overall log level
+            textual_handler.setFormatter(formatter)  # Use the same formatter as the console handler
 
-        root_logger.addHandler(textual_handler)
-        slog.info("TextualLogHandler added to root logger for TUI.")
+            root_logger.addHandler(textual_handler)
+            slog.info("TextualLogHandler added to root logger for TUI.")
+        else:
+            slog.error("TUI mode is active but textual is not installed. Install with: pip install supsrc[tui]")
     elif _is_tui_active and not tui_app_instance:
         slog.warning("TUI mode is active but no TUI app instance was provided to logging setup.")
 
