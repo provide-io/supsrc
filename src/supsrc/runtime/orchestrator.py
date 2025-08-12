@@ -1690,18 +1690,10 @@ class WatchOrchestrator:
 
                 self._console_message(f"❌ Config reload failed: {e}", style="red bold", emoji="⚠️")
                 self._post_tui_log(None, "ERROR", f"❌ Config reload failed: {e}")
-                
-                # If rollback fails, we are in a bad state.
-                # For now, we resume monitoring with the old config.
-                if not original_pause_state:
-                    self.resume_monitoring()
                 raise
-            
-            # If successful, resume monitoring if it wasn't paused before
-            if not original_pause_state:
+            finally:
+                # Always attempt to resume monitoring after the reload attempt
                 self.resume_monitoring()
-            
-            return True
 
         except Exception:
             reload_log.exception("Config reload error")

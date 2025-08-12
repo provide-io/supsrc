@@ -126,7 +126,6 @@ class TestWatchOrchestratorHotReload:
 
         with patch("supsrc.runtime.orchestrator.load_config") as mock_load, \
              patch.object(orchestrator, 'resume_monitoring') as mock_resume:
-
             # New config that will cause an error
             new_config = SupsrcConfig(
                 global_config=GlobalConfig(log_level="DEBUG"),
@@ -138,15 +137,14 @@ class TestWatchOrchestratorHotReload:
             orchestrator._post_tui_log = Mock()
 
             # Test
-            with pytest.raises(ConfigurationError):
-                await orchestrator.reload_config()
+            result = await orchestrator.reload_config()
 
             # Verify rollback
+            assert result is False
             assert orchestrator.config == mock_config  # Should rollback to old config
             assert orchestrator.monitor_service == old_monitor  # Should keep old monitor
-            
-            # Should not resume monitoring on failure
-            mock_resume.assert_not_called()
+            assert orchestrator._is_paused is False  # Should resume original state
+            mock_resume.assert_called_once()
 
     async def test_config_file_change_triggers_reload(self, orchestrator):
         """Test that config file changes trigger reload."""
