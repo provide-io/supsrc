@@ -1409,30 +1409,34 @@ class WatchOrchestrator:
 
             # Store old config for rollback
             old_config = self.config
-            old_monitor_service = self.monitor_service
 
             try:
                 # Apply new config
                 self.config = new_config
                 reload_log.info("New config loaded successfully", enabled_repos=len(enabled_repos))
 
-                # Stop current monitoring
-                if self.monitor_service:
-                    self.monitor_service.stop()
+                # Stop current monitoring (if running)
+                if self.monitor_service and self.monitor_service.is_running:
+                    await self.monitor_service.stop() # Ensure it's fully stopped
+                    self.monitor_service.clear_handlers() # Clear handlers from the old observer
 
                 # Re-initialize repositories with new config
                 reload_log.debug("Re-initializing repositories")
                 enabled_repo_ids = await self._initialize_repositories()
 
-                # Setup new monitoring with new config
+                # Setup new monitoring with new config (reuse existing monitor_service)
                 reload_log.debug("Setting up monitoring with new config")
+                # Ensure monitor_service exists, if not, create it (should exist from run())
+                if not self.monitor_service:
+                    self.monitor_service = MonitoringService(self.event_queue)
+
                 successfully_added_ids = self._setup_monitoring(enabled_repo_ids)
 
                 if not successfully_added_ids:
                     raise MonitoringSetupError("Failed to setup monitoring with new config")
 
-                # Start new monitor service
-                if self.monitor_service:
+                # Start new monitor service (if not already running)
+                if self.monitor_service and not self.monitor_service.is_running:
                     self.monitor_service.start()
                     reload_log.info("Monitor service restarted with new config")
 
@@ -1514,7 +1518,7 @@ class WatchOrchestrator:
 
         # Add config watcher as a special monitored path
         try:
-            asyncio.create_task(self.monitor_service.start_monitoring("__config__", config_repo))
+            asyncio.create_task(self.monitor_service.add_repository("__config__", config_repo, asyncio.get_running_loop()))
             watcher_log.info("Config file watcher setup complete")
         except Exception as e:
             watcher_log.error("Failed to setup config watcher", error=str(e))
