@@ -102,11 +102,12 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
     main_task: asyncio.Task | None = None
 
     try:
-        log.debug("Creating main orchestrator task...")
-        main_task = loop.create_task(orchestrator.run(), name="OrchestratorRun")
-        log.debug(f"Running event loop {id(loop)}...")
-        loop.run_until_complete(main_task)
-        log.debug("Orchestrator task completed normally.")
+        with console.screen():
+            log.debug("Creating main orchestrator task...")
+            main_task = loop.create_task(orchestrator.run(), name="OrchestratorRun")
+            log.debug(f"Running event loop {id(loop)}...")
+            loop.run_until_complete(main_task)
+            log.debug("Orchestrator task completed normally.")
     except KeyboardInterrupt:
         console.print(
             "[bold yellow]KEYBOARD INTERRUPT:[/] Signal received. Initiating graceful shutdown...",
