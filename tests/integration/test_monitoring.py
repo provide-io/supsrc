@@ -180,10 +180,6 @@ class TestMonitoringIntegration:
         # Patch MonitoringService.add_repository to ignore __config__ repo
         original_add_repository = MonitoringService.add_repository
         MonitoringService.add_repository = lambda s, repo_id, repo_config, loop: None if repo_id == "__config__" else original_add_repository(s, repo_id, repo_config, loop)
-        # Patch MonitoringService.add_repository to ignore __config__ repo
-        original_add_repository = MonitoringService.add_repository
-        MonitoringService.add_repository = lambda s, repo_id, repo_config, loop: None if repo_id == "__config__" else original_add_repository(s, repo_id, repo_config, loop)
-        orchestrator.setup_config_watcher = Mock() # Prevent config watcher from interfering
 
         # Start orchestrator in background
         orchestrator_task = asyncio.create_task(orchestrator.run())

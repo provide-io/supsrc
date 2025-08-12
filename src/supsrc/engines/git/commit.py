@@ -88,11 +88,17 @@ async def perform_git_commit(
 
         # Get necessary references
         index = await run_pygit2_async(repo.index)
+        
+        # IMPORTANT: Refresh the index to ensure we have the latest state
+        # This helps avoid race conditions where HEAD changes between operations
+        await run_pygit2_async(index.read)
+        
         tree_oid = await run_pygit2_async(index.write_tree)  # Create tree object from index
         log.debug("Created tree for commit", oid=str(tree_oid))
 
         try:
             # Check if HEAD exists and get parent commit
+            # Re-read HEAD to ensure we have the latest reference
             head_ref = await run_pygit2_async(repo.head.name)  # e.g., 'refs/heads/main'
             parent_commit_oid = await run_pygit2_async(
                 repo.head.target
@@ -119,19 +125,49 @@ async def perform_git_commit(
                 return CommitResult(success=True, message="No changes to commit.", commit_hash=None)
 
         # Create the commit object
-        commit_oid = await run_pygit2_async(
-            repo.create_commit,
-            head_ref,  # The reference to update (e.g., refs/heads/main)
-            author,
-            committer,
-            message,
-            tree_oid,
-            parents,  # List of parent commit OIDs
-        )
-        commit_hash = str(commit_oid)
-        log.info("Commit created successfully", repo_path=str(working_dir), hash=commit_hash)
+        try:
+            commit_oid = await run_pygit2_async(
+                repo.create_commit,
+                head_ref,  # The reference to update (e.g., refs/heads/main)
+                author,
+                committer,
+                message,
+                tree_oid,
+                parents,  # List of parent commit OIDs
+            )
+            commit_hash = str(commit_oid)
+            log.info("Commit created successfully", repo_path=str(working_dir), hash=commit_hash)
 
-        return CommitResult(success=True, message="Commit successful.", commit_hash=commit_hash)
+            return CommitResult(success=True, message="Commit successful.", commit_hash=commit_hash)
+        except pygit2.GitError as git_error:
+            error_msg = str(git_error)
+            if "current tip is not the first parent" in error_msg:
+                # This indicates a race condition where HEAD changed between our read and commit
+                log.warning(
+                    "HEAD changed during commit operation, repository may have been modified externally",
+                    repo_path=str(working_dir),
+                    error=error_msg,
+                )
+                # Try to refresh and get latest HEAD info for debugging
+                try:
+                    current_head = await run_pygit2_async(repo.head.target)
+                    log.debug(
+                        "Current HEAD after failed commit",
+                        expected_parent=str(parents[0]) if parents else "None",
+                        actual_head=str(current_head),
+                    )
+                except Exception:
+                    pass  # Ignore errors during debug info gathering
+                
+                raise GitCommitError(
+                    "Failed to create commit: Repository HEAD changed during commit operation. "
+                    "This may happen if another process modified the repository.",
+                    repo_path=str(working_dir),
+                    details=git_error,
+                ) from git_error
+            else:
+                # Re-raise other git errors
+                raise
 
     except Exception as e:
         log.error(

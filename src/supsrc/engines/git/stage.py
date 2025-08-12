@@ -38,6 +38,9 @@ async def stage_git_changes(
 
     try:
         index = await run_pygit2_async(repo.index)  # Get the index object
+        
+        # Refresh the index to ensure we have the latest state from disk
+        await run_pygit2_async(index.read)
 
         if files is None:
             # Stage all changes (tracked, untracked, deleted)
