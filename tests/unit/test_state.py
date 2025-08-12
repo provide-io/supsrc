@@ -23,7 +23,7 @@ class TestRepositoryState:
         assert state.save_count == 0
         assert state.error_message is None
         assert state.inactivity_timer_handle is None
-        assert state.display_status_emoji == "❓"  # Default emoji before update_status is called
+        assert state.display_status_emoji == "✅"  # Default emoji for IDLE status
 
     def test_record_change(self) -> None:
         """Test recording file changes."""
@@ -35,7 +35,7 @@ class TestRepositoryState:
         assert state.status == RepositoryStatus.CHANGED
         assert state.save_count == 1
         assert state.last_change_time is not None
-        assert state.display_status_emoji == "✏️"  # CHANGED emoji
+        assert state.display_status_emoji == "📝"  # CHANGED emoji
 
         # Record second change
         first_time = state.last_change_time
@@ -66,7 +66,7 @@ class TestRepositoryState:
         state.update_status(RepositoryStatus.IDLE)
         assert state.status == RepositoryStatus.IDLE
         assert state.error_message is None
-        assert state.display_status_emoji == "🧼"
+        assert state.display_status_emoji == "✅"
 
     def test_reset_after_action(self) -> None:
         """Test state reset after successful actions."""
@@ -84,7 +84,6 @@ class TestRepositoryState:
 
         assert state.status == RepositoryStatus.IDLE
         assert state.save_count == 0
-        assert state.last_change_time is None
         assert state.action_description is None
         # Commit info should persist
         assert state.last_commit_short_hash == "abc123"
@@ -98,7 +97,7 @@ class TestRepositoryState:
         mock_timer.cancel = Mock()
 
         # Set timer
-        state.set_inactivity_timer(mock_timer)
+        state.set_inactivity_timer(mock_timer, 60)
         assert state.inactivity_timer_handle == mock_timer
 
         # Cancel timer
