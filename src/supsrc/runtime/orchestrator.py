@@ -755,6 +755,15 @@ class WatchOrchestrator:
                 try:
                     # Handle special config file changes
                     if repo_id == "__config__":
+                        # Only trigger reload if the actual config file changed
+                        if event.src_path.name != self.config_path.name:
+                            event_log.debug(
+                                "Ignoring non-config file change in config directory",
+                                file=event.src_path.name,
+                                config_file=self.config_path.name
+                            )
+                            continue
+                        
                         event_log.info("Config file change detected")
                         self._console_message(
                             f"Config file changed: {event.src_path.name}",
