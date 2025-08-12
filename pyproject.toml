@@ -54,12 +54,7 @@ Homepage = "https://github.com/provide-io/supsrc"
 Repository = "https://github.com/provide-io/supsrc"
 Issues = "https://github.com/provide-io/supsrc/issues"
 
-# --- Optional Features (Extras) ---
-[project.optional-dependencies]
-tui = [
-    "rich>=14.0.0",   # Required for TUI and optional pretty-printing
-    "textual>=0.70.0", # Use a recent stable version
-]
+[dependency-groups]
 dev = [
     # Core Dev Tools
     "hatch>=1.14.1",
@@ -76,6 +71,13 @@ dev = [
     "behave>=1.2.6",
     # Include TUI deps for testing TUI features
     "supsrc[tui]",
+]
+
+# --- Optional Features (Extras) ---
+[project.optional-dependencies]
+tui = [
+    "rich>=14.0.0",   # Required for TUI and optional pretty-printing
+    "textual>=0.70.0", # Use a recent stable version
 ]
 
 [project.scripts]
