@@ -153,6 +153,7 @@ class WatchOrchestrator:
     def _post_tui_state_update(self) -> None:
         """Safely posts the current repository states to the TUI."""
         if self._is_tui_active and self.app and StateUpdate:
+            self._safe_log("debug", "_post_tui_state_update called.")
             try:
                 # Create a copy for thread safety/mutability concerns
                 states_copy = {rid: attrs.evolve(state) for rid, state in self.repo_states.items()}
@@ -631,10 +632,10 @@ class WatchOrchestrator:
         """Consumes events from the queue, updates state, manages timers, checks rules."""
         consumer_log = self._log.bind(component="EventConsumer")
         consumer_log.info("Event consumer starting loop.")
-        # asyncio.get_running_loop() # Removed, as it's called later or implicitly. Ensure loop is obtained where needed.
         processed_event_count = 0
 
         while not self.shutdown_event.is_set():
+            consumer_log.debug("Consumer loop active, waiting for event...")
             event: MonitoredEvent | None = None  # Keep default None
             repo_id: str | None = None  # Initialize repo_id outside try
 
@@ -677,7 +678,7 @@ class WatchOrchestrator:
                 # If shutdown didn't happen, get_task must be in done
                 if get_task in done:
                     event = get_task.result()
-                    consumer_log.debug(">>> Consumer AWOKE from queue.get() with event.")
+                    consumer_log.debug(">>> Consumer AWOKE from queue.get() with event.", event_type=event.event_type, src_path=str(event.src_path))
                     # Assign repo_id *before* the main processing try block
                     repo_id = event.repo_id
                 else:
