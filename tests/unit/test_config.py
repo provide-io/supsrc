@@ -51,6 +51,15 @@ class TestConfigLoading:
         config = load_config(config_file)
 
         assert isinstance(config, SupsrcConfig)
+        assert config.global_config.log_level == "DEBUG"
+        assert len(config.repositories) == 1
+
+        repo_config = config.repositories["test-repo"]
+        assert repo_config.enabled is True
+        assert isinstance(repo_config.rule, InactivityRuleConfig)
+        assert repo_config.rule.period == timedelta(seconds=30)
+        assert repo_config.repository["type"] == "supsrc.engines.git"
+        assert repo_config.repository["auto_push"] is True
 
     def test_load_nonexistent_config(self) -> None:
         """Test loading a non-existent configuration file."""

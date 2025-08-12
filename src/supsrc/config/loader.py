@@ -198,8 +198,10 @@ def load_config(config_path: Path) -> SupsrcConfig:
 
     try:
         log.debug("Structuring TOML data...")
+        log.debug(f"TOML data: {toml_data}")
         # Initial structure from TOML + attrs defaults
         config_object = converter.structure(toml_data, SupsrcConfig)
+        log.debug(f"Structured config: {config_object}")
         log.debug("Initial structuring complete.")
 
         # --- Apply Environment Variable Overrides for Global Config ---
