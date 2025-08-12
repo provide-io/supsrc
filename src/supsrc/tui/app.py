@@ -19,6 +19,7 @@ from textual.widgets import Log as TextualLog
 from textual.worker import Worker
 
 from supsrc.runtime.orchestrator import WatchOrchestrator
+from supsrc.state import RepositoryStatus
 from supsrc.tui.messages import LogMessageUpdate, RepoDetailUpdate, StateUpdate
 
 log = structlog.get_logger("tui.app")
@@ -284,13 +285,6 @@ class SupsrcTuiApp(App):
         try:
             log.info("TUI Mounted. Initializing UI components.")
             self._update_sub_title("Initializing...")
-            
-            # Save original terminal settings
-            try:
-                import termios
-                self._original_terminal_settings = termios.tcgetattr(0)
-            except Exception:
-                pass  # Not a terminal or termios not available
 
             # Initialize table
             table = self.query_one(DataTable)
@@ -606,11 +600,7 @@ class SupsrcTuiApp(App):
         # Stop all timers
         self._timer_manager.stop_all_timers()
 
-        # Give worker time to react
-        import time
-        time.sleep(0.5)
-
-        # Cancel worker
+        # Cancel worker immediately without blocking
         if self._worker and self._worker.is_running:
             log.info("Cancelling orchestrator worker...")
             try:
@@ -620,24 +610,7 @@ class SupsrcTuiApp(App):
 
         log.info("Exiting TUI application.")
         
-        # Ensure terminal is properly restored
-        try:
-            # Reset terminal to normal mode
-            import os
-            import termios
-            import tty
-            
-            # Restore terminal settings
-            if hasattr(self, '_original_terminal_settings'):
-                termios.tcsetattr(0, termios.TCSANOW, self._original_terminal_settings)
-            
-            # Clear screen and reset cursor
-            os.system('clear')
-            os.system('stty sane')
-            
-        except Exception as e:
-            log.debug(f"Error restoring terminal: {e}")
-        
+        # Exit immediately - Textual will handle terminal restoration
         self.exit(0)
 
     # Message Handlers
@@ -695,16 +668,24 @@ class SupsrcTuiApp(App):
                 rule_display = f"{rule_emoji} {rule_indicator}".strip()
                 
                 # Format file statistics with color based on commit status
+                # Show loading indicator for repos that haven't been initialized yet
+                if state.total_files == 0 and not state.has_uncommitted_changes and state.status == RepositoryStatus.IDLE:
+                    # Likely still loading
+                    total_files_display = "[dim]...[/dim]"
+                elif state.total_files == 0:
+                    # Show a question mark for 0 files after loading is complete
+                    total_files_display = "[bold red]?[/bold red]"
+                else:
+                    total_files_display = str(state.total_files)
+                
                 if state.has_uncommitted_changes:
                     # Active colors for uncommitted changes
-                    total_files_display = str(state.total_files)
                     changed_files_display = f"[bold yellow]{state.changed_files}[/bold yellow]" if state.changed_files > 0 else "0"
                     added_display = f"[bold green]{state.added_files}[/bold green]" if state.added_files > 0 else "0"
                     deleted_display = f"[bold red]{state.deleted_files}[/bold red]" if state.deleted_files > 0 else "0"
                     modified_display = f"[bold blue]{state.modified_files}[/bold blue]" if state.modified_files > 0 else "0"
                 else:
                     # Grey/dim for committed state
-                    total_files_display = str(state.total_files)
                     changed_files_display = f"[dim]{state.changed_files}[/dim]" if state.changed_files > 0 else "0"
                     added_display = f"[dim]{state.added_files}[/dim]" if state.added_files > 0 else "0"
                     deleted_display = f"[dim]{state.deleted_files}[/dim]" if state.deleted_files > 0 else "0"

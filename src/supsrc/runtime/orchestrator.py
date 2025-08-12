@@ -110,6 +110,7 @@ class WatchOrchestrator:
         self._is_tui_active = bool(self.app)  # Flag for easier checking
         self._is_paused = False
         self._is_suspended = False
+        self._last_stats_refresh = {}  # Track last refresh time per repo
 
     # --- Console and TUI Update Helpers ---
 
@@ -165,6 +166,58 @@ class WatchOrchestrator:
                 self._safe_log("warning", "Failed to post state update to TUI", error=str(e))
 
     # --- Core Logic Methods ---
+
+    async def _refresh_file_stats(self, repo_id: str) -> None:
+        """
+        Refresh file statistics for a repository without triggering UI flashing.
+        """
+        refresh_log = self._log.bind(repo_id=repo_id)
+        refresh_log.debug("Refreshing file statistics")
+        
+        repo_state = self.repo_states.get(repo_id)
+        repo_config = self.config.repositories.get(repo_id) if self.config else None
+        repo_engine = self.repo_engines.get(repo_id)
+        
+        if not repo_state or not repo_config or not repo_engine:
+            return
+            
+        try:
+            # Add a small delay to batch multiple rapid changes
+            await asyncio.sleep(1.0)
+            
+            # Get current status
+            status_result = await repo_engine.get_status(
+                repo_state,
+                repo_config.repository,
+                self.config.global_config if self.config else {},
+                repo_config.path
+            )
+            
+            if status_result.success:
+                # Only update if values have changed
+                if (repo_state.changed_files != status_result.changed_files or
+                    repo_state.added_files != status_result.added_files or
+                    repo_state.deleted_files != status_result.deleted_files or
+                    repo_state.modified_files != status_result.modified_files):
+                    
+                    repo_state.changed_files = status_result.changed_files
+                    repo_state.added_files = status_result.added_files
+                    repo_state.deleted_files = status_result.deleted_files
+                    repo_state.modified_files = status_result.modified_files
+                    repo_state.has_uncommitted_changes = not status_result.is_clean
+                    
+                    self._last_stats_refresh[repo_id] = time.time()
+                    self._post_tui_state_update()
+                    
+                    refresh_log.debug(
+                        "File statistics updated",
+                        changed=repo_state.changed_files,
+                        added=repo_state.added_files,
+                        deleted=repo_state.deleted_files,
+                        modified=repo_state.modified_files
+                    )
+        except Exception as e:
+            refresh_log.debug("Error refreshing file statistics", error=str(e))
 
     async def _trigger_action_callback(self, repo_id: str) -> None:
         """
@@ -253,13 +306,23 @@ class WatchOrchestrator:
                 raise SupsrcError(f"Failed to get repository status: {status_result.message}")
             
             # Update file statistics in repository state
-            repo_state.total_files = status_result.total_files
-            repo_state.changed_files = status_result.changed_files
-            repo_state.added_files = status_result.added_files
-            repo_state.deleted_files = status_result.deleted_files
-            repo_state.modified_files = status_result.modified_files
-            repo_state.has_uncommitted_changes = not status_result.is_clean
-            repo_state.current_branch = status_result.current_branch
+            # Only update if values have actually changed to avoid UI flashing
+            if (repo_state.total_files != status_result.total_files or
+                repo_state.changed_files != status_result.changed_files or
+                repo_state.added_files != status_result.added_files or
+                repo_state.deleted_files != status_result.deleted_files or
+                repo_state.modified_files != status_result.modified_files):
+                
+                repo_state.total_files = status_result.total_files
+                repo_state.changed_files = status_result.changed_files
+                repo_state.added_files = status_result.added_files
+                repo_state.deleted_files = status_result.deleted_files
+                repo_state.modified_files = status_result.modified_files
+                repo_state.has_uncommitted_changes = not status_result.is_clean
+                repo_state.current_branch = status_result.current_branch
+                
+                # Update last refresh time
+                self._last_stats_refresh[repo_id] = time.time()
 
             if status_result.is_conflicted:
                 callback_log.warning("Repository has merge conflicts. Auto-freezing repository.")
@@ -711,14 +774,11 @@ class WatchOrchestrator:
                         )
                         
                         # Update file statistics after change
-                        # Only recalculate total files if we haven't set it yet
+                        # Only update change counts, not total files (to avoid flashing)
                         try:
                             repo_engine = self.repo_engines.get(repo_id)
-                            if repo_engine:
-                                # Store previous counts to detect actual changes
-                                prev_added = repo_state.added_files
-                                prev_deleted = repo_state.deleted_files
-                                
+                            if repo_engine and repo_state.total_files == 0:
+                                # Only get full status if we don't have a file count yet
                                 status_result = await repo_engine.get_status(
                                     repo_state, 
                                     repo_config.repository,
@@ -726,21 +786,27 @@ class WatchOrchestrator:
                                     repo_config.path
                                 )
                                 if status_result.success:
-                                    # Update change counts
+                                    # Update all counts including total
                                     repo_state.changed_files = status_result.changed_files
                                     repo_state.added_files = status_result.added_files
                                     repo_state.deleted_files = status_result.deleted_files
                                     repo_state.modified_files = status_result.modified_files
                                     repo_state.has_uncommitted_changes = not status_result.is_clean
                                     repo_state.current_branch = status_result.current_branch
-                                    
-                                    # Update total files from status
                                     repo_state.total_files = status_result.total_files
                                     event_log.debug(
-                                        "Updated file statistics",
+                                        "Initial file statistics loaded",
                                         total=repo_state.total_files,
                                         changed=repo_state.changed_files
                                     )
+                            else:
+                                # For subsequent changes, just mark as having uncommitted changes
+                                # Don't recalculate everything to avoid flashing
+                                repo_state.has_uncommitted_changes = True
+                                # Schedule a deferred update if we haven't updated recently
+                                last_refresh = self._last_stats_refresh.get(repo_id, 0)
+                                if time.time() - last_refresh > 5.0:  # Only refresh every 5 seconds
+                                    asyncio.create_task(self._refresh_file_stats(repo_id))
                         except Exception as e:
                             event_log.debug("Could not update file statistics", error=str(e))
                         # self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}") # Redundant
@@ -1073,6 +1139,9 @@ class WatchOrchestrator:
                                 f"Initial status for {repo_id}: {repo_state.total_files} files, branch={repo_state.current_branch}, clean={init_status.is_clean}"
                             )
                             
+                            # Mark initial refresh time
+                            self._last_stats_refresh[repo_id] = time.time()
+                            
                             if init_status.has_unstaged_changes or init_status.has_staged_changes:
                                 repo_state.update_status(RepositoryStatus.CHANGED)
                                 # Set initial last_change_time to now for repos with changes
@@ -1090,9 +1159,6 @@ class WatchOrchestrator:
                         # Still set to IDLE if we can't determine status
                         repo_state.update_status(RepositoryStatus.IDLE)
                     
-                    # Update TUI to show initial file statistics
-                    self._post_tui_state_update()
-
             else:  # Not enabled or path not valid
                 init_log.info(
                     "Skipping initialization (disabled or invalid path)",
@@ -1108,6 +1174,16 @@ class WatchOrchestrator:
             num_states=len(self.repo_states),
             repo_ids=list(self.repo_states.keys()),
         )
+        
+        # Log final state for debugging
+        for repo_id, repo_state in self.repo_states.items():
+            self._log.debug(
+                f"Final state for {repo_id}",
+                total_files=repo_state.total_files,
+                status=repo_state.status.name,
+                has_changes=repo_state.has_uncommitted_changes
+            )
+        
         self._post_tui_state_update()
         self._safe_log("info", "--- Repo Initialization Complete ---", count=len(enabled_repo_ids))
         # self._post_tui_log(None, "INFO", f"{len(enabled_repo_ids)} repos initialized.") # Redundant
