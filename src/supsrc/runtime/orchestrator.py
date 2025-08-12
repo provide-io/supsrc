@@ -1456,9 +1456,6 @@ class WatchOrchestrator:
                     f"✅ Config reloaded: monitoring {len(successfully_added_ids)} repositories",
                 )
 
-                # Create a task to resume monitoring after 90 seconds
-                asyncio.create_task(self._resume_after_delay(90, original_pause_state))
-
                 return True
 
             except Exception as e:
@@ -1469,33 +1466,14 @@ class WatchOrchestrator:
 
                 self._console_message(f"❌ Config reload failed: {e}", style="red bold", emoji="⚠️")
                 self._post_tui_log(None, "ERROR", f"❌ Config reload failed: {e}")
-
-                # Resume original pause state
-                if not original_pause_state:
-                    self.resume_monitoring()
-
                 raise
+            finally:
+                # Always attempt to resume monitoring after the reload attempt
+                self.resume_monitoring()
 
         except Exception:
             reload_log.exception("Config reload error")
-
-            # Resume original pause state on any error
-            if not original_pause_state:
-                self.resume_monitoring()
-
             return False
-
-    async def _resume_after_delay(self, delay_seconds: int, original_pause_state: bool) -> None:
-        """Resume monitoring after a delay, unless manually resumed earlier."""
-        await asyncio.sleep(delay_seconds)
-
-        # Only resume if still paused from config reload
-        if self._is_paused and not original_pause_state:
-            self.resume_monitoring()
-            self._console_message(
-                "▶️  Monitoring resumed after config reload", style="green", emoji="✅"
-            )
-            self._post_tui_log(None, "INFO", "▶️  Monitoring resumed after config reload")
 
     def setup_config_watcher(self) -> None:
         """
@@ -1519,7 +1497,7 @@ class WatchOrchestrator:
 
         # Add config watcher as a special monitored path
         try:
-            asyncio.create_task(self.monitor_service.add_repository("__config__", config_repo, asyncio.get_running_loop()))
+            self.monitor_service.add_repository("__config__", config_repo, asyncio.get_running_loop())
             watcher_log.info("Config file watcher setup complete")
         except Exception as e:
             watcher_log.error("Failed to setup config watcher", error=str(e))
