@@ -137,14 +137,15 @@ class TestWatchOrchestratorHotReload:
             orchestrator._post_tui_log = Mock()
 
             # Test
-            result = await orchestrator.reload_config()
+            with pytest.raises(ConfigurationError):
+                await orchestrator.reload_config()
 
             # Verify rollback
-            assert result is False
             assert orchestrator.config == mock_config  # Should rollback to old config
             assert orchestrator.monitor_service == old_monitor  # Should keep old monitor
-            assert orchestrator._is_paused is False  # Should resume original state
-            mock_resume.assert_called_once()
+            
+            # Should not resume monitoring on failure
+            mock_resume.assert_not_called()
 
     async def test_config_file_change_triggers_reload(self, orchestrator):
         """Test that config file changes trigger reload."""
