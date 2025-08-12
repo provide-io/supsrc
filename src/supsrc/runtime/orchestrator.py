@@ -207,6 +207,17 @@ class WatchOrchestrator:
                     repo_state.modified_files = status_result.modified_files
                     repo_state.has_uncommitted_changes = not status_result.is_clean
                     
+                    # If repository is now clean, cancel any inactivity timer and update status
+                    if status_result.is_clean and repo_state.inactivity_timer_handle:
+                        refresh_log.info("Repository is now clean, canceling inactivity timer")
+                        repo_state.cancel_inactivity_timer()
+                        repo_state.update_status(RepositoryStatus.IDLE)
+                        self._post_tui_log(
+                            repo_id,
+                            "INFO",
+                            "✅ Repository clean - timer canceled"
+                        )
+                    
                     self._last_stats_refresh[repo_id] = time.time()
                     self._post_tui_state_update()
                     
@@ -1610,6 +1621,11 @@ class WatchOrchestrator:
                 style="yellow bold",
                 emoji="⏸️",
             )
+            self._post_tui_log(
+                repo_id,
+                "WARNING",
+                "⏸️ Repository paused - commits disabled for 1 hour"
+            )
         else:
             repo_state.pause_until = None
             repo_state._update_display_emoji()  # Update the emoji
@@ -1619,6 +1635,11 @@ class WatchOrchestrator:
                 repo_id=repo_id,
                 style="green bold",
                 emoji="▶️",
+            )
+            self._post_tui_log(
+                repo_id,
+                "INFO",
+                "▶️ Repository resumed - commits enabled"
             )
             
         self._post_tui_state_update()
