@@ -1625,9 +1625,13 @@ class WatchOrchestrator:
             if repo_state.inactivity_timer_handle:
                 self._log.debug(f"Canceling inactivity timer for paused repository {repo_id}")
                 repo_state.cancel_inactivity_timer()
-                
+            
+            # Force emoji update
+            old_emoji = repo_state.display_status_emoji
             repo_state._update_display_emoji()  # Update the emoji
-            self._log.info(f"Repository {repo_id} PAUSED")
+            new_emoji = repo_state.display_status_emoji
+            
+            self._log.info(f"Repository {repo_id} PAUSED - emoji: '{old_emoji}' -> '{new_emoji}'")
             self._console_message(
                 f"Repository {repo_id} paused for 1 hour",
                 repo_id=repo_id,
