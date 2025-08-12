@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# env.sh - Supsrc Development Environment Setup
+# env.sh - supsrc Development Environment Setup
 #
-# This script sets up a clean, isolated development environment for Supsrc
+# This script sets up a clean, isolated development environment for supsrc
 # using 'uv' for high-performance virtual environment and dependency management.
 #
 # Usage: source ./env.sh
@@ -29,7 +29,6 @@ spinner() {
     done
     printf "    \b\b\b\b"
 }
-
 print_header() {
     echo -e "\n${COLOR_BLUE}--- ${1} ---${COLOR_NC}"
 }
@@ -45,7 +44,6 @@ print_error() {
 print_warning() {
     echo -e "${COLOR_YELLOW}⚠️  ${1}${COLOR_NC}"
 }
-
 # --- Cleanup Previous Environment ---
 print_header "🧹 Cleaning Previous Environment"
 
@@ -62,18 +60,14 @@ unset PYTHONPATH
 ORIGINAL_PATH="${PATH}"
 
 print_success "Cleared Python aliases and PYTHONPATH"
-
 # --- Project Validation ---
 if [ ! -f "pyproject.toml" ]; then
     print_error "No 'pyproject.toml' found in current directory"
-    echo "Please run this script from the Supsrc root directory"
+    echo "Please run this script from the supsrc root directory"
     return 1 2>/dev/null || exit 1
 fi
 
 PROJECT_NAME=$(basename "$(pwd)")
-if [ "$PROJECT_NAME" != "supsrc" ]; then
-    print_warning "This script is optimized for Supsrc but running in '${PROJECT_NAME}'"
-fi
 
 # --- UV Installation ---
 print_header "🚀 Checking UV Package Manager"
@@ -99,21 +93,31 @@ if ! command -v uv &> /dev/null; then
         return 1 2>/dev/null || exit 1
     fi
 else
-    print_success "UV already installed ($(uv --version))"
+    print_success "UV already installed"
 fi
-
 # --- Platform Detection ---
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-case "$ARCH" in
-    x86_64) ARCH="amd64" ;;
-    aarch64|arm64) ARCH="arm64" ;;
+TFOS=$(uname -s | tr '[:upper:]' '[:lower:]')
+TFARCH=$(uname -m)
+case "$TFARCH" in
+    x86_64) TFARCH="amd64" ;;
+    aarch64|arm64) TFARCH="arm64" ;;
 esac
 
-# Virtual environment directory
-VENV_DIR=".venv_${OS}_${ARCH}"
-export UV_PROJECT_ENVIRONMENT="${VENV_DIR}"
+# Workenv directory setup
+PROFILE="${SUPSRC_PROFILE:-default}"
+if [ "$PROFILE" = "default" ]; then
+    VENV_DIR="workenv/supsrc_${TFOS}_${TFARCH}"
+else
+    VENV_DIR="workenv/${PROFILE}_${TFOS}_${TFARCH}"
+fi
 
+# Validate platform
+if [[ "$TFOS" != "darwin" && "$TFOS" != "linux" ]]; then
+    print_warning "Detected OS: $TFOS (only darwin and linux are fully tested)"
+fi
+
+# Set UV project environment early so uv commands use the correct venv
+export UV_PROJECT_ENVIRONMENT="${VENV_DIR}"
 # --- Virtual Environment ---
 print_header "🐍 Setting Up Virtual Environment"
 echo "Directory: ${VENV_DIR}"
@@ -122,7 +126,7 @@ if [ -d "${VENV_DIR}" ] && [ -f "${VENV_DIR}/bin/activate" ] && [ -f "${VENV_DIR
     print_success "Virtual environment exists"
 else
     echo -n "Creating virtual environment..."
-    uv venv "${VENV_DIR}" --python 3.11 > /tmp/uv_venv.log 2>&1 &
+    uv venv "${VENV_DIR}" --python 3.12 > /tmp/uv_venv.log 2>&1 &
     spinner $!
     print_success "Virtual environment created"
 fi
@@ -130,7 +134,7 @@ fi
 # Activate virtual environment
 source "${VENV_DIR}/bin/activate"
 export VIRTUAL_ENV="$(pwd)/${VENV_DIR}"
-
+export UV_PROJECT_ENVIRONMENT="${VENV_DIR}"
 # --- Dependency Installation ---
 print_header "📦 Installing Dependencies"
 
@@ -138,7 +142,7 @@ print_header "📦 Installing Dependencies"
 mkdir -p /tmp/supsrc_setup
 
 echo -n "Syncing dependencies..."
-uv sync --all-extras > /tmp/supsrc_setup/sync.log 2>&1 &
+uv sync --all-groups > /tmp/supsrc_setup/sync.log 2>&1 &
 SYNC_PID=$!
 spinner $SYNC_PID
 wait $SYNC_PID
@@ -149,33 +153,21 @@ else
     return 1 2>/dev/null || exit 1
 fi
 
-echo -n "Installing Supsrc in editable mode..."
+echo -n "Installing supsrc in editable mode..."
 uv pip install --no-deps -e . > /tmp/supsrc_setup/install.log 2>&1 &
 spinner $!
-print_success "Supsrc installed"
+print_success "supsrc installed"
+# --- Sibling Packages ---
+print_header "🤝 Installing Sibling Packages"
 
-# --- Development Tools ---
-print_header "🛠️ Installing Development Tools"
+PARENT_DIR=$(dirname "$(pwd)")
+SIBLING_COUNT=0
 
-DEV_TOOLS=(
-    "mypy"
-    "bandit"
-    "ruff"
-    "pytest"
-    "pytest-cov"
-    "pytest-asyncio"
-    "pytest-xdist"
-)
 
-for tool in "${DEV_TOOLS[@]}"; do
-    if ! "${VENV_DIR}/bin/pip" show "$tool" > /dev/null 2>&1; then
-        echo -n "Installing ${tool}..."
-        uv pip install "$tool" > /tmp/supsrc_setup/${tool}.log 2>&1 &
-        spinner $!
-        print_success "${tool} installed"
-    fi
-done
 
+if [ $SIBLING_COUNT -eq 0 ]; then
+    print_warning "No sibling packages found"
+fi
 # --- Environment Configuration ---
 print_header "🔧 Configuring Environment"
 
@@ -184,7 +176,9 @@ export PYTHONPATH="${PWD}/src:${PWD}"
 echo "PYTHONPATH: ${PYTHONPATH}"
 
 # Clean up PATH - remove duplicates
-NEW_PATH="${VENV_DIR}/bin"
+# Ensure UV bin directories are included
+UV_BIN_PATHS="$HOME/.local/bin:$HOME/.cargo/bin"
+NEW_PATH="${VENV_DIR}/bin:${UV_BIN_PATHS}"
 OLD_IFS="$IFS"
 IFS=':'
 for p in $PATH; do
@@ -202,77 +196,55 @@ print_header "🔍 Verifying Installation"
 echo -e "\n${COLOR_GREEN}Tool Locations & Versions:${COLOR_NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# Python
+if command -v python &> /dev/null; then
+    PYTHON_PATH=$(command -v python 2>/dev/null || which python 2>/dev/null || echo "python")
+    printf "%-12s: %s\n" "Python" "$PYTHON_PATH"
+    printf "%-12s  %s\n" "" "$(python --version 2>&1)"
+fi
+
 # UV
 if command -v uv &> /dev/null; then
     UV_PATH=$(command -v uv 2>/dev/null || which uv 2>/dev/null || echo "uv")
     printf "%-12s: %s\n" "UV" "$UV_PATH"
-    printf "%-12s  %s\n" "" "$(uv --version 2>/dev/null || echo "not found")"
+    printf "%-12s  %s\n" "" "$(uv --version 2>&1)"
 fi
 
-# Python
-PYTHON_PATH="${VENV_DIR}/bin/python"
-if [ -f "$PYTHON_PATH" ]; then
-    printf "%-12s: %s\n" "Python" "$PYTHON_PATH"
-    printf "%-12s  %s\n" "" "$($PYTHON_PATH --version 2>&1)"
+# wrkenv
+if command -v wrkenv &> /dev/null; then
+    WRKENV_PATH=$(command -v wrkenv 2>/dev/null || which wrkenv 2>/dev/null || echo "wrkenv")
+    printf "%-12s: %s\n" "wrkenv" "$WRKENV_PATH"
+    printf "%-12s  %s\n" "" "$(wrkenv --version 2>&1 || echo 'No version info')"
 fi
 
-# Supsrc
-SUPSRC_PATH="${VENV_DIR}/bin/supsrc"
-if [ -f "$SUPSRC_PATH" ]; then
-    printf "%-12s: %s\n" "Supsrc" "$SUPSRC_PATH"
-    SUPSRC_VERSION=$($SUPSRC_PATH --version 2>&1 | head -n1)
-    printf "%-12s  %s\n" "" "$SUPSRC_VERSION"
+# ibmtf
+if command -v ibmtf &> /dev/null; then
+    IBMTF_PATH=$(command -v ibmtf 2>/dev/null || which ibmtf 2>/dev/null || echo "ibmtf")
+    printf "%-12s: %s\n" "ibmtf" "$IBMTF_PATH"
+    printf "%-12s  %s\n" "" "$(ibmtf version 2>&1 | head -1 || echo 'Not installed')"
 fi
 
-# Pytest
-PYTEST_PATH="${VENV_DIR}/bin/pytest"
-if [ -f "$PYTEST_PATH" ]; then
-    printf "%-12s: %s\n" "Pytest" "$PYTEST_PATH"
-    PYTEST_VERSION=$($PYTEST_PATH --version 2>&1 | head -n1)
-    printf "%-12s  %s\n" "" "$PYTEST_VERSION"
+# tofu
+if command -v tofu &> /dev/null; then
+    TOFU_PATH=$(command -v tofu 2>/dev/null || which tofu 2>/dev/null || echo "tofu")
+    printf "%-12s: %s\n" "tofu" "$TOFU_PATH"
+    printf "%-12s  %s\n" "" "$(tofu version 2>&1 | head -1 || echo 'Not installed')"
 fi
 
-# Ruff
-RUFF_PATH="${VENV_DIR}/bin/ruff"
-if [ -f "$RUFF_PATH" ]; then
-    printf "%-12s: %s\n" "Ruff" "$RUFF_PATH"
-    RUFF_VERSION=$($RUFF_PATH --version 2>&1)
-    printf "%-12s  %s\n" "" "$RUFF_VERSION"
-fi
-
-# MyPy
-MYPY_PATH="${VENV_DIR}/bin/mypy"
-if [ -f "$MYPY_PATH" ]; then
-    printf "%-12s: %s\n" "MyPy" "$MYPY_PATH"
-    MYPY_VERSION=$($MYPY_PATH --version 2>&1)
-    printf "%-12s  %s\n" "" "$MYPY_VERSION"
-fi
-
-# Bandit
-BANDIT_PATH="${VENV_DIR}/bin/bandit"
-if [ -f "$BANDIT_PATH" ]; then
-    printf "%-12s: %s\n" "Bandit" "$BANDIT_PATH"
-    BANDIT_VERSION=$($BANDIT_PATH --version 2>&1 | grep -i bandit | head -n1)
-    printf "%-12s  %s\n" "" "$BANDIT_VERSION"
-fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
 # --- Final Summary ---
 print_header "✅ Environment Ready!"
 
-echo -e "\n${COLOR_GREEN}Supsrc development environment activated${COLOR_NC}"
+echo -e "\n${COLOR_GREEN}supsrc development environment activated${COLOR_NC}"
 echo "Virtual environment: ${VENV_DIR}"
+echo "Profile: ${PROFILE}"
 echo -e "\nUseful commands:"
-echo "  supsrc --help     # Supsrc CLI"
-echo "  supsrc watch      # Interactive TUI mode"
-echo "  supsrc tail       # Non-interactive mode"
-echo "  pytest            # Run tests"
-echo "  ruff format .     # Format code"
-echo "  ruff check .      # Lint code"
-echo "  mypy src/         # Type check"
-echo "  bandit -r src/    # Security scan"
-echo "  deactivate        # Exit environment"
+echo "  supsrc --help  # supsrc CLI"
+echo "  wrkenv status  # Check tool versions"
+echo "  wrkenv container status  # Container status"
+echo "  pytest  # Run tests"
+echo "  deactivate  # Exit environment"
 
 # --- Cleanup ---
 # Remove temporary log files older than 1 day
@@ -280,6 +252,3 @@ find /tmp/supsrc_setup -name "*.log" -mtime +1 -delete 2>/dev/null
 
 # Return success
 return 0 2>/dev/null || exit 0
-
-
-# 🔼⚙️
