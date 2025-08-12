@@ -609,7 +609,7 @@ class SupsrcTuiApp(App):
             self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
             return
         
-        success = await self._orchestrator.toggle_repository_pause(repo_id)
+        success = self._orchestrator.toggle_repository_pause(repo_id)
         if success:
             repo_state = self._orchestrator.repo_states.get(repo_id)
             if repo_state and repo_state.is_paused:
@@ -728,6 +728,8 @@ class SupsrcTuiApp(App):
 
                 # Format display data
                 status_display = state.display_status_emoji
+                # Debug log to see what emoji is being used
+                log.debug(f"Repository {repo_id_str} status emoji: '{status_display}'")
                 timer_display = get_countdown_display(state.timer_seconds_left)
                 repository_display = repo_id_str
                 
