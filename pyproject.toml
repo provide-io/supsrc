@@ -46,7 +46,6 @@ dependencies = [
     "sshconf>=0.2.7",
     "rich>=13.7.1",
     "aioconsole>=0.8.1",
-    "textual>=0.70.0", # Required for the watch command TUI
     "wrkenv @ {root:uri}/../wrkenv", # For environment management and bootstrap generation
 ]
 
@@ -77,7 +76,9 @@ dev = [
 
 # --- Optional Features (Extras) ---
 [project.optional-dependencies]
-# TUI dependencies are now part of core dependencies since watch command is a core feature
+tui = [
+    "textual>=0.70.0", # Use a recent stable version
+]
 
 [project.scripts]
 supsrc = "supsrc.cli.main:cli"
