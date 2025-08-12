@@ -818,9 +818,17 @@ class SupsrcTuiApp(App):
                 )
 
                 if repo_id_str in table.rows:
+                    # Save cursor position before update
+                    cursor_row = table.cursor_row
+                    cursor_column = table.cursor_column
+                    
                     # Update existing row by removing and re-adding
                     table.remove_row(repo_id_str)
                     table.add_row(*row_data, key=repo_id_str)
+                    
+                    # Restore cursor position if it's still valid
+                    if cursor_row < table.row_count:
+                        table.cursor_coordinate = (cursor_row, cursor_column)
                 else:
                     table.add_row(*row_data, key=repo_id_str)
 

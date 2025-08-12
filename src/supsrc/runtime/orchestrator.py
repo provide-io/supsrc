@@ -762,24 +762,24 @@ class WatchOrchestrator:
                                 file=event.src_path.name,
                                 config_file=self.config_path.name
                             )
-                            continue
-                        
-                        event_log.info("Config file change detected")
-                        self._console_message(
-                            f"Config file changed: {event.src_path.name}",
-                            style="yellow bold",
-                            emoji="🔄",
-                        )
-                        self._post_tui_log(
-                            None, "INFO", "🔄 Config file change detected, reloading..."
-                        )
+                            # Skip processing but don't continue - let finally block handle task_done
+                        else:
+                            event_log.info("Config file change detected")
+                            self._console_message(
+                                f"Config file changed: {event.src_path.name}",
+                                style="yellow bold",
+                                emoji="🔄",
+                            )
+                            self._post_tui_log(
+                                None, "INFO", "🔄 Config file change detected, reloading..."
+                            )
 
-                        # Schedule config reload
-                        reload_task = asyncio.create_task(
-                            self.reload_config(), name=f"ConfigReload-{time.monotonic()}"
-                        )
-                        self._running_tasks.add(reload_task)
-                        reload_task.add_done_callback(self._running_tasks.discard)
+                            # Schedule config reload
+                            reload_task = asyncio.create_task(
+                                self.reload_config(), name=f"ConfigReload-{time.monotonic()}"
+                            )
+                            self._running_tasks.add(reload_task)
+                            reload_task.add_done_callback(self._running_tasks.discard)
                         continue
 
                     repo_state = self.repo_states.get(repo_id)
