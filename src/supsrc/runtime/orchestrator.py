@@ -251,6 +251,15 @@ class WatchOrchestrator:
 
             if not status_result.success:
                 raise SupsrcError(f"Failed to get repository status: {status_result.message}")
+            
+            # Update file statistics in repository state
+            repo_state.total_files = status_result.total_files
+            repo_state.changed_files = status_result.changed_files
+            repo_state.added_files = status_result.added_files
+            repo_state.deleted_files = status_result.deleted_files
+            repo_state.modified_files = status_result.modified_files
+            repo_state.has_uncommitted_changes = not status_result.is_clean
+            repo_state.current_branch = status_result.current_branch
 
             if status_result.is_conflicted:
                 callback_log.warning("Repository has merge conflicts. Auto-freezing repository.")
@@ -425,6 +434,9 @@ class WatchOrchestrator:
                 repo_state.last_commit_short_hash = commit_result.commit_hash[:7]
                 repo_state.action_description = f"Committed: {repo_state.last_commit_short_hash}"
                 repo_state.display_status_emoji = "✅"
+                # Update the commit timestamp to now since we just made a commit
+                from datetime import datetime, UTC
+                repo_state.last_commit_timestamp = datetime.now(UTC)
                 self._console_message(
                     f"Commit complete. Hash: {repo_state.last_commit_short_hash}",
                     repo_id=repo_id,
@@ -489,6 +501,34 @@ class WatchOrchestrator:
                 repo_state.action_description = "Completed"
                 repo_state.action_progress_total = None
                 repo_state.action_progress_completed = None
+                
+                # Don't reset the change counts - just mark as committed
+                # The numbers should stay visible but will be shown in grey
+                # Adjust total files based on what was added/deleted
+                if repo_state.added_files > 0 or repo_state.deleted_files > 0:
+                    # Adjust the cached total instead of recalculating
+                    repo_state.total_files = repo_state.total_files + repo_state.added_files - repo_state.deleted_files
+                    callback_log.debug(
+                        "Adjusted total file count",
+                        previous=repo_state.total_files - repo_state.added_files + repo_state.deleted_files,
+                        added=repo_state.added_files,
+                        deleted=repo_state.deleted_files,
+                        new_total=repo_state.total_files
+                    )
+                
+                # Just mark as no uncommitted changes - the counts remain for grey display
+                repo_state.has_uncommitted_changes = False
+                
+                # Update branch if needed
+                try:
+                    final_status = await repo_engine.get_status(
+                        repo_state, engine_config_dict, global_config, working_dir
+                    )
+                    if final_status.success:
+                        repo_state.current_branch = final_status.current_branch
+                except Exception as e:
+                    callback_log.debug("Could not update branch", error=str(e))
+                
                 self._post_tui_state_update()
                 repo_state.reset_after_action()
 
@@ -669,6 +709,40 @@ class WatchOrchestrator:
                             style="magenta bold",
                             emoji="✏️",
                         )
+                        
+                        # Update file statistics after change
+                        # Only recalculate total files if we haven't set it yet
+                        try:
+                            repo_engine = self.repo_engines.get(repo_id)
+                            if repo_engine:
+                                # Store previous counts to detect actual changes
+                                prev_added = repo_state.added_files
+                                prev_deleted = repo_state.deleted_files
+                                
+                                status_result = await repo_engine.get_status(
+                                    repo_state, 
+                                    repo_config.repository,
+                                    self.config.global_config if self.config else {},
+                                    repo_config.path
+                                )
+                                if status_result.success:
+                                    # Update change counts
+                                    repo_state.changed_files = status_result.changed_files
+                                    repo_state.added_files = status_result.added_files
+                                    repo_state.deleted_files = status_result.deleted_files
+                                    repo_state.modified_files = status_result.modified_files
+                                    repo_state.has_uncommitted_changes = not status_result.is_clean
+                                    repo_state.current_branch = status_result.current_branch
+                                    
+                                    # Update total files from status
+                                    repo_state.total_files = status_result.total_files
+                                    event_log.debug(
+                                        "Updated file statistics",
+                                        total=repo_state.total_files,
+                                        changed=repo_state.changed_files
+                                    )
+                        except Exception as e:
+                            event_log.debug("Could not update file statistics", error=str(e))
                         # self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}") # Redundant
 
                         rule_config_obj: RuleConfig = repo_config.rule
@@ -764,7 +838,7 @@ class WatchOrchestrator:
                                         self._trigger_action_callback(rid)
                                     ),
                                 )
-                                repo_state.set_inactivity_timer(timer_handle)
+                                repo_state.set_inactivity_timer(timer_handle, int(delay))
                             # else: Rule not met, but not inactivity, so emoji/description might reset or stay 'Evaluating'
                             # The next event or state change will update it. Or reset to default rule description.
                             # For now, if not rule_met and not inactivity, it implicitly goes back to its base status emoji on next cycle.
@@ -948,6 +1022,8 @@ class WatchOrchestrator:
                                 repo_state.last_commit_message_summary = (
                                     summary.head_commit_message_summary
                                 )
+                                # Set the actual Git commit timestamp
+                                repo_state.last_commit_timestamp = summary.head_commit_timestamp
                                 commit_short_hash = repo_state.last_commit_short_hash or "N/A"
                                 commit_msg_summary = (
                                     repo_state.last_commit_message_summary or "No commit message"
@@ -974,11 +1050,48 @@ class WatchOrchestrator:
                         # self._post_tui_log(repo_id, "ERROR", f"Failed to get summary: {summary_exc}") # Redundant
                         # repo_state.update_status(RepositoryStatus.ERROR, f"Summary failed: {summary_exc}") # Potentially set error
 
-                # Ensure emoji is updated based on initial status (typically IDLE)
-                if repo_state:
-                    repo_state.update_status(
-                        repo_state.status
-                    )  # This will set the emoji via STATUS_EMOJI_MAP
+                # Check initial repository status (clean vs uncommitted changes)
+                if repo_state and engine_instance:
+                    try:
+                        init_status = await engine_instance.get_status(
+                            repo_state, 
+                            repo_config.repository, 
+                            self.config.global_config if self.config else {}, 
+                            repo_config.path
+                        )
+                        if init_status.success:
+                            # Update file statistics from initial status
+                            repo_state.total_files = init_status.total_files
+                            repo_state.changed_files = init_status.changed_files
+                            repo_state.added_files = init_status.added_files
+                            repo_state.deleted_files = init_status.deleted_files
+                            repo_state.modified_files = init_status.modified_files
+                            repo_state.has_uncommitted_changes = not init_status.is_clean
+                            repo_state.current_branch = init_status.current_branch
+                            
+                            init_log.info(
+                                f"Initial status for {repo_id}: {repo_state.total_files} files, branch={repo_state.current_branch}, clean={init_status.is_clean}"
+                            )
+                            
+                            if init_status.has_unstaged_changes or init_status.has_staged_changes:
+                                repo_state.update_status(RepositoryStatus.CHANGED)
+                                # Set initial last_change_time to now for repos with changes
+                                from datetime import datetime, UTC
+                                repo_state.last_change_time = datetime.now(UTC)
+                                init_log.info(f"Repository has uncommitted changes (branch: {repo_state.current_branch}, files: {repo_state.total_files})")
+                            else:
+                                repo_state.update_status(RepositoryStatus.IDLE)
+                                init_log.info(f"Repository is clean (branch: {repo_state.current_branch}, files: {repo_state.total_files})")
+                        else:
+                            init_log.warning(f"Failed to get initial status: {init_status.message}")
+                            repo_state.update_status(RepositoryStatus.IDLE)
+                    except Exception as e:
+                        init_log.warning(f"Error checking initial status: {e}")
+                        # Still set to IDLE if we can't determine status
+                        repo_state.update_status(RepositoryStatus.IDLE)
+                    
+                    # Update TUI to show initial file statistics
+                    self._post_tui_state_update()
 
             else:  # Not enabled or path not valid
                 init_log.info(

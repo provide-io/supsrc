@@ -187,6 +187,7 @@ class GlobalConfig:
     log_level: str = field(default=DEFAULT_LOG_LEVEL, validator=_validate_log_level)
     default_commit_message: str = field(default="🔼⚙️ auto-commit [skip ci]")
     default_auto_push: bool = field(default=True)
+    last_change_threshold_hours: float = field(default=3.0)  # Hours before showing absolute time
 
     @property
     def numeric_log_level(self) -> int:
