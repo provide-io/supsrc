@@ -735,8 +735,12 @@ class SupsrcTuiApp(App):
 
                 # Format display data
                 status_display = state.display_status_emoji
-                # Debug log to see what emoji is being used
-                log.debug(f"Repository {repo_id_str} status emoji: '{status_display}'")
+                # Debug log to see the state
+                log.debug(
+                    f"Repository {repo_id_str} - emoji: '{status_display}', "
+                    f"paused: {state.is_paused}, stopped: {state.is_stopped}, "
+                    f"status: {state.status.name}"
+                )
                 timer_display = get_countdown_display(state.timer_seconds_left)
                 repository_display = repo_id_str
                 

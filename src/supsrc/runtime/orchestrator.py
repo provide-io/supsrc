@@ -1592,6 +1592,7 @@ class WatchOrchestrator:
         
         if repo_state.is_paused:
             repo_state.pause_until = datetime.now(UTC) + timedelta(hours=1)  # Default 1 hour pause
+            repo_state._update_display_emoji()  # Update the emoji
             self._log.info(f"Repository {repo_id} PAUSED")
             self._console_message(
                 f"Repository {repo_id} paused for 1 hour",
@@ -1601,6 +1602,7 @@ class WatchOrchestrator:
             )
         else:
             repo_state.pause_until = None
+            repo_state._update_display_emoji()  # Update the emoji
             self._log.info(f"Repository {repo_id} RESUMED")
             self._console_message(
                 f"Repository {repo_id} resumed",
@@ -1621,6 +1623,7 @@ class WatchOrchestrator:
         repo_state.is_stopped = not repo_state.is_stopped
 
         if repo_state.is_stopped:
+            repo_state._update_display_emoji()  # Update the emoji
             self._log.info(f"Repository {repo_id} STOPPED from monitoring.")
             self._console_message(
                 f"Repository {repo_id} stopped from monitoring",
@@ -1637,6 +1640,7 @@ class WatchOrchestrator:
                     self._log.error(f"Failed to unschedule {repo_id} from watchdog: {e}")
                     return False
         else:
+            repo_state._update_display_emoji()  # Update the emoji
             self._log.info(f"Repository {repo_id} RESUMED monitoring.")
             self._console_message(
                 f"Repository {repo_id} resumed monitoring",
