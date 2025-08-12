@@ -155,12 +155,16 @@ class SupsrcTuiApp(App):
         ("enter", "select_repo_for_detail", "View Details"),
         ("escape", "hide_detail_pane", "Hide Details"),
         ("r", "refresh_details", "Refresh Details"),
-        ("p", "pause_monitoring", "Pause/Resume Monitoring"),
-        ("s", "suspend_monitoring", "Suspend Monitoring"),
+        ("p", "pause_monitoring", "Pause/Resume All"),
+        ("s", "suspend_monitoring", "Suspend/Resume All"),
         ("c", "reload_config", "Reload Config"),
         ("h", "show_help", "Show Help"),
         ("tab", "focus_next", "Next Panel"),
         ("shift+tab", "focus_previous", "Previous Panel"),
+        ("P", "toggle_repo_pause", "Toggle Repo Pause"),
+        ("S", "toggle_repo_stop", "Toggle Repo Stop"),
+        ("shift+R", "refresh_repo_status", "Refresh Repo Status"),
+        ("G", "resume_repo_monitoring", "Resume Repo Monitoring"),
     ]
 
     # Updated CSS for better layout
@@ -290,7 +294,7 @@ class SupsrcTuiApp(App):
             table = self.query_one(DataTable)
             table.cursor_type = "row"
             table.add_columns(
-                "📊",  # Status emoji header
+                "",  # Action/Status emoji header (was 📊)
                 "⏱️",   # Timer/countdown column
                 "Repository",
                 "Branch",  # New branch column
@@ -547,8 +551,8 @@ class SupsrcTuiApp(App):
         """Show help information about emojis and shortcuts."""
         help_text = """
 🔄 EMOJI MEANINGS:
-  ⏸️  - Paused (monitoring temporarily halted)
-  ⏹️  - Suspended (monitoring stopped)
+  ⏹️  - Stopped (not monitored)
+  ⏸️  - Paused (monitoring, no commits)
   ▶️  - Running/Active
   🔄 - Processing/Reloading
   ⏳ - Inactivity timer running
@@ -563,8 +567,8 @@ class SupsrcTuiApp(App):
 
 📋 KEYBOARD SHORTCUTS:
   h     - Show this help
-  p     - Pause/Resume monitoring
-  s     - Suspend monitoring (stops watchers)
+  p     - Pause/Resume ALL monitoring
+  s     - Suspend/Resume ALL monitoring (stops watchers)
   c     - Reload configuration (90s pause)
   d     - Toggle dark mode
   q     - Quit application
@@ -575,14 +579,91 @@ class SupsrcTuiApp(App):
   r     - Refresh repository details
   Tab    - Focus next panel
   Shift+Tab - Focus previous panel
+  P     - Toggle selected repo pause
+  S     - Toggle selected repo stop
+  Shift+R - Refresh selected repo status
+  G     - Resume selected repo monitoring
 
 💡 NOTES:
   • Pause keeps watchers active but queues events
   • Suspend stops watchers completely
   • Config reload pauses for 90 seconds
-  • Use 'p' to quickly pause/resume
+  • Use 'p' to quickly pause/resume ALL
 """
         self.post_message(LogMessageUpdate(None, "INFO", help_text))
+
+    def _get_selected_repo_id(self) -> str | None:
+        """Helper to get the ID of the currently selected repository."""
+        try:
+            table = self.query_one(DataTable)
+            cell_key = table.coordinate_to_cell_key((table.cursor_row, 0))
+            row_key = cell_key.row_key
+            return str(row_key.value) if row_key else None
+        except Exception:
+            return None
+
+    async def action_toggle_repo_pause(self) -> None:
+        """Toggle pause state for the selected repository."""
+        repo_id = self._get_selected_repo_id()
+        if not repo_id or not self._orchestrator:
+            self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
+            return
+        
+        success = await self._orchestrator.toggle_repository_pause(repo_id)
+        if success:
+            repo_state = self._orchestrator.repo_states.get(repo_id)
+            if repo_state and repo_state.is_paused:
+                self.post_message(LogMessageUpdate(None, "INFO", f"⏸️ Repository '{repo_id}' paused."))
+            else:
+                self.post_message(LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed."))
+        else:
+            self.post_message(LogMessageUpdate(None, "ERROR", f"Failed to toggle pause for '{repo_id}'."))
+
+    async def action_toggle_repo_stop(self) -> None:
+        """Toggle stop state for the selected repository."""
+        repo_id = self._get_selected_repo_id()
+        if not repo_id or not self._orchestrator:
+            self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
+            return
+        
+        success = await self._orchestrator.toggle_repository_stop(repo_id)
+        if success:
+            repo_state = self._orchestrator.repo_states.get(repo_id)
+            if repo_state and repo_state.is_stopped:
+                self.post_message(LogMessageUpdate(None, "INFO", f"⏹️ Repository '{repo_id}' stopped from monitoring."))
+            else:
+                self.post_message(LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed monitoring."))
+        else:
+            self.post_message(LogMessageUpdate(None, "ERROR", f"Failed to toggle stop for '{repo_id}'."))
+
+    async def action_refresh_repo_status(self) -> None:
+        """Force refresh status for the selected repository."""
+        repo_id = self._get_selected_repo_id()
+        if not repo_id or not self._orchestrator:
+            self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
+            return
+        
+        self._orchestrator.set_repo_refreshing_status(repo_id, True)
+        self.post_message(LogMessageUpdate(None, "INFO", f"🔄 Refreshing status for '{repo_id}'..."))
+        success = await self._orchestrator.refresh_repository_status(repo_id)
+        self._orchestrator.set_repo_refreshing_status(repo_id, False)
+        if success:
+            self.post_message(LogMessageUpdate(None, "INFO", f"✅ Status for '{repo_id}' refreshed."))
+        else:
+            self.post_message(LogMessageUpdate(None, "ERROR", f"❌ Failed to refresh status for '{repo_id}'."))
+
+    async def action_resume_repo_monitoring(self) -> None:
+        """Resume monitoring for the selected repository (unpause/unstop)."""
+        repo_id = self._get_selected_repo_id()
+        if not repo_id or not self._orchestrator:
+            self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
+            return
+        
+        success = await self._orchestrator.resume_repository_monitoring(repo_id)
+        if success:
+            self.post_message(LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed monitoring."))
+        else:
+            self.post_message(LogMessageUpdate(None, "ERROR", f"Failed to resume monitoring for '{repo_id}'."))
 
     def action_quit(self) -> None:
         """Quit the application gracefully."""
