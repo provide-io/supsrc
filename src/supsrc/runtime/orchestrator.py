@@ -207,6 +207,17 @@ class WatchOrchestrator:
                     repo_state.modified_files = status_result.modified_files
                     repo_state.has_uncommitted_changes = not status_result.is_clean
                     
+                    # If repository is now clean, cancel any inactivity timer and update status
+                    if status_result.is_clean and repo_state.inactivity_timer_handle:
+                        refresh_log.info("Repository is now clean, canceling inactivity timer")
+                        repo_state.cancel_inactivity_timer()
+                        repo_state.update_status(RepositoryStatus.IDLE)
+                        self._post_tui_log(
+                            repo_id,
+                            "INFO",
+                            "✅ Repository clean - timer canceled"
+                        )
+                    
                     self._last_stats_refresh[repo_id] = time.time()
                     self._post_tui_state_update()
                     
@@ -241,6 +252,11 @@ class WatchOrchestrator:
         # Allow triggering from IDLE (e.g., timer fired before any new change) or CHANGED
         if repo_state.is_paused:
             callback_log.info("Action Triggered: Repository is paused, skipping action.", repo_id=repo_id)
+            self._post_tui_log(
+                repo_id,
+                "WARNING",
+                "⏸️ Commit skipped - repository is paused"
+            )
             repo_state.cancel_inactivity_timer()
             return
 
@@ -711,13 +727,12 @@ class WatchOrchestrator:
                     await asyncio.sleep(0.5)
                     continue
 
-                # --- Check if repository is individually paused/frozen/stopped ---
+                # --- Check if repository is individually frozen/stopped (but not just paused) ---
                 repo_state = self.repo_states.get(repo_id) if repo_id != "__config__" else None
-                if repo_state and (repo_state.is_paused or repo_state.is_frozen or repo_state.is_stopped):
+                if repo_state and (repo_state.is_frozen or repo_state.is_stopped):
                     consumer_log.info(
-                        "Repository is individually paused/frozen/stopped, skipping event",
+                        "Repository is frozen/stopped, skipping event",
                         repo_id=repo_id,
-                        is_paused=repo_state.is_paused,
                         is_frozen=repo_state.is_frozen,
                         is_stopped=repo_state.is_stopped,
                         freeze_reason=repo_state.freeze_reason,
@@ -778,6 +793,12 @@ class WatchOrchestrator:
                             repo_id=repo_id,
                             style="magenta bold",
                             emoji="✏️",
+                        )
+                        # Also post to TUI log
+                        self._post_tui_log(
+                            repo_id, 
+                            "INFO", 
+                            f"✏️ File changed: {event.src_path.name}"
                         )
                         
                         # Update file statistics after change
@@ -879,39 +900,46 @@ class WatchOrchestrator:
                             action_task.add_done_callback(self._running_tasks.discard)
                         else:
                             if isinstance(rule_config_obj, InactivityRuleConfig):
-                                delay = rule_config_obj.period.total_seconds()
-                                event_log.debug(
-                                    "Rescheduling inactivity check", delay_seconds=delay
-                                )
-                                # Update state for "Waiting"
-                                repo_state.display_status_emoji = (
-                                    "😴"  # Already done by worker (this is a specific state)
-                                )
-                                repo_state.active_rule_description = (
-                                    f"Inactivity ({delay:.0f}s waiting)"
-                                )
-                                repo_state.rule_emoji = RULE_EMOJI_MAP.get("inactivity", "⏳")
-                                repo_state.rule_dynamic_indicator = (
-                                    f"({int(delay)}s left)"  # Placeholder, real countdown later
-                                )
-                                self._console_message(
-                                    f"Waiting for inactivity period ({delay:.0f}s)...",
-                                    repo_id=repo_id,
-                                    style="italic yellow",
-                                    emoji="⏳",
-                                )
-                                # self._post_tui_log(repo_id, "DEBUG", f"Activity detected, rescheduling check in {delay:.1f}s.") # Redundant
-                                self._post_tui_state_update()  # Update TUI for waiting state
+                                # Don't schedule timer if repository is paused
+                                if repo_state.is_paused:
+                                    event_log.debug("Skipping timer scheduling - repository is paused")
+                                    repo_state.display_status_emoji = "⏸️"
+                                    repo_state.rule_dynamic_indicator = "Paused"
+                                    self._post_tui_state_update()
+                                else:
+                                    delay = rule_config_obj.period.total_seconds()
+                                    event_log.debug(
+                                        "Rescheduling inactivity check", delay_seconds=delay
+                                    )
+                                    # Update state for "Waiting"
+                                    repo_state.display_status_emoji = (
+                                        "😴"  # Already done by worker (this is a specific state)
+                                    )
+                                    repo_state.active_rule_description = (
+                                        f"Inactivity ({delay:.0f}s waiting)"
+                                    )
+                                    repo_state.rule_emoji = RULE_EMOJI_MAP.get("inactivity", "⏳")
+                                    repo_state.rule_dynamic_indicator = (
+                                        f"({int(delay)}s left)"  # Placeholder, real countdown later
+                                    )
+                                    self._console_message(
+                                        f"Waiting for inactivity period ({delay:.0f}s)...",
+                                        repo_id=repo_id,
+                                        style="italic yellow",
+                                        emoji="⏳",
+                                    )
+                                    # self._post_tui_log(repo_id, "DEBUG", f"Activity detected, rescheduling check in {delay:.1f}s.") # Redundant
+                                    self._post_tui_state_update()  # Update TUI for waiting state
 
-                                current_loop = asyncio.get_running_loop()
-                                # Ensure the callback lambda creates a task
-                                timer_handle = current_loop.call_later(
-                                    delay,
-                                    lambda rid=repo_id: asyncio.create_task(
-                                        self._trigger_action_callback(rid)
-                                    ),
-                                )
-                                repo_state.set_inactivity_timer(timer_handle, int(delay))
+                                    current_loop = asyncio.get_running_loop()
+                                    # Ensure the callback lambda creates a task
+                                    timer_handle = current_loop.call_later(
+                                        delay,
+                                        lambda rid=repo_id: asyncio.create_task(
+                                            self._trigger_action_callback(rid)
+                                        ),
+                                    )
+                                    repo_state.set_inactivity_timer(timer_handle, int(delay))
                             # else: Rule not met, but not inactivity, so emoji/description might reset or stay 'Evaluating'
                             # The next event or state change will update it. Or reset to default rule description.
                             # For now, if not rule_met and not inactivity, it implicitly goes back to its base status emoji on next cycle.
@@ -1592,15 +1620,32 @@ class WatchOrchestrator:
         
         if repo_state.is_paused:
             repo_state.pause_until = datetime.now(UTC) + timedelta(hours=1)  # Default 1 hour pause
-            self._log.info(f"Repository {repo_id} PAUSED")
+            
+            # Cancel any existing timer when pausing
+            if repo_state.inactivity_timer_handle:
+                self._log.debug(f"Canceling inactivity timer for paused repository {repo_id}")
+                repo_state.cancel_inactivity_timer()
+            
+            # Force emoji update
+            old_emoji = repo_state.display_status_emoji
+            repo_state._update_display_emoji()  # Update the emoji
+            new_emoji = repo_state.display_status_emoji
+            
+            self._log.info(f"Repository {repo_id} PAUSED - emoji: '{old_emoji}' -> '{new_emoji}'")
             self._console_message(
                 f"Repository {repo_id} paused for 1 hour",
                 repo_id=repo_id,
                 style="yellow bold",
                 emoji="⏸️",
             )
+            self._post_tui_log(
+                repo_id,
+                "WARNING",
+                "⏸️ Repository paused - commits disabled for 1 hour, timer stopped"
+            )
         else:
             repo_state.pause_until = None
+            repo_state._update_display_emoji()  # Update the emoji
             self._log.info(f"Repository {repo_id} RESUMED")
             self._console_message(
                 f"Repository {repo_id} resumed",
@@ -1608,6 +1653,43 @@ class WatchOrchestrator:
                 style="green bold",
                 emoji="▶️",
             )
+            
+            # If there are uncommitted changes, restart the inactivity timer
+            if repo_state.has_uncommitted_changes and self.config:
+                repo_config = self.config.repositories.get(repo_id)
+                if repo_config and isinstance(repo_config.rule, InactivityRuleConfig):
+                    delay = repo_config.rule.period.total_seconds()
+                    self._log.debug(f"Restarting inactivity timer for {repo_id} with {delay}s delay")
+                    
+                    # Schedule the timer
+                    current_loop = asyncio.get_running_loop()
+                    timer_handle = current_loop.call_later(
+                        delay,
+                        lambda rid=repo_id: asyncio.create_task(
+                            self._trigger_action_callback(rid)
+                        ),
+                    )
+                    repo_state.set_inactivity_timer(timer_handle, int(delay))
+                    repo_state.display_status_emoji = "😴"
+                    repo_state.rule_dynamic_indicator = f"({int(delay)}s left)"
+                    
+                    self._post_tui_log(
+                        repo_id,
+                        "INFO",
+                        f"▶️ Repository resumed - timer restarted ({int(delay)}s)"
+                    )
+                else:
+                    self._post_tui_log(
+                        repo_id,
+                        "INFO",
+                        "▶️ Repository resumed - commits enabled"
+                    )
+            else:
+                self._post_tui_log(
+                    repo_id,
+                    "INFO",
+                    "▶️ Repository resumed - commits enabled"
+                )
             
         self._post_tui_state_update()
         return True
@@ -1621,6 +1703,7 @@ class WatchOrchestrator:
         repo_state.is_stopped = not repo_state.is_stopped
 
         if repo_state.is_stopped:
+            repo_state._update_display_emoji()  # Update the emoji
             self._log.info(f"Repository {repo_id} STOPPED from monitoring.")
             self._console_message(
                 f"Repository {repo_id} stopped from monitoring",
@@ -1637,6 +1720,7 @@ class WatchOrchestrator:
                     self._log.error(f"Failed to unschedule {repo_id} from watchdog: {e}")
                     return False
         else:
+            repo_state._update_display_emoji()  # Update the emoji
             self._log.info(f"Repository {repo_id} RESUMED monitoring.")
             self._console_message(
                 f"Repository {repo_id} resumed monitoring",
