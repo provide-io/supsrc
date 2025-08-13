@@ -47,7 +47,7 @@ _is_tui_active: bool = False
 
 
 def setup_logging(
-    level: int = logging.INFO,
+    level: int = logging.DEBUG if "pytest" in sys.modules else logging.INFO,
     json_logs: bool = False,
     log_file: str | None = None,
     file_only: bool = False,  # New parameter for file-only logging

@@ -221,11 +221,13 @@ source_directories = ["src", "tests"]
 # --------------------------------------------------------------------------- #
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --strict-markers --import-mode=importlib" # Show summary, quiet, error on markers, use importlib
+addopts = "-ra -q --strict-markers --import-mode=importlib"
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
+log_cli = true
+log_cli_level = "DEBUG"
 filterwarnings = [
     "error", # Fail tests on warnings
     "ignore::DeprecationWarning:pygit2.*:", # Ignore specific deprecations if noisy
