@@ -43,6 +43,15 @@ class MonitoringService:
         self._handlers.clear()
         self._logger.debug("Cleared all monitoring handlers.")
 
+    def unschedule_repository(self, repo_id: str) -> None:
+        """Unschedule a specific repository from being monitored."""
+        handler = self._handlers.pop(repo_id, None)
+        if handler:
+            self._observer.unschedule(handler)
+            self._logger.info("Unscheduled repository from monitoring", repo_id=repo_id)
+        else:
+            self._logger.warning("Attempted to unschedule non-existent handler", repo_id=repo_id)
+
     def add_repository(
         self,
         repo_id: str,

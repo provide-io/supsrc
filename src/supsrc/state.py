@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from enum import Enum, auto
 
 import structlog
+import attrs
 from attrs import field, mutable
 
 # Logger specific to state management
@@ -83,10 +84,12 @@ class RepositoryState:
     action_progress_completed: int | None = field(default=None)
     
     # Individual repository pause/freeze state
-    is_paused: bool = field(default=False)  # Individual repository pause
-    pause_until: datetime | None = field(default=None)  # Time when pause expires
-    is_frozen: bool = field(default=False)  # Frozen due to conflict
-    freeze_reason: str | None = field(default=None)  # Why it was frozen
+    is_paused: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: instance._update_display_emoji()))  # Individual repository pause
+    pause_until: datetime | None = field(default=None)
+    is_frozen: bool = field(default=False)
+    freeze_reason: str | None = field(default=None)
+    is_stopped: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: instance._update_display_emoji())) # New: Repository is not being monitored
+    is_refreshing: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: instance._update_display_emoji())) # New: An operation (e.g., status check) is in progress
     timer_seconds_left: int | None = field(default=None)  # Countdown for timer column
     
     # File statistics
@@ -107,9 +110,8 @@ class RepositoryState:
     # last_error_time: Optional[datetime] = field(default=None)
 
     def __attrs_post_init__(self):
-        """Log the initial state upon creation."""
-        # Set initial emoji based on status
-        self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
+        """Log the initial state upon creation and set initial emoji."""
+        self._update_display_emoji() # Call the new method to set initial emoji
         
         log.debug(
             "Initialized repository state",
@@ -127,10 +129,15 @@ class RepositoryState:
             return
 
         self.status = new_status
-        # Update emoji based on the new status.
-        # More specific emojis (like '🧪 Evaluating', '😴 Waiting') can be set directly
-        # by the Orchestrator if needed for transient states not directly in RepositoryStatus.
-        self.display_status_emoji = STATUS_EMOJI_MAP.get(new_status, "❓")
+        # Update emoji based on the new status, with overrides for pause/stop/refresh.
+        if self.is_stopped:
+            self.display_status_emoji = "⏹️"
+        elif self.is_paused:
+            self.display_status_emoji = "⏸️"
+        elif self.is_refreshing:
+            self.display_status_emoji = "🔄"
+        else:
+            self.display_status_emoji = STATUS_EMOJI_MAP.get(new_status, "❓")
         log_func = log.debug  # Default log level for status changes
 
         if new_status == RepositoryStatus.ERROR:
@@ -248,6 +255,18 @@ class RepositoryState:
             self.timer_seconds_left = seconds_left
         else:
             self.timer_seconds_left = None
+
+    def _update_display_emoji(self) -> None:
+        """Internal method to update the display_status_emoji based on current state."""
+        if self.is_stopped:
+            self.display_status_emoji = "⏹️"
+        elif self.is_paused:
+            self.display_status_emoji = "⏸️"
+        elif self.is_refreshing:
+            self.display_status_emoji = "🔄"
+        else:
+            # Fallback to status-based emoji if not stopped, paused, or refreshing
+            self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
 
 
 # 🔼⚙️

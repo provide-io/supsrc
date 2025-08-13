@@ -239,6 +239,11 @@ class WatchOrchestrator:
 
         # Check status first
         # Allow triggering from IDLE (e.g., timer fired before any new change) or CHANGED
+        if repo_state.is_paused:
+            callback_log.info("Action Triggered: Repository is paused, skipping action.", repo_id=repo_id)
+            repo_state.cancel_inactivity_timer()
+            return
+
         if repo_state.status not in (RepositoryStatus.CHANGED, RepositoryStatus.IDLE):
             callback_log.warning(
                 "Action Triggered: Repo not in CHANGED/IDLE state, skipping.",
@@ -706,14 +711,15 @@ class WatchOrchestrator:
                     await asyncio.sleep(0.5)
                     continue
 
-                # --- Check if repository is individually paused/frozen ---
+                # --- Check if repository is individually paused/frozen/stopped ---
                 repo_state = self.repo_states.get(repo_id) if repo_id != "__config__" else None
-                if repo_state and (repo_state.is_paused or repo_state.is_frozen):
+                if repo_state and (repo_state.is_paused or repo_state.is_frozen or repo_state.is_stopped):
                     consumer_log.info(
-                        "Repository is individually paused/frozen, skipping event",
+                        "Repository is individually paused/frozen/stopped, skipping event",
                         repo_id=repo_id,
                         is_paused=repo_state.is_paused,
                         is_frozen=repo_state.is_frozen,
+                        is_stopped=repo_state.is_stopped,
                         freeze_reason=repo_state.freeze_reason,
                     )
                     # Put the event back in the queue for later processing
@@ -1506,19 +1512,22 @@ class WatchOrchestrator:
     def pause_monitoring(self) -> None:
         """Pause monitoring - events are queued but not processed."""
         self._is_paused = True
-        self._log.info("Monitoring PAUSED")
-        if self.monitor_service:
-            # We'll still receive events but not process them
-            pass
+        self._log.info("Global monitoring PAUSED")
+        for repo_state in self.repo_states.values():
+            repo_state.is_paused = True
+        self._post_tui_state_update()
 
     def suspend_monitoring(self) -> None:
         """Suspend monitoring - stronger than pause, stops file watching."""
         self._is_suspended = True
         self._is_paused = True  # Suspend implies pause
-        self._log.info("Monitoring SUSPENDED")
+        self._log.info("Global monitoring SUSPENDED")
+        for repo_state in self.repo_states.values():
+            repo_state.is_stopped = True # Set individual repo to stopped
         if self.monitor_service:
             # Actually stop the watchers
             self.monitor_service.stop()
+        self._post_tui_state_update()
 
     def resume_monitoring(self) -> None:
         """Resume monitoring from pause or suspend state."""
@@ -1527,13 +1536,18 @@ class WatchOrchestrator:
         self._is_suspended = False
 
         if was_suspended:
-            self._log.info("Monitoring RESUMED from suspension")
+            self._log.info("Global monitoring RESUMED from suspension")
             # Restart the monitor service if it was suspended
             if self.monitor_service and self.config:
                 self._log.info("Restarting monitor service...")
                 asyncio.create_task(self._restart_monitor_service())
+            for repo_state in self.repo_states.values():
+                repo_state.is_stopped = False # Unstop individual repos
         else:
-            self._log.info("Monitoring RESUMED from pause")
+            self._log.info("Global monitoring RESUMED from pause")
+            for repo_state in self.repo_states.values():
+                repo_state.is_paused = False # Unpause individual repos
+        self._post_tui_state_update()
     
     def toggle_repository_pause(self, repo_id: str) -> bool:
         """Toggle pause state for an individual repository."""
@@ -1568,6 +1582,157 @@ class WatchOrchestrator:
         self._post_tui_state_update()
         return True
     
+    def toggle_repository_pause(self, repo_id: str) -> bool:
+        """Toggle pause state for an individual repository."""
+        repo_state = self.repo_states.get(repo_id)
+        if not repo_state:
+            return False
+            
+        repo_state.is_paused = not repo_state.is_paused
+        
+        if repo_state.is_paused:
+            repo_state.pause_until = datetime.now(UTC) + timedelta(hours=1)  # Default 1 hour pause
+            self._log.info(f"Repository {repo_id} PAUSED")
+            self._console_message(
+                f"Repository {repo_id} paused for 1 hour",
+                repo_id=repo_id,
+                style="yellow bold",
+                emoji="⏸️",
+            )
+        else:
+            repo_state.pause_until = None
+            self._log.info(f"Repository {repo_id} RESUMED")
+            self._console_message(
+                f"Repository {repo_id} resumed",
+                repo_id=repo_id,
+                style="green bold",
+                emoji="▶️",
+            )
+            
+        self._post_tui_state_update()
+        return True
+    
+    async def toggle_repository_stop(self, repo_id: str) -> bool:
+        """Toggle stop state for an individual repository (stops monitoring)."""
+        repo_state = self.repo_states.get(repo_id)
+        if not repo_state:
+            return False
+
+        repo_state.is_stopped = not repo_state.is_stopped
+
+        if repo_state.is_stopped:
+            self._log.info(f"Repository {repo_id} STOPPED from monitoring.")
+            self._console_message(
+                f"Repository {repo_id} stopped from monitoring",
+                repo_id=repo_id,
+                style="red bold",
+                emoji="⏹️",
+            )
+            # Unschedule from watchdog observer
+            if self.monitor_service:
+                try:
+                    self.monitor_service.unschedule_repository(repo_id)
+                    self._log.debug(f"Unscheduled {repo_id} from watchdog.")
+                except Exception as e:
+                    self._log.error(f"Failed to unschedule {repo_id} from watchdog: {e}")
+                    return False
+        else:
+            self._log.info(f"Repository {repo_id} RESUMED monitoring.")
+            self._console_message(
+                f"Repository {repo_id} resumed monitoring",
+                repo_id=repo_id,
+                style="green bold",
+                emoji="▶️",
+            )
+            # Re-schedule with watchdog observer
+            if self.monitor_service and self.config:
+                repo_config = self.config.repositories.get(repo_id)
+                if repo_config:
+                    try:
+                        loop = asyncio.get_running_loop()
+                        self.monitor_service.add_repository(repo_id, repo_config, loop)
+                        self._log.debug(f"Rescheduled {repo_id} with watchdog.")
+                    except Exception as e:
+                        self._log.error(f"Failed to reschedule {repo_id} with watchdog: {e}")
+                        return False
+                else:
+                    self._log.warning(f"Cannot resume monitoring for {repo_id}: config not found.")
+                    return False
+
+        self._post_tui_state_update()
+        return True
+
+    async def refresh_repository_status(self, repo_id: str) -> bool:
+        """Force a refresh of the repository's status."""
+        repo_state = self.repo_states.get(repo_id)
+        repo_config = self.config.repositories.get(repo_id) if self.config else None
+        repo_engine = self.repo_engines.get(repo_id)
+
+        if not repo_state or not repo_config or not repo_engine:
+            self._log.warning(f"Cannot refresh status for {repo_id}: state/config/engine missing.")
+            return False
+
+        self._log.info(f"Refreshing status for {repo_id}...")
+        try:
+            # This will update the repo_state with latest file counts and status
+            status_result = await repo_engine.get_status(
+                repo_state,
+                repo_config.repository,
+                self.config.global_config if self.config else {},
+                repo_config.path
+            )
+            if status_result.success:
+                # Update all relevant fields in repo_state from status_result
+                repo_state.total_files = status_result.total_files
+                repo_state.changed_files = status_result.changed_files
+                repo_state.added_files = status_result.added_files
+                repo_state.deleted_files = status_result.deleted_files
+                repo_state.modified_files = status_result.modified_files
+                repo_state.has_uncommitted_changes = not status_result.is_clean
+                repo_state.current_branch = status_result.current_branch
+                
+                # Update last refresh time
+                self._last_stats_refresh[repo_id] = time.time()
+                self._post_tui_state_update()
+                self._log.info(f"Status for {repo_id} refreshed successfully.")
+                return True
+            else:
+                self._log.error(f"Failed to get status for {repo_id}: {status_result.message}")
+                return False
+        except Exception as e:
+            self._log.error(f"Error refreshing status for {repo_id}: {e}", exc_info=True)
+            return False
+
+    async def resume_repository_monitoring(self, repo_id: str) -> bool:
+        """Resumes monitoring for a repository (unpauses and unstops it)."""
+        repo_state = self.repo_states.get(repo_id)
+        if not repo_state:
+            return False
+
+        # Unpause if paused
+        if repo_state.is_paused:
+            repo_state.is_paused = False
+            repo_state.pause_until = None
+            self._log.info(f"Repository {repo_id} unpaused.")
+
+        # Unstop if stopped
+        if repo_state.is_stopped:
+            success = await self.toggle_repository_stop(repo_id) # This will re-schedule
+            if not success:
+                self._log.error(f"Failed to unstop {repo_id} during resume.")
+                return False
+            self._log.info(f"Repository {repo_id} unstopped.")
+        
+        self._post_tui_state_update()
+        return True
+
+    def set_repo_refreshing_status(self, repo_id: str, is_refreshing: bool) -> None:
+        """Sets the refreshing status for a repository."""
+        repo_state = self.repo_states.get(repo_id)
+        if repo_state:
+            repo_state.is_refreshing = is_refreshing
+            self._post_tui_state_update()
+
     def unfreeze_repository(self, repo_id: str) -> bool:
         """Unfreeze a frozen repository."""
         repo_state = self.repo_states.get(repo_id)
