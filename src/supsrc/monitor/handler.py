@@ -113,7 +113,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
                     self.logger.debug("Ignoring event due to .gitignore match", path=str(file_path))
                     return True
             except ValueError:
-                self.logger.warning("Event path not relative to repo path", path=str(file_path))
+                self.logger.debug("Event path not relative to repo path, ignoring", path=str(file_path))
                 return True  # Ignore paths outside the repo being watched
         return False
 
