@@ -77,7 +77,6 @@ dev = [
 # --- Optional Features (Extras) ---
 [project.optional-dependencies]
 tui = [
-    "rich>=14.0.0",   # Required for TUI and optional pretty-printing
     "textual>=0.70.0", # Use a recent stable version
 ]
 

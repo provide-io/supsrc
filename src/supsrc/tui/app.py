@@ -219,6 +219,13 @@ class SupsrcTuiApp(App):
         color: $text;
     }
     
+    /* Status emoji column - fixed width */
+    DataTable > .datatable--column-0 {
+        width: 1;
+        min-width: 2;
+        max-width: 2;
+    }
+    
     /* Make branch column shrinkable on small terminals */
     DataTable > .datatable--column-3 {
         width: 1fr;
@@ -294,7 +301,7 @@ class SupsrcTuiApp(App):
             table = self.query_one(DataTable)
             table.cursor_type = "row"
             table.add_columns(
-                "",  # Action/Status emoji header (was 📊)
+                "📊",  # Action/Status emoji header
                 "⏱️",   # Timer/countdown column
                 "Repository",
                 "Branch",  # New branch column
@@ -609,8 +616,11 @@ class SupsrcTuiApp(App):
             self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
             return
         
-        success = await self._orchestrator.toggle_repository_pause(repo_id)
+        success = self._orchestrator.toggle_repository_pause(repo_id)
         if success:
+            # Force an immediate state update to ensure UI reflects the change
+            self._orchestrator._post_tui_state_update()
+            
             repo_state = self._orchestrator.repo_states.get(repo_id)
             if repo_state and repo_state.is_paused:
                 self.post_message(LogMessageUpdate(None, "INFO", f"⏸️ Repository '{repo_id}' paused."))
@@ -728,6 +738,12 @@ class SupsrcTuiApp(App):
 
                 # Format display data
                 status_display = state.display_status_emoji
+                # Debug log to see the state
+                log.debug(
+                    f"Repository {repo_id_str} - emoji: '{status_display}', "
+                    f"paused: {state.is_paused}, stopped: {state.is_stopped}, "
+                    f"status: {state.status.name}"
+                )
                 timer_display = get_countdown_display(state.timer_seconds_left)
                 repository_display = repo_id_str
                 
@@ -807,9 +823,12 @@ class SupsrcTuiApp(App):
         """Handle log message updates."""
         try:
             log_widget = self.query_one("#event-log", TextualLog)
-            # The message.message from TextualLogHandler should now be pre-formatted
-            # with Rich markup by the ConsoleRenderer.
-            log_widget.write_line(message.message)
+            # Format message with repo name if available
+            if message.repo_id:
+                formatted_message = f"[{message.repo_id}] {message.message}"
+            else:
+                formatted_message = message.message
+            log_widget.write_line(formatted_message)
         except Exception as e:
             # Using the app's own logger here is fine for TUI-specific errors.
             log.error(

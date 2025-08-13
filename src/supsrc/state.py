@@ -35,7 +35,7 @@ class RepositoryStatus(Enum):
 # might be derived in the TUI or Orchestrator based on a combination of
 # RepositoryStatus and other state fields (e.g., error_message, last_commit_hash).
 STATUS_EMOJI_MAP = {
-    RepositoryStatus.IDLE: "✅",      # Clean/normal state
+    RepositoryStatus.IDLE: "▶️",      # Clean/normal state - ready to monitor
     RepositoryStatus.CHANGED: "📝",   # Uncommitted changes
     RepositoryStatus.TRIGGERED: "🎯", # Rule met, action pending
     RepositoryStatus.PROCESSING: "🔄", # General processing (e.g. status check)
@@ -258,6 +258,7 @@ class RepositoryState:
 
     def _update_display_emoji(self) -> None:
         """Internal method to update the display_status_emoji based on current state."""
+        old_emoji = self.display_status_emoji
         if self.is_stopped:
             self.display_status_emoji = "⏹️"
         elif self.is_paused:
@@ -267,6 +268,12 @@ class RepositoryState:
         else:
             # Fallback to status-based emoji if not stopped, paused, or refreshing
             self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
+        
+        if old_emoji != self.display_status_emoji:
+            log.debug(
+                f"Updated emoji for {self.repo_id}: '{old_emoji}' -> '{self.display_status_emoji}' "
+                f"(paused={self.is_paused}, stopped={self.is_stopped}, status={self.status.name})"
+            )
 
 
 # 🔼⚙️
