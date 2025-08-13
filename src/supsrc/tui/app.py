@@ -687,6 +687,10 @@ class SupsrcTuiApp(App):
         # Signal orchestrator shutdown
         if not self._shutdown_event.is_set():
             self._shutdown_event.set()
+        
+        # Also signal CLI shutdown to exit the main process
+        if not self._cli_shutdown_event.is_set():
+            self._cli_shutdown_event.set()
 
         # Stop all timers
         self._timer_manager.stop_all_timers()
@@ -703,6 +707,10 @@ class SupsrcTuiApp(App):
         
         # Exit immediately - Textual will handle terminal restoration
         self.exit(0)
+        
+        # Force immediate exit without waiting for cleanup
+        import os
+        os._exit(0)
 
     # Message Handlers
     def on_state_update(self, message: StateUpdate) -> None:
@@ -810,9 +818,17 @@ class SupsrcTuiApp(App):
                 )
 
                 if repo_id_str in table.rows:
+                    # Save cursor position before update
+                    cursor_row = table.cursor_row
+                    cursor_column = table.cursor_column
+                    
                     # Update existing row by removing and re-adding
                     table.remove_row(repo_id_str)
                     table.add_row(*row_data, key=repo_id_str)
+                    
+                    # Restore cursor position if it's still valid
+                    if cursor_row < table.row_count:
+                        table.cursor_coordinate = (cursor_row, cursor_column)
                 else:
                     table.add_row(*row_data, key=repo_id_str)
 

@@ -111,6 +111,7 @@ class WatchOrchestrator:
         self._is_paused = False
         self._is_suspended = False
         self._last_stats_refresh = {}  # Track last refresh time per repo
+        self._recent_moves = {}  # Track recent move events for deduplication
 
     # --- Console and TUI Update Helpers ---
 
@@ -121,17 +122,24 @@ class WatchOrchestrator:
         style: str | None = None,
         emoji: str | None = None,
     ) -> None:
-        """Helper to print messages to the Rich console if available (non-TUI mode)."""
-        if (
-            self.console and not self._is_tui_active
-        ):  # Only print if console exists and not in TUI mode
+        """Helper to print messages to the console if available (non-TUI mode)."""
+        if not self._is_tui_active:  # Only print if not in TUI mode
             formatted_message = message
             if repo_id:
                 # Using a consistent repo_id style for console messages
-                formatted_message = f"[bold blue]{repo_id}[/]: {formatted_message}"
+                if self.console:
+                    formatted_message = f"[bold blue]{repo_id}[/]: {formatted_message}"
+                else:
+                    formatted_message = f"[{repo_id}] {formatted_message}"
             if emoji:
                 formatted_message = f"{emoji} {formatted_message}"
-            self.console.print(formatted_message, style=style if style else None)
+            
+            if self.console:
+                # Use Rich console if available
+                self.console.print(formatted_message, style=style if style else None)
+            else:
+                # Fall back to simple print for tail command
+                print(formatted_message)
 
     def _post_tui_log(self, repo_id: str | None, level: str, message: str) -> None:
         """Safely posts a log message to the TUI if active."""
@@ -215,7 +223,7 @@ class WatchOrchestrator:
                         self._post_tui_log(
                             repo_id,
                             "INFO",
-                            "✅ Repository clean - timer canceled"
+                            "⏰ Timer cancelled - repository is clean"
                         )
                     
                     self._last_stats_refresh[repo_id] = time.time()
@@ -755,22 +763,31 @@ class WatchOrchestrator:
                 try:
                     # Handle special config file changes
                     if repo_id == "__config__":
-                        event_log.info("Config file change detected")
-                        self._console_message(
-                            f"Config file changed: {event.src_path.name}",
-                            style="yellow bold",
-                            emoji="🔄",
-                        )
-                        self._post_tui_log(
-                            None, "INFO", "🔄 Config file change detected, reloading..."
-                        )
+                        # Only trigger reload if the actual config file changed
+                        if event.src_path.name != self.config_path.name:
+                            event_log.debug(
+                                "Ignoring non-config file change in config directory",
+                                file=event.src_path.name,
+                                config_file=self.config_path.name
+                            )
+                            # Skip processing but don't continue - let finally block handle task_done
+                        else:
+                            event_log.info("Config file change detected")
+                            self._console_message(
+                                f"Config file changed: {event.src_path.name}",
+                                style="yellow bold",
+                                emoji="🔄",
+                            )
+                            self._post_tui_log(
+                                None, "INFO", "🔄 Config file change detected, reloading..."
+                            )
 
-                        # Schedule config reload
-                        reload_task = asyncio.create_task(
-                            self.reload_config(), name=f"ConfigReload-{time.monotonic()}"
-                        )
-                        self._running_tasks.add(reload_task)
-                        reload_task.add_done_callback(self._running_tasks.discard)
+                            # Schedule config reload
+                            reload_task = asyncio.create_task(
+                                self.reload_config(), name=f"ConfigReload-{time.monotonic()}"
+                            )
+                            self._running_tasks.add(reload_task)
+                            reload_task.add_done_callback(self._running_tasks.discard)
                         continue
 
                     repo_state = self.repo_states.get(repo_id)
@@ -782,31 +799,72 @@ class WatchOrchestrator:
                         )
 
                     else:
+                        # Check for duplicate delete events from move operations
+                        if event.event_type == "deleted":
+                            # Check if we recently saw a move event for this file
+                            move_key = f"{repo_id}:{event.src_path}"
+                            current_time = time.time()
+                            
+                            # Clean up old move events (older than 2 seconds)
+                            self._recent_moves = {
+                                k: v for k, v in self._recent_moves.items() 
+                                if current_time - v < 2.0
+                            }
+                            
+                            if move_key in self._recent_moves:
+                                event_log.debug(
+                                    "Ignoring delete event that's part of a recent move",
+                                    file=event.src_path.name
+                                )
+                                continue
+                        elif event.event_type == "moved":
+                            # Record this move to suppress duplicate delete events
+                            move_key = f"{repo_id}:{event.src_path}"
+                            self._recent_moves[move_key] = time.time()
+                        
                         # Record change, check rules, schedule actions/timers
                         repo_state.record_change()  # This calls update_status, which sets emoji for CHANGED
                         event_log = event_log.bind(
                             save_count=repo_state.save_count,
                             status=repo_state.status.name,
                         )
+                        # Map event types to human-readable descriptions and emojis
+                        event_descriptions = {
+                            "created": ("added", "➕"),
+                            "modified": ("modified", "✏️"),
+                            "deleted": ("deleted", "➖"),
+                            "moved": ("moved", "➡️")
+                        }
+                        
+                        event_desc, event_emoji = event_descriptions.get(
+                            event.event_type, ("changed", "📝")
+                        )
+                        
+                        # Format message based on event type
+                        if event.event_type == "moved" and event.dest_path:
+                            display_msg = f"File {event_desc}: {event.src_path.name} → {event.dest_path.name}"
+                        else:
+                            display_msg = f"File {event_desc}: {event.src_path.name}"
+                        
                         self._console_message(
-                            f"Change detected: {event.src_path.name}",
+                            display_msg,
                             repo_id=repo_id,
                             style="magenta bold",
-                            emoji="✏️",
+                            emoji=event_emoji,
                         )
                         # Also post to TUI log
                         self._post_tui_log(
                             repo_id, 
                             "INFO", 
-                            f"✏️ File changed: {event.src_path.name}"
+                            f"{event_emoji} {display_msg}"
                         )
                         
                         # Update file statistics after change
                         # Only update change counts, not total files (to avoid flashing)
                         try:
                             repo_engine = self.repo_engines.get(repo_id)
-                            if repo_engine and repo_state.total_files == 0:
-                                # Only get full status if we don't have a file count yet
+                            if repo_engine:
+                                # Always get current status to check if repository is clean
                                 status_result = await repo_engine.get_status(
                                     repo_state, 
                                     repo_config.repository,
@@ -814,29 +872,57 @@ class WatchOrchestrator:
                                     repo_config.path
                                 )
                                 if status_result.success:
-                                    # Update all counts including total
+                                    # Update all counts
                                     repo_state.changed_files = status_result.changed_files
                                     repo_state.added_files = status_result.added_files
                                     repo_state.deleted_files = status_result.deleted_files
                                     repo_state.modified_files = status_result.modified_files
                                     repo_state.has_uncommitted_changes = not status_result.is_clean
                                     repo_state.current_branch = status_result.current_branch
-                                    repo_state.total_files = status_result.total_files
+                                    if repo_state.total_files == 0:
+                                        repo_state.total_files = status_result.total_files
+                                    
+                                    # If repository is now clean (e.g., file added then deleted), skip timer setup
+                                    if status_result.is_clean:
+                                        event_log.info("Repository is clean after change, no timer needed")
+                                        repo_state.update_status(RepositoryStatus.IDLE)
+                                        
+                                        # Check if there was an active timer that needs to be cancelled
+                                        if repo_state.inactivity_timer_handle:
+                                            self._post_tui_log(
+                                                repo_id,
+                                                "INFO",
+                                                "⏰ Timer cancelled - repository is clean"
+                                            )
+                                        else:
+                                            self._post_tui_log(
+                                                repo_id,
+                                                "INFO",
+                                                "✅ Repository clean - no changes to commit"
+                                            )
+                                        
+                                        self._post_tui_state_update()
+                                        continue  # Skip the rest of the processing
+                                    
                                     event_log.debug(
-                                        "Initial file statistics loaded",
+                                        "File statistics updated",
                                         total=repo_state.total_files,
-                                        changed=repo_state.changed_files
+                                        changed=repo_state.changed_files,
+                                        is_clean=status_result.is_clean
                                     )
+                                else:
+                                    # If status check failed, assume there are changes
+                                    repo_state.has_uncommitted_changes = True
+                                    
+                                # Update refresh timestamp
+                                self._last_stats_refresh[repo_id] = time.time()
                             else:
-                                # For subsequent changes, just mark as having uncommitted changes
-                                # Don't recalculate everything to avoid flashing
+                                # No engine available, assume there are changes
                                 repo_state.has_uncommitted_changes = True
-                                # Schedule a deferred update if we haven't updated recently
-                                last_refresh = self._last_stats_refresh.get(repo_id, 0)
-                                if time.time() - last_refresh > 5.0:  # Only refresh every 5 seconds
-                                    asyncio.create_task(self._refresh_file_stats(repo_id))
                         except Exception as e:
                             event_log.debug("Could not update file statistics", error=str(e))
+                            # On error, assume there are changes
+                            repo_state.has_uncommitted_changes = True
                         # self._post_tui_log(repo_id, "DEBUG", f"Change: {event.event_type} {event.src_path.name}") # Redundant
 
                         rule_config_obj: RuleConfig = repo_config.rule

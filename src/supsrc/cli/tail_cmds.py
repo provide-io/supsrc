@@ -16,9 +16,6 @@ from pathlib import Path
 import click
 import structlog
 
-# --- Rich Imports ---
-from rich.console import Console
-
 # Import logging utilities
 from supsrc.cli.utils import logging_options, setup_logging_from_context
 from supsrc.runtime.orchestrator import WatchOrchestrator
@@ -69,8 +66,8 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
     )
 
     # --- Standard Mode Logic (from old watch command) ---
-    console = Console()
-    console.print("[dim]INFO:[/] Initializing tail command...")
+    # Don't use Rich console to avoid terminal control issues
+    print("INFO: Initializing tail command...")
 
     try:
         loop = asyncio.get_event_loop_policy().get_event_loop()
@@ -96,23 +93,20 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
         config_path=config_path,
         shutdown_event=_shutdown_requested,
         app=None,
-        console=console,
+        console=None,  # Don't pass console to avoid Rich terminal handling
     )
     exit_code = 0
     main_task: asyncio.Task | None = None
 
     try:
-        with console.screen():
-            log.debug("Creating main orchestrator task...")
-            main_task = loop.create_task(orchestrator.run(), name="OrchestratorRun")
-            log.debug(f"Running event loop {id(loop)}...")
-            loop.run_until_complete(main_task)
-            log.debug("Orchestrator task completed normally.")
+        # Don't use console.screen() as it interferes with signal handling
+        log.debug("Creating main orchestrator task...")
+        main_task = loop.create_task(orchestrator.run(), name="OrchestratorRun")
+        log.debug(f"Running event loop {id(loop)}...")
+        loop.run_until_complete(main_task)
+        log.debug("Orchestrator task completed normally.")
     except KeyboardInterrupt:
-        console.print(
-            "[bold yellow]KEYBOARD INTERRUPT:[/] Signal received. Initiating graceful shutdown...",
-            highlight=False,
-        )
+        print("\nKEYBOARD INTERRUPT: Signal received. Initiating graceful shutdown...")
         log.warning("KeyboardInterrupt caught. Signalling shutdown.")
         _shutdown_requested.set()
         exit_code = 130
@@ -122,7 +116,7 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
         exit_code = 1
     except Exception as e:
         log.critical("Orchestrator run failed", error=str(e), exc_info=True)
-        console.print(f"[bold red]CRITICAL:[/] Orchestrator run failed: {e}", highlight=False)
+        print(f"CRITICAL: Orchestrator run failed: {e}")
         _shutdown_requested.set()
         exit_code = 1
     finally:
@@ -204,7 +198,7 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
         else:
             log.warning("Event loop was already closed before final cleanup.")
 
-    console.print("[dim]INFO:[/] 'tail' command finished.")
+    print("INFO: 'tail' command finished.")
     if exit_code != 0:
         sys.exit(exit_code)
 

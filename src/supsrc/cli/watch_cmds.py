@@ -98,7 +98,9 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
         log.info("Interactive dashboard finished.")
     except KeyboardInterrupt:
         log.info("Keyboard interrupt received")
-        # Let Textual handle the cleanup
+        # Force exit on interrupt
+        import os
+        os._exit(0)
     except Exception as e:
         log.error(f"TUI error: {e}")
         # Only restore terminal on crash
@@ -110,9 +112,10 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
         # Force exit on error
         os._exit(1)
     
-    # Normal exit - let Python handle cleanup naturally
-    log.info("Exiting watch command.")
-    ctx.exit(0)
+    # This should never be reached due to os._exit in action_quit
+    # but just in case...
+    import os
+    os._exit(0)
 
 
 # 🔼⚙️

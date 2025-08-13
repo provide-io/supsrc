@@ -28,18 +28,21 @@ def logging_options(f):
         "--log-level",
         type=LOG_LEVEL_CHOICES,
         default=None,  # None means inherit from parent or use global default
-        help="Set the logging level (overrides config file and env var).",
+        envvar="SUPSRC_LOG_LEVEL",
+        help="Set the logging level (overrides config file).",
     )(f)
     f = click.option(
         "--log-file",
         type=click.Path(dir_okay=False, writable=True, resolve_path=True),
         default=None,
+        envvar="SUPSRC_LOG_FILE",
         help="Path to write logs to a file (JSON format). Suppresses console output if --file-only-logs is used (default for TUI).",
     )(f)
     f = click.option(
         "--json-logs",
         is_flag=True,
         default=None,  # None means inherit from parent or use global default
+        envvar="SUPSRC_JSON_LOGS",
         help="Output console logs as JSON.",
     )(f)
     # Option to control if console output is suppressed when log_file is used.
