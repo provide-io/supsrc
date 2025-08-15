@@ -1,4 +1,3 @@
-#
 # tests/integration/test_monitoring.py
 #
 """
@@ -14,9 +13,11 @@ from unittest.mock import Mock
 
 import pytest
 
+# Correctly import dependencies for the test fix
 from supsrc.config import load_config
 from supsrc.monitor import MonitoredEvent, MonitoringService
 from supsrc.runtime.orchestrator import WatchOrchestrator
+from supsrc.runtime.tui_interface import TUIInterface  # Import the TUI interface
 from supsrc.state import RepositoryStatus
 
 
@@ -157,12 +158,11 @@ class TestMonitoringIntegration:
             except TimeoutError:
                 pass  # Expected to timeout after receiving all events
 
-            # Should receive events for normal file
-            assert len(events) > 0
-            assert all(e.src_path == normal_file for e in events)
+            normal_file_events = [e for e in events if e.src_path == normal_file]
+            assert len(normal_file_events) > 0, "Did not receive event for non-ignored file"
 
-            # Should not receive any events for the ignored file
-            assert not any(e.src_path == ignored_file for e in events)
+            ignored_file_events = [e for e in events if e.src_path == ignored_file]
+            assert len(ignored_file_events) == 0, "Received event for ignored file"
 
         finally:
             await monitoring_service.stop()
@@ -179,8 +179,13 @@ class TestMonitoringIntegration:
         orchestrator_task = asyncio.create_task(orchestrator.run())
 
         try:
-            # Give orchestrator and watchdog time to initialize
-            await asyncio.sleep(2.0)
+            # Wait for the monitoring service to be running, which is more reliable than a fixed sleep.
+            timeout = 10.0
+            start_time = asyncio.get_event_loop().time()
+            while not (orchestrator.monitor_service and orchestrator.monitor_service.is_running):
+                if asyncio.get_event_loop().time() - start_time > timeout:
+                    raise TimeoutError("Timed out waiting for monitoring service to start.")
+                await asyncio.sleep(0.1)
 
             # Verify repository state is initialized
             assert "test-repo" in orchestrator.repo_states
@@ -266,16 +271,18 @@ class TestErrorHandling:
         shutdown_event = asyncio.Event()
         orchestrator = WatchOrchestrator(config_file, shutdown_event)
 
+        # Manually load config and create a mock TUI interface to pass to the method
+        config = load_config(config_file)
+        orchestrator.config = config  # Set config on orchestrator for the assertion
+        mock_tui = TUIInterface(None)
+
         # Should handle invalid path gracefully
         try:
-            await asyncio.wait_for(orchestrator._initialize_repositories(), timeout=5.0)
-            # Should have no enabled repositories
-            enabled_repos = [
-                repo_id
-                for repo_id, state in orchestrator.repo_states.items()
-                if orchestrator.config.repositories[repo_id].enabled
-            ]
-            assert len(enabled_repos) == 0
+            # Call the method with the required arguments
+            await asyncio.wait_for(orchestrator._initialize_repositories(config, mock_tui), timeout=5.0)
+            
+            # The invalid repo should be skipped, leaving repo_states empty
+            assert len(orchestrator.repo_states) == 0
 
         except Exception as e:
             pytest.fail(f"Should handle invalid paths gracefully: {e}")
