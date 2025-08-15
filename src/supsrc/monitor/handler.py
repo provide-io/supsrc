@@ -17,14 +17,17 @@ import pathspec
 import structlog
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
+# Use relative import for the event structure
 from .events import MonitoredEvent
 
+# Conditional import for type hinting the loop
 if TYPE_CHECKING:
     from asyncio import AbstractEventLoop
 
 log = structlog.get_logger("monitor.handler")
 
 # Define parts of the .git directory to always ignore
+# Convert to strings for simple startswith check
 GIT_DIR_PARTS = (
     f"{os.sep}.git{os.sep}",
     f"{os.sep}.git",
@@ -44,7 +47,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
         repo_id: str,
         repo_path: Path,
         event_queue: asyncio.Queue[MonitoredEvent],
-        loop: "AbstractEventLoop",
+        loop: "AbstractEventLoop",  # <<< Added loop parameter
     ):
         """
         Initializes the event handler for a specific repository.
@@ -59,7 +62,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
         self.repo_id = repo_id
         self.repo_path = repo_path
         self.event_queue = event_queue
-        self.loop = loop
+        self.loop = loop  # <<< Store the loop
         self.logger = log.bind(repo_id=repo_id, repo_path=str(repo_path))
         self.gitignore_spec: pathspec.PathSpec | None = self._load_gitignore()
 
@@ -67,6 +70,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
 
     def _load_gitignore(self) -> pathspec.PathSpec | None:
         """Loads and parses the .gitignore file for the repository."""
+        # (Implementation remains the same)
         gitignore_path = self.repo_path / ".gitignore"
         spec = None
         if gitignore_path.is_file():
@@ -93,6 +97,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
 
     def _is_ignored(self, file_path: Path) -> bool:
         """Checks if a given absolute path should be ignored."""
+        # (Implementation remains the same)
         norm_path_str = os.path.normpath(str(file_path))
         repo_path_str = os.path.normpath(str(self.repo_path))
         if norm_path_str.startswith(
@@ -108,7 +113,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
                     self.logger.debug("Ignoring event due to .gitignore match", path=str(file_path))
                     return True
             except ValueError:
-                self.logger.debug("Event path not relative to repo path, ignoring", path=str(file_path))
+                self.logger.warning("Event path not relative to repo path", path=str(file_path))
                 return True  # Ignore paths outside the repo being watched
         return False
 
@@ -139,13 +144,10 @@ class SupsrcEventHandler(FileSystemEventHandler):
 
     def _process_and_queue_event(self, event: FileSystemEvent):
         """Processes, filters, and queues a watchdog event using thread-safe mechanism."""
+        # (Filtering logic remains the same)
         event_type = event.event_type
         src_path_str = event.src_path
         dest_path_str = getattr(event, "dest_path", None)
-
-        if event.is_directory and event_type == "modified":
-            self.logger.debug("Ignoring noisy directory modification event", path=src_path_str)
-            return
 
         try:
             src_path = Path(src_path_str).resolve()
@@ -181,6 +183,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
             dest_path=dest_path,
         )
 
+        # --- FIX: Use loop.call_soon_threadsafe ---
         if self.loop.is_running():
             self.loop.call_soon_threadsafe(self._queue_event_threadsafe, monitored_event)
         else:
@@ -189,13 +192,17 @@ class SupsrcEventHandler(FileSystemEventHandler):
                 "Event loop not running, cannot queue event threadsafe.",
                 event=monitored_event,
             )
+        # ------------------------------------------
 
     # Override watchdog methods to call the processing function
     def on_created(self, event: FileSystemEvent):
         self._process_and_queue_event(event)
 
     def on_modified(self, event: FileSystemEvent):
-        self._process_and_queue_event(event)
+        if not event.is_directory:
+            self._process_and_queue_event(event)
+        else:
+            self.logger.debug("Ignoring directory modification event", path=event.src_path)
 
     def on_deleted(self, event: FileSystemEvent):
         self._process_and_queue_event(event)
