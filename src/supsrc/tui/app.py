@@ -1,12 +1,11 @@
 #
-# src/supsrc/tui/app.py
+# supsrc/tui/app.py
 #
 """
 Stabilized TUI application with improved layout and proper timer management.
 """
 
 import asyncio
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -17,7 +16,7 @@ from textual.reactive import var
 from textual.timer import Timer
 from textual.widgets import DataTable, Footer, Header
 from textual.widgets import Log as TextualLog
-from textual.worker import Worker, WorkerState
+from textual.worker import Worker
 
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.state import RepositoryStatus
@@ -30,7 +29,7 @@ def get_countdown_display(seconds_left: int | None) -> str:
     """Generate countdown display with hand emojis for last 10 seconds."""
     if seconds_left is None:
         return ""
-
+    
     if seconds_left > 10:
         # Show regular countdown
         minutes = seconds_left // 60
@@ -67,15 +66,16 @@ def format_last_commit_time(last_change_time, threshold_hours=3):
     """Format last commit time as relative or absolute based on age."""
     if not last_change_time:
         return "Never"
-
+    
+    from datetime import datetime, UTC
     now = datetime.now(UTC)
     delta = now - last_change_time
     total_seconds = int(delta.total_seconds())
-
+    
     # If older than threshold, show full date
     if delta.total_seconds() > (threshold_hours * 3600):
         return last_change_time.strftime("%Y-%m-%d %H:%M:%S")
-
+    
     # Otherwise show relative time
     if total_seconds < 60:
         return f"{total_seconds}s ago"
@@ -117,19 +117,22 @@ class TimerManager:
             return False
 
         timer = self._timers[name]
-        success = True
         try:
             # Check if the timer is active by inspecting its internal handle
             if hasattr(timer, "_Timer__handle") and timer._Timer__handle is not None:
                 timer.stop()
+            # No need to check is_cancelled, stop() should be idempotent or handle internal state.
+            # Textual's stop() method on Timer sets _Timer__handle to None.
         except Exception as e:
             self._logger.error("Error stopping timer", name=name, error=str(e))
-            success = False
+            return False
         finally:
-            if name in self._timers:
+            if (
+                name in self._timers
+            ):  # Re-check as timer.stop() might have already removed it via a callback
                 del self._timers[name]
             self._logger.debug("Timer stopped or already inactive", name=name)
-        return success
+            return True
 
     def stop_all_timers(self) -> None:
         """Stop all managed timers."""
@@ -215,21 +218,21 @@ class SupsrcTuiApp(App):
         background: $accent;
         color: $text;
     }
-
+    
     /* Status emoji column - fixed width */
     DataTable > .datatable--column-0 {
         width: 1;
         min-width: 2;
         max-width: 2;
     }
-
+    
     /* Make branch column shrinkable on small terminals */
     DataTable > .datatable--column-3 {
         width: 1fr;
         min-width: 10;
         max-width: 25;
     }
-
+    
     /* Ensure Repository column gets priority space */
     DataTable > .datatable--column-2 {
         width: 2fr;
@@ -304,8 +307,8 @@ class SupsrcTuiApp(App):
                 "Branch",  # New branch column
                 "📁",  # Total files
                 "📝",  # Changed files count
-                "➕",  # Added files  # noqa: RUF001
-                "➖",  # Deleted files  # noqa: RUF001
+                "➕",  # Added files
+                "➖",  # Deleted files
                 "✏️",  # Modified files
                 "Last Commit",  # Moved after modified
                 "Rule",
@@ -325,10 +328,10 @@ class SupsrcTuiApp(App):
                 "Press [bold]Tab[/] to navigate, [bold]Enter[/] for details, [bold]Q[/] to quit"
             )
 
-            # Start orchestrator worker in the main event loop
+            # Start orchestrator worker
             log.info("Starting orchestrator worker...")
             self._worker = self.run_worker(
-                self._run_orchestrator, name="Orchestrator", group="orchestrator"
+                self._run_orchestrator, thread=True, group="orchestrator"
             )
 
             # Start shutdown check timer
@@ -338,7 +341,7 @@ class SupsrcTuiApp(App):
                 self._check_external_shutdown,
                 repeat=True,
             )
-
+            
             # Start countdown update timer
             self._timer_manager.create_timer(
                 "countdown_update",
@@ -361,12 +364,17 @@ class SupsrcTuiApp(App):
                 self._config_path, self._shutdown_event, app=self
             )
             await self._orchestrator.run()
-        except asyncio.CancelledError:
-            log.info("Orchestrator worker was cancelled gracefully.")
-        except Exception:
-            # The worker state change handler is now responsible for the reaction.
-            # Just log the exception here. The TUI will be shut down by the handler.
-            log.exception("Orchestrator failed within TUI worker. The app will shut down.")
+        except Exception as e:
+            log.exception("Orchestrator failed within TUI worker")
+            if not self._is_shutting_down:
+                self.call_later(
+                    self.post_message,
+                    LogMessageUpdate(None, "CRITICAL", f"Orchestrator CRASHED: {e}"),
+                )
+                self._update_sub_title("Orchestrator CRASHED!")
+                # Auto-quit on orchestrator failure
+                await asyncio.sleep(1.0)
+                self.call_later(self.action_quit)
         finally:
             log.info("Orchestrator worker finished.")
 
@@ -375,7 +383,7 @@ class SupsrcTuiApp(App):
         if self._cli_shutdown_event.is_set() and not self._is_shutting_down:
             log.warning("External shutdown detected (CLI signal). Triggering quit.")
             self.action_quit()
-
+    
     def _update_countdown_display(self) -> None:
         """Update countdown displays for all repositories."""
         try:
@@ -383,30 +391,22 @@ class SupsrcTuiApp(App):
                 # Update countdown for each repository state
                 for repo_state in self._orchestrator.repo_states.values():
                     repo_state.update_timer_countdown()
-
+                
                 # Trigger a state update to refresh the display with actual state objects
                 self.post_message(StateUpdate(self._orchestrator.repo_states))
         except Exception as e:
             log.debug(f"Error updating countdown: {e}")
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
-        """Handle worker state changes, and exit the app when the main worker is done."""
+        """Handle worker state changes."""
         log.debug("Worker state changed", worker=event.worker.name, state=event.state)
-        # Only act on terminal states: SUCCESS or ERROR. Ignore PENDING and RUNNING.
-        if event.worker == self._worker and event.state in (WorkerState.SUCCESS, WorkerState.ERROR):
-            log.info(
-                f"Orchestrator worker has finished with state: {event.state!r}.",
-            )
-            # If the app is already shutting down, this is expected. We can exit cleanly.
-            if self._is_shutting_down:
-                self.exit(0)
-            else:
-                # If the app was NOT shutting down, this is an unexpected crash.
-                log.error("Orchestrator worker stopped unexpectedly. Initiating shutdown.")
-                self.post_message(
-                    LogMessageUpdate(None, "CRITICAL", "Orchestrator worker crashed. TUI will now exit.")
-                )
-                self.call_later(self.action_quit)
+        if (
+            event.worker == self._worker
+            and event.state in ("SUCCESS", "ERROR")
+            and not self._is_shutting_down
+        ):
+            log.info(f"Orchestrator worker stopped: {event.state}")
+            self.call_later(self.action_quit)
 
     async def _fetch_repo_details_worker(self, repo_id: str) -> None:
         """Worker to fetch repository details."""
@@ -484,7 +484,7 @@ class SupsrcTuiApp(App):
     def action_toggle_dark(self) -> None:
         """Toggle dark mode."""
         try:
-            self.dark = not self.dark
+            self.screen.dark = not self.screen.dark
         except Exception as e:
             log.error("Failed to toggle dark mode", error=str(e))
 
@@ -552,7 +552,7 @@ class SupsrcTuiApp(App):
                         LogMessageUpdate(None, "ERROR", "❌ Configuration reload failed")
                     )
 
-            asyncio.create_task(_reload())  # noqa: RUF006
+            asyncio.create_task(_reload())
 
     def action_show_help(self) -> None:
         """Show help information about emojis and shortcuts."""
@@ -615,12 +615,12 @@ class SupsrcTuiApp(App):
         if not repo_id or not self._orchestrator:
             self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
             return
-
+        
         success = self._orchestrator.toggle_repository_pause(repo_id)
         if success:
             # Force an immediate state update to ensure UI reflects the change
             self._orchestrator._post_tui_state_update()
-
+            
             repo_state = self._orchestrator.repo_states.get(repo_id)
             if repo_state and repo_state.is_paused:
                 self.post_message(LogMessageUpdate(None, "INFO", f"⏸️ Repository '{repo_id}' paused."))
@@ -635,7 +635,7 @@ class SupsrcTuiApp(App):
         if not repo_id or not self._orchestrator:
             self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
             return
-
+        
         success = await self._orchestrator.toggle_repository_stop(repo_id)
         if success:
             repo_state = self._orchestrator.repo_states.get(repo_id)
@@ -652,7 +652,7 @@ class SupsrcTuiApp(App):
         if not repo_id or not self._orchestrator:
             self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
             return
-
+        
         self._orchestrator.set_repo_refreshing_status(repo_id, True)
         self.post_message(LogMessageUpdate(None, "INFO", f"🔄 Refreshing status for '{repo_id}'..."))
         success = await self._orchestrator.refresh_repository_status(repo_id)
@@ -668,7 +668,7 @@ class SupsrcTuiApp(App):
         if not repo_id or not self._orchestrator:
             self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
             return
-
+        
         success = await self._orchestrator.resume_repository_monitoring(repo_id)
         if success:
             self.post_message(LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed monitoring."))
@@ -676,27 +676,41 @@ class SupsrcTuiApp(App):
             self.post_message(LogMessageUpdate(None, "ERROR", f"Failed to resume monitoring for '{repo_id}'."))
 
     def action_quit(self) -> None:
-        """Initiates a graceful shutdown of the application."""
+        """Quit the application gracefully."""
         if self._is_shutting_down:
-            return  # Shutdown already in progress
+            return
 
         self._is_shutting_down = True
-        log.info("Quit action triggered. Signaling components and exiting.")
+        log.info("Quit action triggered.")
         self._update_sub_title("Quitting...")
 
-        # Stop all managed timers immediately.
-        self._timer_manager.stop_all_timers()
-
-        # Signal other components that need to know about the shutdown.
+        # Signal orchestrator shutdown
         if not self._shutdown_event.is_set():
             self._shutdown_event.set()
+        
+        # Also signal CLI shutdown to exit the main process
         if not self._cli_shutdown_event.is_set():
             self._cli_shutdown_event.set()
 
-        # The most robust way to shut down is to tell Textual to exit.
-        # Textual's exit sequence will automatically handle cancelling any
-        # running workers (like our orchestrator worker).
+        # Stop all timers
+        self._timer_manager.stop_all_timers()
+
+        # Cancel worker immediately without blocking
+        if self._worker and self._worker.is_running:
+            log.info("Cancelling orchestrator worker...")
+            try:
+                self._worker.cancel()
+            except Exception as e:
+                log.error(f"Error cancelling worker: {e}", exc_info=True)
+
+        log.info("Exiting TUI application.")
+        
+        # Exit immediately - Textual will handle terminal restoration
         self.exit(0)
+        
+        # Force immediate exit without waiting for cleanup
+        import os
+        os._exit(0)
 
     # Message Handlers
     def on_state_update(self, message: StateUpdate) -> None:
@@ -720,7 +734,7 @@ class SupsrcTuiApp(App):
 
             # Remove obsolete rows
             for key_to_remove in current_keys - incoming_keys:
-                try:  # noqa: SIM105
+                try:
                     table.remove_row(key_to_remove)
                 except Exception:
                     # Row may have already been removed
@@ -740,14 +754,14 @@ class SupsrcTuiApp(App):
                 )
                 timer_display = get_countdown_display(state.timer_seconds_left)
                 repository_display = repo_id_str
-
+                
                 # Use relative time for recent changes, full date for older ones
                 # Get threshold from config if available
                 threshold = 3.0  # default
                 if hasattr(self, "_orchestrator") and self._orchestrator and self._orchestrator.config:
                     threshold = getattr(
-                        self._orchestrator.config.global_config,
-                        "last_change_threshold_hours",
+                        self._orchestrator.config.global_config, 
+                        'last_change_threshold_hours', 
                         3.0
                     )
                 # Use actual Git commit timestamp if available, fallback to last_change_time
@@ -757,7 +771,7 @@ class SupsrcTuiApp(App):
                 rule_emoji = state.rule_emoji or ""
                 rule_indicator = state.rule_dynamic_indicator or "N/A"
                 rule_display = f"{rule_emoji} {rule_indicator}".strip()
-
+                
                 # Format file statistics with color based on commit status
                 # Show loading indicator for repos that haven't been initialized yet
                 if state.total_files == 0 and not state.has_uncommitted_changes and state.status == RepositoryStatus.IDLE:
@@ -768,7 +782,7 @@ class SupsrcTuiApp(App):
                     total_files_display = "[bold red]?[/bold red]"
                 else:
                     total_files_display = str(state.total_files)
-
+                
                 if state.has_uncommitted_changes:
                     # Active colors for uncommitted changes
                     changed_files_display = f"[bold yellow]{state.changed_files}[/bold yellow]" if state.changed_files > 0 else "0"
@@ -784,8 +798,11 @@ class SupsrcTuiApp(App):
 
                 # Get branch display - truncate from beginning if too long
                 branch_name = state.current_branch or "main"
-                branch_display = "..." + branch_name[-17:] if len(branch_name) > 20 else branch_name
-
+                if len(branch_name) > 20:
+                    branch_display = "..." + branch_name[-17:]
+                else:
+                    branch_display = branch_name
+                
                 row_data = (
                     status_display,
                     timer_display,
@@ -804,11 +821,11 @@ class SupsrcTuiApp(App):
                     # Save cursor position before update
                     cursor_row = table.cursor_row
                     cursor_column = table.cursor_column
-
+                    
                     # Update existing row by removing and re-adding
                     table.remove_row(repo_id_str)
                     table.add_row(*row_data, key=repo_id_str)
-
+                    
                     # Restore cursor position if it's still valid
                     if cursor_row < table.row_count:
                         table.cursor_coordinate = (cursor_row, cursor_column)
@@ -823,7 +840,10 @@ class SupsrcTuiApp(App):
         try:
             log_widget = self.query_one("#event-log", TextualLog)
             # Format message with repo name if available
-            formatted_message = f"[{message.repo_id}] {message.message}" if message.repo_id else message.message
+            if message.repo_id:
+                formatted_message = f"[{message.repo_id}] {message.message}"
+            else:
+                formatted_message = message.message
             log_widget.write_line(formatted_message)
         except Exception as e:
             # Using the app's own logger here is fine for TUI-specific errors.
@@ -871,5 +891,6 @@ class SupsrcTuiApp(App):
             "SUCCESS": "bold green",
         }
         return styles.get(level, "white")
-        
+
+
 # 🖥️✨
