@@ -16,6 +16,7 @@ from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.monitor import MonitoredEvent
 
 
+@pytest.mark.integration
 async def test_hot_reload():
     print("🧪 Testing Hot Reload Directly")
     print("=" * 50)

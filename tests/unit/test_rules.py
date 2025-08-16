@@ -22,6 +22,7 @@ from supsrc.state import RepositoryState
 class TestInactivityRule:
     """Test inactivity rule functionality."""
 
+    @pytest.mark.unit
     def test_no_last_change_time(self) -> None:
         """Test inactivity check with no last change time."""
         state = RepositoryState(repo_id="test-repo")
@@ -31,6 +32,7 @@ class TestInactivityRule:
 
         assert result is False
 
+    @pytest.mark.unit
     def test_period_not_elapsed(self) -> None:
         """Test inactivity check when period has not elapsed."""
         state = RepositoryState(repo_id="test-repo")
@@ -41,6 +43,7 @@ class TestInactivityRule:
 
         assert result is False
 
+    @pytest.mark.unit
     def test_period_elapsed(self) -> None:
         """Test inactivity check when period has elapsed."""
         state = RepositoryState(repo_id="test-repo")
@@ -51,6 +54,7 @@ class TestInactivityRule:
 
         assert result is True
 
+    @pytest.mark.unit
     def test_exact_period_boundary(self) -> None:
         """Test inactivity check at exact period boundary."""
         state = RepositoryState(repo_id="test-repo")
@@ -65,6 +69,7 @@ class TestInactivityRule:
 class TestSaveCountRule:
     """Test save count rule functionality."""
 
+    @pytest.mark.unit
     def test_count_not_reached(self) -> None:
         """Test save count check when count has not been reached."""
         state = RepositoryState(repo_id="test-repo")
@@ -75,6 +80,7 @@ class TestSaveCountRule:
 
         assert result is False
 
+    @pytest.mark.unit
     def test_count_reached(self) -> None:
         """Test save count check when count has been reached."""
         state = RepositoryState(repo_id="test-repo")
@@ -85,6 +91,7 @@ class TestSaveCountRule:
 
         assert result is True
 
+    @pytest.mark.unit
     def test_count_exceeded(self) -> None:
         """Test save count check when count has been exceeded."""
         state = RepositoryState(repo_id="test-repo")
@@ -95,6 +102,7 @@ class TestSaveCountRule:
 
         assert result is True
 
+    @pytest.mark.unit
     def test_zero_count(self) -> None:
         """Test save count check with zero saves."""
         state = RepositoryState(repo_id="test-repo")
@@ -109,6 +117,7 @@ class TestSaveCountRule:
 class TestTriggerConditionCheck:
     """Test the main trigger condition check function."""
 
+    @pytest.mark.unit
     def test_inactivity_rule_integration(self) -> None:
         """Test inactivity rule through main trigger check."""
         state = RepositoryState(repo_id="test-repo")
@@ -121,6 +130,7 @@ class TestTriggerConditionCheck:
 
         assert result is True
 
+    @pytest.mark.unit
     def test_save_count_rule_integration(self) -> None:
         """Test save count rule through main trigger check."""
         state = RepositoryState(repo_id="test-repo")
@@ -133,6 +143,7 @@ class TestTriggerConditionCheck:
 
         assert result is True
 
+    @pytest.mark.unit
     def test_manual_rule_integration(self) -> None:
         """Test manual rule through main trigger check."""
         state = RepositoryState(repo_id="test-repo")
@@ -145,6 +156,7 @@ class TestTriggerConditionCheck:
 
         assert result is False
 
+    @pytest.mark.unit
     def test_unknown_rule_type(self) -> None:
         """Test handling of unknown rule types."""
         state = RepositoryState(repo_id="test-repo")
@@ -164,18 +176,21 @@ class TestTriggerConditionCheck:
 class TestRuleEdgeCases:
     """Test edge cases and error conditions in rules."""
 
+    @pytest.mark.unit
     def test_negative_save_count_config(self) -> None:
         """Test that negative save counts are handled properly."""
         # This should be caught at config validation level
         with pytest.raises(ValueError):
             SaveCountRuleConfig(count=-1)
 
+    @pytest.mark.unit
     def test_zero_save_count_config(self) -> None:
         """Test that zero save counts are handled properly."""
         # This should be caught at config validation level
         with pytest.raises(ValueError):
             SaveCountRuleConfig(count=0)
 
+    @pytest.mark.unit
     def test_zero_inactivity_period(self) -> None:
         """Test zero inactivity period handling."""
         state = RepositoryState(repo_id="test-repo")
@@ -188,6 +203,7 @@ class TestRuleEdgeCases:
 
         assert result is True
 
+    @pytest.mark.unit
     def test_very_large_save_count(self) -> None:
         """Test handling of very large save counts."""
         state = RepositoryState(repo_id="test-repo")
@@ -199,6 +215,7 @@ class TestRuleEdgeCases:
 
         assert result is False
 
+    @pytest.mark.unit
     def test_future_last_change_time(self) -> None:
         """Test handling of future last change time."""
         state = RepositoryState(repo_id="test-repo")

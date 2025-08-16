@@ -64,6 +64,7 @@ def git_repo_path(tmp_path: Path) -> Path:
 class TestGitEngine:
     """Test GitEngine functionality."""
 
+    @pytest.mark.integration
     async def test_get_summary_normal_repo(
         self, git_engine: GitEngine, git_repo_path: Path
     ) -> None:
@@ -77,6 +78,7 @@ class TestGitEngine:
         assert len(summary.head_commit_hash) == 40  # Full SHA
         assert summary.head_commit_message_summary == "Initial commit"
 
+    @pytest.mark.integration
     async def test_get_summary_nonexistent_repo(
         self, git_engine: GitEngine, tmp_path: Path
     ) -> None:
@@ -88,6 +90,7 @@ class TestGitEngine:
         assert summary.head_ref_name == "ERROR"
         assert "Not a Git repository" in summary.head_commit_message_summary
 
+    @pytest.mark.integration
     async def test_get_status_clean_repo(
         self,
         git_engine: GitEngine,
@@ -110,6 +113,7 @@ class TestGitEngine:
         assert not result.has_untracked_changes
         assert not result.is_conflicted
 
+    @pytest.mark.integration
     async def test_get_status_with_changes(
         self,
         git_engine: GitEngine,
@@ -136,6 +140,7 @@ class TestGitEngine:
         assert result.has_unstaged_changes
         assert not result.has_staged_changes
 
+    @pytest.mark.integration
     async def test_stage_changes_all(
         self,
         git_engine: GitEngine,
@@ -160,6 +165,7 @@ class TestGitEngine:
         assert "new_file.txt" in result.files_staged
         assert "README.md" in result.files_staged
 
+    @pytest.mark.integration
     async def test_perform_commit_success(
         self,
         git_engine: GitEngine,
@@ -190,6 +196,7 @@ class TestGitEngine:
         assert result.commit_hash is not None
         assert len(result.commit_hash) == 40  # Full SHA
 
+    @pytest.mark.integration
     async def test_perform_commit_no_changes(
         self,
         git_engine: GitEngine,
@@ -208,6 +215,7 @@ class TestGitEngine:
         assert result.commit_hash is None
         assert "No changes" in result.message
 
+    @pytest.mark.integration
     async def test_perform_push_disabled(
         self,
         git_engine: GitEngine,
@@ -231,6 +239,7 @@ class TestGitEngine:
 class TestGitCredentialManager:
     """Test Git credential management functionality."""
 
+    @pytest.mark.unit
     def test_ssh_key_auth_missing_files(self) -> None:
         """Test SSH key authentication with missing key files."""
         config = {"ssh_key_path": "/nonexistent/key"}
@@ -242,6 +251,7 @@ class TestGitCredentialManager:
 
         assert result is None
 
+    @pytest.mark.unit
     @patch("os.getenv")
     def test_userpass_auth_success(self, mock_getenv: Mock) -> None:
         """Test successful username/password authentication."""
@@ -265,6 +275,7 @@ class TestGitCredentialManager:
             assert result is not None
             mock_userpass.assert_called_once_with("testuser", "testpass")
 
+    @pytest.mark.unit
     @patch("os.getenv")
     def test_userpass_auth_missing_env(self, mock_getenv: Mock) -> None:
         """Test username/password authentication with missing environment variables."""
@@ -281,6 +292,7 @@ class TestGitCredentialManager:
 
         assert result is None
 
+    @pytest.mark.unit
     @patch("pygit2.credentials.KeypairFromAgent")
     def test_ssh_agent_auth_failure(self, mock_agent: Mock) -> None:
         """Test SSH agent authentication failure."""

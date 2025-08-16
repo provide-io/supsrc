@@ -13,6 +13,7 @@ from supsrc.cli.main import cli
 class TestCLIRefactoring:
     """Test that the CLI refactoring from watch/tui to tail/watch is complete."""
 
+    @pytest.mark.unit
     def test_no_tui_flag_in_any_command(self) -> None:
         """Test that --tui flag is completely removed from all commands."""
         runner = CliRunner()
@@ -31,6 +32,7 @@ class TestCLIRefactoring:
         if result.exit_code == 0:
             assert "--tui" not in result.output
 
+    @pytest.mark.unit
     def test_no_old_tui_command(self) -> None:
         """Test that the old 'tui' command no longer exists."""
         runner = CliRunner()
@@ -42,6 +44,7 @@ class TestCLIRefactoring:
         assert result.exit_code != 0
         assert "No such command" in result.output or "Error" in result.output
 
+    @pytest.mark.unit
     def test_new_commands_exist(self) -> None:
         """Test that new tail and watch commands exist."""
         runner = CliRunner()
@@ -60,6 +63,7 @@ class TestCLIRefactoring:
         assert "watch" in result.output
         assert "interactive" in result.output.lower() or "dashboard" in result.output.lower()
 
+    @pytest.mark.unit
     def test_command_descriptions_are_clear(self) -> None:
         """Test that command descriptions clearly differentiate tail vs watch."""
         runner = CliRunner()
@@ -86,6 +90,7 @@ class TestCLIRefactoring:
         assert len(tail_desc) > 10  # Has actual description
         assert len(watch_desc) > 10  # Has actual description
 
+    @pytest.mark.unit
     def test_old_watch_behavior_moved_to_tail(self) -> None:
         """Test that the old watch (non-TUI) behavior is now in tail command."""
         runner = CliRunner()
@@ -99,6 +104,7 @@ class TestCLIRefactoring:
         assert "--tui" not in result.output
         assert "textual" not in result.output.lower()
 
+    @pytest.mark.unit
     def test_new_watch_is_interactive_only(self) -> None:
         """Test that new watch command is for interactive UI only."""
         runner = CliRunner()

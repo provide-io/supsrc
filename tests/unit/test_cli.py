@@ -22,6 +22,7 @@ from supsrc.config.loader import load_config
 class TestMainCLI:
     """Test main CLI entry point."""
 
+    @pytest.mark.unit
     def test_cli_help(self) -> None:
         """Test CLI help output."""
         runner = CliRunner()
@@ -32,6 +33,7 @@ class TestMainCLI:
         assert "watch" in result.output
         assert "config" in result.output
 
+    @pytest.mark.unit
     def test_cli_version(self) -> None:
         """Test CLI version output."""
         runner = CliRunner()
@@ -41,6 +43,7 @@ class TestMainCLI:
         # Check for version number in output (click may format this differently)
         assert "0.1.3" in result.output or "version" in result.output.lower()
 
+    @pytest.mark.unit
     def test_global_log_level_option(self) -> None:
         """Test global log level option."""
         runner = CliRunner()
@@ -53,6 +56,7 @@ class TestMainCLI:
         result = runner.invoke(cli, ["--log-level", "INVALID", "config", "show", "--help"])
         assert result.exit_code != 0
 
+    @pytest.mark.unit
     def test_global_log_file_option(self) -> None:
         """Test global log file option."""
         runner = CliRunner()
@@ -61,6 +65,7 @@ class TestMainCLI:
             result = runner.invoke(cli, ["--log-file", tmp_file.name, "config", "show", "--help"])
             assert result.exit_code == 0
 
+    @pytest.mark.unit
     def test_global_json_logs_option(self) -> None:
         """Test global JSON logs option."""
         runner = CliRunner()
@@ -72,6 +77,7 @@ class TestMainCLI:
 class TestConfigCommands:
     """Test configuration-related CLI commands."""
 
+    @pytest.mark.unit
     def test_config_show_help(self) -> None:
         """Test config show command help."""
         runner = CliRunner()
@@ -80,6 +86,7 @@ class TestConfigCommands:
         assert result.exit_code == 0
         assert "Load, validate, and display the configuration" in result.output
 
+    @pytest.mark.unit
     def test_config_show_valid_file(self, tmp_path: Path) -> None:
         """Test config show with valid configuration file."""
         config_content = """
@@ -108,6 +115,7 @@ class TestConfigCommands:
         # Output should contain configuration information
         assert "test-repo" in result.output or "Configuration loaded" in result.output
 
+    @pytest.mark.unit
     def test_config_show_nonexistent_file(self) -> None:
         """Test config show with non-existent file."""
         runner = CliRunner()
@@ -117,6 +125,7 @@ class TestConfigCommands:
         assert "Error" in result.output
         assert "Configuration problem" in result.output
 
+    @pytest.mark.unit
     def test_config_show_invalid_toml(self, tmp_path: Path) -> None:
         """Test config show with invalid TOML."""
         config_file = tmp_path / "invalid.conf"
@@ -128,6 +137,7 @@ class TestConfigCommands:
         assert result.exit_code == 1
         assert "error" in result.output.lower()
 
+    @pytest.mark.unit
     def test_config_show_with_env_var(self, tmp_path: Path) -> None:
         """Test config show with environment variable."""
         config_content = """
@@ -157,6 +167,8 @@ class TestConfigCommands:
 class TestWatchCommands:
     """Test watch-related CLI commands."""
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_watch_help(self) -> None:
         """Test watch command help."""
         runner = CliRunner()
@@ -166,6 +178,7 @@ class TestWatchCommands:
         assert "monitor configured repositories" in result.output.lower()
         assert "--tui" in result.output
 
+    @pytest.mark.unit
     @patch("supsrc.tui.app.WatchOrchestrator")
     @patch("supsrc.config.loader.load_config")
     def test_watch_normal_mode(
@@ -199,6 +212,8 @@ class TestWatchCommands:
         mock_load_config.assert_called_once()
         mock_orchestrator_class.assert_called_once()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     @patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", True)
     @patch("supsrc.tui.app.SupsrcTuiApp")
     def test_watch_tui_mode(self, mock_tui_app: Mock, tmp_path: Path) -> None:
@@ -217,6 +232,8 @@ class TestWatchCommands:
         mock_tui_app.assert_called_once()
         mock_app_instance.run.assert_called_once()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     @patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", False)
     def test_watch_tui_unavailable(self, tmp_path: Path) -> None:
         """Test watch command when TUI is unavailable."""
@@ -229,6 +246,8 @@ class TestWatchCommands:
         assert result.exit_code == 1
         assert "TUI mode requires" in result.output
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_watch_config_file_not_found(self) -> None:
         """Test watch command with non-existent config file."""
         runner = CliRunner()
@@ -240,6 +259,7 @@ class TestWatchCommands:
 class TestCLIIntegration:
     """Test CLI integration scenarios."""
 
+    @pytest.mark.integration
     def test_end_to_end_config_validation(self, tmp_path: Path) -> None:
         """Test end-to-end configuration validation."""
         # Create a valid Git repository
@@ -301,6 +321,7 @@ class TestCLIIntegration:
         assert result.exit_code == 0
         assert "integration-test" in result.output
 
+    @pytest.mark.unit
     def test_cli_error_handling(self, tmp_path: Path) -> None:
         """Test CLI error handling scenarios."""
         runner = CliRunner()
@@ -320,6 +341,7 @@ class TestCLIIntegration:
         assert result.exit_code == 1
         assert "Error" in result.output
 
+    @pytest.mark.integration
     def test_cli_logging_integration(self, tmp_path: Path) -> None:
         """Test CLI logging integration."""
         config_content = """
@@ -369,6 +391,7 @@ class TestCLIIntegration:
 class TestCLIUtilities:
     """Test CLI utility functions and helpers."""
 
+    @pytest.mark.unit
     def test_command_parsing(self) -> None:
         """Test command line argument parsing."""
         # Test that Click properly parses our commands
@@ -382,6 +405,7 @@ class TestCLIUtilities:
         config_cmd = cli.commands["config"]
         assert any("show" in str(cmd) for cmd in config_cmd.commands)
 
+    @pytest.mark.unit
     def test_environment_variable_integration(self) -> None:
         """Test environment variable integration."""
         runner = CliRunner()
@@ -391,6 +415,7 @@ class TestCLIUtilities:
             result = runner.invoke(cli, ["--help"])
             assert result.exit_code == 0
 
+    @pytest.mark.unit
     def test_context_passing(self) -> None:
         """Test Click context passing between commands."""
         runner = CliRunner()

@@ -87,6 +87,7 @@ async def monitoring_setup(tmp_path: Path):
 class TestMonitoringIntegration:
     """Test complete monitoring system integration."""
 
+    @pytest.mark.integration
     async def test_file_change_detection(self, monitoring_setup: dict) -> None:
         """Test that file changes are properly detected and processed."""
         repo_path = monitoring_setup["repo_path"]
@@ -121,6 +122,7 @@ class TestMonitoringIntegration:
         finally:
             await monitoring_service.stop()
 
+    @pytest.mark.integration
     async def test_gitignore_filtering(self, monitoring_setup: dict) -> None:
         """Test that .gitignore patterns are properly respected."""
         repo_path = monitoring_setup["repo_path"]
@@ -169,6 +171,7 @@ class TestMonitoringIntegration:
         finally:
             await monitoring_service.stop()
 
+    @pytest.mark.integration
     async def test_orchestrator_end_to_end(self, monitoring_setup: dict) -> None:
         """Test the complete orchestrator workflow."""
         repo_path = monitoring_setup["repo_path"]
@@ -253,6 +256,7 @@ class TestMonitoringIntegration:
 class TestErrorHandling:
     """Test error handling in monitoring integration."""
 
+    @pytest.mark.integration
     async def test_invalid_repository_path(self, tmp_path: Path) -> None:
         """Test handling of invalid repository paths."""
         # Create configuration with invalid path
@@ -288,6 +292,7 @@ class TestErrorHandling:
         except Exception as e:
             pytest.fail(f"Should handle invalid paths gracefully: {e}")
 
+    @pytest.mark.integration
     async def test_git_operation_failure(self, monitoring_setup: dict) -> None:
         """Test handling of Git operation failures."""
         repo_path = monitoring_setup["repo_path"]
@@ -334,6 +339,7 @@ class TestErrorHandling:
 class TestConcurrency:
     """Test concurrent operations and thread safety."""
 
+    @pytest.mark.integration
     async def test_multiple_repositories_concurrent(self, tmp_path: Path) -> None:
         """Test monitoring multiple repositories concurrently."""
         # Create multiple test repositories
