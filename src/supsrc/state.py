@@ -1,4 +1,5 @@
-# src/supsrc/state.py
+#
+# supsrc/state.py
 #
 """
 Defines the dynamic state management models for monitored repositories in supsrc.
@@ -9,6 +10,7 @@ from datetime import UTC, datetime
 from enum import Enum, auto
 
 import structlog
+import attrs
 from attrs import field, mutable
 
 # Logger specific to state management
@@ -80,15 +82,16 @@ class RepositoryState:
     action_description: str | None = field(default=None)
     action_progress_total: int | None = field(default=None)
     action_progress_completed: int | None = field(default=None)
-
-    is_paused: bool = field(default=False)
+    
+    # Individual repository pause/freeze state
+    is_paused: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: instance._update_display_emoji()))  # Individual repository pause
     pause_until: datetime | None = field(default=None)
     is_frozen: bool = field(default=False)
     freeze_reason: str | None = field(default=None)
-    is_stopped: bool = field(default=False)
-    is_refreshing: bool = field(default=False)
+    is_stopped: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: instance._update_display_emoji())) # New: Repository is not being monitored
+    is_refreshing: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: instance._update_display_emoji())) # New: An operation (e.g., status check) is in progress
     timer_seconds_left: int | None = field(default=None)  # Countdown for timer column
-
+    
     # File statistics
     total_files: int = field(default=0)  # Total number of files in repo
     changed_files: int = field(default=0)  # Number of files with changes
@@ -96,14 +99,20 @@ class RepositoryState:
     deleted_files: int = field(default=0)  # Number of deleted files
     modified_files: int = field(default=0)  # Number of modified files
     has_uncommitted_changes: bool = field(default=False)  # Whether there are uncommitted changes
-
+    
     # Internal timer tracking fields (not exposed via attrs)
     _timer_total_seconds: int | None = field(default=None, init=False)
     _timer_start_time: float | None = field(default=None, init=False)
 
+    # Consider adding:
+    # last_commit_hash: Optional[str] = field(default=None) # This is now last_commit_short_hash
+    # last_push_time: Optional[datetime] = field(default=None)
+    # last_error_time: Optional[datetime] = field(default=None)
+
     def __attrs_post_init__(self):
         """Log the initial state upon creation and set initial emoji."""
         self._update_display_emoji() # Call the new method to set initial emoji
+        
         log.debug(
             "Initialized repository state",
             repo_id=self.repo_id,
@@ -165,7 +174,7 @@ class RepositoryState:
         self.last_change_time = now_utc
         self.save_count += 1
         self.update_status(RepositoryStatus.CHANGED)  # Move to CHANGED state
-        log.info(
+        log.debug(
             "Recorded file change",
             repo_id=self.repo_id,
             change_time_utc=now_utc.isoformat(),
@@ -179,6 +188,9 @@ class RepositoryState:
         """Resets state fields typically after a successful commit/push sequence."""
         log.debug("Resetting state after action", repo_id=self.repo_id)
         self.save_count = 0
+        # Keep last_change_time - it represents when we last saw changes,
+        # which is useful for the UI to show "time since last activity"
+        # Don't clear: self.last_change_time = None
         self.active_rule_description = None  # Clear specific action/wait messages
         # self.error_message is cleared by update_status if moving out of ERROR
 
@@ -188,6 +200,9 @@ class RepositoryState:
         self.action_description = None
         self.action_progress_total = None
         self.action_progress_completed = None
+        
+        # Don't reset file counters - just mark as committed
+        # The numbers should remain visible but will be shown in grey
         self.has_uncommitted_changes = False
 
         self.cancel_inactivity_timer()  # Ensure timer is gone
@@ -231,7 +246,7 @@ class RepositoryState:
             # This is normal operation, no need to log unless debugging timing issues
             # log.debug("No active inactivity timer to cancel", repo_id=self.repo_id)
             pass
-
+    
     def update_timer_countdown(self) -> None:
         """Updates the timer_seconds_left based on elapsed time."""
         if self.inactivity_timer_handle and self._timer_start_time and self._timer_total_seconds:
@@ -253,11 +268,12 @@ class RepositoryState:
         else:
             # Fallback to status-based emoji if not stopped, paused, or refreshing
             self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
-
+        
         if old_emoji != self.display_status_emoji:
             log.debug(
                 f"Updated emoji for {self.repo_id}: '{old_emoji}' -> '{self.display_status_emoji}' "
                 f"(paused={self.is_paused}, stopped={self.is_stopped}, status={self.status.name})"
             )
+
 
 # 🔼⚙️
