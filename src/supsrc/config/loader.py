@@ -306,4 +306,5 @@ def load_config(config_path: Path) -> SupsrcConfig:
     finally:
         _CURRENT_CONFIG_PATH_CONTEXT = None
 
+
 # 🔼⚙️
