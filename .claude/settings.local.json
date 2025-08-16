@@ -5,6 +5,12 @@
       "Bash(git log:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "/Users/tim/code/gh/provide-io",
+      "/Users/tim/.cache/flavor/",
+      "/tmp",
+      "/private/var/folders/sg"
+    ]
   }
 }
