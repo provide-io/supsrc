@@ -26,6 +26,7 @@ from supsrc.exceptions import (
 class TestConfigLoading:
     """Test configuration file loading functionality."""
 
+    @pytest.mark.unit
     def test_load_valid_config(self, tmp_path: Path) -> None:
         """Test loading a valid configuration file."""
         repo_path = tmp_path / "test_repo"
@@ -72,6 +73,7 @@ class TestConfigLoading:
         assert repo_config.repository["type"] == "supsrc.engines.git"
         assert repo_config.repository["auto_push"] is True
 
+    @pytest.mark.unit
     def test_load_nonexistent_config(self) -> None:
         """Test loading a non-existent configuration file."""
         with pytest.raises(ConfigFileNotFoundError) as exc_info:
@@ -79,6 +81,7 @@ class TestConfigLoading:
 
         assert "not found" in str(exc_info.value)
 
+    @pytest.mark.unit
     def test_load_invalid_toml(self, tmp_path: Path) -> None:
         """Test loading invalid TOML syntax."""
         config_file = tmp_path / "invalid.conf"
@@ -93,6 +96,7 @@ class TestConfigLoading:
 class TestRuleConfiguration:
     """Test rule configuration validation."""
 
+    @pytest.mark.unit
     def test_inactivity_rule_config(self, tmp_path: Path) -> None:
         """Test inactivity rule configuration."""
         config_content = """
@@ -118,6 +122,7 @@ class TestRuleConfiguration:
         assert rule.period == timedelta(minutes=5)
         assert rule.type == "supsrc.rules.inactivity"
 
+    @pytest.mark.unit
     def test_save_count_rule_config(self, tmp_path: Path) -> None:
         """Test save count rule configuration."""
         config_content = """
@@ -143,6 +148,7 @@ class TestRuleConfiguration:
         assert rule.count == 10
         assert rule.type == "supsrc.rules.save_count"
 
+    @pytest.mark.unit
     def test_manual_rule_config(self, tmp_path: Path) -> None:
         """Test manual rule configuration."""
         config_content = """
@@ -170,6 +176,7 @@ class TestRuleConfiguration:
 class TestGlobalConfiguration:
     """Test global configuration handling."""
 
+    @pytest.mark.unit
     def test_default_global_config(self, tmp_path: Path) -> None:
         """Test default global configuration values."""
         config_content = """
@@ -192,6 +199,7 @@ class TestGlobalConfiguration:
         assert config.global_config.log_level == "INFO"
         assert config.global_config.numeric_log_level == 20
 
+    @pytest.mark.unit
     def test_custom_global_config(self, tmp_path: Path) -> None:
         """Test custom global configuration."""
         config_content = """

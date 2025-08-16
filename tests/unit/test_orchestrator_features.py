@@ -15,6 +15,7 @@ from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.state import RepositoryState, RepositoryStatus
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_auto_freeze_on_conflict():
     """
@@ -65,6 +66,7 @@ async def test_auto_freeze_on_conflict():
         assert "display notification" in mock_subprocess_run.call_args[0][0][2]
 
 
+@pytest.mark.unit
 @pytest.mark.slow
 @pytest.mark.asyncio
 async def test_event_consumption_for_paused_repository():
@@ -118,6 +120,7 @@ async def test_event_consumption_for_paused_repository():
     mock_event.process.assert_not_called()
 
 
+@pytest.mark.unit
 def test_toggle_repository_pause():
     """
     Verify that toggling a repository's pause state works correctly.

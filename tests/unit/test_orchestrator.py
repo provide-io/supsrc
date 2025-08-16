@@ -70,6 +70,7 @@ async def orchestrator(temp_config_file):
 class TestWatchOrchestratorHotReload:
     """Test hot reload functionality."""
 
+    @pytest.mark.unit
     async def test_reload_config_success(self, orchestrator, mock_config):
         """Test successful config reload."""
         # Setup
@@ -116,6 +117,7 @@ class TestWatchOrchestratorHotReload:
             orchestrator.monitor_service.stop.assert_called_once()
             orchestrator.monitor_service.start.assert_called_once()
 
+    @pytest.mark.unit
     async def test_reload_config_rollback_on_error(self, orchestrator, mock_config):
         """Test config reload rollback on error."""
         # Setup
@@ -144,6 +146,7 @@ class TestWatchOrchestratorHotReload:
             assert orchestrator.monitor_service == old_monitor  # Should keep old monitor
             assert orchestrator._is_paused is False  # Should resume original state
 
+    @pytest.mark.integration
     async def test_config_file_change_triggers_reload(self, orchestrator):
         """Test that config file changes trigger reload."""
         # Setup
@@ -180,6 +183,7 @@ class TestWatchOrchestratorHotReload:
         # Verify
         orchestrator.reload_config.assert_called_once()
 
+    @pytest.mark.unit
     def test_setup_config_watcher(self, orchestrator, mock_config):
         """Test config watcher setup."""
         # Setup
@@ -194,6 +198,7 @@ class TestWatchOrchestratorHotReload:
         # The actual async behavior is tested in integration tests
         assert orchestrator.monitor_service is not None
 
+    @pytest.mark.unit
     async def test_resume_after_delay(self, orchestrator):
         """Test automatic resume after delay."""
         # Setup
@@ -220,6 +225,7 @@ class TestWatchOrchestratorHotReload:
 class TestWatchOrchestratorPauseResume:
     """Test pause/resume functionality."""
 
+    @pytest.mark.unit
     def test_pause_monitoring(self, orchestrator):
         """Test pause monitoring."""
         orchestrator._is_paused = False
@@ -231,6 +237,7 @@ class TestWatchOrchestratorPauseResume:
         # Monitor service should still be running (just paused)
         orchestrator.monitor_service.stop.assert_not_called()
 
+    @pytest.mark.unit
     def test_suspend_monitoring(self, orchestrator):
         """Test suspend monitoring."""
         orchestrator._is_paused = False
@@ -244,6 +251,7 @@ class TestWatchOrchestratorPauseResume:
         # Monitor service should be stopped
         orchestrator.monitor_service.stop.assert_called_once()
 
+    @pytest.mark.unit
     def test_resume_from_pause(self, orchestrator):
         """Test resume from pause."""
         orchestrator._is_paused = True
@@ -254,6 +262,7 @@ class TestWatchOrchestratorPauseResume:
         assert orchestrator._is_paused is False
         assert orchestrator._is_suspended is False
 
+    @pytest.mark.unit
     async def test_resume_from_suspend(self, orchestrator, mock_config):
         """Test resume from suspend."""
         orchestrator._is_paused = True
@@ -273,6 +282,7 @@ class TestWatchOrchestratorPauseResume:
 class TestWatchOrchestratorEventProcessing:
     """Test event processing with pause/suspend."""
 
+    @pytest.mark.unit
     async def test_events_queued_when_paused(self, orchestrator):
         """Test that events are queued but not processed when paused."""
         # Setup
@@ -306,6 +316,7 @@ class TestWatchOrchestratorEventProcessing:
 class TestWatchOrchestratorIntegration:
     """Integration tests for orchestrator functionality."""
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_full_reload_cycle(self, temp_config_file):
         """Test complete config reload cycle."""
@@ -352,6 +363,7 @@ class TestWatchOrchestratorIntegration:
                     result = await orchestrator.reload_config()
                     assert result is True
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_concurrent_operations(self, orchestrator):
         """Test concurrent pause/resume/reload operations."""
@@ -382,6 +394,7 @@ class TestWatchOrchestratorIntegration:
 class TestSyncMethods:
     """Test synchronous methods."""
 
+    @pytest.mark.unit
     def test_pause_monitoring_sync(self, orchestrator):
         """Test pause_monitoring is synchronous."""
         # This should not be a coroutine
@@ -389,6 +402,7 @@ class TestSyncMethods:
         orchestrator.pause_monitoring()
         assert orchestrator._is_paused is True
 
+    @pytest.mark.unit
     def test_suspend_monitoring_sync(self, orchestrator):
         """Test suspend_monitoring is synchronous."""
         assert not asyncio.iscoroutinefunction(orchestrator.suspend_monitoring)
@@ -396,6 +410,7 @@ class TestSyncMethods:
         orchestrator.suspend_monitoring()
         assert orchestrator._is_suspended is True
 
+    @pytest.mark.unit
     def test_resume_monitoring_sync(self, orchestrator):
         """Test resume_monitoring is synchronous."""
         assert not asyncio.iscoroutinefunction(orchestrator.resume_monitoring)
@@ -403,6 +418,7 @@ class TestSyncMethods:
         orchestrator.resume_monitoring()
         assert orchestrator._is_paused is False
 
+    @pytest.mark.unit
     def test_setup_config_watcher_sync(self, orchestrator):
         """Test setup_config_watcher is synchronous."""
         assert not asyncio.iscoroutinefunction(orchestrator.setup_config_watcher)

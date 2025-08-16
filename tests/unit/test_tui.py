@@ -31,6 +31,8 @@ def mock_shutdown_event() -> asyncio.Event:
 class TestTimerManager:
     """Test the TimerManager functionality."""
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_timer_creation(self) -> None:
         """Test timer creation and tracking."""
         mock_app = Mock()
@@ -47,6 +49,8 @@ class TestTimerManager:
         assert "test_timer" in manager._timers
         mock_app.set_interval.assert_called_once_with(1.0, callback, name="test_timer")
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_timer_replacement(self) -> None:
         """Test replacing an existing timer."""
         mock_app = Mock()
@@ -67,6 +71,8 @@ class TestTimerManager:
         old_timer.stop.assert_called_once()
         assert manager._timers["test_timer"] == new_timer
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_stop_timer(self) -> None:
         """Test stopping a specific timer."""
         mock_app = Mock()
@@ -84,6 +90,8 @@ class TestTimerManager:
         mock_timer.stop.assert_called_once()
         assert "test_timer" not in manager._timers
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_stop_nonexistent_timer(self) -> None:
         """Test stopping a timer that doesn't exist."""
         mock_app = Mock()
@@ -93,6 +101,8 @@ class TestTimerManager:
 
         assert result is False
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_stop_all_timers(self) -> None:
         """Test stopping all timers."""
         mock_app = Mock()
@@ -124,6 +134,8 @@ class TestSupsrcTuiApp:
         """Create a TUI app instance for testing."""
         return SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_app_initialization(self, tui_app: SupsrcTuiApp) -> None:
         """Test TUI app initialization."""
         assert tui_app._config_path == Path("/mock/config.conf")
@@ -132,12 +144,16 @@ class TestSupsrcTuiApp:
         assert isinstance(tui_app._timer_manager, TimerManager)
         assert tui_app._is_shutting_down is False
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_reactive_variables(self, tui_app: SupsrcTuiApp) -> None:
         """Test reactive variable initialization."""
         assert tui_app.repo_states_data == {}
         assert tui_app.show_detail_pane is False
         assert tui_app.selected_repo_id is None
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_compose_method(self, tui_app: SupsrcTuiApp) -> None:
         """Test the compose method exists and is callable."""
         # Just verify the method exists and has correct signature
@@ -145,6 +161,8 @@ class TestSupsrcTuiApp:
         assert hasattr(tui_app, "compose")
         assert callable(tui_app.compose)
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_watch_show_detail_pane(self, tui_app: SupsrcTuiApp) -> None:
         """Test detail pane visibility watcher."""
         # Mock the query methods
@@ -159,6 +177,8 @@ class TestSupsrcTuiApp:
         # Should have been called multiple times for different containers
         assert tui_app.query_one.call_count >= 3
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     @pytest.mark.skip(reason="Complex mocking of Textual property with getter/setter is blocking progress on other failures.")
     def test_action_toggle_dark(self, tui_app: SupsrcTuiApp) -> None:
         """Test dark mode toggle action."""
@@ -182,6 +202,8 @@ class TestSupsrcTuiApp:
             tui_app.action_toggle_dark()
             assert _dark_value is True
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_action_clear_log(self, tui_app: SupsrcTuiApp) -> None:
         """Test log clearing action."""
         # Mock log widget and post_message
@@ -194,6 +216,8 @@ class TestSupsrcTuiApp:
         mock_log.clear.assert_called_once()
         tui_app.post_message.assert_called_once()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     async def test_action_quit(self, tui_app: SupsrcTuiApp) -> None:
         """Test quit action."""
         # Mock dependencies
@@ -208,6 +232,8 @@ class TestSupsrcTuiApp:
         tui_app._timer_manager.stop_all_timers.assert_called_once()
         tui_app.exit.assert_called_once_with(0)
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_on_state_update(self, tui_app: SupsrcTuiApp) -> None:
         """Test state update message handling."""
         # Mock table with proper rows behavior
@@ -244,6 +270,8 @@ class TestSupsrcTuiApp:
         assert "abc123" in str(row_data)  # Commit hash
         assert "Test commit" in str(row_data)  # Commit message
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_on_log_message_update(self, tui_app: SupsrcTuiApp) -> None:
         """Test log message update handling."""
         # Mock log widget
@@ -261,6 +289,8 @@ class TestSupsrcTuiApp:
         assert "INFO" in call_args
         assert "Test message" in call_args
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_get_level_style(self, tui_app: SupsrcTuiApp) -> None:
         """Test log level styling."""
         assert tui_app._get_level_style("CRITICAL") == "bold white on red"
@@ -281,6 +311,8 @@ class TestTuiIntegration:
         orchestrator.get_repository_details = AsyncMock()
         return orchestrator
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     async def test_repo_detail_fetching(
         self,
         mock_config_path: Path,
@@ -314,6 +346,8 @@ class TestTuiIntegration:
         assert hasattr(posted_message, "repo_id")
         assert posted_message.repo_id == "test-repo"
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     async def test_repo_detail_error_handling(
         self,
         mock_config_path: Path,
@@ -338,6 +372,8 @@ class TestTuiIntegration:
         posted_message = tui_app.post_message.call_args[0][0]
         assert "Error loading details" in str(posted_message.details)
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_action_select_repo_for_detail(
         self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
@@ -374,6 +410,8 @@ class TestTuiIntegration:
         # Verify worker was started
         tui_app.run_worker.assert_called_once()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_action_hide_detail_pane(
         self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
@@ -412,6 +450,8 @@ class TestTuiIntegration:
 class TestTuiErrorHandling:
     """Test TUI error handling and resilience."""
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_widget_query_error_handling(
         self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
@@ -428,6 +468,8 @@ class TestTuiErrorHandling:
         # App should still be functional
         assert not tui_app._is_shutting_down
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_orchestrator_crash_handling(
         self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
@@ -455,6 +497,8 @@ class TestTuiErrorHandling:
         # Should trigger quit action
         tui_app.call_later.assert_called_once()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     async def test_external_shutdown_handling(
         self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
@@ -471,6 +515,8 @@ class TestTuiErrorHandling:
         # Should trigger quit action
         tui_app.action_quit.assert_called_once()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_timer_manager_error_recovery(self) -> None:
         """Test timer manager error recovery."""
         mock_app = Mock()
@@ -496,6 +542,8 @@ class TestTuiErrorHandling:
 class TestTuiAccessibility:
     """Test TUI accessibility and usability features."""
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_keyboard_bindings(
         self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
@@ -523,6 +571,8 @@ class TestTuiAccessibility:
             assert key in bindings
             assert bindings[key] == action
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_widget_focus_management(
         self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
@@ -540,6 +590,8 @@ class TestTuiAccessibility:
         # Should focus back to table
         mock_table.focus.assert_called_once()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_progress_bar_rendering(
         self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:

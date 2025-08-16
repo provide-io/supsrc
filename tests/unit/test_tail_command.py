@@ -17,6 +17,7 @@ from supsrc.config.loader import load_config
 class TestTailCommand:
     """Test the tail command functionality."""
 
+    @pytest.mark.unit
     def test_tail_command_exists(self) -> None:
         """Test that tail command exists in CLI."""
         runner = CliRunner()
@@ -29,6 +30,7 @@ class TestTailCommand:
             or "Tail repository changes" in result.output
         )
 
+    @pytest.mark.unit
     def test_tail_help(self) -> None:
         """Test tail command help."""
         runner = CliRunner()
@@ -40,6 +42,7 @@ class TestTailCommand:
         # Should NOT have --tui flag
         assert "--tui" not in result.output
 
+    @pytest.mark.unit
     @patch("supsrc.cli.tail_cmds.WatchOrchestrator")
     @patch("supsrc.config.loader.load_config")
     def test_tail_basic_operation(
@@ -84,6 +87,7 @@ class TestTailCommand:
         mock_load_config.assert_called_once()
         mock_orchestrator_class.assert_called_once_with(mock_config, is_tui=False)
 
+    @pytest.mark.unit
     def test_tail_with_invalid_config(self) -> None:
         """Test tail command with invalid config path."""
         runner = CliRunner()
@@ -92,6 +96,7 @@ class TestTailCommand:
         assert result.exit_code != 0
         assert "Error" in result.output or "does not exist" in result.output
 
+    @pytest.mark.unit
     def test_tail_with_env_config(self, tmp_path: Path) -> None:
         """Test tail command with config from environment variable."""
         config_file = tmp_path / "env_test.conf"
@@ -120,6 +125,7 @@ class TestTailCommand:
                     # Should use config from env var
                     assert mock_load_config.called
 
+    @pytest.mark.unit
     @patch("supsrc.telemetry.logger.base.log")
     def test_tail_logging_setup(self, mock_logger: Mock, tmp_path: Path) -> None:
         """Test that tail command sets up logging correctly."""
@@ -137,6 +143,7 @@ class TestTailCommand:
         # Should log startup message
         mock_logger.info.assert_called()
 
+    @pytest.mark.unit
     def test_tail_interrupt_handling(self, tmp_path: Path) -> None:
         """Test tail command handles keyboard interrupt gracefully."""
         config_file = tmp_path / "test.conf"

@@ -66,7 +66,7 @@ async def _handle_signal_async(sig: int):
 )
 @logging_options
 @click.pass_context
-def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
+async def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
     """Interactive dashboard for monitoring repositories."""
     # Setup logging for TUI mode
     ctx.obj.get("LOG_FILE")  # Check if global --log-file was set
@@ -94,28 +94,25 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
     app = SupsrcTuiApp(config_path=config_path, cli_shutdown_event=_shutdown_requested)
     
     try:
-        app.run()
+        await app.run_async()
         log.info("Interactive dashboard finished.")
     except KeyboardInterrupt:
         log.info("Keyboard interrupt received")
-        # Force exit on interrupt
-        import os
-        os._exit(0)
+        pass # Allow Textual to handle graceful exit
     except Exception as e:
         log.error(f"TUI error: {e}")
-        # Only restore terminal on crash
-        import os
-        try:
-            os.system('stty sane')
-        except Exception:
-            pass
-        # Force exit on error
-        os._exit(1)
-    
-    # This should never be reached due to os._exit in action_quit
-    # but just in case...
-    import os
-    os._exit(0)
+        pass # Allow Textual to handle graceful exit
+    finally:
+        # Ensure the CLI shutdown event is set if app.run() returns for any reason
+        # and it hasn't been set by action_quit (e.g., if app.run() crashes before action_quit is called)
+        if not _shutdown_requested.is_set():
+            _shutdown_requested.set()
+
+    # Wait for the CLI shutdown event to ensure all background tasks (orchestrator, monitor)
+    # have a chance to complete their cleanup after the TUI exits.
+    log.info("Waiting for orchestrator and monitor cleanup to complete...")
+    await _shutdown_requested.wait()
+    log.info("Orchestrator and monitor cleanup complete. Exiting.")
 
 
 # 🔼⚙️

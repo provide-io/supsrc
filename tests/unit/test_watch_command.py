@@ -16,6 +16,8 @@ from supsrc.cli.main import cli
 class TestWatchCommand:
     """Test the watch command functionality (interactive UI mode)."""
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_watch_command_exists(self) -> None:
         """Test that watch command exists in CLI."""
         runner = CliRunner()
@@ -26,6 +28,8 @@ class TestWatchCommand:
         # The help should indicate it's the interactive mode
         assert "Interactive" in result.output or "dashboard" in result.output.lower()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_watch_help(self) -> None:
         """Test watch command help."""
         runner = CliRunner()
@@ -37,6 +41,8 @@ class TestWatchCommand:
         # Should NOT have --tui flag
         assert "--tui" not in result.output
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     @patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", True)
     @patch("supsrc.cli.watch_cmds.SupsrcTuiApp")
     def test_watch_runs_tui(self, mock_tui_app: Mock, tmp_path: Path) -> None:
@@ -70,6 +76,8 @@ class TestWatchCommand:
         assert "cli_shutdown_event" in call_args[1]
         mock_app_instance.run.assert_called_once()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     @patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", False)
     def test_watch_without_textual(self, tmp_path: Path) -> None:
         """Test watch command when textual is not available."""
@@ -83,6 +91,8 @@ class TestWatchCommand:
         assert "textual" in result.output.lower()
         assert "install" in result.output.lower()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_watch_with_invalid_config(self) -> None:
         """Test watch command with invalid config path."""
         runner = CliRunner()
@@ -90,6 +100,8 @@ class TestWatchCommand:
 
         assert result.exit_code != 0
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_watch_with_env_config(self, tmp_path: Path) -> None:
         """Test watch command with config from environment variable."""
         config_file = tmp_path / "env_test.conf"
@@ -121,6 +133,8 @@ class TestWatchCommand:
                     call_args = mock_tui_app.call_args
                     assert str(call_args[1]["config_path"]) == str(config_file)
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     @patch("supsrc.cli.watch_cmds.log")
     @patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", True)
     def test_watch_logging_setup(self, mock_log: Mock, tmp_path: Path) -> None:
@@ -139,6 +153,8 @@ class TestWatchCommand:
         # Should log startup message
         mock_log.info.assert_called()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_watch_handles_tui_errors(self, tmp_path: Path) -> None:
         """Test watch command handles TUI errors gracefully."""
         config_file = tmp_path / "test.conf"
@@ -156,6 +172,8 @@ class TestWatchCommand:
         assert result.exit_code != 0
         assert "error" in result.output.lower() or "crashed" in result.output.lower()
 
+    @pytest.mark.unit
+    @pytest.mark.tui
     def test_watch_keyboard_interrupt(self, tmp_path: Path) -> None:
         """Test watch command handles keyboard interrupt gracefully."""
         config_file = tmp_path / "test.conf"
