@@ -57,7 +57,6 @@ def event_processor(
 class TestEventProcessor:
     """Comprehensive tests for the EventProcessor."""
 
-    @pytest.mark.unit
     async def test_event_triggers_action_when_rule_met(
         self, event_processor: EventProcessor, mock_action_handler: AsyncMock, temp_git_repo: Path
     ):
@@ -74,7 +73,6 @@ class TestEventProcessor:
 
         mock_action_handler.execute_action_sequence.assert_called_once_with(repo_id)
 
-    @pytest.mark.unit
     async def test_event_starts_timer_when_rule_not_met(
         self, event_processor: EventProcessor, mock_action_handler: AsyncMock, temp_git_repo: Path
     ):
@@ -97,7 +95,6 @@ class TestEventProcessor:
         state = event_processor.repo_states[repo_id]
         assert state.inactivity_timer_handle is not None
 
-    @pytest.mark.unit
     async def test_new_event_cancels_previous_timer(
         self, event_processor: EventProcessor, temp_git_repo: Path
     ):
@@ -118,7 +115,6 @@ class TestEventProcessor:
         
         mock_timer.cancel.assert_called_once()
 
-    @pytest.mark.unit
     async def test_timer_callback_schedules_action(
         self, event_processor: EventProcessor, mock_action_handler: AsyncMock
     ):
@@ -131,7 +127,6 @@ class TestEventProcessor:
 
         mock_action_handler.execute_action_sequence.assert_called_once_with(repo_id)
 
-    @pytest.mark.unit
     async def test_shutdown_event_stops_loop(self, event_processor: EventProcessor):
         """Verify the run loop terminates when the shutdown event is set."""
         event_processor.shutdown_event.set()
@@ -140,7 +135,6 @@ class TestEventProcessor:
         await asyncio.wait_for(task, timeout=0.1)
         assert task.done()
 
-    @pytest.mark.unit
     async def test_event_consumption_for_paused_repository(self, event_processor: EventProcessor, temp_git_repo: Path):
         """
         Verify that the event consumer skips processing for a paused repository

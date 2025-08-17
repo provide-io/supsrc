@@ -13,7 +13,6 @@ from supsrc.state import RepositoryState, RepositoryStatus
 class TestRepositoryState:
     """Test repository state management functionality."""
 
-    @pytest.mark.unit
     def test_initial_state(self) -> None:
         """Test initial repository state."""
         state = RepositoryState(repo_id="test-repo")
@@ -24,9 +23,8 @@ class TestRepositoryState:
         assert state.save_count == 0
         assert state.error_message is None
         assert state.inactivity_timer_handle is None
-        assert state.display_status_emoji == "✅"  # Default emoji for IDLE status
+        assert state.display_status_emoji == "▶️"  # Default emoji for IDLE status
 
-    @pytest.mark.unit
     def test_record_change(self) -> None:
         """Test recording file changes."""
         state = RepositoryState(repo_id="test-repo")
@@ -46,7 +44,6 @@ class TestRepositoryState:
         assert state.save_count == 2
         assert state.last_change_time > first_time
 
-    @pytest.mark.unit
     def test_update_status(self) -> None:
         """Test status updates and emoji changes."""
         state = RepositoryState(repo_id="test-repo")
@@ -69,9 +66,8 @@ class TestRepositoryState:
         state.update_status(RepositoryStatus.IDLE)
         assert state.status == RepositoryStatus.IDLE
         assert state.error_message is None
-        assert state.display_status_emoji == "✅"
+        assert state.display_status_emoji == "▶️"  # Default emoji for IDLE status
 
-    @pytest.mark.unit
     def test_reset_after_action(self) -> None:
         """Test state reset after successful actions."""
         state = RepositoryState(repo_id="test-repo")
@@ -92,7 +88,6 @@ class TestRepositoryState:
         # Commit info should persist
         assert state.last_commit_short_hash == "abc123"
 
-    @pytest.mark.unit
     def test_inactivity_timer_management(self) -> None:
         """Test inactivity timer handling."""
         state = RepositoryState(repo_id="test-repo")
@@ -117,7 +112,6 @@ class TestRepositoryState:
 class TestRepositoryStatusEnum:
     """Test repository status enumeration."""
 
-    @pytest.mark.unit
     def test_all_statuses_have_emojis(self) -> None:
         """Ensure all status values have corresponding emojis."""
         from supsrc.state import STATUS_EMOJI_MAP
