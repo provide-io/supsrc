@@ -85,9 +85,10 @@ class EventProcessor:
                     continue
 
                 if repo_state.is_paused or self.orchestrator._is_paused:
-                    log.debug("Repo or orchestrator is paused, deferring event", repo_id=repo_id)
-                    await self.event_queue.put(event)
-                    await asyncio.sleep(1)
+                    log.debug("Repo or orchestrator is paused, dropping event", repo_id=repo_id)
+                    # Don't re-queue the event to avoid infinite loops
+                    # The file watcher will generate new events when unpaused
+                    await asyncio.sleep(0.1)
                     continue
 
                 if event.event_type == "moved":

@@ -175,6 +175,8 @@ class SupsrcTuiApp(App):
         ("S", "toggle_repo_stop", "Toggle Repo Stop"),
         ("shift+R", "refresh_repo_status", "Refresh Repo Status"),
         ("G", "resume_repo_monitoring", "Resume Repo Monitoring"),
+        ("T", "trigger_repo_action", "Trigger Commit Now"),
+        ("E", "clear_repo_error", "Clear Error State"),
     ]
 
     # Updated CSS for better layout
@@ -716,6 +718,43 @@ class SupsrcTuiApp(App):
             self.post_message(LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed monitoring."))
         else:
             self.post_message(LogMessageUpdate(None, "ERROR", f"Failed to resume monitoring for '{repo_id}'."))
+    
+    async def action_trigger_repo_action(self) -> None:
+        """Manually trigger a commit action for the selected repository."""
+        repo_id = self._get_selected_repo_id()
+        if not repo_id or not self._orchestrator:
+            self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected."))
+            return
+        
+        self.post_message(LogMessageUpdate(None, "INFO", f"⚡ Triggering commit for '{repo_id}'..."))
+        success = await self._orchestrator.trigger_repository_action(repo_id)
+        if success:
+            self.post_message(LogMessageUpdate(None, "INFO", f"✅ Action triggered for '{repo_id}'."))
+        else:
+            self.post_message(LogMessageUpdate(None, "ERROR", f"❌ Failed to trigger action for '{repo_id}'."))
+    
+    async def action_clear_repo_error(self) -> None:
+        """Clear error state for the selected repository."""
+        repo_id = self._get_selected_repo_id()
+        if not repo_id or not self._orchestrator:
+            self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected."))
+            return
+        
+        repo_state = self._orchestrator.repo_states.get(repo_id)
+        if not repo_state:
+            return
+        
+        # Clear error and frozen states
+        if repo_state.status == RepositoryStatus.ERROR:
+            repo_state.error_message = None
+            repo_state.update_status(RepositoryStatus.IDLE)
+        
+        if repo_state.is_frozen:
+            repo_state.is_frozen = False
+            repo_state.freeze_reason = None
+        
+        self._orchestrator._post_tui_state_update()
+        self.post_message(LogMessageUpdate(None, "INFO", f"🔧 Cleared error state for '{repo_id}'."))
 
     def action_quit(self) -> None:
         """Quit the application gracefully."""

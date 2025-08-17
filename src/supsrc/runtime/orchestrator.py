@@ -241,6 +241,91 @@ class WatchOrchestrator:
         repo_state._update_display_emoji()
         log.info("Toggled repository pause state", repo_id=repo_id, paused=repo_state.is_paused)
         return True
+    
+    def set_repo_refreshing_status(self, repo_id: str, refreshing: bool) -> None:
+        """Set the refreshing status for a repository."""
+        repo_state = self.repo_states.get(repo_id)
+        if repo_state:
+            repo_state.is_refreshing = refreshing
+            repo_state._update_display_emoji()
+            self._post_tui_state_update()
+    
+    async def refresh_repository_status(self, repo_id: str) -> bool:
+        """Force refresh the status of a repository and clear errors if possible."""
+        repo_state = self.repo_states.get(repo_id)
+        repo_config = self.config.repositories.get(repo_id) if self.config else None
+        repo_engine = self.repo_engines.get(repo_id)
+        
+        if not all((repo_state, repo_config, repo_engine)):
+            log.warning("Cannot refresh status - missing state, config, or engine", repo_id=repo_id)
+            return False
+        
+        try:
+            log.info("Refreshing repository status", repo_id=repo_id)
+            tui = TUIInterface(self.app)
+            
+            # Get fresh status
+            from supsrc.protocols import RepoStatusResult
+            status_result: RepoStatusResult = await repo_engine.get_status(
+                repo_state, repo_config.repository, self.config.global_config, repo_config.path
+            )
+            
+            if status_result.success:
+                # Update file statistics
+                repo_state.total_files = status_result.total_files
+                repo_state.changed_files = status_result.changed_files
+                repo_state.added_files = status_result.added_files
+                repo_state.deleted_files = status_result.deleted_files
+                repo_state.modified_files = status_result.modified_files
+                repo_state.has_uncommitted_changes = not status_result.is_clean
+                repo_state.current_branch = status_result.current_branch
+                
+                # Clear error state if it exists
+                if repo_state.status == RepositoryStatus.ERROR:
+                    log.info("Clearing error state after successful refresh", repo_id=repo_id)
+                    repo_state.error_message = None
+                    repo_state.update_status(RepositoryStatus.IDLE if status_result.is_clean else RepositoryStatus.CHANGED)
+                
+                # Clear frozen state if no conflicts
+                if repo_state.is_frozen and not status_result.is_conflicted:
+                    log.info("Clearing frozen state after successful refresh", repo_id=repo_id)
+                    repo_state.is_frozen = False
+                    repo_state.freeze_reason = None
+                
+                tui.post_log_update(repo_id, "INFO", f"Status refreshed: {repo_state.changed_files} changes")
+                self._post_tui_state_update()
+                return True
+            else:
+                log.warning("Status refresh failed", repo_id=repo_id, message=status_result.message)
+                return False
+                
+        except Exception as e:
+            log.error("Error refreshing repository status", repo_id=repo_id, error=str(e), exc_info=True)
+            return False
+    
+    async def trigger_repository_action(self, repo_id: str) -> bool:
+        """Manually trigger a commit action for a repository."""
+        repo_state = self.repo_states.get(repo_id)
+        if not repo_state:
+            log.warning("Cannot trigger action - repository not found", repo_id=repo_id)
+            return False
+        
+        # Clear any error/frozen state first
+        if repo_state.status == RepositoryStatus.ERROR:
+            repo_state.error_message = None
+        if repo_state.is_frozen:
+            repo_state.is_frozen = False
+            repo_state.freeze_reason = None
+        
+        log.info("Manually triggering action for repository", repo_id=repo_id)
+        
+        # Schedule the action
+        if self.event_processor:
+            self.event_processor._schedule_action(repo_id)
+            return True
+        else:
+            log.error("Event processor not available")
+            return False
 
     async def toggle_repository_stop(self, repo_id: str) -> bool:
         repo_state = self.repo_states.get(repo_id)
