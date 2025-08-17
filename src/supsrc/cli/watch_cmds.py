@@ -6,8 +6,9 @@ import asyncio
 import signal
 from pathlib import Path
 
-import click
+import asyncclick as click
 import structlog
+import sys
 
 # --- Rich Imports ---
 # Import logging utilities
@@ -107,6 +108,11 @@ async def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
         # and it hasn't been set by action_quit (e.g., if app.run() crashes before action_quit is called)
         if not _shutdown_requested.is_set():
             _shutdown_requested.set()
+
+        # Explicitly disable mouse reporting to ensure terminal state is reset
+        # This is a comprehensive reset for various mouse modes.
+        sys.stdout.write("\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1005l\x1b[?1006l\x1b[?1015l\x1b[?1006l\x1b[?1007l\x1b[?25l")
+        sys.stdout.flush()
 
     # Wait for the CLI shutdown event to ensure all background tasks (orchestrator, monitor)
     # have a chance to complete their cleanup after the TUI exits.

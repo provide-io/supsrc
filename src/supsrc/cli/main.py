@@ -8,7 +8,7 @@ Handles global options like logging level.
 
 from importlib.metadata import PackageNotFoundError, version
 
-import click
+import asyncclick as click
 import structlog
 
 from supsrc.cli.config_cmds import config_cli
@@ -28,7 +28,7 @@ except PackageNotFoundError:
 log: StructLogger = structlog.get_logger("cli.main")
 
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+@click.group(cls=click.Group, context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(__version__, "-V", "--version", package_name="supsrc")
 @logging_options  # This now comes from cli.utils
 @click.pass_context
