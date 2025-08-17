@@ -83,12 +83,12 @@ class RepositoryState:
     action_progress_completed: int | None = field(default=None)
 
     # Individual repository pause/freeze state
-    is_paused: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: instance._update_display_emoji()))  # Individual repository pause
+    is_paused: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: (instance._update_display_emoji(), value)[1]))  # Individual repository pause
     pause_until: datetime | None = field(default=None)
     is_frozen: bool = field(default=False)
     freeze_reason: str | None = field(default=None)
-    is_stopped: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: instance._update_display_emoji())) # New: Repository is not being monitored
-    is_refreshing: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: instance._update_display_emoji())) # New: An operation (e.g., status check) is in progress
+    is_stopped: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: (instance._update_display_emoji(), value)[1])) # New: Repository is not being monitored
+    is_refreshing: bool = field(default=False, on_setattr=attrs.setters.pipe(attrs.setters.validate, lambda instance, attribute, value: (instance._update_display_emoji(), value)[1])) # New: An operation (e.g., status check) is in progress
     timer_seconds_left: int | None = field(default=None)  # Countdown for timer column
 
     # File statistics

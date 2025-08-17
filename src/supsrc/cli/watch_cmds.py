@@ -66,8 +66,9 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
     try:
         app = SupsrcTuiApp(config_path=config_path, cli_shutdown_event=_shutdown_requested)
         # The app's on_mount will configure logging with the Textual handler.
+        log.debug("Starting TUI app.run()...")
         app.run()
-        log.info("Interactive dashboard finished.")
+        log.info("Interactive dashboard finished - app.run() returned.")
     except KeyboardInterrupt:
         log.warning("Shutdown requested via KeyboardInterrupt during TUI run.")
         click.echo("\nAborted!")
@@ -76,5 +77,7 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
         log.critical("The TUI application crashed unexpectedly.", error=str(e), exc_info=True)
         click.echo(f"\nAn unexpected error occurred in the TUI: {e}", err=True)
         ctx.exit(1)
+    finally:
+        log.debug("Exiting watch command...")
 
 # 🔼⚙️

@@ -100,6 +100,17 @@ class EventProcessor:
                     continue
 
                 repo_state.record_change()
+                
+                # Update file statistics after the change
+                is_clean = await self.action_handler.update_repository_stats(repo_id)
+                
+                # If repository is now clean (e.g., file added then deleted), cancel timer
+                if is_clean:
+                    log.info("Repository is clean after change, cancelling timer", repo_id=repo_id)
+                    repo_state.cancel_inactivity_timer()
+                    self.tui.post_state_update(self.repo_states)
+                    continue  # Skip timer setup since repo is clean
+                
                 self.tui.post_state_update(self.repo_states)
 
                 if check_trigger_condition(repo_state, repo_config):
