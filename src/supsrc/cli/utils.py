@@ -8,7 +8,7 @@ Shared utility functions and decorators for CLI commands.
 import logging
 from typing import Any
 
-import click
+import asyncclick as click
 import structlog
 
 # Alias the import as core_setup_logging

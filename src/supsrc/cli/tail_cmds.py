@@ -13,7 +13,7 @@ import sys
 from contextlib import suppress
 from pathlib import Path
 
-import click
+import asyncclick as click
 import structlog
 
 # --- Rich Imports ---

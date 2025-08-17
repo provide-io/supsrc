@@ -705,12 +705,16 @@ class SupsrcTuiApp(App):
 
         log.info("Exiting TUI application.")
         
+        # Explicitly disable mouse reporting to ensure terminal state is reset
+        # This is a comprehensive reset for various mouse modes.
+        import sys
+        sys.stdout.write("\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1005l\x1b[?1006l\x1b[?1015l\x1b[?1006l\x1b[?1007l\x1b[?25l")
+        sys.stdout.flush()
+
         # Exit immediately - Textual will handle terminal restoration
         self.exit(0)
         
-        # Force immediate exit without waiting for cleanup
-        import os
-        os._exit(0)
+        
 
     # Message Handlers
     def on_state_update(self, message: StateUpdate) -> None:
