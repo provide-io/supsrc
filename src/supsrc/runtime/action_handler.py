@@ -106,8 +106,20 @@ class ActionHandler:
 
             if not status_result.success:
                 msg = f"Failed to get repo status: {status_result.message}"
-                repo_state.update_status(RepositoryStatus.ERROR, msg)
-                self.tui.post_log_update(repo_id, "ERROR", msg)
+                
+                # Check if this is a transient error that might be worth retrying
+                transient_errors = ["index.lock", "unable to access", "Connection", "timeout"]
+                is_transient = any(err in status_result.message.lower() for err in transient_errors)
+                
+                if is_transient:
+                    action_log.warning("Transient error detected, will retry on next trigger", error=msg)
+                    self.tui.post_log_update(repo_id, "WARNING", f"Transient error: {msg}")
+                    # Don't mark as error, just skip this attempt
+                    repo_state.reset_after_action()
+                else:
+                    repo_state.update_status(RepositoryStatus.ERROR, msg)
+                    self.tui.post_log_update(repo_id, "ERROR", msg)
+                
                 self.tui.post_state_update(self.repo_states)
                 return
             
