@@ -7,14 +7,14 @@ Manages lifecycle of all runtime components.
 
 import asyncio
 from pathlib import Path
-from typing import Any, Optional, TypeAlias, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional, TypeAlias, cast
 
 import structlog
 from rich.console import Console
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from supsrc.config import load_config, SupsrcConfig
+from supsrc.config import SupsrcConfig, load_config
 from supsrc.engines.git import GitEngine, GitRepoSummary
 from supsrc.exceptions import ConfigurationError, MonitoringSetupError
 from supsrc.monitor import MonitoredEvent, MonitoringService
@@ -67,7 +67,6 @@ class WatchOrchestrator:
         """Main execution method: setup, run, and cleanup."""
         log.info("Orchestrator run sequence starting.")
         processor_task = None
-        cleanup_tasks = []
         tui = TUIInterface(self.app)
 
         try:
@@ -80,7 +79,7 @@ class WatchOrchestrator:
                 return
 
             enabled_repos = await self._initialize_repositories(self.config, tui)
-            
+
             action_handler = ActionHandler(self.config, self.repo_states, self.repo_engines, tui)
             self.event_processor = EventProcessor(
                 self, self.config, self.event_queue, self.shutdown_event, action_handler, self.repo_states, tui
@@ -107,23 +106,7 @@ class WatchOrchestrator:
 
             log.info("Starting event processor task.")
             processor_task = asyncio.create_task(self.event_processor.run())
-            
-            # Wait for processor task to complete or shutdown signal
-            while not processor_task.done():
-                try:
-                    # Check every second if we should shutdown
-                    await asyncio.wait_for(asyncio.shield(processor_task), timeout=1.0)
-                except asyncio.TimeoutError:
-                    # Check if shutdown was requested
-                    if self.shutdown_event.is_set():
-                        log.info("Shutdown requested, cancelling processor task...")
-                        processor_task.cancel()
-                        try:
-                            await processor_task
-                        except asyncio.CancelledError:
-                            pass
-                        break
-                    continue
+            await processor_task
 
         except asyncio.CancelledError:
             log.warning("Orchestrator task was cancelled.")
@@ -131,40 +114,15 @@ class WatchOrchestrator:
             log.critical("Orchestrator run failed with an unhandled exception.", exc_info=True)
         finally:
             log.info("Orchestrator entering cleanup phase.")
-            
-            # Cancel processor task if it exists and is running
             if processor_task and not processor_task.done():
                 processor_task.cancel()
-                cleanup_tasks.append(processor_task)
-            
-            # Stop event processor if it exists
-            if hasattr(self, 'event_processor') and self.event_processor:
-                try:
-                    await self.event_processor.stop()
-                except Exception as e:
-                    log.error("Error stopping event processor", error=str(e))
 
-            # Stop monitoring service
             if self.monitor_service and self.monitor_service.is_running:
-                try:
-                    await self.monitor_service.stop()
-                except Exception as e:
-                    log.error("Error stopping monitor service", error=str(e))
-            
-            # Stop config observer
+                await self.monitor_service.stop()
+
             if self.config_observer and self.config_observer.is_alive():
-                try:
-                    # Unschedule all handlers first
-                    self.config_observer.unschedule_all()
-                    self.config_observer.stop()
-                    # Since it's a daemon thread, we don't need to wait for it
-                    log.debug("Config observer stop signal sent (daemon thread)")
-                except Exception as e:
-                    log.error("Error stopping config observer", error=str(e))
-            
-            # Wait for any cleanup tasks
-            if cleanup_tasks:
-                await asyncio.gather(*cleanup_tasks, return_exceptions=True)
+                self.config_observer.stop()
+                self.config_observer.join()
 
             log.info("Orchestrator cleanup complete.")
 
@@ -180,12 +138,12 @@ class WatchOrchestrator:
     def suspend_monitoring(self) -> None:
         log.warning("Suspending filesystem monitoring service.")
         if self.monitor_service and self.monitor_service.is_running:
-            asyncio.create_task(self.monitor_service.stop())
+            asyncio.create_task(self.monitor_service.stop())  # noqa: RUF006
 
     def resume_monitoring(self) -> None:
         log.info("Resuming event processing and monitoring.")
         self._is_paused = False
-        
+
         if self.config and self.monitor_service and not self.monitor_service.is_running:
             log.info("Restarting suspended monitoring service...")
             tui = TUIInterface(self.app)
@@ -195,7 +153,7 @@ class WatchOrchestrator:
             self.monitor_service = self._setup_monitoring(self.config, enabled_repos, tui)
             if self.monitor_service:
                 self.monitor_service.start()
-        
+
         for state in self.repo_states.values():
             if state.is_paused:
                 state.is_paused = False
@@ -220,8 +178,6 @@ class WatchOrchestrator:
 
         try:
             self.config_observer = Observer()
-            # Make the config observer a daemon thread so it doesn't block exit
-            self.config_observer.daemon = True
             handler = ConfigChangeHandler(self)
             watch_dir = str(self.config_path.parent)
             self.config_observer.schedule(handler, watch_dir, recursive=False)
@@ -241,104 +197,19 @@ class WatchOrchestrator:
         repo_state._update_display_emoji()
         log.info("Toggled repository pause state", repo_id=repo_id, paused=repo_state.is_paused)
         return True
-    
-    def set_repo_refreshing_status(self, repo_id: str, refreshing: bool) -> None:
-        """Set the refreshing status for a repository."""
-        repo_state = self.repo_states.get(repo_id)
-        if repo_state:
-            repo_state.is_refreshing = refreshing
-            repo_state._update_display_emoji()
-            self._post_tui_state_update()
-    
-    async def refresh_repository_status(self, repo_id: str) -> bool:
-        """Force refresh the status of a repository and clear errors if possible."""
-        repo_state = self.repo_states.get(repo_id)
-        repo_config = self.config.repositories.get(repo_id) if self.config else None
-        repo_engine = self.repo_engines.get(repo_id)
-        
-        if not all((repo_state, repo_config, repo_engine)):
-            log.warning("Cannot refresh status - missing state, config, or engine", repo_id=repo_id)
-            return False
-        
-        try:
-            log.info("Refreshing repository status", repo_id=repo_id)
-            tui = TUIInterface(self.app)
-            
-            # Get fresh status
-            from supsrc.protocols import RepoStatusResult
-            status_result: RepoStatusResult = await repo_engine.get_status(
-                repo_state, repo_config.repository, self.config.global_config, repo_config.path
-            )
-            
-            if status_result.success:
-                # Update file statistics
-                repo_state.total_files = status_result.total_files
-                repo_state.changed_files = status_result.changed_files
-                repo_state.added_files = status_result.added_files
-                repo_state.deleted_files = status_result.deleted_files
-                repo_state.modified_files = status_result.modified_files
-                repo_state.has_uncommitted_changes = not status_result.is_clean
-                repo_state.current_branch = status_result.current_branch
-                
-                # Clear error state if it exists
-                if repo_state.status == RepositoryStatus.ERROR:
-                    log.info("Clearing error state after successful refresh", repo_id=repo_id)
-                    repo_state.error_message = None
-                    repo_state.update_status(RepositoryStatus.IDLE if status_result.is_clean else RepositoryStatus.CHANGED)
-                
-                # Clear frozen state if no conflicts
-                if repo_state.is_frozen and not status_result.is_conflicted:
-                    log.info("Clearing frozen state after successful refresh", repo_id=repo_id)
-                    repo_state.is_frozen = False
-                    repo_state.freeze_reason = None
-                
-                tui.post_log_update(repo_id, "INFO", f"Status refreshed: {repo_state.changed_files} changes")
-                self._post_tui_state_update()
-                return True
-            else:
-                log.warning("Status refresh failed", repo_id=repo_id, message=status_result.message)
-                return False
-                
-        except Exception as e:
-            log.error("Error refreshing repository status", repo_id=repo_id, error=str(e), exc_info=True)
-            return False
-    
-    async def trigger_repository_action(self, repo_id: str) -> bool:
-        """Manually trigger a commit action for a repository."""
-        repo_state = self.repo_states.get(repo_id)
-        if not repo_state:
-            log.warning("Cannot trigger action - repository not found", repo_id=repo_id)
-            return False
-        
-        # Clear any error/frozen state first
-        if repo_state.status == RepositoryStatus.ERROR:
-            repo_state.error_message = None
-        if repo_state.is_frozen:
-            repo_state.is_frozen = False
-            repo_state.freeze_reason = None
-        
-        log.info("Manually triggering action for repository", repo_id=repo_id)
-        
-        # Schedule the action
-        if self.event_processor:
-            self.event_processor._schedule_action(repo_id)
-            return True
-        else:
-            log.error("Event processor not available")
-            return False
 
     async def toggle_repository_stop(self, repo_id: str) -> bool:
         repo_state = self.repo_states.get(repo_id)
         if not self.config or not (repo_config := self.config.repositories.get(repo_id)):
             log.warning("Attempted to toggle stop on non-existent repo config", repo_id=repo_id)
             return False
-        
+
         if not repo_state:
             log.warning("Attempted to toggle stop on non-existent repo state", repo_id=repo_id)
             return False
 
         repo_state.is_stopped = not repo_state.is_stopped
-        
+
         if repo_state.is_stopped:
             log.info("Stopping monitoring for repository", repo_id=repo_id)
             if self.monitor_service:
@@ -356,7 +227,7 @@ class WatchOrchestrator:
                     repo_state.update_status(RepositoryStatus.ERROR, f"Failed to resume monitoring: {e}")
                     repo_state.is_stopped = True
                     return False
-        
+
         repo_state._update_display_emoji()
         self._post_tui_state_update()
         return True
@@ -387,7 +258,7 @@ class WatchOrchestrator:
             self.repo_states.clear()
             self.repo_engines.clear()
             enabled_repos = await self._initialize_repositories(self.config, tui)
-            
+
             if not enabled_repos:
                 log.warning("No enabled repositories after reload.")
                 tui.post_log_update(None, "WARNING", "Config reloaded, but no repositories are enabled.")
@@ -397,7 +268,7 @@ class WatchOrchestrator:
             if self.monitor_service:
                 self.monitor_service.start()
                 tui.post_log_update(None, "INFO", "Monitoring resumed with new configuration.")
-            
+
             log.info("Configuration reloaded and monitoring restarted.")
             return True
         except ConfigurationError as e:
@@ -442,7 +313,6 @@ class WatchOrchestrator:
                     if summary.head_commit_hash:
                         repo_state.last_commit_short_hash = summary.head_commit_hash[:7]
                         repo_state.last_commit_message_summary = summary.head_commit_message_summary
-                        repo_state.last_commit_timestamp = summary.head_commit_timestamp
                         msg = f"HEAD at {summary.head_ref_name} ({repo_state.last_commit_short_hash})"
                         init_log.info(msg)
                         tui.post_log_update(repo_id, "INFO", msg)
@@ -454,31 +324,6 @@ class WatchOrchestrator:
                         repo_state.update_status(RepositoryStatus.ERROR, f"Init failed: {summary.head_commit_message_summary}")
                     else:
                         init_log.warning("Could not determine initial HEAD commit.", summary_details=summary)
-                    
-                    # Get initial status to populate file statistics
-                    try:
-                        init_log.debug("Getting initial repository status")
-                        status_result = await engine.get_status(
-                            repo_state, 
-                            repo_config.repository, 
-                            config.global_config, 
-                            repo_config.path
-                        )
-                        if status_result.success:
-                            # Update file statistics from initial status
-                            repo_state.total_files = status_result.total_files
-                            repo_state.changed_files = status_result.changed_files
-                            repo_state.added_files = status_result.added_files
-                            repo_state.deleted_files = status_result.deleted_files
-                            repo_state.modified_files = status_result.modified_files
-                            repo_state.has_uncommitted_changes = not status_result.is_clean
-                            repo_state.current_branch = status_result.current_branch
-                            
-                            init_log.info(
-                                f"Initial status: {repo_state.total_files} files, branch={repo_state.current_branch}, clean={status_result.is_clean}"
-                            )
-                    except Exception as e:
-                        init_log.warning(f"Error checking initial status: {e}")
 
                 enabled_repo_ids.append(repo_id)
             except Exception as e:
@@ -497,7 +342,7 @@ class WatchOrchestrator:
         log.info("Setting up filesystem monitoring...")
         tui.post_log_update(None, "INFO", "Setting up filesystem monitoring...")
         service = MonitoringService(self.event_queue)
-        
+
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -512,7 +357,7 @@ class WatchOrchestrator:
                 if self.repo_states.get(repo_id):
                     self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, "Monitor setup failed")
                     tui.post_log_update(repo_id, "ERROR", f"Monitoring setup failed: {e}")
-        
+
         tui.post_state_update(self.repo_states)
         return service
 
