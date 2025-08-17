@@ -137,24 +137,20 @@ class MonitoringService:
 
         self._logger.info("Stopping monitoring service...")
 
-        try:
-            # First unschedule all handlers to stop processing new events
-            log.debug("Unscheduling all handlers...")
-            try:
-                self._observer.unschedule_all()
-                # Also clear our internal handler references
-                self._handlers.clear()
-            except Exception as e:
-                log.warning(f"Error unscheduling handlers: {e}")
-            
-            # Stop the observer - this is non-blocking
+        def _blocking_shutdown():
+            """The blocking part of the shutdown to be run in a thread."""
+            if not self._observer.is_alive():
+                return
             log.debug("Signaling watchdog observer to stop...")
             self._observer.stop()
-            
-            # Since the observer is a daemon thread, we don't need to wait for it
-            # It will terminate when the main program exits
-            log.debug("Observer stop signal sent (daemon thread will terminate on exit)")
-            
+            log.debug("Waiting for watchdog observer to join...")
+            self._observer.join(timeout=2.0)
+            if self._observer.is_alive():
+                log.warning("Watchdog observer thread did not join within timeout.")
+
+        try:
+            # Run the blocking shutdown sequence in a separate thread
+            await asyncio.to_thread(_blocking_shutdown)
             self._logger.info("Monitoring service shutdown complete.")
         except Exception as e:
             self._logger.error("Error during monitoring service shutdown", error=str(e), exc_info=True)
