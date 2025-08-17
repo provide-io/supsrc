@@ -187,7 +187,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
             # Should not happen if orchestrator is running, but log as warning
             self.logger.warning(
                 "Event loop not running, cannot queue event threadsafe.",
-                event=monitored_event,
+                monitored_event=monitored_event,
             )
 
     # Override watchdog methods to call the processing function

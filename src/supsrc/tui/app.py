@@ -139,8 +139,16 @@ class TimerManager:
     def stop_all_timers(self) -> None:
         """Stop all managed timers."""
         timer_names = list(self._timers.keys())
+        self._logger.debug("Stopping all timers", count=len(timer_names))
+        
         for name in timer_names:
-            self.stop_timer(name)
+            try:
+                self.stop_timer(name)
+            except Exception as e:
+                self._logger.error("Error stopping timer during cleanup", name=name, error=str(e))
+        
+        # Clear any remaining timer references
+        self._timers.clear()
         self._logger.debug("All timers stopped", count=len(timer_names))
 
 
@@ -293,6 +301,28 @@ class SupsrcTuiApp(App):
 
         yield Footer()
 
+    def on_unmount(self) -> None:
+        """Clean up resources when the TUI is unmounting."""
+        log.info("TUI unmounting, cleaning up resources...")
+        
+        # Mark as shutting down to prevent any further actions
+        self._is_shutting_down = True
+        
+        # Stop all timers
+        if hasattr(self, "_timer_manager"):
+            log.debug("Stopping timers in unmount...")
+            self._timer_manager.stop_all_timers()
+        
+        # Signal shutdown events
+        if not self._shutdown_event.is_set():
+            log.debug("Setting shutdown event in unmount...")
+            self._shutdown_event.set()
+        if not self._cli_shutdown_event.is_set():
+            log.debug("Setting CLI shutdown event in unmount...")
+            self._cli_shutdown_event.set()
+        
+        log.info("TUI cleanup complete.")
+
     def on_mount(self) -> None:
         """Initialize the TUI with proper error handling."""
         try:
@@ -365,7 +395,12 @@ class SupsrcTuiApp(App):
             self._orchestrator = WatchOrchestrator(
                 self._config_path, self._shutdown_event, app=self
             )
+            log.debug("Starting orchestrator.run()...")
             await self._orchestrator.run()
+            log.debug("orchestrator.run() completed")
+        except asyncio.CancelledError:
+            log.info("Orchestrator worker cancelled")
+            raise  # Re-raise to properly handle cancellation
         except Exception as e:
             log.exception("Orchestrator failed within TUI worker")
             if not self._is_shutting_down:
@@ -376,7 +411,8 @@ class SupsrcTuiApp(App):
                 self._update_sub_title("Orchestrator CRASHED!")
                 # Auto-quit on orchestrator failure
                 await asyncio.sleep(1.0)
-                self.call_later(self.action_quit)
+                if not self._is_shutting_down:
+                    self.call_later(self.action_quit)
         finally:
             log.info("Orchestrator worker finished.")
 
@@ -401,14 +437,18 @@ class SupsrcTuiApp(App):
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         """Handle worker state changes."""
+        from textual.worker import WorkerState
+        
         log.debug("Worker state changed", worker=event.worker.name, state=event.state)
         if (
             event.worker == self._worker
-            and event.state in ("SUCCESS", "ERROR")
+            and event.state in (WorkerState.SUCCESS, WorkerState.ERROR)
             and not self._is_shutting_down
         ):
             log.info(f"Orchestrator worker stopped: {event.state}")
-            self.call_later(self.action_quit)
+            # Only quit if we're not already shutting down
+            if not self._is_shutting_down:
+                self.call_later(self.action_quit)
 
     async def _fetch_repo_details_worker(self, repo_id: str) -> None:
         """Worker to fetch repository details."""
@@ -680,22 +720,55 @@ class SupsrcTuiApp(App):
     def action_quit(self) -> None:
         """Quit the application gracefully."""
         if self._is_shutting_down:
+            log.debug("Quit already in progress, ignoring duplicate call")
             return
 
         self._is_shutting_down = True
         log.info("Quit action triggered.")
         self._update_sub_title("Quitting...")
 
+        # Stop all timers first to prevent any race conditions
+        log.debug("Stopping all timers...")
+        self._timer_manager.stop_all_timers()
+
         # Signal orchestrator shutdown
+        log.debug("Signaling orchestrator shutdown...")
         if not self._shutdown_event.is_set():
             self._shutdown_event.set()
         
         # Also signal CLI shutdown to exit the main process
+        log.debug("Signaling CLI shutdown...")
         if not self._cli_shutdown_event.is_set():
             self._cli_shutdown_event.set()
 
-        # Let Textual handle the exit and worker cleanup
-        self.exit(0)
+        # Cancel the orchestrator worker if it's running
+        if hasattr(self, "_worker") and self._worker:
+            log.debug("Cancelling orchestrator worker...")
+            try:
+                self._worker.cancel()
+            except Exception as e:
+                log.error(f"Error cancelling worker: {e}")
+        
+        # Schedule the exit to happen after this method returns
+        log.debug("Scheduling exit...")
+        def do_exit():
+            log.debug("Executing exit...")
+            self.exit(0)
+            
+            # Force exit after a short delay if normal exit doesn't work
+            def force_exit():
+                import os
+                log.warning("Force exiting with os._exit(0)")
+                os._exit(0)
+            
+            # Give normal exit 2 seconds to work, then force it
+            import threading
+            timer = threading.Timer(2.0, force_exit)
+            timer.daemon = True
+            timer.start()
+        
+        # Use call_later to ensure we're not in the middle of event handling
+        self.call_later(do_exit)
 
     # Message Handlers
     def on_state_update(self, message: StateUpdate) -> None:

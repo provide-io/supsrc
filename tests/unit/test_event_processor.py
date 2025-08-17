@@ -20,7 +20,10 @@ from supsrc.state import RepositoryState
 @pytest.fixture
 def mock_action_handler() -> AsyncMock:
     """Provides a mock ActionHandler."""
-    return AsyncMock(spec=ActionHandler)
+    handler = AsyncMock(spec=ActionHandler)
+    # Set default return value for update_repository_stats to False (not clean)
+    handler.update_repository_stats.return_value = False
+    return handler
 
 
 @pytest.fixture

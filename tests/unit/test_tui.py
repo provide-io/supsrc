@@ -200,16 +200,16 @@ class TestSupsrcTuiApp:
     def test_action_quit(self, tui_app: SupsrcTuiApp) -> None:
         """Test quit action."""
         tui_app._timer_manager.stop_all_timers = Mock()
+        tui_app.call_later = Mock()
 
-        with patch.object(tui_app, "exit", side_effect=SystemExit) as mock_exit:
-            with pytest.raises(SystemExit):
-                tui_app.action_quit()
+        tui_app.action_quit()
 
-            assert tui_app._is_shutting_down is True
-            assert tui_app._shutdown_event.is_set()
-            assert tui_app._cli_shutdown_event.is_set()
-            tui_app._timer_manager.stop_all_timers.assert_called_once()
-            mock_exit.assert_called_once_with(0)
+        assert tui_app._is_shutting_down is True
+        assert tui_app._shutdown_event.is_set()
+        assert tui_app._cli_shutdown_event.is_set()
+        tui_app._timer_manager.stop_all_timers.assert_called_once()
+        # Check that call_later was called to schedule the exit
+        tui_app.call_later.assert_called_once()
 
 
     def test_on_state_update(self, tui_app: SupsrcTuiApp) -> None:
@@ -425,6 +425,7 @@ class TestTuiErrorHandling:
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
         tui_app.call_later = Mock()
+        tui_app._is_shutting_down = False  # Ensure not shutting down
 
         mock_worker = Mock()
         mock_worker.name = "orchestrator"

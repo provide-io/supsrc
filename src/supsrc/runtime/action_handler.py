@@ -36,6 +36,44 @@ class ActionHandler:
         self.repo_engines = repo_engines
         self.tui = tui
         log.debug("ActionHandler initialized.")
+    
+    async def update_repository_stats(self, repo_id: str) -> bool:
+        """
+        Update file statistics for a repository by checking git status.
+        
+        Returns True if the repository is clean (no changes), False otherwise.
+        """
+        repo_state = self.repo_states.get(repo_id)
+        repo_config = self.config.repositories.get(repo_id)
+        repo_engine = self.repo_engines.get(repo_id)
+        
+        if not repo_state or not repo_config or not repo_engine:
+            return False
+        
+        try:
+            status_result: RepoStatusResult = await repo_engine.get_status(
+                repo_state, repo_config.repository, self.config.global_config, repo_config.path
+            )
+            
+            if status_result.success:
+                # Update file statistics in repository state
+                repo_state.total_files = status_result.total_files
+                repo_state.changed_files = status_result.changed_files
+                repo_state.added_files = status_result.added_files
+                repo_state.deleted_files = status_result.deleted_files
+                repo_state.modified_files = status_result.modified_files
+                repo_state.has_uncommitted_changes = not status_result.is_clean
+                repo_state.current_branch = status_result.current_branch
+                
+                # Update status if clean
+                if status_result.is_clean:
+                    repo_state.update_status(RepositoryStatus.IDLE)
+                    
+                return status_result.is_clean
+        except Exception as e:
+            log.warning("Failed to update repository stats", repo_id=repo_id, error=str(e))
+            
+        return False
 
     async def execute_action_sequence(self, repo_id: str) -> None:
         """

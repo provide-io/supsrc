@@ -67,6 +67,7 @@ class WatchOrchestrator:
         """Main execution method: setup, run, and cleanup."""
         log.info("Orchestrator run sequence starting.")
         processor_task = None
+        cleanup_tasks = []
         tui = TUIInterface(self.app)
 
         try:
@@ -106,7 +107,23 @@ class WatchOrchestrator:
 
             log.info("Starting event processor task.")
             processor_task = asyncio.create_task(self.event_processor.run())
-            await processor_task
+            
+            # Wait for processor task to complete or shutdown signal
+            while not processor_task.done():
+                try:
+                    # Check every second if we should shutdown
+                    await asyncio.wait_for(asyncio.shield(processor_task), timeout=1.0)
+                except asyncio.TimeoutError:
+                    # Check if shutdown was requested
+                    if self.shutdown_event.is_set():
+                        log.info("Shutdown requested, cancelling processor task...")
+                        processor_task.cancel()
+                        try:
+                            await processor_task
+                        except asyncio.CancelledError:
+                            pass
+                        break
+                    continue
 
         except asyncio.CancelledError:
             log.warning("Orchestrator task was cancelled.")
@@ -114,15 +131,40 @@ class WatchOrchestrator:
             log.critical("Orchestrator run failed with an unhandled exception.", exc_info=True)
         finally:
             log.info("Orchestrator entering cleanup phase.")
+            
+            # Cancel processor task if it exists and is running
             if processor_task and not processor_task.done():
                 processor_task.cancel()
-
-            if self.monitor_service and self.monitor_service.is_running:
-                await self.monitor_service.stop()
+                cleanup_tasks.append(processor_task)
             
+            # Stop event processor if it exists
+            if hasattr(self, 'event_processor') and self.event_processor:
+                try:
+                    await self.event_processor.stop()
+                except Exception as e:
+                    log.error("Error stopping event processor", error=str(e))
+
+            # Stop monitoring service
+            if self.monitor_service and self.monitor_service.is_running:
+                try:
+                    await self.monitor_service.stop()
+                except Exception as e:
+                    log.error("Error stopping monitor service", error=str(e))
+            
+            # Stop config observer
             if self.config_observer and self.config_observer.is_alive():
-                self.config_observer.stop()
-                self.config_observer.join()
+                try:
+                    # Unschedule all handlers first
+                    self.config_observer.unschedule_all()
+                    self.config_observer.stop()
+                    # Since it's a daemon thread, we don't need to wait for it
+                    log.debug("Config observer stop signal sent (daemon thread)")
+                except Exception as e:
+                    log.error("Error stopping config observer", error=str(e))
+            
+            # Wait for any cleanup tasks
+            if cleanup_tasks:
+                await asyncio.gather(*cleanup_tasks, return_exceptions=True)
 
             log.info("Orchestrator cleanup complete.")
 
@@ -178,6 +220,8 @@ class WatchOrchestrator:
 
         try:
             self.config_observer = Observer()
+            # Make the config observer a daemon thread so it doesn't block exit
+            self.config_observer.daemon = True
             handler = ConfigChangeHandler(self)
             watch_dir = str(self.config_path.parent)
             self.config_observer.schedule(handler, watch_dir, recursive=False)
