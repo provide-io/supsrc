@@ -41,7 +41,6 @@ def action_handler(
 class TestActionHandler:
     """Comprehensive tests for the ActionHandler."""
 
-    @pytest.mark.unit
     async def test_execute_full_sequence_success(
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
@@ -55,7 +54,6 @@ class TestActionHandler:
         mock_repo_engine.perform_push.assert_called_once()
         assert action_handler.repo_states[repo_id].status == RepositoryStatus.IDLE
 
-    @pytest.mark.unit
     async def test_skips_actions_if_repo_is_clean(
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
@@ -71,7 +69,6 @@ class TestActionHandler:
         mock_repo_engine.perform_push.assert_not_called()
         assert action_handler.repo_states[repo_id].status == RepositoryStatus.IDLE
 
-    @pytest.mark.unit
     async def test_aborts_on_status_failure(
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
@@ -85,7 +82,6 @@ class TestActionHandler:
         assert state.status == RepositoryStatus.ERROR
         mock_repo_engine.stage_changes.assert_not_called()
 
-    @pytest.mark.unit
     async def test_aborts_on_merge_conflict(
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
@@ -102,7 +98,6 @@ class TestActionHandler:
         assert "conflicts" in (state.error_message or "").lower()
         mock_repo_engine.stage_changes.assert_not_called()
 
-    @pytest.mark.unit
     async def test_handles_commit_failure_gracefully(
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
@@ -116,7 +111,6 @@ class TestActionHandler:
         assert state.status == RepositoryStatus.ERROR
         mock_repo_engine.perform_push.assert_not_called()
 
-    @pytest.mark.unit
     async def test_handles_push_failure_gracefully(
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
@@ -132,7 +126,6 @@ class TestActionHandler:
         assert state.status == RepositoryStatus.IDLE
         action_handler.tui.post_log_update.assert_any_call(repo_id, "WARNING", "Push failed: Connection failed")
 
-    @pytest.mark.unit
     async def test_handles_skipped_push(
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
@@ -146,7 +139,6 @@ class TestActionHandler:
         assert state.status == RepositoryStatus.IDLE
         action_handler.tui.post_log_update.assert_any_call(repo_id, "INFO", "Push skipped by configuration.")
 
-    @pytest.mark.unit
     async def test_handles_skipped_commit(
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):

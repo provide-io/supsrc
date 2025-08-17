@@ -72,6 +72,15 @@ class ActionHandler:
                 self.tui.post_log_update(repo_id, "ERROR", msg)
                 self.tui.post_state_update(self.repo_states)
                 return
+            
+            # Update file statistics in repository state
+            repo_state.total_files = status_result.total_files
+            repo_state.changed_files = status_result.changed_files
+            repo_state.added_files = status_result.added_files
+            repo_state.deleted_files = status_result.deleted_files
+            repo_state.modified_files = status_result.modified_files
+            repo_state.has_uncommitted_changes = not status_result.is_clean
+            repo_state.current_branch = status_result.current_branch
 
             if status_result.is_conflicted:
                 msg = "Repository has conflicts, action aborted."
@@ -131,6 +140,10 @@ class ActionHandler:
             else:
                 short_hash = commit_result.commit_hash[:7]
                 repo_state.last_commit_short_hash = short_hash
+                # Update last commit timestamp to now since we just made the commit
+                from datetime import datetime, UTC
+                repo_state.last_commit_timestamp = datetime.now(UTC)
+                # Note: We don't have the commit message here, but we could fetch it if needed
                 repo_state.action_description = f"Committed: {short_hash}"
                 self.tui.post_log_update(repo_id, "INFO", f"Commit successful: {short_hash}")
 
