@@ -7,6 +7,7 @@ Comprehensive tests for the Git engine implementation.
 
 import subprocess
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pygit2
 import pytest
@@ -84,7 +85,7 @@ class TestGitEngine:
         summary = await git_engine.get_summary(nonexistent_path)
 
         assert summary.head_ref_name == "ERROR"
-        assert "Repository not found" in summary.head_commit_message_summary
+        assert "Not a Git repository" in summary.head_commit_message_summary
 
     async def test_get_status_clean_repo(
         self,
