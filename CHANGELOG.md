@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - PowerShell environment script (`env.ps1`) for Windows support
-- Working environment configuration file (`wrkenv.toml`) 
+- Working environment configuration file (`wrknv.toml`) 
 - Timer cancellation messages in TUI log with clock emoji (🕐)
 - Descriptive file change messages in TUI showing specific file actions
 - Countdown display with hand emojis for last 10 seconds in TUI
