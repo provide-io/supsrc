@@ -16,7 +16,7 @@ The `provide-io` monorepo contains several core components, with `supsrc` being 
 *   **`pyvider-telemetry`**: A library for structured logging and telemetry.
 *   **`tofusoup`**: A testing and conformance suite for providers.
 *   **`flavor`**: An optional packaging system for distributing providers as binaries.
-*   **`wrkenv`**: A development environment management tool.
+*   **`wrknv`**: A development environment management tool.
 
 ## Configuration Files
 
@@ -35,7 +35,7 @@ The `supsrc` project can be built and tested using a combination of `hatch`, `se
 
 ### Key Commands:
 *   `supsrc --help`: Displays the `supsrc` CLI help.
-*   `wrkenv status`: Checks tool versions.
+*   `wrknv status`: Checks tool versions.
 *   `pytest`: Runs tests.
 *   `deactivate`: Exits the development environment.
 *   `source env.sh`: Activates the development environment.
@@ -46,7 +46,7 @@ The `supsrc` project can be built and tested using a combination of `hatch`, `se
 *   **Testing**: The projects are tested with `pytest`.
 *   **Type Checking**: Type checking is done with `mypy` and `pyre`.
 *   **Dependencies**: Dependencies are managed with `uv` and specified in the `pyproject.toml` files.
-*   **Virtual Environments**: The projects are developed in virtual environments, which can be managed with `wrkenv`.
+*   **Virtual Environments**: The projects are developed in virtual environments, which can be managed with `wrknv`.
 
 ---
 *This document is intended for the Gemini AI assistant.*

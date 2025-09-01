@@ -5,5 +5,5 @@ siblings = [
     # Other special packages
     { name = "tofusoup", with_deps = true },
     { name = "flavor", with_deps = true },
-    { name = "wrkenv", with_deps = true }
+    { name = "wrknv", with_deps = true }
 ]

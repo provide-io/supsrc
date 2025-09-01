@@ -135,7 +135,7 @@ Rules determine when to trigger Git operations:
 
 - Requires Python 3.11+ for modern Python features
 - Uses `uv` as the primary package manager for fast dependency resolution
-- Local dependency on `wrkenv` package at `../wrkenv`
+- Local dependency on `wrknv` package at `../wrknv`
 - Configuration files use TOML format (`supsrc.conf`)
 - Environment variables can override configuration (prefix: `SUPSRC_`)
 - TUI is optional and requires separate installation (`supsrc[tui]`)
