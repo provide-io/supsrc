@@ -4,13 +4,10 @@ import logging
 import sys
 from typing import TYPE_CHECKING, Optional
 
-import structlog
-from structlog.typing import FilteringBoundLogger
-
-from supsrc.telemetry.logger.processors import (
-    add_emoji_processor,
-    remove_extra_keys_processor,
-)
+from provide.foundation import setup_telemetry, TelemetryConfig, LoggingConfig, logger
+from provide.foundation.hub import get_component_registry
+from provide.foundation.hub.components import ComponentCategory
+from provide.foundation.logger.emoji.types import EmojiSet
 
 try:
     from supsrc.tui.logging_handler import TextualLogHandler
@@ -24,20 +21,32 @@ if TYPE_CHECKING:
 
 
 BASE_LOGGER_NAME = "supsrc"
-LOG_EMOJIS = {
-    logging.DEBUG: "🐛",
-    logging.INFO: "ℹ️",
-    logging.WARNING: "⚠️",
-    logging.ERROR: "❌",
-    logging.CRITICAL: "💥",
-    "load": "📄",
-    "validate": "✅",
-    "fail": "🚫",
-    "path": "📁",
-    "time": "⏱️",
-    "success": "🎉",
-    "general": "➡️",
-}
+
+# Register supsrc-specific emojis with Foundation's registry
+_supsrc_emoji_set = EmojiSet(
+    name="supsrc", 
+    emojis={
+        "load": "📄",
+        "validate": "✅",
+        "fail": "🚫", 
+        "path": "📁",
+        "time": "⏱️",
+        "success": "🎉",
+        "general": "➡️",
+    },
+    default_emoji_key="general"
+)
+
+def _register_supsrc_emojis():
+    """Register supsrc-specific emojis with Foundation registry."""
+    registry = get_component_registry()
+    registry.register(
+        name="supsrc",
+        value=_supsrc_emoji_set, 
+        dimension=ComponentCategory.EMOJI_SET.value,
+        metadata={"domain": "supsrc", "priority": 100},
+        replace=True
+    )
 
 
 def setup_logging(
