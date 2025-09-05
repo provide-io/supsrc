@@ -8,6 +8,7 @@ from provide.foundation import setup_telemetry, TelemetryConfig, LoggingConfig, 
 from provide.foundation.hub import get_component_registry
 from provide.foundation.hub.components import ComponentCategory
 from provide.foundation.logger.emoji.types import EmojiSet
+from structlog.typing import FilteringBoundLogger
 
 try:
     from supsrc.tui.logging_handler import TextualLogHandler
@@ -57,57 +58,40 @@ def setup_logging(
     tui_app_instance: Optional["SupsrcTuiApp"] = None,
     headless_mode: bool = False,
 ) -> None:
-    """Configures structlog for the entire application."""
-    is_tui_mode = tui_app_instance is not None
+    """Configures logging using Foundation with supsrc customizations."""
+    # Register supsrc-specific emojis first
+    _register_supsrc_emojis()
+    
+    # Use Foundation's TelemetryConfig
     log_level_name = logging.getLevelName(level)
-
-    shared_processors: list[structlog.types.Processor] = [
-        structlog.contextvars.merge_contextvars,
-        structlog.stdlib.add_logger_name,
-        structlog.stdlib.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso", utc=True),
-        add_emoji_processor,
-        remove_extra_keys_processor,
-        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-    ]
-
-    structlog.configure(
-        processors=shared_processors,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        wrapper_class=structlog.stdlib.BoundLogger,
-        cache_logger_on_first_use=True,
-    )
-
+    
+    # Determine formatter based on mode
     if json_logs:
-        final_renderer = structlog.processors.JSONRenderer(sort_keys=True)
-    elif headless_mode:
-        try:
-            from rich.console import Console
-            safe_console = Console(file=sys.stdout, hijack=False)
-            final_renderer = structlog.dev.ConsoleRenderer(console=safe_console, colors=True)
-        except (ImportError, TypeError):
-            final_renderer = structlog.dev.ConsoleRenderer(colors=True)
+        formatter = "json"
     else:
-        final_renderer = structlog.dev.ConsoleRenderer(colors=True)
-
-    formatter = structlog.stdlib.ProcessorFormatter(processor=final_renderer)
-
+        formatter = "key_value"  # Foundation's console formatter is "key_value"
+    
+    # Set up Foundation logging
+    config = TelemetryConfig(
+        logging=LoggingConfig(
+            console_formatter=formatter,
+            default_level=log_level_name,
+            das_emoji_prefix_enabled=True,
+            logger_name_emoji_prefix_enabled=True,
+        )
+    )
+    
+    setup_telemetry(config)
+    
+    # Get Foundation's logger for supsrc-specific setup
+    slog = logger.bind(logger_name=BASE_LOGGER_NAME)
+    
+    # Add custom handlers for file and TUI modes
     root_logger = logging.getLogger()
-    for handler in list(root_logger.handlers):
-        handler.close()
-        root_logger.removeHandler(handler)
-    root_logger.setLevel(level)
-
-    slog = structlog.get_logger(BASE_LOGGER_NAME)
-
-    if not is_tui_mode and not file_only:
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(formatter)
-        root_logger.addHandler(console_handler)
-        slog.debug("Standard StreamHandler added for console output.")
-
+    
     if log_file:
         try:
+            import structlog
             file_handler = logging.FileHandler(log_file, encoding="utf-8")
             file_formatter = structlog.stdlib.ProcessorFormatter(
                 processor=structlog.processors.JSONRenderer(sort_keys=True)
@@ -115,27 +99,33 @@ def setup_logging(
             file_handler.setFormatter(file_formatter)
             file_handler.setLevel(level)
             root_logger.addHandler(file_handler)
-            slog.info(f"File logging enabled to '{log_file}'")
+            slog.info("File logging enabled", file=log_file)
         except Exception as e:
-            slog.error(f"Failed to setup file logging to '{log_file}': {e}", exc_info=True)
+            slog.error("Failed to setup file logging", file=log_file, error=str(e))
 
+    # Add TUI handler if needed
+    is_tui_mode = tui_app_instance is not None
     if is_tui_mode and tui_app_instance:
         if HAS_TUI and TextualLogHandler:
+            import structlog
             textual_handler = TextualLogHandler(app=tui_app_instance)
             textual_handler.setLevel(level)
+            # Use Foundation-compatible formatter
+            formatter = structlog.stdlib.ProcessorFormatter(
+                processor=structlog.dev.ConsoleRenderer(colors=True)
+            )
             textual_handler.setFormatter(formatter)
             root_logger.addHandler(textual_handler)
-            slog.info("TextualLogHandler added for TUI.")
+            slog.info("TextualLogHandler added for TUI")
         else:
-            slog.error("TUI mode active but textual is not installed.")
+            slog.error("TUI mode active but textual is not installed")
 
     slog.info(
-        "structlog logging initialization complete",
+        "Foundation-based logging initialization complete",
         log_level=log_level_name,
-        json_console_format=json_logs,
-        console_output_enabled=(not is_tui_mode and not file_only),
-        log_file=log_file or "None",
-        tui_mode_active=is_tui_mode,
+        json_logs=json_logs,
+        file_logging=log_file or "disabled",
+        tui_mode=is_tui_mode,
     )
 
 
