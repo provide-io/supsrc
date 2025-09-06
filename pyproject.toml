@@ -4,7 +4,7 @@
 
 [project]
 name = "supsrc"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Automated Git commit/push utility based on filesystem events and rules."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -86,11 +86,17 @@ supsrc = "supsrc.cli.main:cli"
 # Build System Configuration (Hatch)                                          #
 # --------------------------------------------------------------------------- #
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
-[tool.hatch.version]
-path = "src/supsrc/__init__.py" # Ensure __version__ is defined here
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
 
 [tool.hatch.metadata]
 allow-direct-references = true
