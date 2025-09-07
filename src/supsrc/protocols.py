@@ -9,7 +9,7 @@ and standard result objects. Uses concrete attrs classes for results.
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
-import attrs  # Import attrs
+from attrs import define
 import structlog
 
 from supsrc.config.models import GlobalConfig  # Assuming config models exist
@@ -23,7 +23,7 @@ log = structlog.get_logger("protocols")
 # These are returned by engine implementations.
 
 
-@attrs.define(frozen=True, slots=True)
+@define(frozen=True, slots=True)
 class PluginResultBase:
     """Base for plugin results, providing common fields."""
 
@@ -32,7 +32,7 @@ class PluginResultBase:
     details: dict[str, Any] | None = attrs.field(factory=dict)
 
 
-@attrs.define(frozen=True, slots=True)
+@define(frozen=True, slots=True)
 class ConversionResult(PluginResultBase):
     """Concrete result from a conversion step."""
 
@@ -40,7 +40,7 @@ class ConversionResult(PluginResultBase):
     output_data: Any | None = None
 
 
-@attrs.define(frozen=True, slots=True)
+@define(frozen=True, slots=True)
 class RepoStatusResult(PluginResultBase):
     """Concrete result from checking repository status."""
 
@@ -59,21 +59,21 @@ class RepoStatusResult(PluginResultBase):
     modified_files: int = 0
 
 
-@attrs.define(frozen=True, slots=True)
+@define(frozen=True, slots=True)
 class StageResult(PluginResultBase):
     """Concrete result from staging changes."""
 
     files_staged: list[str] | None = attrs.field(factory=list)
 
 
-@attrs.define(frozen=True, slots=True)
+@define(frozen=True, slots=True)
 class CommitResult(PluginResultBase):
     """Concrete result from performing a commit."""
 
     commit_hash: str | None = None  # None if commit was skipped (e.g., no changes)
 
 
-@attrs.define(frozen=True, slots=True)
+@define(frozen=True, slots=True)
 class PushResult(PluginResultBase):
     """Concrete result from performing a push."""
 
