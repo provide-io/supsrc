@@ -7,8 +7,9 @@ from pathlib import Path
 import click
 import structlog
 
-from supsrc.cli.utils import logging_options, setup_logging_from_context
-from supsrc.telemetry import StructLogger
+from provide.foundation.cli import logging_options, setup_cli_logging
+from provide.foundation.logger import get_logger
+from structlog.typing import FilteringBoundLogger as StructLogger
 
 try:
     from supsrc.tui.app import SupsrcTuiApp

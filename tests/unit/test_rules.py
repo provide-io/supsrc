@@ -10,7 +10,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from supsrc.config.models import (
+from supsrc.config import (
     InactivityRuleConfig,
     ManualRuleConfig,
     SaveCountRuleConfig,

@@ -14,7 +14,7 @@ import pygit2
 import structlog
 from pygit2.credentials import CredentialType
 
-from supsrc.config.models import GlobalConfig
+from supsrc.config import GlobalConfig
 from supsrc.engines.git.info import GitRepoSummary
 
 # Use absolute imports

@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(uv run:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(PYTHONPATH=/Users/tim/code/gh/provide-io/supsrc/src python3 -c \"import supsrc.config; print(''Config import successful'')\")",
+      "Bash(PYTHONPATH=/Users/tim/code/gh/provide-io/supsrc/workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:/Users/tim/code/gh/provide-io/supsrc/src python3 -c \"import supsrc.config; print(''Config import successful'')\")",
+      "Bash(PYTHONPATH=/Users/tim/code/gh/provide-io/supsrc/workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:/Users/tim/code/gh/provide-io/supsrc/src python3 -m pytest tests/unit/test_config.py -v --tb=short)",
+      "Bash(PYTHONPATH=/Users/tim/code/gh/provide-io/supsrc/workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:/Users/tim/code/gh/provide-io/supsrc/src python3 -m pytest tests/unit/test_config.py::TestConfigLoading::test_load_valid_config -v --tb=short)",
+      "Bash(PYTHONPATH=/Users/tim/code/gh/provide-io/supsrc/workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:/Users/tim/code/gh/provide-io/supsrc/src python3 -m pytest tests/unit/ -v --tb=short -x)",
+      "Bash(PYTHONPATH=/Users/tim/code/gh/provide-io/supsrc/workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:/Users/tim/code/gh/provide-io/supsrc/src python3 -c \"import supsrc.config; print(''✅ Config works''); import supsrc.exceptions; print(''✅ Exceptions work''); import supsrc.telemetry; print(''✅ Telemetry works'')\")"
     ],
     "deny": [],
     "ask": [],

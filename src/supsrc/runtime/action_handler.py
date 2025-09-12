@@ -8,8 +8,7 @@ from pathlib import Path
 
 import structlog
 
-from supsrc.config import SupsrcConfig
-from supsrc.config.models import LLMConfig
+from supsrc.config import SupsrcConfig, LLMConfig
 from supsrc.protocols import (
     CommitResult,
     PushResult,
@@ -19,7 +18,8 @@ from supsrc.protocols import (
 )
 from supsrc.runtime.tui_interface import TUIInterface
 from supsrc.state import RepositoryState, RepositoryStatus
-from supsrc.telemetry import StructLogger
+from provide.foundation.logger import get_logger
+from structlog.typing import FilteringBoundLogger as StructLogger
 
 # LLM imports are conditional
 try:
