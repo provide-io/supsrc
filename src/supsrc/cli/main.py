@@ -70,32 +70,46 @@ def cli(
         
         # Validate log file accessibility if provided
         log_file_path = None
-        if log_file and not is_test_env:
+        if log_file:
             log_file_path = str(log_file)
-            # Test if we can write to the file
-            try:
-                with open(log_file_path, 'a') as f:
-                    pass  # Just test accessibility
-            except (OSError, ValueError):
-                # If file is closed or inaccessible, disable file logging
-                log_file_path = None
+            # Test if we can write to the file (skip for temporary files in tests)
+            if not is_test_env or not log_file_path.startswith('/tmp'):
+                try:
+                    with open(log_file_path, 'a') as f:
+                        pass  # Just test accessibility
+                except (OSError, ValueError):
+                    # If file is closed or inaccessible, disable file logging
+                    log_file_path = None
         
-        # Use simpler setup in test environment to avoid resource conflicts
+        # Configure logging with Foundation but handle test environment carefully
+        config = TelemetryConfig(
+            logging=LoggingConfig(
+                console_formatter=log_format,
+                default_level=log_level or "WARNING",
+                log_file=log_file_path,
+            )
+        )
+        
         if is_test_env:
-            import logging
-            logging.basicConfig(
-                level=getattr(logging, (log_level or "WARNING").upper()),
-                format='%(levelname)s: %(message)s',
-                force=True  # Override any existing loggers
-            )
+            # In test mode, be more cautious about file logging
+            try:
+                setup_telemetry(config)
+            except Exception:
+                # If Foundation fails in test mode, use basic logging
+                import logging
+                level = getattr(logging, (log_level or "WARNING").upper())
+                logging.basicConfig(level=level, format='%(levelname)s: %(message)s', force=True)
+                
+                # Still try to set up file logging if explicitly requested
+                if log_file_path:
+                    try:
+                        file_handler = logging.FileHandler(log_file_path)
+                        file_handler.setLevel(level)
+                        file_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+                        logging.getLogger().addHandler(file_handler)
+                    except Exception:
+                        pass  # If file logging fails, just continue without it
         else:
-            config = TelemetryConfig(
-                logging=LoggingConfig(
-                    console_formatter=log_format,
-                    default_level=log_level or "WARNING",
-                    log_file=log_file_path,
-                )
-            )
             setup_telemetry(config)
     except Exception as e:
         # Fallback to basic logging setup if Foundation fails
