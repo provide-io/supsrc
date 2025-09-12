@@ -9,6 +9,9 @@ import re
 
 import structlog
 
+# Add Foundation utilities for rate limiting and timing
+from provide.foundation.utils import TokenBucketRateLimiter, timed_block
+
 from supsrc.llm.prompts import (
     BASIC_COMMIT_PROMPT_TEMPLATE,
     CHANGE_FRAGMENT_PROMPT_TEMPLATE,
@@ -47,19 +50,41 @@ class GeminiProvider:
 
         self.client = genai.Client(api_key=api_key)  # API key can be None
         self.model_name = model
-        log.info("GeminiProvider initialized", model=model)
+        
+        # Add rate limiter: Gemini API allows ~60 requests per minute
+        self._rate_limiter = TokenBucketRateLimiter(
+            capacity=60,  # Max 60 requests
+            refill_rate=1.0,  # 1 token per second = 60 per minute
+            initial_tokens=10  # Start with some tokens available
+        )
+        
+        log.info("GeminiProvider initialized", model=model, rate_limit="60 req/min")
 
     async def _generate(self, prompt: str) -> str:
-        """Internal helper to run generation."""
+        """Internal helper to run generation with rate limiting and timing."""
+        # Wait for rate limiter
+        await asyncio.to_thread(self._rate_limiter.acquire, 1)
+        
         try:
-            # The new SDK uses a synchronous generate_content method on the client.
-            # We run it in a thread to keep our provider async.
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
+            with timed_block("gemini_api_call") as timer:
+                # The new SDK uses a synchronous generate_content method on the client.
+                # We run it in a thread to keep our provider async.
+                response = await asyncio.to_thread(
+                    self.client.models.generate_content,
+                    model=self.model_name,
+                    contents=prompt,
+                )
+                result = response.text.strip()
+                
+            # Log timing information
+            log.debug(
+                "Gemini API call completed", 
+                duration_ms=timer.elapsed_ms,
                 model=self.model_name,
-                contents=prompt,
+                tokens_remaining=self._rate_limiter.available_tokens()
             )
-            return response.text.strip()
+            return result
+            
         except Exception as e:
             log.error("Gemini API call failed", error=str(e), exc_info=True)
             return f"Error: LLM generation failed. {e}"

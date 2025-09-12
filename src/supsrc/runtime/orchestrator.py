@@ -22,6 +22,8 @@ from supsrc.protocols import RepositoryEngine
 from supsrc.state import RepositoryState, RepositoryStatus
 from provide.foundation.logger import get_logger
 from structlog.typing import FilteringBoundLogger as StructLogger
+# Add Foundation error handling patterns
+from provide.foundation.errors import with_error_handling, error_boundary
 
 from .action_handler import ActionHandler
 from .event_processor import EventProcessor
@@ -64,6 +66,11 @@ class WatchOrchestrator:
         self._is_paused = False
         self.config_observer: Observer | None = None
 
+    @with_error_handling(
+        log_errors=True,
+        reraise=True,
+        context={"component": "orchestrator", "method": "run"}
+    )
     async def run(self) -> None:
         """Main execution method: setup, run, and cleanup."""
         log.info("Orchestrator run sequence starting.")

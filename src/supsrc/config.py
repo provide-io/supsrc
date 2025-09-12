@@ -15,6 +15,8 @@ from typing import Any, TypeAlias
 from attrs import define, field, mutable
 from provide.foundation.config import field as config_field
 from provide.foundation.errors.config import ConfigurationError
+# Add Foundation parsing utilities 
+from provide.foundation.utils import parse_duration, parse_bool, parse_dict
 
 
 def _validate_log_level(inst: Any, attr: Any, value: str) -> None:
@@ -131,24 +133,7 @@ def load_config(config_path: Path) -> SupsrcConfig:
         # Use the original converter logic
         converter = Converter()
         
-        def _parse_duration(duration_str: str) -> timedelta:
-            """Parse duration string."""
-            pattern = re.compile(
-                r"^\s*(?:(?P<hours>\d+)\s*h)?\s*(?:(?P<minutes>\d+)\s*m)?\s*(?:(?P<seconds>\d+)\s*s)?\s*$"
-            )
-            match = pattern.match(duration_str)
-            if not match or not duration_str.strip():
-                raise ValueError(f"Invalid duration format: {duration_str}")
-                
-            parts = match.groupdict()
-            time_params = {k: int(v) for k, v in parts.items() if v}
-            if not time_params:
-                raise ValueError(f"Empty duration string: {duration_str}")
-                
-            duration = timedelta(**time_params)
-            if duration <= timedelta(0):
-                raise ValueError(f"Duration must be positive: {duration}")
-            return duration
+        # Use Foundation's duration parser instead of custom implementation
             
         def _structure_path_simple(path_str: str, type_hint: type[Path]) -> Path:
             """Structure hook for Path."""
@@ -182,7 +167,7 @@ def load_config(config_path: Path) -> SupsrcConfig:
             return converter.structure(data_copy, target_class)
         
         converter.register_structure_hook(Path, _structure_path_simple)
-        converter.register_structure_hook(timedelta, lambda d, t: _parse_duration(d))
+        converter.register_structure_hook(timedelta, lambda d, t: parse_duration(d))
         converter.register_structure_hook(RuleConfig, structure_rule_hook)
         
         config_object = converter.structure(toml_data, SupsrcConfig)

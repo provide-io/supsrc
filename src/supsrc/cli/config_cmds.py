@@ -41,12 +41,7 @@ def config_cli():
 @click.pass_context
 def show_config(ctx: click.Context, config_path: Path, **kwargs):
     """Load, validate, and display the configuration."""
-    setup_logging_from_context(
-        ctx,
-        local_log_level=kwargs.get("log_level"),
-        local_log_file=kwargs.get("log_file"),
-        local_json_logs=kwargs.get("json_logs"),
-    )
+    # Foundation's CLI framework handles logging setup via decorators
     log.info("Executing 'config show' command", config_path=str(config_path))
 
     try:

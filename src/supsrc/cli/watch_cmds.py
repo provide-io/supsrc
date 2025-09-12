@@ -50,7 +50,7 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
     # Step 1: Check for TUI dependencies before configuring logging.
     if not TEXTUAL_AVAILABLE or SupsrcTuiApp is None:
         # Set up basic console logging to ensure the error is visible.
-        setup_logging_from_context(ctx)
+        # Foundation's CLI framework handles logging setup via decorators
         log.error("TUI dependencies not installed for 'watch' command.")
         click.echo(
             "Error: The 'watch' command requires the 'textual' library, provided by the 'tui' extra.",

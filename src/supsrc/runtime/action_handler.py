@@ -20,6 +20,8 @@ from supsrc.runtime.tui_interface import TUIInterface
 from supsrc.state import RepositoryState, RepositoryStatus
 from provide.foundation.logger import get_logger
 from structlog.typing import FilteringBoundLogger as StructLogger
+# Add Foundation error handling patterns
+from provide.foundation.errors import with_error_handling, error_boundary
 
 # LLM imports are conditional
 try:
@@ -152,6 +154,11 @@ class ActionHandler:
         except OSError as e:
             log.error("Failed to save change fragment", path=str(file_path), error=str(e))
 
+    @with_error_handling(
+        log_errors=True,
+        reraise=False,  # Don't reraise to avoid crashing the whole orchestrator
+        context={"component": "action_handler", "method": "execute_action_sequence"}
+    )
     async def execute_action_sequence(self, repo_id: str) -> None:
         """Runs the full action workflow, including optional LLM steps."""
         repo_state = self.repo_states.get(repo_id)
