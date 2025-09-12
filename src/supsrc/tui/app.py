@@ -871,5 +871,5 @@ class SupsrcTuiApp(App):
             "SUCCESS": "bold green",
         }
         return styles.get(level, "white")
-        
+
 # 🖥️✨

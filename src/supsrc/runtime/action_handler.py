@@ -2,13 +2,19 @@
 """
 Handles the execution of the triggered action sequence for a repository.
 """
+from __future__ import annotations
+
 import asyncio
 import os
 from pathlib import Path
 
 import structlog
 
-from supsrc.config import SupsrcConfig, LLMConfig
+# Add Foundation error handling patterns
+from provide.foundation.errors import with_error_handling
+from structlog.typing import FilteringBoundLogger as StructLogger
+
+from supsrc.config import LLMConfig, SupsrcConfig
 from supsrc.protocols import (
     CommitResult,
     PushResult,
@@ -18,10 +24,6 @@ from supsrc.protocols import (
 )
 from supsrc.runtime.tui_interface import TUIInterface
 from supsrc.state import RepositoryState, RepositoryStatus
-from provide.foundation.logger import get_logger
-from structlog.typing import FilteringBoundLogger as StructLogger
-# Add Foundation error handling patterns
-from provide.foundation.errors import with_error_handling, error_boundary
 
 # LLM imports are conditional
 try:
@@ -156,8 +158,8 @@ class ActionHandler:
 
     @with_error_handling(
         log_errors=True,
-        reraise=False,  # Don't reraise to avoid crashing the whole orchestrator
-        context={"component": "action_handler", "method": "execute_action_sequence"}
+        suppress=(Exception,),  # Suppress all errors to avoid crashing the orchestrator
+        context_provider=lambda: {"component": "action_handler", "method": "execute_action_sequence"}
     )
     async def execute_action_sequence(self, repo_id: str) -> None:
         """Runs the full action workflow, including optional LLM steps."""

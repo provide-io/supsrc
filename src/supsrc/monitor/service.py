@@ -164,5 +164,5 @@ class MonitoringService:
             hasattr(self, "_observer") and self._observer is not None and self._observer.is_alive()
         )
         return self._is_running and observer_alive
-        
+
 # 🔼⚙️

@@ -9,8 +9,8 @@ and standard result objects. Uses concrete attrs classes for results.
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
-from attrs import define, field
 import structlog
+from attrs import define, field
 
 from supsrc.config import GlobalConfig
 

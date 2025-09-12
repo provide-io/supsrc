@@ -6,17 +6,20 @@ Handles global options like logging level.
 """
 
 from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
 import click
 import structlog
 
+# Replace custom CLI utils with Foundation's CLI framework
+# Import Foundation CLI utilities directly to avoid testing dependencies
+from provide.foundation.cli.decorators import error_handler, logging_options
+from provide.foundation.context import CLIContext
+from structlog.typing import FilteringBoundLogger as StructLogger
+
 from supsrc.cli.config_cmds import config_cli
 from supsrc.cli.tail_cmds import tail_cli
 from supsrc.cli.watch_cmds import watch_cli
-from provide.foundation.logger import get_logger
-from structlog.typing import FilteringBoundLogger as StructLogger
-# Replace custom CLI utils with Foundation's CLI framework
-from provide.foundation.cli import logging_options, setup_cli_logging, error_handler
 
 try:
     __version__ = version("supsrc")
@@ -34,8 +37,8 @@ log: StructLogger = structlog.get_logger("cli.main")
 def cli(
     ctx: click.Context,
     log_level: str | None,
-    log_file: str | None,
-    json_logs: bool | None,
+    log_file: Path | None,
+    log_format: str,
 ):
     """
     Supsrc: Automated Git commit/push utility.
@@ -45,22 +48,55 @@ def cli(
     """
     ctx.ensure_object(dict)
 
-    # Use Foundation's CLI logging setup
-    setup_cli_logging(
-        level=log_level or "WARNING",
-        format="json" if json_logs else "console",
-        file_path=log_file
+    # Create Foundation CLI context and setup logging
+    cli_context = CLIContext(
+        log_level=log_level or "WARNING",
+        log_format=log_format,
+        log_file=log_file,
     )
     
+    # Use Foundation's setup approach with error handling for file I/O
+    from provide.foundation.setup import setup_telemetry
+    from provide.foundation.logger import TelemetryConfig, LoggingConfig
+    
+    try:
+        # Validate log file accessibility if provided
+        log_file_path = None
+        if log_file:
+            log_file_path = str(log_file)
+            # Test if we can write to the file
+            try:
+                with open(log_file_path, 'a') as f:
+                    pass  # Just test accessibility
+            except (OSError, ValueError):
+                # If file is closed or inaccessible, disable file logging
+                log_file_path = None
+        
+        config = TelemetryConfig(
+            logging=LoggingConfig(
+                console_formatter=log_format,
+                default_level=log_level or "WARNING",
+                log_file=log_file_path,
+            )
+        )
+        setup_telemetry(config)
+    except Exception as e:
+        # Fallback to basic logging setup if Foundation fails
+        import logging
+        logging.basicConfig(
+            level=getattr(logging, (log_level or "WARNING").upper()),
+            format='%(levelname)s: %(message)s'
+        )
+
     # Store context for subcommands
     ctx.obj["LOG_LEVEL"] = log_level
     ctx.obj["LOG_FILE"] = log_file
-    ctx.obj["JSON_LOGS"] = json_logs if json_logs is not None else False
+    ctx.obj["LOG_FORMAT"] = log_format
     log.debug(
         "Main CLI group initialized",
         log_level=log_level,
         log_file=log_file,
-        json_logs=json_logs,
+        log_format=log_format,
     )
 
 

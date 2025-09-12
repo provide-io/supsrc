@@ -13,10 +13,10 @@ from typing import Any, TypeAlias
 
 # Foundation includes attrs as a dependency
 from attrs import define, field, mutable
-from provide.foundation.config import field as config_field
 from provide.foundation.errors.config import ConfigurationError
-# Add Foundation parsing utilities 
-from provide.foundation.utils import parse_duration, parse_bool, parse_dict
+
+# Add Foundation parsing utilities
+from provide.foundation.utils import parse_duration
 
 
 def _validate_log_level(inst: Any, attr: Any, value: str) -> None:
@@ -103,75 +103,76 @@ class GlobalConfig:
 @define(frozen=True, slots=True)
 class SupsrcConfig:
     """Root configuration object for the supsrc application."""
-    
+
     repositories: dict[str, RepositoryConfig] = field(factory=dict)
     global_config: GlobalConfig = field(factory=GlobalConfig)
 
 
 def load_config(config_path: Path) -> SupsrcConfig:
     """Load supsrc configuration using Foundation's error handling."""
-    from cattrs import Converter
-    import re
     import tomllib
+
+    from cattrs import Converter
+
     from supsrc.exceptions import ConfigFileNotFoundError, ConfigParsingError
-    
+
     try:
-        
+
         # Use Foundation error handling but keep our TOML loading logic
         if not config_path.is_file():
             raise ConfigFileNotFoundError(f"Config file not found: {config_path}")
-            
+
         try:
             with open(config_path, "rb") as f:
                 toml_data = tomllib.load(f)
         except tomllib.TOMLDecodeError as e:
             raise ConfigParsingError(f"Invalid TOML syntax in {config_path}: {e}") from e
-        
+
         if "global" in toml_data:
             toml_data["global_config"] = toml_data.pop("global")
-            
+
         # Use the original converter logic
         converter = Converter()
-        
+
         # Use Foundation's duration parser instead of custom implementation
-            
+
         def _structure_path_simple(path_str: str, type_hint: type[Path]) -> Path:
             """Structure hook for Path."""
             if not isinstance(path_str, str):
                 raise ValueError(f"Path must be string, got: {type(path_str).__name__}")
             return Path(path_str).expanduser().resolve()
-            
+
         def structure_rule_hook(data: Mapping[str, Any], cl: type[RuleConfig]) -> RuleConfig:
             """Structure the correct RuleConfig based on the 'type' field."""
             if not isinstance(data, Mapping):
                 raise ValueError(f"Rule configuration must be a mapping, got {type(data).__name__}")
-                
+
             rule_type = data.get("type")
             if not rule_type or not isinstance(rule_type, str):
                 raise ValueError("Rule configuration missing or invalid 'type' field.")
-                
+
             type_map: dict[str, type[RuleConfig]] = {
                 "supsrc.rules.inactivity": InactivityRuleConfig,
                 "supsrc.rules.save_count": SaveCountRuleConfig,
                 "supsrc.rules.manual": ManualRuleConfig,
             }
-            
+
             target_class = type_map.get(rule_type)
             if target_class is None:
                 raise ValueError(f"Unknown rule type specified: '{rule_type}'")
-                
+
             data_copy = dict(data)
-            if hasattr(target_class.__attrs_attrs__, 'type') and target_class.__attrs_attrs__.type.kw_only:
+            if hasattr(target_class.__attrs_attrs__, "type") and target_class.__attrs_attrs__.type.kw_only:
                 data_copy.pop("type", None)
-                
+
             return converter.structure(data_copy, target_class)
-        
+
         converter.register_structure_hook(Path, _structure_path_simple)
-        converter.register_structure_hook(timedelta, lambda d, t: parse_duration(d))
+        converter.register_structure_hook(timedelta, lambda d, t: timedelta(seconds=parse_duration(d)))
         converter.register_structure_hook(RuleConfig, structure_rule_hook)
-        
+
         config_object = converter.structure(toml_data, SupsrcConfig)
-        
+
         # Validate paths and disable repos with invalid paths
         for repo_id, repo_config in config_object.repositories.items():
             p = repo_config.path
@@ -181,13 +182,13 @@ def load_config(config_path: Path) -> SupsrcConfig:
                     path_valid = False
             except OSError:
                 path_valid = False
-                
+
             if not path_valid:
                 repo_config.enabled = False
                 repo_config._path_valid = False
-        
+
         return config_object
-        
+
     except (ConfigFileNotFoundError, ConfigParsingError):
         # Re-raise specific config exceptions as-is
         raise
@@ -197,16 +198,16 @@ def load_config(config_path: Path) -> SupsrcConfig:
 
 # Export all the models and functions that were in the original config package
 __all__ = [
-    "SupsrcConfig",
-    "RepositoryConfig", 
-    "GlobalConfig",
-    "LLMConfig",
-    "RuleConfig",
-    "InactivityRuleConfig",
-    "SaveCountRuleConfig", 
-    "ManualRuleConfig",
-    "load_config",
     "ConfigurationError",
+    "GlobalConfig",
+    "InactivityRuleConfig",
+    "LLMConfig",
+    "ManualRuleConfig",
+    "RepositoryConfig",
+    "RuleConfig",
+    "SaveCountRuleConfig",
+    "SupsrcConfig",
+    "load_config",
 ]
 
 # 🔼⚙️

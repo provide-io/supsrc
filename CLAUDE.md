@@ -139,3 +139,4 @@ Rules determine when to trigger Git operations:
 - Configuration files use TOML format (`supsrc.conf`)
 - Environment variables can override configuration (prefix: `SUPSRC_`)
 - TUI is optional and requires separate installation (`supsrc[tui]`)
+- "import annotations" is okay so I can use the unquoted types.

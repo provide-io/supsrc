@@ -63,8 +63,8 @@ class TestMainCLI:
         """Test global JSON logs option."""
         runner = CliRunner()
 
-        # Invoke a real command to ensure the context is processed
-        result = runner.invoke(cli, ["--json-logs", "config", "show", "--help"])
+        # Use Foundation's --log-format option instead of --json-logs
+        result = runner.invoke(cli, ["--log-format", "json", "config", "show", "--help"])
         assert result.exit_code == 0
 
 
@@ -225,7 +225,7 @@ class TestCLIIntegration:
             [
                 "--log-level", "DEBUG",
                 "--log-file", str(log_file),
-                "--json-logs",
+                "--log-format", "json",
                 "config", "show",
                 "--config-path", str(config_file),
             ],
