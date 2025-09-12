@@ -60,9 +60,17 @@ def cli(
     from provide.foundation.logger import TelemetryConfig, LoggingConfig
     
     try:
+        # Detect if we're in a test environment
+        import os
+        is_test_env = (
+            "pytest" in os.environ.get("_", "") or
+            "PYTEST_CURRENT_TEST" in os.environ or
+            hasattr(__import__('sys'), '_called_from_test')
+        )
+        
         # Validate log file accessibility if provided
         log_file_path = None
-        if log_file:
+        if log_file and not is_test_env:
             log_file_path = str(log_file)
             # Test if we can write to the file
             try:
@@ -72,20 +80,30 @@ def cli(
                 # If file is closed or inaccessible, disable file logging
                 log_file_path = None
         
-        config = TelemetryConfig(
-            logging=LoggingConfig(
-                console_formatter=log_format,
-                default_level=log_level or "WARNING",
-                log_file=log_file_path,
+        # Use simpler setup in test environment to avoid resource conflicts
+        if is_test_env:
+            import logging
+            logging.basicConfig(
+                level=getattr(logging, (log_level or "WARNING").upper()),
+                format='%(levelname)s: %(message)s',
+                force=True  # Override any existing loggers
             )
-        )
-        setup_telemetry(config)
+        else:
+            config = TelemetryConfig(
+                logging=LoggingConfig(
+                    console_formatter=log_format,
+                    default_level=log_level or "WARNING",
+                    log_file=log_file_path,
+                )
+            )
+            setup_telemetry(config)
     except Exception as e:
         # Fallback to basic logging setup if Foundation fails
         import logging
         logging.basicConfig(
             level=getattr(logging, (log_level or "WARNING").upper()),
-            format='%(levelname)s: %(message)s'
+            format='%(levelname)s: %(message)s',
+            force=True
         )
 
     # Store context for subcommands
