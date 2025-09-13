@@ -14,7 +14,9 @@ import pygit2
 import structlog
 from pygit2.credentials import CredentialType
 
-from supsrc.config.models import GlobalConfig
+from supsrc.config import GlobalConfig
+# Add Foundation resilience patterns for Git operations
+from provide.foundation.resilience import retry, RetryPolicy, BackoffStrategy
 from supsrc.engines.git.info import GitRepoSummary
 
 # Use absolute imports
@@ -214,6 +216,15 @@ class GitEngine(RepositoryEngine):
             self._log.exception("Unexpected status error getting Git status", repo_id=state.repo_id)
             return RepoStatusResult(success=False, message=f"Unexpected status error: {e}")
 
+    @retry(
+        policy=RetryPolicy(
+            max_attempts=3,
+            backoff_strategy=BackoffStrategy.EXPONENTIAL,
+            base_delay=0.5,
+            max_delay=5.0
+        ),
+        on_exceptions=(pygit2.GitError, OSError)
+    )
     async def stage_changes(
         self,
         files: list[Path] | None,
@@ -321,6 +332,15 @@ class GitEngine(RepositoryEngine):
 
         return "\n".join(summary_lines)
 
+    @retry(
+        policy=RetryPolicy(
+            max_attempts=3,
+            backoff_strategy=BackoffStrategy.EXPONENTIAL,
+            base_delay=1.0,
+            max_delay=10.0
+        ),
+        on_exceptions=(pygit2.GitError, OSError)
+    )
     async def perform_commit(
         self,
         message_template: str,
@@ -389,6 +409,15 @@ class GitEngine(RepositoryEngine):
             self._log.exception("Unexpected error performing commit", repo_id=state.repo_id)
             return CommitResult(success=False, message=f"Unexpected commit error: {e}")
 
+    @retry(
+        policy=RetryPolicy(
+            max_attempts=5,  # More retries for network operations
+            backoff_strategy=BackoffStrategy.EXPONENTIAL,
+            base_delay=2.0,
+            max_delay=30.0
+        ),
+        on_exceptions=(pygit2.GitError, OSError, ConnectionError, TimeoutError)
+    )
     async def perform_push(
         self,
         state: RepositoryState,
