@@ -4,14 +4,15 @@
 Provides a thread-safe interface for communicating with the Textual TUI.
 """
 
-from typing import TYPE_CHECKING, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import attrs
 import structlog
+from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.state import RepositoryState
-from provide.foundation.logger import get_logger
-from structlog.typing import FilteringBoundLogger as StructLogger
 
 # Conditional imports for TUI components to avoid hard dependency
 try:
@@ -31,7 +32,7 @@ log: StructLogger = structlog.get_logger("runtime.tui_interface")
 class TUIInterface:
     """A thread-safe bridge for communicating with the Textual UI."""
 
-    def __init__(self, app: Optional["SupsrcTuiApp"]):
+    def __init__(self, app: SupsrcTuiApp | None):
         self.app = app
         self.is_active = bool(app and TEXTUAL_AVAILABLE)
         if self.is_active:

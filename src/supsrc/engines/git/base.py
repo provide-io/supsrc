@@ -12,11 +12,12 @@ from typing import Any
 
 import pygit2
 import structlog
+
+# Add Foundation resilience patterns for Git operations
+from provide.foundation.resilience import BackoffStrategy, RetryPolicy, retry
 from pygit2.credentials import CredentialType
 
 from supsrc.config import GlobalConfig
-# Add Foundation resilience patterns for Git operations
-from provide.foundation.resilience import retry, RetryPolicy, BackoffStrategy
 from supsrc.engines.git.info import GitRepoSummary
 
 # Use absolute imports
@@ -217,13 +218,13 @@ class GitEngine(RepositoryEngine):
             return RepoStatusResult(success=False, message=f"Unexpected status error: {e}")
 
     @retry(
+        pygit2.GitError, OSError,
         policy=RetryPolicy(
             max_attempts=3,
-            backoff_strategy=BackoffStrategy.EXPONENTIAL,
+            backoff=BackoffStrategy.EXPONENTIAL,
             base_delay=0.5,
             max_delay=5.0
-        ),
-        on_exceptions=(pygit2.GitError, OSError)
+        )
     )
     async def stage_changes(
         self,
@@ -333,13 +334,13 @@ class GitEngine(RepositoryEngine):
         return "\n".join(summary_lines)
 
     @retry(
+        pygit2.GitError, OSError,
         policy=RetryPolicy(
             max_attempts=3,
-            backoff_strategy=BackoffStrategy.EXPONENTIAL,
+            backoff=BackoffStrategy.EXPONENTIAL,
             base_delay=1.0,
             max_delay=10.0
-        ),
-        on_exceptions=(pygit2.GitError, OSError)
+        )
     )
     async def perform_commit(
         self,
@@ -410,13 +411,13 @@ class GitEngine(RepositoryEngine):
             return CommitResult(success=False, message=f"Unexpected commit error: {e}")
 
     @retry(
+        pygit2.GitError, OSError, ConnectionError, TimeoutError,
         policy=RetryPolicy(
             max_attempts=5,  # More retries for network operations
-            backoff_strategy=BackoffStrategy.EXPONENTIAL,
+            backoff=BackoffStrategy.EXPONENTIAL,
             base_delay=2.0,
             max_delay=30.0
-        ),
-        on_exceptions=(pygit2.GitError, OSError, ConnectionError, TimeoutError)
+        )
     )
     async def perform_push(
         self,

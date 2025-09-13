@@ -50,21 +50,21 @@ class GeminiProvider:
 
         self.client = genai.Client(api_key=api_key)  # API key can be None
         self.model_name = model
-        
+
         # Add rate limiter: Gemini API allows ~60 requests per minute
         self._rate_limiter = TokenBucketRateLimiter(
             capacity=60,  # Max 60 requests
             refill_rate=1.0,  # 1 token per second = 60 per minute
             initial_tokens=10  # Start with some tokens available
         )
-        
+
         log.info("GeminiProvider initialized", model=model, rate_limit="60 req/min")
 
     async def _generate(self, prompt: str) -> str:
         """Internal helper to run generation with rate limiting and timing."""
         # Wait for rate limiter
         await asyncio.to_thread(self._rate_limiter.acquire, 1)
-        
+
         try:
             with timed_block("gemini_api_call") as timer:
                 # The new SDK uses a synchronous generate_content method on the client.
@@ -75,16 +75,16 @@ class GeminiProvider:
                     contents=prompt,
                 )
                 result = response.text.strip()
-                
+
             # Log timing information
             log.debug(
-                "Gemini API call completed", 
+                "Gemini API call completed",
                 duration_ms=timer.elapsed_ms,
                 model=self.model_name,
                 tokens_remaining=self._rate_limiter.available_tokens()
             )
             return result
-            
+
         except Exception as e:
             log.error("Gemini API call failed", error=str(e), exc_info=True)
             return f"Error: LLM generation failed. {e}"
