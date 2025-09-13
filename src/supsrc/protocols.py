@@ -9,10 +9,10 @@ and standard result objects. Uses concrete attrs classes for results.
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
-from attrs import define
+from attrs import define, field
 import structlog
 
-from supsrc.config.models import GlobalConfig  # Assuming config models exist
+from supsrc.config import GlobalConfig
 
 # Re-export or define core types needed by protocols
 from supsrc.state import RepositoryState  # Assuming state.py exists
@@ -29,14 +29,14 @@ class PluginResultBase:
 
     success: bool
     message: str | None = None
-    details: dict[str, Any] | None = attrs.field(factory=dict)
+    details: dict[str, Any] | None = field(factory=dict)
 
 
 @define(frozen=True, slots=True)
 class ConversionResult(PluginResultBase):
     """Concrete result from a conversion step."""
 
-    processed_files: list[Path] | None = attrs.field(factory=list)
+    processed_files: list[Path] | None = field(factory=list)
     output_data: Any | None = None
 
 
@@ -63,7 +63,7 @@ class RepoStatusResult(PluginResultBase):
 class StageResult(PluginResultBase):
     """Concrete result from staging changes."""
 
-    files_staged: list[str] | None = attrs.field(factory=list)
+    files_staged: list[str] | None = field(factory=list)
 
 
 @define(frozen=True, slots=True)

@@ -8,9 +8,10 @@ from pathlib import Path
 import click
 import structlog
 
-from supsrc.cli.utils import logging_options, setup_logging_from_context
+from provide.foundation.cli import logging_options, setup_cli_logging
 from supsrc.runtime.orchestrator import WatchOrchestrator
-from supsrc.telemetry import StructLogger
+from provide.foundation.logger import get_logger
+from structlog.typing import FilteringBoundLogger as StructLogger
 
 log: StructLogger = structlog.get_logger("cli.tail")
 
@@ -62,13 +63,7 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
     # asyncio.run() will manage propagating the initial cancellation.
     shutdown_event = asyncio.Event()
 
-    setup_logging_from_context(
-        ctx,
-        local_log_level=kwargs.get("log_level"),
-        local_log_file=kwargs.get("log_file"),
-        local_json_logs=kwargs.get("json_logs"),
-        headless_mode=True,
-    )
+    # Foundation's CLI framework handles logging setup via decorators
 
     log.info("Initializing tail command...")
 

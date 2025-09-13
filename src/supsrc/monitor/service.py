@@ -6,7 +6,7 @@ import structlog
 from watchdog.observers import Observer
 
 # Use absolute imports
-from supsrc.config.models import RepositoryConfig
+from supsrc.config import RepositoryConfig
 from supsrc.exceptions import MonitoringError, MonitoringSetupError
 from supsrc.monitor.events import MonitoredEvent
 from supsrc.monitor.handler import SupsrcEventHandler

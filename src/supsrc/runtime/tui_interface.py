@@ -10,7 +10,8 @@ import attrs
 import structlog
 
 from supsrc.state import RepositoryState
-from supsrc.telemetry import StructLogger
+from provide.foundation.logger import get_logger
+from structlog.typing import FilteringBoundLogger as StructLogger
 
 # Conditional imports for TUI components to avoid hard dependency
 try:

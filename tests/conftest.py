@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from supsrc.config.models import (
+from supsrc.config import (
     GlobalConfig,
     InactivityRuleConfig,
     RepositoryConfig,

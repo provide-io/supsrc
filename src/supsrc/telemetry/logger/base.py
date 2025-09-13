@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional
 from provide.foundation import setup_telemetry, TelemetryConfig, LoggingConfig, logger
 from provide.foundation.hub import get_component_registry
 from provide.foundation.hub.components import ComponentCategory
-from provide.foundation.logger.emoji.types import EmojiSet
+from provide.foundation.eventsets.types import EventSet, EventMapping
 from structlog.typing import FilteringBoundLogger
 
 try:
@@ -23,10 +23,10 @@ if TYPE_CHECKING:
 
 BASE_LOGGER_NAME = "supsrc"
 
-# Register supsrc-specific emojis with Foundation's registry
-_supsrc_emoji_set = EmojiSet(
-    name="supsrc", 
-    emojis={
+# Register supsrc-specific event set with Foundation's registry
+_supsrc_event_mapping = EventMapping(
+    name="supsrc_operations",
+    visual_markers={
         "load": "📄",
         "validate": "✅",
         "fail": "🚫", 
@@ -35,16 +35,23 @@ _supsrc_emoji_set = EmojiSet(
         "success": "🎉",
         "general": "➡️",
     },
-    default_emoji_key="general"
+    default_key="general"
 )
 
-def _register_supsrc_emojis():
-    """Register supsrc-specific emojis with Foundation registry."""
+_supsrc_event_set = EventSet(
+    name="supsrc",
+    description="Event set for supsrc operations",
+    mappings=[_supsrc_event_mapping],
+    priority=100
+)
+
+def _register_supsrc_event_set():
+    """Register supsrc-specific event set with Foundation registry."""
     registry = get_component_registry()
     registry.register(
         name="supsrc",
-        value=_supsrc_emoji_set, 
-        dimension=ComponentCategory.EMOJI_SET.value,
+        value=_supsrc_event_set, 
+        dimension=ComponentCategory.EVENT_SET.value,
         metadata={"domain": "supsrc", "priority": 100},
         replace=True
     )
@@ -59,8 +66,8 @@ def setup_logging(
     headless_mode: bool = False,
 ) -> None:
     """Configures logging using Foundation with supsrc customizations."""
-    # Register supsrc-specific emojis first
-    _register_supsrc_emojis()
+    # Register supsrc-specific event set first
+    _register_supsrc_event_set()
     
     # Use Foundation's TelemetryConfig
     log_level_name = logging.getLevelName(level)

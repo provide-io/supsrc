@@ -14,7 +14,8 @@ from supsrc.rules import check_trigger_condition
 from supsrc.runtime.action_handler import ActionHandler
 from supsrc.runtime.tui_interface import TUIInterface
 from supsrc.state import RepositoryState, RepositoryStatus
-from supsrc.telemetry import StructLogger
+from provide.foundation.logger import get_logger
+from structlog.typing import FilteringBoundLogger as StructLogger
 
 if TYPE_CHECKING:
     from supsrc.runtime.orchestrator import WatchOrchestrator

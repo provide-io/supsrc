@@ -14,15 +14,15 @@ import structlog
 
 # Use ABSOLUTE imports based on the 'src' layout
 # --- Import the RENAMED config model classes ---
-from supsrc.config.models import (
-    # Import the specific rule config classes using their new names
+from supsrc.config import (
     InactivityRuleConfig,
-    ManualRuleConfig,  # Import the Union type alias if needed, but specific types are used below
+    ManualRuleConfig,
     RepositoryConfig,
     SaveCountRuleConfig,
 )
 from supsrc.state import RepositoryState
-from supsrc.telemetry import StructLogger  # Assuming this type hint exists
+from provide.foundation.logger import get_logger
+from structlog.typing import FilteringBoundLogger as StructLogger  # Assuming this type hint exists
 
 # Logger specific to the rule engine
 log: StructLogger = structlog.get_logger("rules")
