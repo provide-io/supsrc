@@ -5,10 +5,11 @@ from pathlib import Path
 import click
 import structlog
 
-from supsrc.cli.utils import logging_options, setup_logging_from_context
+from provide.foundation.cli import logging_options, setup_cli_logging
 from supsrc.config import load_config
 from supsrc.exceptions import ConfigurationError
-from supsrc.telemetry import StructLogger
+from provide.foundation.logger import get_logger
+from structlog.typing import FilteringBoundLogger as StructLogger
 
 try:
     from rich.pretty import pretty_repr
@@ -40,12 +41,7 @@ def config_cli():
 @click.pass_context
 def show_config(ctx: click.Context, config_path: Path, **kwargs):
     """Load, validate, and display the configuration."""
-    setup_logging_from_context(
-        ctx,
-        local_log_level=kwargs.get("log_level"),
-        local_log_file=kwargs.get("log_file"),
-        local_json_logs=kwargs.get("json_logs"),
-    )
+    # Foundation's CLI framework handles logging setup via decorators
     log.info("Executing 'config show' command", config_path=str(config_path))
 
     try:

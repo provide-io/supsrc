@@ -12,9 +12,11 @@ import structlog
 
 from supsrc.cli.config_cmds import config_cli
 from supsrc.cli.tail_cmds import tail_cli
-from supsrc.cli.utils import logging_options, setup_logging_from_context
 from supsrc.cli.watch_cmds import watch_cli
-from supsrc.telemetry import StructLogger
+from provide.foundation.logger import get_logger
+from structlog.typing import FilteringBoundLogger as StructLogger
+# Replace custom CLI utils with Foundation's CLI framework
+from provide.foundation.cli import logging_options, setup_cli_logging, error_handler
 
 try:
     __version__ = version("supsrc")
@@ -27,6 +29,7 @@ log: StructLogger = structlog.get_logger("cli.main")
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(__version__, "-V", "--version", package_name="supsrc")
 @logging_options
+@error_handler
 @click.pass_context
 def cli(
     ctx: click.Context,
@@ -42,13 +45,17 @@ def cli(
     """
     ctx.ensure_object(dict)
 
+    # Use Foundation's CLI logging setup
+    setup_cli_logging(
+        level=log_level or "WARNING",
+        format="json" if json_logs else "console",
+        file_path=log_file
+    )
+    
+    # Store context for subcommands
     ctx.obj["LOG_LEVEL"] = log_level
     ctx.obj["LOG_FILE"] = log_file
     ctx.obj["JSON_LOGS"] = json_logs if json_logs is not None else False
-
-    setup_logging_from_context(
-        ctx, default_log_level="WARNING"
-    )
     log.debug(
         "Main CLI group initialized",
         log_level=log_level,

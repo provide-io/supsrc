@@ -11,7 +11,7 @@ from pathlib import Path
 import pygit2
 import pytest
 
-from supsrc.config.models import GlobalConfig
+from supsrc.config import GlobalConfig
 from supsrc.engines.git import GitEngine, GitRepoSummary
 from supsrc.protocols import CommitResult, PushResult, RepoStatusResult, StageResult
 from supsrc.state import RepositoryState
