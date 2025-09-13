@@ -5,12 +5,19 @@ High-level coordinator for the supsrc watch process.
 Manages lifecycle of all runtime components.
 """
 
+from __future__ import annotations
+
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 import structlog
+
+# Add Foundation error handling and metrics patterns
+from provide.foundation.errors import with_error_handling
+from provide.foundation.metrics import counter, gauge
 from rich.console import Console
+from structlog.typing import FilteringBoundLogger as StructLogger
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
@@ -20,10 +27,6 @@ from supsrc.exceptions import ConfigurationError, MonitoringSetupError
 from supsrc.monitor import MonitoredEvent, MonitoringService
 from supsrc.protocols import RepositoryEngine
 from supsrc.state import RepositoryState, RepositoryStatus
-from provide.foundation.logger import get_logger
-from structlog.typing import FilteringBoundLogger as StructLogger
-# Add Foundation error handling patterns
-from provide.foundation.errors import with_error_handling, error_boundary
 
 from .action_handler import ActionHandler
 from .event_processor import EventProcessor
@@ -42,6 +45,12 @@ RULE_EMOJI_MAP: dict[str, str] = {
     "default": "⚙️",
 }
 
+# Initialize Foundation metrics (work with or without OpenTelemetry)
+orchestrator_starts = counter("orchestrator_starts", "Number of orchestrator start attempts")
+orchestrator_errors = counter("orchestrator_errors", "Number of orchestrator errors")
+active_repositories = gauge("active_repositories", "Number of actively monitored repositories")
+config_reloads = counter("config_reloads", "Number of configuration reloads")
+
 
 class WatchOrchestrator:
     """Instantiates and coordinates all runtime components for the watch command."""
@@ -50,7 +59,7 @@ class WatchOrchestrator:
         self,
         config_path: Path,
         shutdown_event: asyncio.Event,
-        app: Optional["SupsrcTuiApp"] = None,
+        app: SupsrcTuiApp | None = None,
         console: Console | None = None,
     ):
         self.config_path = config_path
@@ -68,11 +77,11 @@ class WatchOrchestrator:
 
     @with_error_handling(
         log_errors=True,
-        reraise=True,
-        context={"component": "orchestrator", "method": "run"}
+        context_provider=lambda: {"component": "orchestrator", "method": "run"}
     )
     async def run(self) -> None:
         """Main execution method: setup, run, and cleanup."""
+        orchestrator_starts.inc()
         log.info("Orchestrator run sequence starting.")
         processor_task = None
         tui = TUIInterface(self.app)
@@ -87,6 +96,7 @@ class WatchOrchestrator:
                 return
 
             enabled_repos = await self._initialize_repositories(self.config, tui)
+            active_repositories.set(len(enabled_repos))
 
             action_handler = ActionHandler(self.config, self.repo_states, self.repo_engines, tui)
             self.event_processor = EventProcessor(
@@ -119,19 +129,35 @@ class WatchOrchestrator:
         except asyncio.CancelledError:
             log.warning("Orchestrator task was cancelled.")
         except Exception:
+            orchestrator_errors.inc()
             log.critical("Orchestrator run failed with an unhandled exception.", exc_info=True)
         finally:
             log.info("Orchestrator entering cleanup phase.")
+
+            # Cancel processor task first
             if processor_task and not processor_task.done():
                 processor_task.cancel()
+                try:
+                    await asyncio.wait_for(processor_task, timeout=5.0)
+                except (TimeoutError, asyncio.CancelledError):
+                    log.warning("Processor task cleanup timed out or was cancelled.")
 
+            # Clean up all repository timers
+            await self._cleanup_repository_timers()
+
+            # Stop monitoring service
             if self.monitor_service and self.monitor_service.is_running:
                 await self.monitor_service.stop()
 
+            # Stop config observer
             if self.config_observer and self.config_observer.is_alive():
                 self.config_observer.stop()
-                self.config_observer.join()
+                self.config_observer.join(timeout=2.0)
+                if self.config_observer.is_alive():
+                    log.warning("Config observer thread did not stop within timeout.")
 
+            # Reset metrics
+            active_repositories.set(0)
             log.info("Orchestrator cleanup complete.")
 
     def pause_monitoring(self) -> None:
@@ -172,7 +198,7 @@ class WatchOrchestrator:
         loop = asyncio.get_running_loop()
 
         class ConfigChangeHandler(FileSystemEventHandler):
-            def __init__(self, orchestrator_ref: "WatchOrchestrator"):
+            def __init__(self, orchestrator_ref: WatchOrchestrator):
                 self._orchestrator = orchestrator_ref
                 self._config_path_str = str(self._orchestrator.config_path.resolve())
 
@@ -246,6 +272,7 @@ class WatchOrchestrator:
             tui.post_state_update(self.repo_states)
 
     async def reload_config(self) -> bool:
+        config_reloads.inc()
         log.info("Reloading configuration...")
         self._is_paused = True
         tui = TUIInterface(self.app)
@@ -263,13 +290,18 @@ class WatchOrchestrator:
             if self.event_processor:
                 self.event_processor.config = new_config
 
+            # Clean up timers before clearing states
+            await self._cleanup_repository_timers()
+
             self.repo_states.clear()
             self.repo_engines.clear()
             enabled_repos = await self._initialize_repositories(self.config, tui)
+            active_repositories.set(len(enabled_repos))
 
             if not enabled_repos:
                 log.warning("No enabled repositories after reload.")
                 tui.post_log_update(None, "WARNING", "Config reloaded, but no repositories are enabled.")
+                active_repositories.set(0)
                 return True
 
             self.monitor_service = self._setup_monitoring(self.config, enabled_repos, tui)
@@ -406,4 +438,33 @@ class WatchOrchestrator:
                 return {"commit_history": [f"[bold red]Error fetching history: {e}[/]"]}
 
         return {"commit_history": ["Details not available for this engine type."]}
+
+    async def _cleanup_repository_timers(self) -> None:
+        """Clean up all repository timers to prevent resource leaks."""
+        log.info("Cleaning up repository timers", repo_count=len(self.repo_states))
+        cleanup_count = 0
+
+        for repo_id, repo_state in self.repo_states.items():
+            try:
+                # Cancel any inactivity timers
+                if repo_state.inactivity_timer_handle and not repo_state.inactivity_timer_handle.cancelled():
+                    repo_state.inactivity_timer_handle.cancel()
+                    cleanup_count += 1
+
+                # Cancel any debounce timers
+                if repo_state.debounce_timer_handle and not repo_state.debounce_timer_handle.cancelled():
+                    repo_state.debounce_timer_handle.cancel()
+                    cleanup_count += 1
+
+                # Reset timer-related state
+                repo_state.inactivity_timer_handle = None
+                repo_state.debounce_timer_handle = None
+                repo_state._timer_total_seconds = None
+                repo_state._timer_start_time = None
+                repo_state.timer_seconds_left = None
+
+            except Exception as e:
+                log.warning("Error cleaning up timers for repository", repo_id=repo_id, error=str(e))
+
+        log.info("Repository timer cleanup complete", timers_cancelled=cleanup_count)
 
