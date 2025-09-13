@@ -49,35 +49,35 @@ class OllamaProvider:
             raise ImportError("Ollama library not found. Please install `supsrc[llm]`.")
         self.model = model
         self.client = ollama.AsyncClient()
-        
+
         # Add rate limiter: Local Ollama is more generous, but still limit to avoid overwhelming
         self._rate_limiter = TokenBucketRateLimiter(
             capacity=30,  # Max 30 concurrent requests
             refill_rate=2.0,  # 2 tokens per second = 120 per minute
             initial_tokens=5  # Start with some tokens available
         )
-        
+
         log.info("OllamaProvider initialized", model=model, rate_limit="120 req/min")
 
     async def _generate(self, prompt: str) -> str:
         """Internal helper to run generation with rate limiting and timing."""
         # Wait for rate limiter
         self._rate_limiter.acquire(1)
-        
+
         try:
             with timed_block("ollama_api_call") as timer:
                 response = await self.client.generate(model=self.model, prompt=prompt)
                 result = response["response"].strip()
-                
+
             # Log timing information
             log.debug(
-                "Ollama API call completed", 
+                "Ollama API call completed",
                 duration_ms=timer.elapsed_ms,
                 model=self.model,
                 tokens_remaining=self._rate_limiter.available_tokens()
             )
             return result
-            
+
         except ollama.ResponseError as e:
             log.error("Ollama API call failed", error=str(e.body), status_code=e.status_code, exc_info=True)
             return f"Error: LLM generation failed. Status: {e.status_code}"

@@ -9,7 +9,6 @@ puts relevant events onto an asyncio Queue using thread-safe methods.
 """
 
 import asyncio
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -86,7 +85,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
         self.event_queue = event_queue
         self.loop = loop
         self.logger = log.bind(repo_id=repo_id, repo_path=str(repo_path))
-        
+
         # --- MODIFIED: Load both default and gitignore specs ---
         self.default_spec = pathspec.PathSpec.from_lines(
             pathspec.patterns.GitWildMatchPattern, DEFAULT_IGNORE_PATTERNS

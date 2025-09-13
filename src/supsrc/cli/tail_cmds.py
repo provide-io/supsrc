@@ -7,11 +7,10 @@ from pathlib import Path
 
 import click
 import structlog
-
-from provide.foundation.cli import logging_options, setup_cli_logging
-from supsrc.runtime.orchestrator import WatchOrchestrator
-from provide.foundation.logger import get_logger
+from provide.foundation.cli.decorators import logging_options
 from structlog.typing import FilteringBoundLogger as StructLogger
+
+from supsrc.runtime.orchestrator import WatchOrchestrator
 
 log: StructLogger = structlog.get_logger("cli.tail")
 
@@ -79,5 +78,5 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
     log.info("'tail' command finished.")
     if exit_code != 0:
         sys.exit(exit_code)
-        
+
 # 🔼⚙️

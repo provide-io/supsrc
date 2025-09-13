@@ -4,12 +4,11 @@ from pathlib import Path
 
 import click
 import structlog
+from provide.foundation.cli.decorators import logging_options
+from structlog.typing import FilteringBoundLogger as StructLogger
 
-from provide.foundation.cli import logging_options, setup_cli_logging
 from supsrc.config import load_config
 from supsrc.exceptions import ConfigurationError
-from provide.foundation.logger import get_logger
-from structlog.typing import FilteringBoundLogger as StructLogger
 
 try:
     from rich.pretty import pretty_repr
@@ -52,8 +51,8 @@ def show_config(ctx: click.Context, config_path: Path, **kwargs):
             output_str = pretty_repr(config, expand_all=True)
             click.echo(output_str)
         else:
-            import pprint
             import io
+            import pprint
             with io.StringIO() as buffer:
                 pprint.pprint(config, stream=buffer)
                 output_str = buffer.getvalue()

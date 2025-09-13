@@ -58,15 +58,15 @@ class MonitoringSetupError(MonitoringError):
 
 # Export all exceptions for backward compatibility
 __all__ = [
-    "SupsrcError",
-    "ConfigurationError",
-    "ConfigFileNotFoundError", 
+    "ConfigFileNotFoundError",
     "ConfigParsingError",
     "ConfigValidationError",
-    "PathValidationError",
+    "ConfigurationError",
     "DurationValidationError",
     "MonitoringError",
     "MonitoringSetupError",
+    "PathValidationError",
+    "SupsrcError",
 ]
 
 # 🔼⚙️

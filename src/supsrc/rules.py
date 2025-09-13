@@ -11,6 +11,7 @@ based on the current state of a repository.
 from datetime import UTC, datetime
 
 import structlog
+from structlog.typing import FilteringBoundLogger as StructLogger  # Assuming this type hint exists
 
 # Use ABSOLUTE imports based on the 'src' layout
 # --- Import the RENAMED config model classes ---
@@ -21,8 +22,6 @@ from supsrc.config import (
     SaveCountRuleConfig,
 )
 from supsrc.state import RepositoryState
-from provide.foundation.logger import get_logger
-from structlog.typing import FilteringBoundLogger as StructLogger  # Assuming this type hint exists
 
 # Logger specific to the rule engine
 log: StructLogger = structlog.get_logger("rules")

@@ -238,6 +238,7 @@ log_cli = true
 log_cli_level = "DEBUG"
 filterwarnings = [
     "error", # Fail tests on warnings
+    "ignore::UserWarning:provide.foundation.*", # Allow Foundation testing helpers warnings
     "ignore::DeprecationWarning:pygit2.*:", # Ignore specific deprecations if noisy
 ]
 markers = [

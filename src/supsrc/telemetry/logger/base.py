@@ -1,13 +1,14 @@
 # src/supsrc/telemetry/logger/base.py
 
-import logging
-import sys
-from typing import TYPE_CHECKING, Optional
+from __future__ import annotations
 
-from provide.foundation import setup_telemetry, TelemetryConfig, LoggingConfig, logger
+import logging
+from typing import TYPE_CHECKING
+
+from provide.foundation import LoggingConfig, TelemetryConfig, logger, setup_telemetry
+from provide.foundation.eventsets.types import EventMapping, EventSet
 from provide.foundation.hub import get_component_registry
 from provide.foundation.hub.components import ComponentCategory
-from provide.foundation.eventsets.types import EventSet, EventMapping
 from structlog.typing import FilteringBoundLogger
 
 try:
@@ -29,7 +30,7 @@ _supsrc_event_mapping = EventMapping(
     visual_markers={
         "load": "📄",
         "validate": "✅",
-        "fail": "🚫", 
+        "fail": "🚫",
         "path": "📁",
         "time": "⏱️",
         "success": "🎉",
@@ -50,7 +51,7 @@ def _register_supsrc_event_set():
     registry = get_component_registry()
     registry.register(
         name="supsrc",
-        value=_supsrc_event_set, 
+        value=_supsrc_event_set,
         dimension=ComponentCategory.EVENT_SET.value,
         metadata={"domain": "supsrc", "priority": 100},
         replace=True
@@ -62,22 +63,22 @@ def setup_logging(
     json_logs: bool = False,
     log_file: str | None = None,
     file_only: bool = False,
-    tui_app_instance: Optional["SupsrcTuiApp"] = None,
+    tui_app_instance: SupsrcTuiApp | None = None,
     headless_mode: bool = False,
 ) -> None:
     """Configures logging using Foundation with supsrc customizations."""
     # Register supsrc-specific event set first
     _register_supsrc_event_set()
-    
+
     # Use Foundation's TelemetryConfig
     log_level_name = logging.getLevelName(level)
-    
+
     # Determine formatter based on mode
     if json_logs:
         formatter = "json"
     else:
         formatter = "key_value"  # Foundation's console formatter is "key_value"
-    
+
     # Set up Foundation logging
     config = TelemetryConfig(
         logging=LoggingConfig(
@@ -87,15 +88,15 @@ def setup_logging(
             logger_name_emoji_prefix_enabled=True,
         )
     )
-    
+
     setup_telemetry(config)
-    
+
     # Get Foundation's logger for supsrc-specific setup
     slog = logger.bind(logger_name=BASE_LOGGER_NAME)
-    
+
     # Add custom handlers for file and TUI modes
     root_logger = logging.getLogger()
-    
+
     if log_file:
         try:
             import structlog

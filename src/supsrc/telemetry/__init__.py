@@ -12,6 +12,6 @@ from structlog.typing import FilteringBoundLogger as StructLogger
 # Re-export our custom setup function from the logger base module
 from supsrc.telemetry.logger.base import setup_logging
 
-__all__ = ["StructLogger", "setup_logging", "get_logger", "setup_logger"]
+__all__ = ["StructLogger", "get_logger", "setup_logger", "setup_logging"]
 
 # 🔼⚙️

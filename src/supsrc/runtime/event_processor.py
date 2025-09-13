@@ -4,9 +4,10 @@ Consumes filesystem events, checks rules, manages timers, and triggers actions.
 """
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING, Set
+from typing import TYPE_CHECKING
 
 import structlog
+from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.config import InactivityRuleConfig, RepositoryConfig, SupsrcConfig
 from supsrc.monitor import MonitoredEvent
@@ -14,8 +15,6 @@ from supsrc.rules import check_trigger_condition
 from supsrc.runtime.action_handler import ActionHandler
 from supsrc.runtime.tui_interface import TUIInterface
 from supsrc.state import RepositoryState, RepositoryStatus
-from provide.foundation.logger import get_logger
-from structlog.typing import FilteringBoundLogger as StructLogger
 
 if TYPE_CHECKING:
     from supsrc.runtime.orchestrator import WatchOrchestrator
@@ -46,7 +45,7 @@ class EventProcessor:
         self.repo_states = repo_states
         self.tui = tui
         self._action_tasks: set[asyncio.Task] = set()
-        self._recent_moves: Set[Path] = set()
+        self._recent_moves: set[Path] = set()
         log.debug("EventProcessor initialized.")
 
     async def run(self) -> None:
@@ -96,7 +95,7 @@ class EventProcessor:
                 # Record the change and update UI
                 repo_state.record_change()
                 self.tui.post_state_update(self.repo_states)
-                
+
                 # Instead of acting immediately, start a debounced check
                 self._debounce_trigger_check(event.repo_id)
 
@@ -105,7 +104,7 @@ class EventProcessor:
                 break
             except Exception:
                 log.exception("Error in event processor loop.")
-        
+
         await self.stop()
         log.info("Event processor has stopped.")
 
@@ -152,7 +151,7 @@ class EventProcessor:
         # Clean up all timers for this repo before starting the action
         repo_state.cancel_inactivity_timer()
         repo_state.cancel_debounce_timer()
-        
+
         log.info("Trigger condition met, scheduling action sequence.", repo_id=repo_id)
         task = asyncio.create_task(self.action_handler.execute_action_sequence(repo_id))
         self._action_tasks.add(task)
@@ -162,10 +161,10 @@ class EventProcessor:
         """Sets or resets an inactivity timer for a repository."""
         if not isinstance(config.rule, InactivityRuleConfig):
             return
-        
+
         delay = config.rule.period.total_seconds()
         log.debug("Starting inactivity timer", repo_id=state.repo_id, delay=delay)
-        
+
         loop = asyncio.get_running_loop()
         handle = loop.call_later(delay, self._schedule_action, state.repo_id)
         state.set_inactivity_timer(handle, int(delay))
