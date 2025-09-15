@@ -54,22 +54,9 @@ Issues = "https://github.com/provide-io/supsrc/issues"
 
 [dependency-groups]
 dev = [
-    # Core Dev Tools
-    "hatch>=1.14.1",
-    "ruff>=0.11.8",
-    "pyre-check>=0.9.20", # <<< Added Pyre
-    # Testing Frameworks & Helpers
-    "pytest>=8.3.5",
-    "pytest-asyncio>=0.26.0",
-    "pytest-cov>=6.1.1",
-    "pytest-mock>=3.14.0",
-    "hypothesis>=6.131.9",
-    "freezegun>=1.5.1",
-    # BDD (if used)
-    "behave>=1.2.6",
+    "provide-testkit[standard,advanced-testing,build]",
     # Include TUI and LLM deps for testing all features
     "supsrc[tui,llm]",
-    "pytest-xdist>=3.8.0",
 ]
 
 # --- Optional Features (Extras) ---
