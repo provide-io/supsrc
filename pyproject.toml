@@ -55,7 +55,6 @@ Issues = "https://github.com/provide-io/supsrc/issues"
 [dependency-groups]
 dev = [
     "provide-testkit[standard,advanced-testing,build]",
-    # Include TUI and LLM deps for testing all features
     "supsrc[tui,llm]",
 ]
 
