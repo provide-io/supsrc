@@ -86,7 +86,9 @@ class TestActionHandler:
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
         """Verify workflow aborts and freezes the repo if conflicts are detected."""
-        mock_repo_engine.get_status.return_value = RepoStatusResult(success=True, is_conflicted=True)
+        mock_repo_engine.get_status.return_value = RepoStatusResult(
+            success=True, is_conflicted=True
+        )
         repo_id = "test_repo_1"
         state = action_handler.repo_states[repo_id]
 
@@ -102,7 +104,9 @@ class TestActionHandler:
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
         """Verify a commit failure sets ERROR state and prevents push."""
-        mock_repo_engine.perform_commit.return_value = CommitResult(success=False, message="Git error")
+        mock_repo_engine.perform_commit.return_value = CommitResult(
+            success=False, message="Git error"
+        )
         repo_id = "test_repo_1"
         state = action_handler.repo_states[repo_id]
 
@@ -115,7 +119,9 @@ class TestActionHandler:
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
         """Verify a push failure is logged but the state still resets."""
-        mock_repo_engine.perform_push.return_value = PushResult(success=False, message="Connection failed")
+        mock_repo_engine.perform_push.return_value = PushResult(
+            success=False, message="Connection failed"
+        )
         repo_id = "test_repo_1"
         state = action_handler.repo_states[repo_id]
 
@@ -124,7 +130,9 @@ class TestActionHandler:
         # A push failure is not a blocking error; the commit is safe.
         # The state should reset to IDLE.
         assert state.status == RepositoryStatus.IDLE
-        action_handler.tui.post_log_update.assert_any_call(repo_id, "WARNING", "Push failed: Connection failed")
+        action_handler.tui.post_log_update.assert_any_call(
+            repo_id, "WARNING", "Push failed: Connection failed"
+        )
 
     async def test_handles_skipped_push(
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
@@ -137,7 +145,9 @@ class TestActionHandler:
         await action_handler.execute_action_sequence(repo_id)
 
         assert state.status == RepositoryStatus.IDLE
-        action_handler.tui.post_log_update.assert_any_call(repo_id, "INFO", "Push skipped by configuration.")
+        action_handler.tui.post_log_update.assert_any_call(
+            repo_id, "INFO", "Push skipped by configuration."
+        )
 
     async def test_handles_skipped_commit(
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock

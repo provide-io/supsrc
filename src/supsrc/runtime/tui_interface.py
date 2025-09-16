@@ -19,6 +19,7 @@ try:
     if TYPE_CHECKING:
         from supsrc.tui.app import SupsrcTuiApp
     from supsrc.tui.messages import LogMessageUpdate, StateUpdate
+
     TEXTUAL_AVAILABLE = True
 except ImportError:
     TEXTUAL_AVAILABLE = False

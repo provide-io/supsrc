@@ -11,6 +11,7 @@ from structlog.typing import FilteringBoundLogger as StructLogger
 
 try:
     from supsrc.tui.app import SupsrcTuiApp
+
     TEXTUAL_AVAILABLE = True
 except ImportError:
     TEXTUAL_AVAILABLE = False
@@ -19,6 +20,7 @@ except ImportError:
 log: StructLogger = structlog.get_logger("cli.watch")
 
 _shutdown_requested = asyncio.Event()
+
 
 async def _handle_signal_async(sig: int):
     signame = signal.Signals(sig).name
@@ -29,6 +31,7 @@ async def _handle_signal_async(sig: int):
         _shutdown_requested.set()
     else:
         base_log.warning("Shutdown already requested, signal ignored.")
+
 
 @click.command(name="watch")
 @click.option(
@@ -75,5 +78,6 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
         log.critical("The TUI application crashed unexpectedly.", error=str(e), exc_info=True)
         click.echo(f"\nAn unexpected error occurred in the TUI: {e}", err=True)
         ctx.exit(1)
+
 
 # 🔼⚙️

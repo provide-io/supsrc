@@ -76,8 +76,7 @@ class WatchOrchestrator:
         self.config_observer: Observer | None = None
 
     @with_error_handling(
-        log_errors=True,
-        context_provider=lambda: {"component": "orchestrator", "method": "run"}
+        log_errors=True, context_provider=lambda: {"component": "orchestrator", "method": "run"}
     )
     async def run(self) -> None:
         """Main execution method: setup, run, and cleanup."""
@@ -100,7 +99,13 @@ class WatchOrchestrator:
 
             action_handler = ActionHandler(self.config, self.repo_states, self.repo_engines, tui)
             self.event_processor = EventProcessor(
-                self, self.config, self.event_queue, self.shutdown_event, action_handler, self.repo_states, tui
+                self,
+                self.config,
+                self.event_queue,
+                self.shutdown_event,
+                action_handler,
+                self.repo_states,
+                tui,
             )
 
             self.monitor_service = self._setup_monitoring(self.config, enabled_repos, tui)
@@ -109,9 +114,13 @@ class WatchOrchestrator:
                     self.monitor_service.start()
                     if not self.monitor_service.is_running:
                         log.error("Monitoring service for repositories failed to start silently.")
-                        tui.post_log_update(None, "ERROR", "Filesystem monitoring service failed to start.")
+                        tui.post_log_update(
+                            None, "ERROR", "Filesystem monitoring service failed to start."
+                        )
                 except Exception as e:
-                    log.critical("Failed to start filesystem monitoring service", error=str(e), exc_info=True)
+                    log.critical(
+                        "Failed to start filesystem monitoring service", error=str(e), exc_info=True
+                    )
                     tui.post_log_update(None, "CRITICAL", f"FATAL: Filesystem monitor failed: {e}")
 
             self.setup_config_watcher(tui)
@@ -119,8 +128,12 @@ class WatchOrchestrator:
                 try:
                     self.config_observer.start()
                 except Exception as e:
-                    log.critical("Failed to start configuration file watcher", error=str(e), exc_info=True)
-                    tui.post_log_update(None, "CRITICAL", f"FATAL: Config watcher failed to start: {e}")
+                    log.critical(
+                        "Failed to start configuration file watcher", error=str(e), exc_info=True
+                    )
+                    tui.post_log_update(
+                        None, "CRITICAL", f"FATAL: Config watcher failed to start: {e}"
+                    )
 
             log.info("Starting event processor task.")
             processor_task = asyncio.create_task(self.event_processor.run())
@@ -182,7 +195,9 @@ class WatchOrchestrator:
             log.info("Restarting suspended monitoring service...")
             tui = TUIInterface(self.app)
             enabled_repos = [
-                repo_id for repo_id, repo in self.config.repositories.items() if repo.enabled and repo._path_valid
+                repo_id
+                for repo_id, repo in self.config.repositories.items()
+                if repo.enabled and repo._path_valid
             ]
             self.monitor_service = self._setup_monitoring(self.config, enabled_repos, tui)
             if self.monitor_service:
@@ -206,9 +221,14 @@ class WatchOrchestrator:
                 if str(Path(event.src_path).resolve()) == self._config_path_str:
                     log.info("Configuration file modified, queueing reload event.")
                     monitored_event = MonitoredEvent(
-                        repo_id="__config__", event_type="modified", src_path=self._orchestrator.config_path, is_directory=False
+                        repo_id="__config__",
+                        event_type="modified",
+                        src_path=self._orchestrator.config_path,
+                        is_directory=False,
                     )
-                    loop.call_soon_threadsafe(self._orchestrator.event_queue.put_nowait, monitored_event)
+                    loop.call_soon_threadsafe(
+                        self._orchestrator.event_queue.put_nowait, monitored_event
+                    )
 
         try:
             self.config_observer = Observer()
@@ -257,8 +277,15 @@ class WatchOrchestrator:
                     if repo_state.status == RepositoryStatus.ERROR:
                         repo_state.reset_after_action()
                 except Exception as e:
-                    log.error("Failed to re-add repository to monitor", repo_id=repo_id, error=str(e), exc_info=True)
-                    repo_state.update_status(RepositoryStatus.ERROR, f"Failed to resume monitoring: {e}")
+                    log.error(
+                        "Failed to re-add repository to monitor",
+                        repo_id=repo_id,
+                        error=str(e),
+                        exc_info=True,
+                    )
+                    repo_state.update_status(
+                        RepositoryStatus.ERROR, f"Failed to resume monitoring: {e}"
+                    )
                     repo_state.is_stopped = True
                     return False
 
@@ -300,7 +327,9 @@ class WatchOrchestrator:
 
             if not enabled_repos:
                 log.warning("No enabled repositories after reload.")
-                tui.post_log_update(None, "WARNING", "Config reloaded, but no repositories are enabled.")
+                tui.post_log_update(
+                    None, "WARNING", "Config reloaded, but no repositories are enabled."
+                )
                 active_repositories.set(0)
                 return True
 
@@ -344,7 +373,9 @@ class WatchOrchestrator:
 
                 rule_type_str = getattr(repo_config.rule, "type", "default")
                 repo_state.rule_emoji = RULE_EMOJI_MAP.get(rule_type_str, RULE_EMOJI_MAP["default"])
-                repo_state.rule_dynamic_indicator = rule_type_str.split(".")[-1].replace("_", " ").capitalize()
+                repo_state.rule_dynamic_indicator = (
+                    rule_type_str.split(".")[-1].replace("_", " ").capitalize()
+                )
 
                 engine = self.repo_engines[repo_id]
                 if hasattr(engine, "get_summary"):
@@ -353,17 +384,27 @@ class WatchOrchestrator:
                     if summary.head_commit_hash:
                         repo_state.last_commit_short_hash = summary.head_commit_hash[:7]
                         repo_state.last_commit_message_summary = summary.head_commit_message_summary
-                        msg = f"HEAD at {summary.head_ref_name} ({repo_state.last_commit_short_hash})"
+                        msg = (
+                            f"HEAD at {summary.head_ref_name} ({repo_state.last_commit_short_hash})"
+                        )
                         init_log.info(msg)
                         tui.post_log_update(repo_id, "INFO", msg)
                     elif summary.is_empty or summary.head_ref_name == "UNBORN":
                         init_log.info("Repo is empty or unborn.")
                         tui.post_log_update(repo_id, "INFO", "Repo is empty or unborn.")
                     elif summary.head_ref_name == "ERROR":
-                        init_log.warning("Failed to get repo summary.", details=summary.head_commit_message_summary)
-                        repo_state.update_status(RepositoryStatus.ERROR, f"Init failed: {summary.head_commit_message_summary}")
+                        init_log.warning(
+                            "Failed to get repo summary.",
+                            details=summary.head_commit_message_summary,
+                        )
+                        repo_state.update_status(
+                            RepositoryStatus.ERROR,
+                            f"Init failed: {summary.head_commit_message_summary}",
+                        )
                     else:
-                        init_log.warning("Could not determine initial HEAD commit.", summary_details=summary)
+                        init_log.warning(
+                            "Could not determine initial HEAD commit.", summary_details=summary
+                        )
 
                 enabled_repo_ids.append(repo_id)
             except Exception as e:
@@ -375,7 +416,9 @@ class WatchOrchestrator:
         log.info(f"Initialized {len(enabled_repo_ids)} repositories.")
         return enabled_repo_ids
 
-    def _setup_monitoring(self, config: SupsrcConfig, enabled_repo_ids: list[str], tui: TUIInterface) -> MonitoringService | None:
+    def _setup_monitoring(
+        self, config: SupsrcConfig, enabled_repo_ids: list[str], tui: TUIInterface
+    ) -> MonitoringService | None:
         if not enabled_repo_ids:
             return None
 
@@ -395,7 +438,9 @@ class WatchOrchestrator:
             except MonitoringSetupError as e:
                 log.error("Failed to add repo to monitor", repo_id=repo_id, error=str(e))
                 if self.repo_states.get(repo_id):
-                    self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, "Monitor setup failed")
+                    self.repo_states[repo_id].update_status(
+                        RepositoryStatus.ERROR, "Monitor setup failed"
+                    )
                     tui.post_log_update(repo_id, "ERROR", f"Monitoring setup failed: {e}")
 
         tui.post_state_update(self.repo_states)
@@ -447,12 +492,18 @@ class WatchOrchestrator:
         for repo_id, repo_state in self.repo_states.items():
             try:
                 # Cancel any inactivity timers
-                if repo_state.inactivity_timer_handle and not repo_state.inactivity_timer_handle.cancelled():
+                if (
+                    repo_state.inactivity_timer_handle
+                    and not repo_state.inactivity_timer_handle.cancelled()
+                ):
                     repo_state.inactivity_timer_handle.cancel()
                     cleanup_count += 1
 
                 # Cancel any debounce timers
-                if repo_state.debounce_timer_handle and not repo_state.debounce_timer_handle.cancelled():
+                if (
+                    repo_state.debounce_timer_handle
+                    and not repo_state.debounce_timer_handle.cancelled()
+                ):
                     repo_state.debounce_timer_handle.cancel()
                     cleanup_count += 1
 
@@ -464,7 +515,8 @@ class WatchOrchestrator:
                 repo_state.timer_seconds_left = None
 
             except Exception as e:
-                log.warning("Error cleaning up timers for repository", repo_id=repo_id, error=str(e))
+                log.warning(
+                    "Error cleaning up timers for repository", repo_id=repo_id, error=str(e)
+                )
 
         log.info("Repository timer cleanup complete", timers_cancelled=cleanup_count)
-

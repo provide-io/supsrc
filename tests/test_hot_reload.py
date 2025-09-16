@@ -4,12 +4,13 @@ Direct test of hot reload functionality.
 """
 
 import asyncio
+
+# Ensure we can import supsrc
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
-# Ensure we can import supsrc
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from supsrc.config import load_config
@@ -46,7 +47,7 @@ type = "supsrc.engines.git"
 
         # --- Part 1: Test direct reload_config call ---
         print("\n🔄 Testing direct reload_config method...")
-        
+
         # Mock dependencies for the reload_config method
         mock_monitor_service = MagicMock(spec=MonitoringService)
         mock_monitor_service.is_running = True
@@ -77,10 +78,10 @@ type = "supsrc.rules.manual"
 type = "supsrc.engines.git"
 """
         )
-        
+
         # Execute the reload
         result = await orchestrator.reload_config()
-        
+
         print(f"   Direct reload result: {'SUCCESS' if result else 'FAILED'}")
         assert result is True
         assert len(orchestrator.config.repositories) == 2
@@ -90,7 +91,7 @@ type = "supsrc.engines.git"
 
         # --- Part 2: Test event-driven reload ---
         print("\n🔄 Testing event-driven reload via event queue...")
-        orchestrator.reload_config = AsyncMock(return_value=True) # Mock the method for this part
+        orchestrator.reload_config = AsyncMock(return_value=True)  # Mock the method for this part
 
         config_event = MonitoredEvent(
             repo_id="__config__",
@@ -98,31 +99,31 @@ type = "supsrc.engines.git"
             src_path=config_path,
             is_directory=False,
         )
-        
+
         # Manually create the event processor to test its logic
         event_processor = orchestrator.event_processor = MagicMock()
-        event_processor.orchestrator = orchestrator # Link back
-        
+        event_processor.orchestrator = orchestrator  # Link back
+
         # Simulate the event processor loop consuming one event
         event_processor.run = AsyncMock(side_effect=orchestrator.shutdown_event.set)
         await orchestrator.event_queue.put(config_event)
-        
+
         # The EventProcessor now needs to be created inside the orchestrator run loop
         # So we test its behavior by calling the orchestrator and checking the mock
-        
+
         # We'll re-use the same orchestrator but mock its reload method
         # This time, we'll run the event processor loop to consume the event
-        
+
         async def consume_one_event():
             event = await orchestrator.event_queue.get()
             if event.repo_id == "__config__":
                 await orchestrator.reload_config()
-        
+
         await consume_one_event()
 
         orchestrator.reload_config.assert_called_once()
         print("   ✅ reload_config was called by event processor logic.")
-        
+
         print("\n✅ Test completed!")
 
     finally:
