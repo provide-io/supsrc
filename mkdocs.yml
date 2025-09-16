@@ -94,4 +94,4 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - API Reference: api/
+  - API Reference: api/index.md
