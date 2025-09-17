@@ -33,9 +33,7 @@ class ActionHandlerMixin:
         if self._orchestrator:
             if self._orchestrator._is_paused:
                 self._orchestrator.resume_monitoring()
-                self.post_message(
-                    LogMessageUpdate(None, "INFO", "▶️  Monitoring RESUMED")
-                )
+                self.post_message(LogMessageUpdate(None, "INFO", "▶️  Monitoring RESUMED"))
             else:
                 self._orchestrator.pause_monitoring()
                 self.post_message(
@@ -53,7 +51,9 @@ class ActionHandlerMixin:
             else:
                 self._orchestrator.suspend_monitoring()
                 self.post_message(
-                    LogMessageUpdate(None, "WARNING", "⏹️  Monitoring SUSPENDED - Press 's' to resume")
+                    LogMessageUpdate(
+                        None, "WARNING", "⏹️  Monitoring SUSPENDED - Press 's' to resume"
+                    )
                 )
 
     async def action_reload_config(self) -> None:
@@ -66,7 +66,9 @@ class ActionHandlerMixin:
                     success = await self._orchestrator.reload_config()
                     if success:
                         self.post_message(
-                            LogMessageUpdate(None, "SUCCESS", "✅ Configuration reloaded successfully")
+                            LogMessageUpdate(
+                                None, "SUCCESS", "✅ Configuration reloaded successfully"
+                            )
                         )
                     else:
                         self.post_message(
@@ -98,7 +100,7 @@ class ActionHandlerMixin:
             "• [bold]F5[/] - Refresh repository status\\n"
             "• [bold]Shift+F5[/] - Resume repository monitoring\\n"
             "\\n"
-            "ℹ️  Repository table shows real-time status, file counts, and timer information."
+            "i  Repository table shows real-time status, file counts, and timer information."
         )
         self.post_message(LogMessageUpdate(None, "INFO", help_text))
 
