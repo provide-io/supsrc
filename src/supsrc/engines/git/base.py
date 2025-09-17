@@ -43,8 +43,6 @@ class GitEngine(RepositoryEngine):
         self.auth_handler = GitAuthHandler()
         self._credentials_callback = self.auth_handler.create_credentials_callback()
 
-
-
     async def get_summary(self, working_dir: Path) -> GitRepoSummary:
         """Gets a summary of the repository's HEAD state."""
 
@@ -224,7 +222,6 @@ class GitEngine(RepositoryEngine):
         except Exception as e:
             self._log.exception("Unexpected error staging changes", repo_id=state.repo_id)
             return StageResult(success=False, message=f"Unexpected staging error: {e}")
-
 
     @retry(
         pygit2.GitError,
