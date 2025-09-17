@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 if TYPE_CHECKING:
-    from supsrc.state.models import StateData
+    from supsrc.state.control import StateData
 
 log = structlog.get_logger("state.file")
 
@@ -88,7 +88,7 @@ class StateFile:
         Returns:
             StateData if file exists and is valid, None otherwise
         """
-        from supsrc.state.models import StateData, validate_state_file
+        from supsrc.state.control import StateData, validate_state_file
 
         if file_path is None:
             file_path = cls.find_state_file(repo_path)
@@ -115,7 +115,9 @@ class StateFile:
             return None
 
     @classmethod
-    def save(cls, state_data: StateData, file_path: Path | None = None, repo_path: Path | None = None) -> bool:
+    def save(
+        cls, state_data: StateData, file_path: Path | None = None, repo_path: Path | None = None
+    ) -> bool:
         """Save state data to file using atomic write.
 
         Args:
@@ -151,7 +153,7 @@ class StateFile:
                 Path(temp_path).unlink(missing_ok=True)
                 raise
 
-        except (OSError, json.JSONEncodeError) as e:
+        except (OSError, TypeError) as e:
             log.error("Failed to save state file", path=str(file_path), error=str(e))
             return False
 
@@ -170,7 +172,10 @@ class StateFile:
             file_path = cls.find_state_file(repo_path)
 
         if not file_path or not file_path.exists():
-            log.debug("State file doesn't exist, nothing to delete", path=str(file_path) if file_path else None)
+            log.debug(
+                "State file doesn't exist, nothing to delete",
+                path=str(file_path) if file_path else None,
+            )
             return True
 
         try:
@@ -199,10 +204,7 @@ class StateFile:
             search_paths.extend(repo_paths)
         else:
             # Check common locations
-            search_paths.extend([
-                Path.home() / ".config" / "supsrc",
-                Path("/tmp")
-            ])
+            search_paths.extend([Path.home() / ".config" / "supsrc", Path("/tmp")])
 
         for search_path in search_paths:
             if not search_path.exists():
@@ -211,9 +213,8 @@ class StateFile:
             # Look for state files
             for state_file in search_path.rglob(cls.STATE_FILENAME):
                 state_data = cls.load(state_file)
-                if state_data and state_data.is_expired():
-                    if cls.delete(state_file):
-                        cleaned_count += 1
-                        log.info("Cleaned up expired state file", path=str(state_file))
+                if state_data and state_data.is_expired() and cls.delete(state_file):
+                    cleaned_count += 1
+                    log.info("Cleaned up expired state file", path=str(state_file))
 
         return cleaned_count
