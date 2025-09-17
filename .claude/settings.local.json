@@ -1,10 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(PYTHONPATH=../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run pytest tests/unit/test_state.py -v)",
-      "Bash(PYTHONPATH=../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run pytest tests/unit/test_state.py::TestRepositoryStatusEnum::test_all_statuses_have_emojis -v)",
-      "Bash(PYTHONPATH=../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run pytest tests/unit/test_config.py -v)",
-      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/utils/streams.py src/supsrc/cli/watch_cmds.py src/supsrc/runtime/action_handler.py src/supsrc/events/processor.py src/supsrc/runtime/orchestrator.py)"
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" python3 -c \"\nfrom supsrc.utils.streams import NoOpStream\nfrom supsrc.events.processor import EventProcessor\nfrom supsrc.runtime.orchestrator import WatchOrchestrator\nprint(''✅ All imports successful'')\nprint(''NoOpStream:'', NoOpStream())\nprint(''EventProcessor imported from events module'')\nprint(''WatchOrchestrator imported with absolute imports'')\n\")"
     ],
     "deny": [],
     "ask": [],

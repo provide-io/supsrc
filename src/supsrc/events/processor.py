@@ -115,10 +115,10 @@ class EventProcessor:
                 task = asyncio.create_task(self._refresh_repository_statistics(event.repo_id))
                 task.add_done_callback(lambda _: None)  # Ensure task is properly handled
 
-                self.tui_post_state_update(self.repo_states)
+                self.tui.post_state_update(self.repo_states)
 
                 # Emit file change event for TUI event feed
-                if hasattr(self.tui_app, "event_collector"):
+                if hasattr(self.tui.app, "event_collector"):
                     from supsrc.events.monitor import FileChangeEvent
 
                     change_event = FileChangeEvent(
@@ -127,7 +127,7 @@ class EventProcessor:
                         file_path=event.src_path,
                         change_type=event.event_type,
                     )
-                    self.tui_app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
+                    self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
 
                 # Instead of acting immediately, start a debounced check
                 self._debounce_trigger_check(event.repo_id)
@@ -190,7 +190,7 @@ class EventProcessor:
         repo_state.cancel_debounce_timer()
 
         log.info("Trigger condition met, scheduling action sequence.", repo_id=repo_id)
-        task = asyncio.create_task(self.action_execution_callback(repo_id))
+        task = asyncio.create_task(self.action_handler.execute_action_sequence(repo_id))
         self._action_tasks.add(task)
         task.add_done_callback(self._action_tasks.discard)
 
@@ -236,7 +236,7 @@ class EventProcessor:
                     changed_files=repo_state.changed_files,
                 )
                 # Update UI with refreshed statistics
-                self.tui_post_state_update(self.repo_states)
+                self.tui.post_state_update(self.repo_states)
         except Exception as e:
             log.debug("Failed to refresh repository statistics", repo_id=repo_id, error=str(e))
 
