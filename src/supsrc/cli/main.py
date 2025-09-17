@@ -55,8 +55,8 @@ def cli(
         log_file=log_file,
     )
 
-    # Use supsrc's own logging setup which properly handles Foundation
-    from supsrc.telemetry.logger.base import setup_logging
+    # Use supsrc's logging setup with Foundation
+    from supsrc.logging import setup_logging
     import logging
 
     try:

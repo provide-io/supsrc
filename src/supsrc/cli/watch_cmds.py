@@ -63,7 +63,7 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
 
     # Step 2: Dependencies are available. Now run the TUI application.
     # Enable debug file logging for troubleshooting
-    from supsrc.telemetry.logger.base import setup_logging
+    from supsrc.logging import setup_logging
     import logging
 
     log.info("Initializing interactive dashboard...")

@@ -20,7 +20,6 @@ from supsrc.events.feed import EventFeed
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.tui.base_app import TuiAppBase
 from supsrc.tui.managers import TimerManager
-from supsrc.tui.messages import LogMessageUpdate
 from supsrc.tui.widgets import DraggableSplitter
 
 log = structlog.get_logger("tui.app")
@@ -150,8 +149,8 @@ class SupsrcTuiApp(TuiAppBase):
     """
 
     # Reactive variables
-    selected_repo_id = var(None, init=False)
-    repo_states_data = var({})
+    selected_repo_id = var(None, init=False)  # type: ignore[assignment]
+    repo_states_data: dict[str, Any] = var({})  # type: ignore[assignment]
     show_detail_pane = var(False)
 
     def __init__(self, config_path: Path, cli_shutdown_event: asyncio.Event, **kwargs: Any) -> None:
@@ -159,7 +158,7 @@ class SupsrcTuiApp(TuiAppBase):
         self._config_path = config_path
         self._cli_shutdown_event = cli_shutdown_event
         self._shutdown_event = asyncio.Event()
-        self._orchestrator: WatchOrchestrator | None = None
+        self._orchestrator: WatchOrchestrator | None = None  # type: ignore[assignment]
         self._worker = None
         self._is_shutting_down = False
         self.timer_manager: TimerManager | None = None
@@ -189,7 +188,10 @@ class SupsrcTuiApp(TuiAppBase):
             yield DraggableSplitter(id="splitter_line")
 
             # Bottom section: Info pane with tabs
-            with Container(id="log_section", classes="main-section"), TabbedContent(initial="events-tab"):
+            with (
+                Container(id="log_section", classes="main-section"),
+                TabbedContent(initial="events-tab"),
+            ):
                 with TabPane("Events", id="events-tab"):
                     yield EventFeed(id="event-feed")
                 with TabPane("Repo Details", id="details-tab"):
@@ -241,7 +243,7 @@ class SupsrcTuiApp(TuiAppBase):
                     description="TUI started successfully",
                     action="start",
                 )
-                self.event_collector.emit(welcome_event)
+                self.event_collector.emit(welcome_event)  # type: ignore[arg-type]
                 log.debug("Event feed widget initialized successfully")
             except Exception as e:
                 log.error("Failed to initialize event feed widget", error=str(e))
@@ -253,7 +255,7 @@ class SupsrcTuiApp(TuiAppBase):
             self.set_interval(1.0, self._update_countdown_display)
 
             # Set the main worker
-            self._worker = self.run_worker(
+            self._worker = self.run_worker(  # type: ignore[assignment]
                 self._run_orchestrator(),
                 thread=False,
                 group="orchestrator_runner",
@@ -366,37 +368,8 @@ class SupsrcTuiApp(TuiAppBase):
         ]
 
         for event in test_events:
-            self.event_collector.emit(event)
+            self.event_collector.emit(event)  # type: ignore[arg-type]
 
-    def on_log_message_update(self, message: LogMessageUpdate) -> None:
-        """Handle legacy log message updates by converting to events."""
-        try:
-            # Convert legacy log messages to events for backward compatibility
-            from supsrc.events.system import ErrorEvent, UserActionEvent
-
-            if message.level == "ERROR":
-                event = ErrorEvent(
-                    description=message.message,
-                    source="legacy",
-                    error_type="LogMessage",
-                    repo_id=message.repo_id,
-                )
-            else:
-                event = UserActionEvent(
-                    description=message.message,
-                    action="log_message",
-                    target=message.repo_id,
-                )
-
-            self.event_collector.emit(event)
-        except Exception as e:
-            # Log errors but don't crash the app
-            log.error(
-                "Failed to convert log message to event",
-                error=str(e),
-                raw_message_level=message.level,
-                raw_message_content=message.message,
-            )
 
 
 # 🖥️✨

@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import structlog
 from textual.widgets import DataTable, TabbedContent
-from textual.widgets import Log as TextualLog
 
-from supsrc.tui.messages import LogMessageUpdate
+from supsrc.events.system import UserActionEvent
 
 log = structlog.get_logger("tui.actions")
 

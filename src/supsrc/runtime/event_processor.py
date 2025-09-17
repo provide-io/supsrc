@@ -82,9 +82,13 @@ class EventProcessor:
                     log.warning("Ignoring event for unknown repo", repo_id=event.repo_id)
                     continue
                 orchestrator_paused = (
-                    self.orchestrator.monitoring_coordinator
-                    and self.orchestrator.monitoring_coordinator.is_paused
-                ) if self.orchestrator.monitoring_coordinator else False
+                    (
+                        self.orchestrator.monitoring_coordinator
+                        and self.orchestrator.monitoring_coordinator.is_paused
+                    )
+                    if self.orchestrator.monitoring_coordinator
+                    else False
+                )
                 if repo_state.is_paused or orchestrator_paused:
                     log.debug(
                         "Repo or orchestrator is paused, event ignored", repo_id=event.repo_id
