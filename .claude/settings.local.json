@@ -5,7 +5,9 @@
       "Bash(PYTHONPATH=/Users/tim/code/gh/provide-io/supsrc/workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:/Users/tim/code/gh/provide-io/supsrc/src python3 -c \"\ntry:\n    from provide.foundation.setup import setup_telemetry\n    print(''✅ setup_telemetry import works'')\nexcept ImportError as e:\n    print(f''❌ Import error: {e}'')\n\")",
       "Bash(supsrc watch:*)",
       "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src python3 test_statistics_fix.py)",
-      "Bash(workenv/env.sh)"
+      "Bash(workenv/env.sh)",
+      "Bash(timeout 10s python -m supsrc.cli.main watch:*)",
+      "Bash(timeout 3s python -m supsrc.cli.main watch:*)"
     ],
     "deny": [],
     "ask": [],
