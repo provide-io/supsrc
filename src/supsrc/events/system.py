@@ -37,7 +37,9 @@ class ConfigReloadEvent(BaseEvent):
         """Format config reload event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         path_info = f" from {self.config_path}" if self.config_path else ""
-        return f"[{time_str}] \U0001f504 Configuration reloaded{path_info}"  # COUNTERCLOCKWISE ARROWS
+        return (
+            f"[{time_str}] \U0001f504 Configuration reloaded{path_info}"  # COUNTERCLOCKWISE ARROWS
+        )
 
 
 @attrs.define
@@ -52,7 +54,9 @@ class UserActionEvent(BaseEvent):
         """Format user action event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         target_str = f" [{self.target}]" if self.target else ""
-        return f"[{time_str}] \U0001f464{target_str} User action: {self.action}"  # BUST IN SILHOUETTE
+        return (
+            f"[{time_str}] \U0001f464{target_str} User action: {self.action}"  # BUST IN SILHOUETTE
+        )
 
 
 @attrs.define

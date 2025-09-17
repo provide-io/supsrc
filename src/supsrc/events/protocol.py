@@ -7,9 +7,10 @@ Event protocol definition.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
+@runtime_checkable
 class Event(Protocol):
     """Protocol for any event in the supsrc system.
 
