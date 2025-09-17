@@ -43,13 +43,14 @@ def event_processor(
     tui = MagicMock(spec=TUIInterface)
     # The first argument, `orchestrator`, is now provided by the mock_orchestrator fixture.
     return EventProcessor(
-        orchestrator=mock_orchestrator,
         config=minimal_config,
         event_queue=asyncio.Queue(),
         shutdown_event=asyncio.Event(),
         action_handler=mock_action_handler,
         repo_states=states,
+        repo_engines={},
         tui=tui,
+        config_reload_callback=AsyncMock(),
     )
 
 
