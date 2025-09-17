@@ -150,6 +150,7 @@ class SupsrcTuiApp(TuiAppBase):
 
     # Reactive variables
     selected_repo_id: str | None = var(None, init=False)
+    repo_states_data: dict[str, Any] = var({})
 
     def __init__(self, config_path: Path, cli_shutdown_event: asyncio.Event, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -160,6 +161,7 @@ class SupsrcTuiApp(TuiAppBase):
         self._worker = None
         self._is_shutting_down = False
         self.timer_manager: TimerManager | None = None
+        self._timer_manager = TimerManager(self)
         self._is_paused = False
         self._is_suspended = False
 

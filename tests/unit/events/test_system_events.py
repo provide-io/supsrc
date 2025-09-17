@@ -4,7 +4,6 @@
 Tests for system events.
 """
 
-
 from supsrc.events.system import ConfigReloadEvent, ErrorEvent, RuleTriggeredEvent, UserActionEvent
 
 
