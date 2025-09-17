@@ -63,8 +63,18 @@ class SupsrcTuiApp(TuiAppBase):
         overflow-y: auto;
         scrollbar-gutter: stable;
         border: round #888888;
-        padding: 1;
+        padding: 0;
         margin: 1;
+    }
+
+    #top_pane {
+        height: 70%;
+        min-height: 5;
+    }
+
+    #bottom_pane {
+        height: 30%;
+        min-height: 3;
     }
 
     #splitter {
@@ -78,15 +88,17 @@ class SupsrcTuiApp(TuiAppBase):
         background: #666666;
     }
 
+    DataTable {
+        height: 100%;
+        scrollbar-gutter: stable;
+        border: none;
+    }
+
     #event-log {
         height: 100%;
         overflow-y: auto;
         scrollbar-gutter: stable;
-    }
-
-    DataTable {
-        height: 100%;
-        scrollbar-gutter: stable;
+        border: none;
     }
 
     Footer {

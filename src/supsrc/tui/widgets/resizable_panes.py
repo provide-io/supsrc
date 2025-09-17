@@ -6,7 +6,7 @@ Resizable panes widget for the TUI application.
 
 from __future__ import annotations
 
-from textual.containers import Container, Vertical
+from textual.containers import Vertical
 from textual.events import MouseEvent
 from textual.reactive import reactive
 from textual.widgets import Static
@@ -26,18 +26,22 @@ class ResizablePanes(Vertical):
 
     def compose(self):
         """Compose the resizable panes."""
-        # Top pane container
-        with Container(id="top_pane", classes="resizable-pane"):
-            if len(self._children_to_add) > 0:
-                yield self._children_to_add[0]
+        # Top pane - direct widget without container wrapper
+        if len(self._children_to_add) > 0:
+            child = self._children_to_add[0]
+            child.id = "top_pane"
+            child.add_class("resizable-pane")
+            yield child
 
         # Splitter
         yield ResizableSplitter(id="splitter")
 
-        # Bottom pane container
-        with Container(id="bottom_pane", classes="resizable-pane"):
-            if len(self._children_to_add) > 1:
-                yield self._children_to_add[1]
+        # Bottom pane - direct widget without container wrapper
+        if len(self._children_to_add) > 1:
+            child = self._children_to_add[1]
+            child.id = "bottom_pane"
+            child.add_class("resizable-pane")
+            yield child
 
     def watch_top_pane_height(self, height: int) -> None:
         """Update pane heights when top pane height changes."""
