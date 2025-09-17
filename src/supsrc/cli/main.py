@@ -57,7 +57,7 @@ def cli(
 
     # Use Foundation's setup approach with error handling for file I/O
     from provide.foundation.logger import LoggingConfig, TelemetryConfig
-    from provide.foundation.setup import setup_telemetry
+    from provide.foundation.setup import setup_foundation
 
     try:
         # Detect if we're in a test environment
@@ -94,7 +94,7 @@ def cli(
         if is_test_env:
             # In test mode, be more cautious about file logging
             try:
-                setup_telemetry(config)
+                setup_foundation(config)
             except Exception:
                 # If Foundation fails in test mode, use basic logging
                 import logging
@@ -112,7 +112,7 @@ def cli(
                     except Exception:
                         pass  # If file logging fails, just continue without it
         else:
-            setup_telemetry(config)
+            setup_foundation(config)
     except Exception:
         # Fallback to basic logging setup if Foundation fails
         import logging
