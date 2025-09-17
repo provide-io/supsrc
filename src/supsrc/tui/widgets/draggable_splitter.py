@@ -38,9 +38,9 @@ class DraggableSplitter(Static):
             repo_height_str = str(repo_section.styles.height)
             log_height_str = str(log_section.styles.height)
 
-            if repo_height_str.endswith('%'):
+            if repo_height_str.endswith("%"):
                 self._initial_repo_height = float(repo_height_str[:-1])
-            if log_height_str.endswith('%'):
+            if log_height_str.endswith("%"):
                 self._initial_log_height = float(log_height_str[:-1])
 
         except Exception:
@@ -104,9 +104,9 @@ class DraggableSplitter(Static):
             repo_height_str = str(repo_section.styles.height)
             log_height_str = str(log_section.styles.height)
 
-            if repo_height_str.endswith('%'):
+            if repo_height_str.endswith("%"):
                 self._initial_repo_height = float(repo_height_str[:-1])
-            if log_height_str.endswith('%'):
+            if log_height_str.endswith("%"):
                 self._initial_log_height = float(log_height_str[:-1])
         except Exception:
             # Keep existing values if we can't read them

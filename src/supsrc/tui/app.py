@@ -227,9 +227,7 @@ class SupsrcTuiApp(TuiAppBase):
             # Initialize the event log widget
             try:
                 log_widget = self.query_one("#event-log", TextualLog)
-                log_widget.write_line(
-                    "[bold green]✅ Event log initialized[/bold green]"
-                )
+                log_widget.write_line("[bold green]✅ Event log initialized[/bold green]")
                 log.debug("Event log widget initialized successfully")
             except Exception as e:
                 log.error("Failed to initialize log widget", error=str(e))
@@ -312,13 +310,16 @@ class SupsrcTuiApp(TuiAppBase):
     def action_test_log_messages(self) -> None:
         """Test action to manually trigger log messages."""
         import datetime
+
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
 
         # Post several test messages
         self.post_message(LogMessageUpdate(None, "INFO", f"🧪 Test message {timestamp}"))
         self.post_message(LogMessageUpdate("test-repo", "DEBUG", f"🔍 Debug message {timestamp}"))
         self.post_message(LogMessageUpdate(None, "WARNING", f"⚠️ Warning message {timestamp}"))
-        self.post_message(LogMessageUpdate("another-repo", "ERROR", f"❌ Error message {timestamp}"))
+        self.post_message(
+            LogMessageUpdate("another-repo", "ERROR", f"❌ Error message {timestamp}")
+        )
 
         # Also write directly to log widget to test
         try:

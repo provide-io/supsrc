@@ -119,7 +119,10 @@ def setup_logging(
     # TextualLogHandler is disabled to avoid mixing debug logs with functional logs
     is_tui_mode = tui_app_instance is not None
     if is_tui_mode:
-        slog.info("🎯 TUI mode active - functional logs will use LogMessageUpdate messages", app_instance=bool(tui_app_instance))
+        slog.info(
+            "🎯 TUI mode active - functional logs will use LogMessageUpdate messages",
+            app_instance=bool(tui_app_instance),
+        )
     # Note: TextualLogHandler setup removed to separate functional logs from debug logs
 
     slog.info(
