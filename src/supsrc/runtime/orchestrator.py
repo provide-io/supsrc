@@ -18,17 +18,16 @@ from provide.foundation.metrics import counter, gauge
 from rich.console import Console
 
 from supsrc.config import SupsrcConfig, load_config
+from supsrc.events.processor import EventProcessor
 from supsrc.exceptions import ConfigurationError
 from supsrc.monitor import MonitoredEvent
 from supsrc.protocols import RepositoryEngine
+from supsrc.runtime.action_handler import ActionHandler
+from supsrc.runtime.monitoring_coordinator import MonitoringCoordinator
+from supsrc.runtime.repository_manager import RepositoryManager
+from supsrc.runtime.status_manager import StatusManager
+from supsrc.runtime.tui_interface import TUIInterface
 from supsrc.state import RepositoryState
-
-from .action_handler import ActionHandler
-from .event_processor import EventProcessor
-from .monitoring_coordinator import MonitoringCoordinator
-from .repository_manager import RepositoryManager
-from .status_manager import StatusManager
-from .tui_interface import TUIInterface
 
 if TYPE_CHECKING:
     from supsrc.tui.app import SupsrcTuiApp

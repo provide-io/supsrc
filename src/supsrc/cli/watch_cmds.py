@@ -66,9 +66,16 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
     import logging
 
     from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
+    from provide.foundation.streams.core import set_log_stream_for_testing
+
+    from supsrc.utils.streams import NoOpStream
 
     log.info("Initializing interactive dashboard...")
     log.info("🐛 Debug logging available at /tmp/supsrc_tui_debug.log")
+
+    # Suppress all console output from Foundation by setting NoOpStream
+    # This must be done BEFORE Foundation initialization
+    set_log_stream_for_testing(NoOpStream())
 
     # Set up file logging for debugging using Foundation public API
     try:

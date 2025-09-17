@@ -363,6 +363,27 @@ class ActionHandler:
                         )
                         self.tui.app.event_collector.emit(push_event)  # type: ignore[arg-type]
 
+                # Refresh repository statistics after successful commit to update UI
+                try:
+                    status_result = await repo_engine.get_status(
+                        repo_state,
+                        repo_config.repository,
+                        self.config.global_config,
+                        repo_config.path,
+                    )
+                    if status_result.success:
+                        repo_state.total_files = status_result.total_files or 0
+                        repo_state.changed_files = status_result.changed_files or 0
+                        repo_state.added_files = status_result.added_files or 0
+                        repo_state.deleted_files = status_result.deleted_files or 0
+                        repo_state.modified_files = status_result.modified_files or 0
+                        repo_state.has_uncommitted_changes = not status_result.is_clean
+                        repo_state.current_branch = status_result.current_branch
+                except Exception as e:
+                    action_log.warning(
+                        "Failed to refresh repository statistics after commit", error=str(e)
+                    )
+
                 repo_state.reset_after_action()
 
             self.tui.post_state_update(self.repo_states)
