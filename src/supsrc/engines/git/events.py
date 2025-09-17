@@ -11,7 +11,7 @@ import attrs
 from supsrc.events.base import BaseEvent
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class GitCommitEvent(BaseEvent):
     """Event emitted when a git commit is performed."""
 
@@ -26,7 +26,7 @@ class GitCommitEvent(BaseEvent):
         return f"[{time_str}] 📝 Committed {self.files_changed} files [{self.commit_hash[:7]}] on {self.branch}"
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class GitPushEvent(BaseEvent):
     """Event emitted when a git push is performed."""
 
@@ -43,7 +43,7 @@ class GitPushEvent(BaseEvent):
         )
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class GitStageEvent(BaseEvent):
     """Event emitted when files are staged."""
 
@@ -57,7 +57,7 @@ class GitStageEvent(BaseEvent):
         return f"[{time_str}] 📋 Staged {file_count} files"
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class GitBranchEvent(BaseEvent):
     """Event emitted when branch changes."""
 

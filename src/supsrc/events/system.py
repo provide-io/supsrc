@@ -11,7 +11,7 @@ import attrs
 from supsrc.events.base import BaseEvent
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class RuleTriggeredEvent(BaseEvent):
     """Event emitted when a rule triggers an action."""
 
@@ -26,7 +26,7 @@ class RuleTriggeredEvent(BaseEvent):
         return f"[{time_str}] \u26a1 [{self.repo_id}] Rule '{self.rule_name}' triggered {self.action}"  # LIGHTNING
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class ConfigReloadEvent(BaseEvent):
     """Event emitted when configuration is reloaded."""
 
@@ -42,7 +42,7 @@ class ConfigReloadEvent(BaseEvent):
         )
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class UserActionEvent(BaseEvent):
     """Event emitted from user interaction in TUI."""
 
@@ -59,7 +59,7 @@ class UserActionEvent(BaseEvent):
         )
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class ErrorEvent(BaseEvent):
     """Event emitted when an error occurs."""
 

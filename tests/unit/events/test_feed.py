@@ -10,19 +10,19 @@ from supsrc.events.base import BaseEvent
 from supsrc.events.feed import EventFeed
 
 
-class TestEvent(BaseEvent):
+class MockEvent(BaseEvent):
     """Test event for feed tests."""
 
     source: str = "test"
 
 
-class GitTestEvent(BaseEvent):
+class GitMockEvent(BaseEvent):
     """Git test event for color testing."""
 
     source: str = "git"
 
 
-class MonitorTestEvent(BaseEvent):
+class MonitorMockEvent(BaseEvent):
     """Monitor test event for color testing."""
 
     source: str = "monitor"
@@ -32,7 +32,7 @@ class MonitorTestEvent(BaseEvent):
 def test_feed_add_event(mock_write: Mock) -> None:
     """Test adding an event to the feed."""
     feed = EventFeed()
-    event = TestEvent(description="Test event")
+    event = MockEvent(description="Test event")
 
     feed.add_event(event)
 
@@ -46,7 +46,7 @@ def test_feed_add_event(mock_write: Mock) -> None:
 def test_feed_git_event_color(mock_write: Mock) -> None:
     """Test that git events get green color."""
     feed = EventFeed()
-    event = GitTestEvent(description="Git event")
+    event = GitMockEvent(description="Git event")
 
     feed.add_event(event)
 
@@ -60,7 +60,7 @@ def test_feed_git_event_color(mock_write: Mock) -> None:
 def test_feed_monitor_event_color(mock_write: Mock) -> None:
     """Test that monitor events get blue color."""
     feed = EventFeed()
-    event = MonitorTestEvent(description="Monitor event")
+    event = MonitorMockEvent(description="Monitor event")
 
     feed.add_event(event)
 
@@ -74,9 +74,9 @@ def test_feed_monitor_event_color(mock_write: Mock) -> None:
 def test_feed_multiple_events(mock_write: Mock) -> None:
     """Test adding multiple events to the feed."""
     feed = EventFeed()
-    event1 = GitTestEvent(description="First event")
-    event2 = MonitorTestEvent(description="Second event")
-    event3 = TestEvent(description="Third event")
+    event1 = GitMockEvent(description="First event")
+    event2 = MonitorMockEvent(description="Second event")
+    event3 = MockEvent(description="Third event")
 
     feed.add_event(event1)
     feed.add_event(event2)

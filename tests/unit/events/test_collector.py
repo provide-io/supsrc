@@ -10,7 +10,7 @@ from supsrc.events.base import BaseEvent
 from supsrc.events.collector import EventCollector
 
 
-class TestEvent(BaseEvent):
+class MockEvent(BaseEvent):
     """Test event for collector tests."""
 
     source: str = "test"
@@ -57,7 +57,7 @@ def test_collector_emit_single_handler() -> None:
     """Test emitting an event to a single handler."""
     collector = EventCollector()
     handler = Mock()
-    event = TestEvent(description="Test event")
+    event = MockEvent(description="Test event")
 
     collector.subscribe(handler)
     collector.emit(event)
@@ -71,7 +71,7 @@ def test_collector_emit_multiple_handlers() -> None:
     handler1 = Mock()
     handler2 = Mock()
     handler3 = Mock()
-    event = TestEvent(description="Multi-handler test")
+    event = MockEvent(description="Multi-handler test")
 
     collector.subscribe(handler1)
     collector.subscribe(handler2)
@@ -87,7 +87,7 @@ def test_collector_emit_multiple_handlers() -> None:
 def test_collector_emit_no_handlers() -> None:
     """Test emitting an event with no subscribed handlers."""
     collector = EventCollector()
-    event = TestEvent(description="No handlers test")
+    event = MockEvent(description="No handlers test")
 
     # Should not raise an exception
     collector.emit(event)
@@ -99,7 +99,7 @@ def test_collector_handler_exception() -> None:
     good_handler = Mock()
     bad_handler = Mock(side_effect=ValueError("Handler error"))
     another_handler = Mock()
-    event = TestEvent(description="Exception test")
+    event = MockEvent(description="Exception test")
 
     collector.subscribe(good_handler)
     collector.subscribe(bad_handler)
@@ -118,7 +118,7 @@ def test_collector_multiple_subscriptions() -> None:
     """Test subscribing the same handler multiple times."""
     collector = EventCollector()
     handler = Mock()
-    event = TestEvent(description="Multi-subscription test")
+    event = MockEvent(description="Multi-subscription test")
 
     collector.subscribe(handler)
     collector.subscribe(handler)  # Subscribe again

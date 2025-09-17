@@ -13,7 +13,7 @@ import attrs
 from supsrc.events.base import BaseEvent
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class FileChangeEvent(BaseEvent):
     """Event emitted when a monitored file changes."""
 
@@ -35,7 +35,7 @@ class FileChangeEvent(BaseEvent):
         return f"[{time_str}] {emoji} [{self.repo_id}] {self.file_path.name} {self.change_type}"
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class MonitoringStartEvent(BaseEvent):
     """Event emitted when monitoring starts for a repository."""
 
@@ -49,7 +49,7 @@ class MonitoringStartEvent(BaseEvent):
         return f"[{time_str}] \U0001f441\ufe0f Started monitoring [{self.repo_id}] at {self.path}"  # EYE
 
 
-@attrs.define
+@attrs.define(frozen=True)
 class MonitoringStopEvent(BaseEvent):
     """Event emitted when monitoring stops for a repository."""
 

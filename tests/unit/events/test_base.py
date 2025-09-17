@@ -11,15 +11,15 @@ import pytest
 from supsrc.events.base import BaseEvent
 
 
-class TestEvent(BaseEvent):
-    """Test event implementation."""
+class MockEvent(BaseEvent):
+    """Mock event implementation."""
 
     source: str = "test"
 
 
 def test_base_event_creation() -> None:
     """Test creating a BaseEvent instance."""
-    event = TestEvent(description="Test event")
+    event = MockEvent(description="Test event")
 
     assert event.description == "Test event"
     assert event.source == "test"
@@ -30,7 +30,7 @@ def test_base_event_creation() -> None:
 def test_base_event_with_metadata() -> None:
     """Test BaseEvent with custom metadata."""
     metadata = {"key": "value", "count": 42}
-    event = TestEvent(description="Test with metadata", metadata=metadata)
+    event = MockEvent(description="Test with metadata", metadata=metadata)
 
     assert event.metadata == metadata
 
@@ -38,14 +38,14 @@ def test_base_event_with_metadata() -> None:
 def test_base_event_with_custom_timestamp() -> None:
     """Test BaseEvent with custom timestamp."""
     custom_time = datetime(2023, 1, 1, 12, 0, 0)
-    event = TestEvent(description="Timed event", timestamp=custom_time)
+    event = MockEvent(description="Timed event", timestamp=custom_time)
 
     assert event.timestamp == custom_time
 
 
 def test_base_event_format() -> None:
     """Test BaseEvent default formatting."""
-    event = TestEvent(description="Format test")
+    event = MockEvent(description="Format test")
 
     formatted = event.format()
     assert "[test]" in formatted
@@ -55,7 +55,7 @@ def test_base_event_format() -> None:
 
 def test_base_event_immutable() -> None:
     """Test that BaseEvent is frozen (immutable)."""
-    event = TestEvent(description="Immutable test")
+    event = MockEvent(description="Immutable test")
 
     with pytest.raises((AttributeError, TypeError)):
         event.description = "Changed"  # type: ignore
@@ -67,9 +67,9 @@ def test_base_event_immutable() -> None:
 def test_base_event_kw_only() -> None:
     """Test that BaseEvent enforces keyword-only arguments."""
     # This should work
-    event = TestEvent(description="Keyword test")
+    event = MockEvent(description="Keyword test")
     assert event.description == "Keyword test"
 
     # This should also work with explicit kwargs
-    event2 = TestEvent(description="Another test", metadata={"test": True})
+    event2 = MockEvent(description="Another test", metadata={"test": True})
     assert event2.metadata == {"test": True}

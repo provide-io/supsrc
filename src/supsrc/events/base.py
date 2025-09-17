@@ -12,7 +12,7 @@ from typing import Any
 import attrs
 
 
-@attrs.define(kw_only=True)
+@attrs.define(kw_only=True, frozen=True)
 class BaseEvent:
     """Base event implementation with common fields.
 
