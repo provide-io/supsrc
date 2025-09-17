@@ -55,8 +55,9 @@ def cli(
         log_file=log_file,
     )
 
-    # Use supsrc's logging setup with Foundation
-    from supsrc.logging import setup_logging
+    # Use Foundation's setup directly
+    from provide.foundation.setup import internal_setup
+    from provide.foundation.logger.config import TelemetryConfig, LoggingConfig
     import logging
 
     try:
@@ -66,13 +67,23 @@ def cli(
         # Determine if JSON logs should be used
         json_logs = log_format == "json"
 
-        # Setup logging using supsrc's Foundation integration
-        setup_logging(
-            level=level,
-            json_logs=json_logs,
-            log_file=str(log_file) if log_file else None,
-            headless_mode=True,
+        # Setup Foundation logging directly
+        formatter = "json" if json_logs else "key_value"
+        config = TelemetryConfig(
+            logging=LoggingConfig(
+                console_formatter=formatter,
+                default_level=logging.getLevelName(level),
+                das_emoji_prefix_enabled=True,
+                logger_name_emoji_prefix_enabled=True,
+            )
         )
+        internal_setup(config)
+
+        # Add file handler if needed
+        if log_file:
+            file_handler = logging.FileHandler(str(log_file), encoding="utf-8")
+            file_handler.setLevel(level)
+            logging.getLogger().addHandler(file_handler)
     except Exception:
         # Fallback to basic logging setup if supsrc logging fails
         import logging
