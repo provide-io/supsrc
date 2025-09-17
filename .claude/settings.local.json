@@ -84,7 +84,9 @@
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/runtime/repository_manager.py src/supsrc/runtime/event_processor.py src/supsrc/runtime/action_handler.py)",
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check:*)",
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/cli/watch_cmds.py)",
-      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src timeout 5s python -m supsrc.cli.main watch)"
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src timeout 5s python -m supsrc.cli.main watch)",
+      "Bash(PYTHONPATH=../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src timeout 5s python -m supsrc.cli.main watch)",
+      "Bash(PYTHONPATH=../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src timeout 3s python -m supsrc.cli.main watch)"
     ],
     "deny": [],
     "ask": [],

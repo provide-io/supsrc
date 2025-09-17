@@ -78,6 +78,9 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
                 default_level="DEBUG",
                 das_emoji_prefix_enabled=True,
                 logger_name_emoji_prefix_enabled=True,
+                console_enabled=False,  # Disable console logging entirely
+                file_enabled=True,  # Enable file logging
+                file_path="/tmp/supsrc_tui_debug.log",
             )
         )
 
@@ -86,14 +89,26 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
         hub.initialize_foundation(config)
 
         # CRITICAL: Remove all console handlers to prevent app logs from appearing in TUI
+        # Must be done AFTER Foundation initialization
         root_logger = logging.getLogger()
-        console_handlers = [
-            h
-            for h in root_logger.handlers
-            if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+        all_loggers = [root_logger] + [
+            logging.getLogger(name) for name in logging.root.manager.loggerDict
         ]
-        for handler in console_handlers:
-            root_logger.removeHandler(handler)
+
+        for logger in all_loggers:
+            console_handlers = [
+                h
+                for h in logger.handlers
+                if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+            ]
+            for handler in console_handlers:
+                logger.removeHandler(handler)
+
+        # Also disable propagation for structlog loggers to prevent console output
+        for name in logging.root.manager.loggerDict:
+            if any(pattern in name for pattern in ["provide.foundation", "supsrc"]):
+                logger = logging.getLogger(name)
+                logger.propagate = False
 
         # Add debug file handler
         file_handler = logging.FileHandler("/tmp/supsrc_tui_debug.log", encoding="utf-8")
