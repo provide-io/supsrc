@@ -74,7 +74,6 @@ class TestEventProcessor:
             with contextlib.suppress(asyncio.CancelledError):
                 await run_task
 
-
         mock_action_handler.execute_action_sequence.assert_called_once_with(repo_id)
 
     async def test_event_starts_timer_when_rule_not_met(
@@ -142,7 +141,9 @@ class TestEventProcessor:
         await asyncio.wait_for(task, timeout=0.1)
         assert task.done()
 
-    async def test_event_consumption_for_paused_repository(self, event_processor: EventProcessor, temp_git_repo: Path):
+    async def test_event_consumption_for_paused_repository(
+        self, event_processor: EventProcessor, temp_git_repo: Path
+    ):
         """
         Verify that the event consumer skips processing for a paused repository.
         The current implementation ignores (drops) the event.
@@ -157,7 +158,7 @@ class TestEventProcessor:
         # Act: Run the consumer for a very short time to process the one event
         consumer_task = asyncio.create_task(event_processor.run())
         await asyncio.sleep(0.1)
-        event_processor.shutdown_event.set() # Stop the loop
+        event_processor.shutdown_event.set()  # Stop the loop
         with contextlib.suppress(asyncio.CancelledError):
             await consumer_task
 

@@ -54,33 +54,34 @@ def cli(
         log_format=log_format,
         log_file=log_file,
     )
-    
+
     # Use Foundation's setup approach with error handling for file I/O
+    from provide.foundation.logger import LoggingConfig, TelemetryConfig
     from provide.foundation.setup import setup_telemetry
-    from provide.foundation.logger import TelemetryConfig, LoggingConfig
-    
+
     try:
         # Detect if we're in a test environment
         import os
+
         is_test_env = (
-            "pytest" in os.environ.get("_", "") or
-            "PYTEST_CURRENT_TEST" in os.environ or
-            hasattr(__import__('sys'), '_called_from_test')
+            "pytest" in os.environ.get("_", "")
+            or "PYTEST_CURRENT_TEST" in os.environ
+            or hasattr(__import__("sys"), "_called_from_test")
         )
-        
+
         # Validate log file accessibility if provided
         log_file_path = None
         if log_file:
             log_file_path = str(log_file)
             # Test if we can write to the file (skip for temporary files in tests)
-            if not is_test_env or not log_file_path.startswith('/tmp'):
+            if not is_test_env or not log_file_path.startswith("/tmp"):
                 try:
-                    with open(log_file_path, 'a') as f:
+                    with open(log_file_path, "a") as f:
                         pass  # Just test accessibility
                 except (OSError, ValueError):
                     # If file is closed or inaccessible, disable file logging
                     log_file_path = None
-        
+
         # Configure logging with Foundation but handle test environment carefully
         config = TelemetryConfig(
             logging=LoggingConfig(
@@ -89,7 +90,7 @@ def cli(
                 log_file=log_file_path,
             )
         )
-        
+
         if is_test_env:
             # In test mode, be more cautious about file logging
             try:
@@ -97,27 +98,29 @@ def cli(
             except Exception:
                 # If Foundation fails in test mode, use basic logging
                 import logging
+
                 level = getattr(logging, (log_level or "WARNING").upper())
-                logging.basicConfig(level=level, format='%(levelname)s: %(message)s', force=True)
-                
+                logging.basicConfig(level=level, format="%(levelname)s: %(message)s", force=True)
+
                 # Still try to set up file logging if explicitly requested
                 if log_file_path:
                     try:
                         file_handler = logging.FileHandler(log_file_path)
                         file_handler.setLevel(level)
-                        file_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+                        file_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
                         logging.getLogger().addHandler(file_handler)
                     except Exception:
                         pass  # If file logging fails, just continue without it
         else:
             setup_telemetry(config)
-    except Exception as e:
+    except Exception:
         # Fallback to basic logging setup if Foundation fails
         import logging
+
         logging.basicConfig(
             level=getattr(logging, (log_level or "WARNING").upper()),
-            format='%(levelname)s: %(message)s',
-            force=True
+            format="%(levelname)s: %(message)s",
+            force=True,
         )
 
     # Store context for subcommands

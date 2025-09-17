@@ -129,7 +129,7 @@ class TestSupsrcTuiApp:
         """Create a TUI app instance for testing."""
         # We need to patch the cli_shutdown_event in the app instance
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
-        app._cli_shutdown_event = asyncio.Event() # Ensure it has one for the test
+        app._cli_shutdown_event = asyncio.Event()  # Ensure it has one for the test
         return app
 
     def test_app_initialization(self, tui_app: SupsrcTuiApp) -> None:
@@ -167,14 +167,16 @@ class TestSupsrcTuiApp:
         tui_app.watch_show_detail_pane(False)
         assert mock_container.styles.display == "none"
 
-
-    @pytest.mark.skip(reason="Complex mocking of Textual property with getter/setter is blocking progress on other failures.")
+    @pytest.mark.skip(
+        reason="Complex mocking of Textual property with getter/setter is blocking progress on other failures."
+    )
     def test_action_toggle_dark(self, tui_app: SupsrcTuiApp) -> None:
         """Test dark mode toggle action."""
         mock_screen_instance = Mock()
         mock_screen_instance.dark = False
 
         _dark_value = False
+
         def _setter(value):
             nonlocal _dark_value
             _dark_value = value
@@ -211,11 +213,10 @@ class TestSupsrcTuiApp:
             tui_app._timer_manager.stop_all_timers.assert_called_once()
             mock_exit.assert_called_once_with(0)
 
-
     def test_on_state_update(self, tui_app: SupsrcTuiApp) -> None:
         """Test state update message handling."""
         mock_table = Mock()
-        mock_table.rows = {} # Simulate empty rows
+        mock_table.rows = {}  # Simulate empty rows
         mock_table.row_count = 0
         tui_app.query_one = Mock(return_value=mock_table)
 
@@ -249,14 +250,16 @@ class TestSupsrcTuiApp:
         assert "✅" in str(row_data)
         assert "test-repo" in str(row_data)
         assert "feature/test" in str(row_data)
-        assert "25s" in str(row_data) # From timer_seconds_left
+        assert "25s" in str(row_data)  # From timer_seconds_left
 
     def test_on_log_message_update(self, tui_app: SupsrcTuiApp) -> None:
         """Test log message update handling."""
         mock_log = Mock()
         tui_app.query_one = Mock(return_value=mock_log)
 
-        message = LogMessageUpdate(None, "INFO", "[dim blue]test-repo[/] [green]INFO[/] Test message")
+        message = LogMessageUpdate(
+            None, "INFO", "[dim blue]test-repo[/] [green]INFO[/] Test message"
+        )
 
         tui_app.on_log_message_update(message)
 
@@ -444,7 +447,7 @@ class TestTuiErrorHandling:
         """Test handling of external shutdown signals."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
         tui_app.action_quit = Mock()
-        tui_app._cli_shutdown_event = mock_shutdown_event # Link the events for the test
+        tui_app._cli_shutdown_event = mock_shutdown_event  # Link the events for the test
 
         mock_shutdown_event.set()
 
@@ -466,7 +469,7 @@ class TestTuiErrorHandling:
 
         result = manager.stop_timer("test_timer")
 
-        assert result is False # It now returns False on exception
+        assert result is False  # It now returns False on exception
         assert "test_timer" not in manager._timers
 
 

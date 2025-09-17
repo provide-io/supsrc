@@ -2,6 +2,7 @@
 """
 Consumes filesystem events, checks rules, manages timers, and triggers actions.
 """
+
 import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -81,7 +82,9 @@ class EventProcessor:
                     log.warning("Ignoring event for unknown repo", repo_id=event.repo_id)
                     continue
                 if repo_state.is_paused or self.orchestrator._is_paused:
-                    log.debug("Repo or orchestrator is paused, event ignored", repo_id=event.repo_id)
+                    log.debug(
+                        "Repo or orchestrator is paused, event ignored", repo_id=event.repo_id
+                    )
                     continue
 
                 # Deduplicate moved/deleted events
@@ -89,7 +92,9 @@ class EventProcessor:
                     self._recent_moves.add(event.src_path)
                     loop.call_later(0.5, self._recent_moves.discard, event.src_path)
                 elif event.event_type == "deleted" and event.src_path in self._recent_moves:
-                    log.debug("Ignoring duplicate delete event for a moved file", path=str(event.src_path))
+                    log.debug(
+                        "Ignoring duplicate delete event for a moved file", path=str(event.src_path)
+                    )
                     continue
 
                 # Record the change and update UI
@@ -131,7 +136,11 @@ class EventProcessor:
 
         # Do not proceed if an action is already in progress for this repo
         if repo_state.status not in (RepositoryStatus.IDLE, RepositoryStatus.CHANGED):
-            log.debug("Action already in progress, skipping trigger check", repo_id=repo_id, status=repo_state.status.name)
+            log.debug(
+                "Action already in progress, skipping trigger check",
+                repo_id=repo_id,
+                status=repo_state.status.name,
+            )
             return
 
         if check_trigger_condition(repo_state, repo_config):

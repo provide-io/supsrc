@@ -79,4 +79,5 @@ def tail_cli(ctx: click.Context, config_path: Path, **kwargs):
     if exit_code != 0:
         sys.exit(exit_code)
 
+
 # 🔼⚙️
