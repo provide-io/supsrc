@@ -182,7 +182,11 @@ class TestMonitoringIntegration:
             # Wait for the monitoring service to be running, which is more reliable than a fixed sleep.
             timeout = 10.0
             start_time = asyncio.get_event_loop().time()
-            while not (orchestrator.monitor_service and orchestrator.monitor_service.is_running):
+            while not (
+                orchestrator.monitoring_coordinator
+                and orchestrator.monitoring_coordinator.monitor_service
+                and orchestrator.monitoring_coordinator.monitor_service.is_running
+            ):
                 if asyncio.get_event_loop().time() - start_time > timeout:
                     raise TimeoutError("Timed out waiting for monitoring service to start.")
                 await asyncio.sleep(0.1)

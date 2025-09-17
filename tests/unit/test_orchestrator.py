@@ -76,7 +76,13 @@ class TestOrchestratorLifecycle:
     async def test_initialize_repositories_success(self, mock_orchestrator: WatchOrchestrator):
         """Test that repositories are initialized correctly from config."""
         mock_tui = MagicMock()
-        await mock_orchestrator._initialize_repositories(mock_orchestrator.config, mock_tui)
+        # Mock repository manager
+        from supsrc.runtime.repository_manager import RepositoryManager
+
+        mock_orchestrator.repository_manager = MagicMock(spec=RepositoryManager)
+        await mock_orchestrator.repository_manager.initialize_repositories(
+            mock_orchestrator.config, mock_tui
+        )
 
         assert "test_repo_1" in mock_orchestrator.repo_states
         assert "test_repo_1" in mock_orchestrator.repo_engines

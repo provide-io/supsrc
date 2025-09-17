@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import structlog
 
@@ -20,11 +20,10 @@ from rich.console import Console
 from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.config import SupsrcConfig, load_config
-from supsrc.engines.git import GitEngine, GitRepoSummary
-from supsrc.exceptions import ConfigurationError, MonitoringSetupError
-from supsrc.monitor import MonitoredEvent, MonitoringService
+from supsrc.exceptions import ConfigurationError
+from supsrc.monitor import MonitoredEvent
 from supsrc.protocols import RepositoryEngine
-from supsrc.state import RepositoryState, RepositoryStatus
+from supsrc.state import RepositoryState
 
 from .action_handler import ActionHandler
 from .event_processor import EventProcessor
@@ -125,9 +124,7 @@ class WatchOrchestrator:
             )
 
             # Setup monitoring services
-            self.monitoring_coordinator.setup_monitoring(
-                self.config, enabled_repos, tui
-            )
+            self.monitoring_coordinator.setup_monitoring(self.config, enabled_repos, tui)
             self.monitoring_coordinator.setup_config_watcher(tui)
 
             # Start monitoring services
@@ -210,15 +207,15 @@ class WatchOrchestrator:
 
         tui = TUIInterface(self.app)
 
-        def initialize_repositories_callback(config: SupsrcConfig, tui_interface: TUIInterface) -> Any:
+        def initialize_repositories_callback(
+            config: SupsrcConfig, tui_interface: TUIInterface
+        ) -> Any:
             return asyncio.create_task(
                 self.repository_manager.initialize_repositories(config, tui_interface)
             )
 
         def cleanup_timers_callback() -> Any:
-            return asyncio.create_task(
-                self.repository_manager.cleanup_repository_timers()
-            )
+            return asyncio.create_task(self.repository_manager.cleanup_repository_timers())
 
         def update_processor_config_callback(new_config: SupsrcConfig) -> None:
             self.config = new_config
@@ -234,16 +231,19 @@ class WatchOrchestrator:
 
         if success:
             # Update metrics after successful reload
-            enabled_repos = [
-                repo_id for repo_id, repo in self.config.repositories.items()
-                if repo.enabled and repo._path_valid
-            ] if self.config else []
+            enabled_repos = (
+                [
+                    repo_id
+                    for repo_id, repo in self.config.repositories.items()
+                    if repo.enabled and repo._path_valid
+                ]
+                if self.config
+                else []
+            )
             active_repositories.set(len(enabled_repos))
 
         self._post_tui_state_update()
         return success
-
-
 
     async def resume_repository_monitoring(self, repo_id: str) -> bool:
         """Resume repository monitoring - delegate to repository manager."""
@@ -255,7 +255,6 @@ class WatchOrchestrator:
         if self.repository_manager and self.config:
             return await self.repository_manager.get_repository_details(repo_id, self.config)
         return {"error": "Repository manager not available."}
-
 
     def set_repo_refreshing_status(self, repo_id: str, is_refreshing: bool) -> None:
         """Set the refreshing status for a repository."""
@@ -271,20 +270,3 @@ class WatchOrchestrator:
                 repo_id, self.status_manager
             )
         return False
-
-    # Backward compatibility properties for tests
-    @property
-    def monitor_service(self) -> MonitoringService | None:
-        """Backward compatibility: expose monitoring_coordinator's monitor_service."""
-        return self.monitoring_coordinator.monitor_service if self.monitoring_coordinator else None
-
-    @property
-    def is_paused(self) -> bool:
-        """Backward compatibility: expose monitoring_coordinator's pause state."""
-        return self.monitoring_coordinator.is_paused if self.monitoring_coordinator else False
-
-    async def _initialize_repositories(self, config: SupsrcConfig, tui: TUIInterface) -> list[str]:
-        """Backward compatibility: delegate to repository_manager."""
-        if self.repository_manager:
-            return await self.repository_manager.initialize_repositories(config, tui)
-        return []

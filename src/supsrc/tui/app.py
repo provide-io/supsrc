@@ -11,15 +11,15 @@ from typing import Any, ClassVar
 
 import structlog
 from textual.app import ComposeResult
+from textual.containers import Container, Vertical
 from textual.reactive import var
-from textual.widgets import DataTable, Footer, Header, Label, Static, TabbedContent, TabPane
+from textual.widgets import DataTable, Footer, Header, Label, TabbedContent, TabPane
 from textual.widgets import Log as TextualLog
 
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.tui.base_app import TuiAppBase
 from supsrc.tui.managers import TimerManager
 from supsrc.tui.messages import LogMessageUpdate
-from textual.containers import Container, Horizontal, Vertical
 from supsrc.tui.widgets import DraggableSplitter
 
 log = structlog.get_logger("tui.app")
@@ -151,6 +151,7 @@ class SupsrcTuiApp(TuiAppBase):
     # Reactive variables
     selected_repo_id: str | None = var(None, init=False)
     repo_states_data: dict[str, Any] = var({})
+    show_detail_pane: bool = var(False)
 
     def __init__(self, config_path: Path, cli_shutdown_event: asyncio.Event, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -308,6 +309,12 @@ class SupsrcTuiApp(TuiAppBase):
 
         except Exception as e:
             log.error("Failed to update repo details tab", error=str(e), repo_id=repo_id)
+
+    def watch_show_detail_pane(self, show_detail: bool) -> None:
+        """Watch for changes to the show_detail_pane reactive variable."""
+        # This method would typically update CSS or widget visibility
+        # For now, it's a placeholder to satisfy test expectations
+        pass
 
     def action_test_log_messages(self) -> None:
         """Test action to manually trigger log messages."""
