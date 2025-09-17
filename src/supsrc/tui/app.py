@@ -6,7 +6,6 @@ Stabilized TUI application with improved layout and proper timer management.
 """
 
 import asyncio
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -14,129 +13,17 @@ import structlog
 from textual.app import App, ComposeResult
 from textual.containers import Container
 from textual.reactive import var
-from textual.timer import Timer
 from textual.widgets import DataTable, Footer, Header
 from textual.widgets import Log as TextualLog
 from textual.worker import Worker, WorkerState
 
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.state import RepositoryStatus
+from supsrc.tui.managers import TimerManager
 from supsrc.tui.messages import LogMessageUpdate, RepoDetailUpdate, StateUpdate
+from supsrc.tui.utils import format_last_commit_time, get_countdown_display
 
 log = structlog.get_logger("tui.app")
-
-
-def get_countdown_display(seconds_left: int | None) -> str:
-    """Generate countdown display with hand emojis for last 10 seconds."""
-    if seconds_left is None:
-        return ""
-
-    if seconds_left > 10:
-        # Show regular countdown
-        minutes = seconds_left // 60
-        secs = seconds_left % 60
-        if minutes > 0:
-            return f"{minutes}:{secs:02d}"
-        else:
-            return f"{secs}s"
-    elif seconds_left == 10:
-        return "🙌"  # Both hands open (10)
-    elif seconds_left == 9:
-        return "🖐️✋"  # 5 + 4
-    elif seconds_left == 8:
-        return "✋✌️"  # 5 + 3
-    elif seconds_left == 7:
-        return "✋🤘"  # 5 + 2
-    elif seconds_left == 6:
-        return "✋☝️"  # 5 + 1
-    elif seconds_left == 5:
-        return "🖐️"  # One hand (5)
-    elif seconds_left == 4:
-        return "🖖"  # Four fingers
-    elif seconds_left == 3:
-        return "🤟"  # Three fingers
-    elif seconds_left == 2:
-        return "✌️"  # Peace sign (2)
-    elif seconds_left == 1:
-        return "☝️"  # One finger
-    else:
-        return "💥"  # Zero/trigger
-
-
-def format_last_commit_time(last_change_time, threshold_hours=3):
-    """Format last commit time as relative or absolute based on age."""
-    if not last_change_time:
-        return "Never"
-
-    now = datetime.now(UTC)
-    delta = now - last_change_time
-    total_seconds = int(delta.total_seconds())
-
-    # If older than threshold, show full date
-    if delta.total_seconds() > (threshold_hours * 3600):
-        return last_change_time.strftime("%Y-%m-%d %H:%M:%S")
-
-    # Otherwise show relative time
-    if total_seconds < 60:
-        return f"{total_seconds}s ago"
-    elif total_seconds < 3600:
-        minutes = total_seconds // 60
-        return f"{minutes}m ago"
-    else:
-        hours = total_seconds // 3600
-        minutes = (total_seconds % 3600) // 60
-        if minutes > 0:
-            return f"{hours}h {minutes}m ago"
-        else:
-            return f"{hours}h ago"
-
-
-class TimerManager:
-    """Manages application timers with proper lifecycle handling."""
-
-    def __init__(self, app: "SupsrcTuiApp") -> None:
-        self.app = app
-        self._timers: dict[str, Timer] = {}
-        self._logger = log.bind(component="TimerManager")
-
-    def create_timer(
-        self, name: str, interval: float, callback: callable, repeat: bool = True
-    ) -> Timer:
-        """Create a new timer with proper tracking."""
-        if name in self._timers:
-            self.stop_timer(name)
-
-        timer = self.app.set_interval(interval, callback, name=name)
-        self._timers[name] = timer
-        self._logger.debug("Timer created", name=name, interval=interval)
-        return timer
-
-    def stop_timer(self, name: str) -> bool:
-        """Stop a specific timer."""
-        if name not in self._timers:
-            return False
-
-        timer = self._timers[name]
-        success = True
-        try:
-            # Check if the timer is active by inspecting its internal handle
-            if hasattr(timer, "_Timer__handle") and timer._Timer__handle is not None:
-                timer.stop()
-        except Exception as e:
-            self._logger.error("Error stopping timer", name=name, error=str(e))
-            success = False
-        finally:
-            if name in self._timers:
-                del self._timers[name]
-            self._logger.debug("Timer stopped or already inactive", name=name)
-        return success
-
-    def stop_all_timers(self) -> None:
-        """Stop all managed timers."""
-        timer_names = list(self._timers.keys())
-        for name in timer_names:
-            self.stop_timer(name)
-        self._logger.debug("All timers stopped", count=len(timer_names))
 
 
 class SupsrcTuiApp(App):
