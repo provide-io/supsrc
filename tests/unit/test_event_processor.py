@@ -12,7 +12,7 @@ import pytest
 from supsrc.config import SupsrcConfig
 from supsrc.monitor import MonitoredEvent
 from supsrc.runtime.action_handler import ActionHandler
-from supsrc.runtime.event_processor import DEBOUNCE_DELAY, EventProcessor
+from supsrc.events.processor import DEBOUNCE_DELAY, EventProcessor
 from supsrc.runtime.tui_interface import TUIInterface
 from supsrc.state import RepositoryState
 
