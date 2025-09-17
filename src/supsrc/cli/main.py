@@ -57,7 +57,7 @@ def cli(
 
     # Use Foundation's setup approach with error handling for file I/O
     from provide.foundation.logger import LoggingConfig, TelemetryConfig
-    from provide.foundation.setup import setup_foundation
+    from provide.foundation.setup import internal_setup
 
     try:
         # Detect if we're in a test environment
