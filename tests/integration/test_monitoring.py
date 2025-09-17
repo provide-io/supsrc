@@ -290,8 +290,13 @@ class TestErrorHandling:
         # Should handle invalid path gracefully
         try:
             # Call the method with the required arguments
+            # Initialize repository manager and call the method through it
+            from supsrc.runtime.repository_manager import RepositoryManager
+            orchestrator.repository_manager = RepositoryManager(
+                orchestrator.repo_states, orchestrator.repo_engines
+            )
             await asyncio.wait_for(
-                orchestrator._initialize_repositories(config, mock_tui), timeout=5.0
+                orchestrator.repository_manager.initialize_repositories(config, mock_tui), timeout=5.0
             )
 
             # The invalid repo should be skipped, leaving repo_states empty

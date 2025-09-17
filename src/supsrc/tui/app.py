@@ -14,8 +14,9 @@ from textual.app import ComposeResult
 from textual.containers import Container, Vertical
 from textual.reactive import var
 from textual.widgets import DataTable, Footer, Header, Label, TabbedContent, TabPane
-from textual.widgets import Log as TextualLog
 
+from supsrc.events.collector import EventCollector
+from supsrc.events.feed import EventFeed
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.tui.base_app import TuiAppBase
 from supsrc.tui.managers import TimerManager
@@ -99,7 +100,7 @@ class SupsrcTuiApp(TuiAppBase):
         scrollbar-gutter: stable;
     }
 
-    #event-log {
+    #event-feed {
         height: 100%;
         scrollbar-gutter: stable;
     }
@@ -149,9 +150,9 @@ class SupsrcTuiApp(TuiAppBase):
     """
 
     # Reactive variables
-    selected_repo_id: str | None = var(None, init=False)
-    repo_states_data: dict[str, Any] = var({})
-    show_detail_pane: bool = var(False)
+    selected_repo_id = var(None, init=False)
+    repo_states_data = var({})
+    show_detail_pane = var(False)
 
     def __init__(self, config_path: Path, cli_shutdown_event: asyncio.Event, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -165,6 +166,8 @@ class SupsrcTuiApp(TuiAppBase):
         self._timer_manager = TimerManager(self)
         self._is_paused = False
         self._is_suspended = False
+        self.event_collector = EventCollector()
+        self._event_feed: EventFeed | None = None
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -186,19 +189,18 @@ class SupsrcTuiApp(TuiAppBase):
             yield DraggableSplitter(id="splitter_line")
 
             # Bottom section: Info pane with tabs
-            with Container(id="log_section", classes="main-section"):
-                with TabbedContent(initial="logs-tab"):
-                    with TabPane("Logs", id="logs-tab"):
-                        yield TextualLog(id="event-log", highlight=True)
-                    with TabPane("Repo Details", id="details-tab"):
-                        yield Label(
-                            "Repository details will appear here when selected",
-                            id="repo-details-content",
-                        )
-                    with TabPane("About", id="about-tab"):
-                        yield Label(
-                            "Supsrc TUI v1.0\nMonitoring and auto-commit system", id="about-content"
-                        )
+            with Container(id="log_section", classes="main-section"), TabbedContent(initial="events-tab"):
+                with TabPane("Events", id="events-tab"):
+                    yield EventFeed(id="event-feed")
+                with TabPane("Repo Details", id="details-tab"):
+                    yield Label(
+                        "Repository details will appear here when selected",
+                        id="repo-details-content",
+                    )
+                with TabPane("About", id="about-tab"):
+                    yield Label(
+                        "Supsrc TUI v1.0\nMonitoring and auto-commit system", id="about-content"
+                    )
 
         yield Footer()
 
@@ -217,8 +219,8 @@ class SupsrcTuiApp(TuiAppBase):
                 "Branch",
                 "📁",  # Total files
                 "📝",  # Changed files count
-                "➕",  # Added files
-                "➖",  # Deleted files
+                "\u2795",  # HEAVY PLUS SIGN - Added files
+                "\u2796",  # HEAVY MINUS SIGN - Deleted files
                 "✏️",  # Modified files
                 "Last Commit",
                 "Rule",
@@ -227,13 +229,22 @@ class SupsrcTuiApp(TuiAppBase):
             # Initialize timer manager
             self.timer_manager = TimerManager(self)
 
-            # Initialize the event log widget
+            # Initialize the event feed widget
             try:
-                log_widget = self.query_one("#event-log", TextualLog)
-                log_widget.write_line("[bold green]✅ Event log initialized[/bold green]")
-                log.debug("Event log widget initialized successfully")
+                self._event_feed = self.query_one("#event-feed", EventFeed)
+                self.event_collector.subscribe(self._event_feed.add_event)
+
+                # Create a welcome event
+                from supsrc.events.system import UserActionEvent
+
+                welcome_event = UserActionEvent(
+                    description="TUI started successfully",
+                    action="start",
+                )
+                self.event_collector.emit(welcome_event)
+                log.debug("Event feed widget initialized successfully")
             except Exception as e:
-                log.error("Failed to initialize log widget", error=str(e))
+                log.error("Failed to initialize event feed widget", error=str(e))
 
             # Set up a timer to check for external shutdown every 500ms
             self.set_interval(0.5, self._check_external_shutdown)
@@ -287,8 +298,8 @@ class SupsrcTuiApp(TuiAppBase):
 📊 Status: {repo_state.display_status_emoji} {repo_state.status.name}
 📁 Total files: {repo_state.total_files}
 📝 Changed files: {repo_state.changed_files}
-➕ Added: {repo_state.added_files}
-➖ Deleted: {repo_state.deleted_files}
+\u2795 Added: {repo_state.added_files}
+\u2796 Deleted: {repo_state.deleted_files}
 ✏️ Modified: {repo_state.modified_files}
 ⏱️ Timer: {repo_state.timer_seconds_left}s remaining
 🔄 Last updated: {repo_state.last_updated.strftime("%Y-%m-%d %H:%M:%S") if repo_state.last_updated else "never"}
@@ -317,39 +328,71 @@ class SupsrcTuiApp(TuiAppBase):
         pass
 
     def action_test_log_messages(self) -> None:
-        """Test action to manually trigger log messages."""
+        """Test action to manually trigger events."""
         import datetime
 
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
 
-        # Post several test messages
-        self.post_message(LogMessageUpdate(None, "INFO", f"🧪 Test message {timestamp}"))
-        self.post_message(LogMessageUpdate("test-repo", "DEBUG", f"🔍 Debug message {timestamp}"))
-        self.post_message(LogMessageUpdate(None, "WARNING", f"⚠️ Warning message {timestamp}"))
-        self.post_message(
-            LogMessageUpdate("another-repo", "ERROR", f"❌ Error message {timestamp}")
-        )
+        # Emit test events using the event system
+        from pathlib import Path
 
-        # Also write directly to log widget to test
-        try:
-            log_widget = self.query_one("#event-log", TextualLog)
-            log_widget.write_line(f"[bold yellow]Direct write test {timestamp}[/bold yellow]")
-        except Exception as e:
-            log.error("Failed direct log write test", error=str(e))
+        from supsrc.engines.git.events import GitCommitEvent
+        from supsrc.events.monitor import FileChangeEvent
+        from supsrc.events.system import ErrorEvent, UserActionEvent
+
+        test_events = [
+            UserActionEvent(
+                description=f"Test user action {timestamp}",
+                action="test",
+            ),
+            FileChangeEvent(
+                description=f"Test file modified {timestamp}",
+                repo_id="test-repo",
+                file_path=Path("test_file.py"),
+                change_type="modified",
+            ),
+            GitCommitEvent(
+                description=f"Test commit {timestamp}",
+                commit_hash="abc123",
+                branch="main",
+                files_changed=3,
+            ),
+            ErrorEvent(
+                description=f"Test error message {timestamp}",
+                source="test",
+                error_type="TestError",
+                repo_id="test-repo",
+            ),
+        ]
+
+        for event in test_events:
+            self.event_collector.emit(event)
 
     def on_log_message_update(self, message: LogMessageUpdate) -> None:
-        """Handle log message updates."""
+        """Handle legacy log message updates by converting to events."""
         try:
-            log_widget = self.query_one("#event-log", TextualLog)
-            # Format message with repo name if available
-            formatted_message = (
-                f"[{message.repo_id}] {message.message}" if message.repo_id else message.message
-            )
-            log_widget.write_line(formatted_message)
+            # Convert legacy log messages to events for backward compatibility
+            from supsrc.events.system import ErrorEvent, UserActionEvent
+
+            if message.level == "ERROR":
+                event = ErrorEvent(
+                    description=message.message,
+                    source="legacy",
+                    error_type="LogMessage",
+                    repo_id=message.repo_id,
+                )
+            else:
+                event = UserActionEvent(
+                    description=message.message,
+                    action="log_message",
+                    target=message.repo_id,
+                )
+
+            self.event_collector.emit(event)
         except Exception as e:
             # Log errors but don't crash the app
             log.error(
-                "Failed to write to TUI log widget",
+                "Failed to convert log message to event",
                 error=str(e),
                 raw_message_level=message.level,
                 raw_message_content=message.message,
