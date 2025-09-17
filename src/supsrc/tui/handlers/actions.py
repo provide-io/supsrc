@@ -7,7 +7,7 @@ Action handler methods for the TUI application.
 from __future__ import annotations
 
 import structlog
-from textual.widgets import DataTable
+from textual.widgets import DataTable, TabbedContent
 from textual.widgets import Log as TextualLog
 
 from supsrc.tui.messages import LogMessageUpdate
@@ -113,31 +113,60 @@ class ActionHandlerMixin:
 
             if repo_id:
                 log.debug("Repository selected for detail view", repo_id=repo_id)
+                self.selected_repo_id = repo_id
                 self.post_message(
                     LogMessageUpdate(
                         None,
                         "INFO",
-                        f"📖 Loading details for '{repo_id}'. Use 'Escape' to hide details.",
+                        f"📖 Selected repository: '{repo_id}'. Details shown in 'Repo Details' tab.",
                     )
                 )
-                self.show_detail_pane = True
-                self._run_repo_details_fetch(repo_id)
+                # Update the repo details tab content
+                self._update_repo_details_tab(repo_id)
 
     def action_hide_detail_pane(self) -> None:
-        """Hide the repository detail pane."""
-        if self.show_detail_pane:
-            self.show_detail_pane = False
-            log.debug("Detail pane hidden")
-            # Clear the detail log when hiding
-            self.query_one("#repo_detail_log", TextualLog).clear()
-            self.query_one(DataTable).focus()
+        """Hide the repository detail pane (legacy - now clears selection)."""
+        # In the new tabbed interface, this just clears the selection
+        self.selected_repo_id = None
+        log.debug("Repository selection cleared")
+        self.post_message(LogMessageUpdate(None, "INFO", "Repository selection cleared"))
+        # Focus back to the repository table
+        self.query_one(DataTable).focus()
 
     def action_refresh_details(self) -> None:
         """Refresh the currently displayed repository details."""
-        if self.show_detail_pane:
-            repo_id = self._get_selected_repo_id()
-            if repo_id:
-                self._run_repo_details_fetch(repo_id)
+        if self.selected_repo_id:
+            self.post_message(
+                LogMessageUpdate(
+                    None, "INFO", f"🔄 Refreshing details for '{self.selected_repo_id}'..."
+                )
+            )
+            self._update_repo_details_tab(self.selected_repo_id)
+        else:
+            self.post_message(
+                LogMessageUpdate(None, "WARNING", "No repository selected to refresh")
+            )
+
+    def action_focus_next(self) -> None:
+        """Focus the next panel in the interface."""
+        # Simple two-pane navigation: repo table <-> info pane tabs
+        try:
+            # Check if repository table has focus
+            repo_table = self.query_one("#repository_table", DataTable)
+            if repo_table.has_focus:
+                # Move focus to the tabbed content area
+                tabbed_content = self.query_one(TabbedContent)
+                tabbed_content.focus()
+            else:
+                # Move focus back to repository table
+                repo_table.focus()
+        except Exception as e:
+            log.debug("Error in focus_next", error=str(e))
+
+    def action_focus_previous(self) -> None:
+        """Focus the previous panel in the interface."""
+        # Same as focus_next for a two-pane layout
+        self.action_focus_next()
 
     def action_quit(self) -> None:
         """Quit the application."""

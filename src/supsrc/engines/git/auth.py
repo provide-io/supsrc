@@ -7,6 +7,7 @@ Git authentication and credentials handling for the GitEngine.
 from __future__ import annotations
 
 import getpass
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import pygit2
@@ -26,7 +27,9 @@ class GitAuthHandler:
         self._log = log.bind(handler_id=id(self))
         self._log.debug("GitAuthHandler initialized")
 
-    def create_credentials_callback(self) -> callable:
+    def create_credentials_callback(
+        self,
+    ) -> Callable[[str, str | None, int], CredentialType | None]:
         """Creates a credentials callback function for pygit2 operations."""
 
         def credentials_callback(

@@ -223,7 +223,9 @@ class SupsrcTuiApp(TuiAppBase):
             # Test log widget access and initialize it with a test message
             try:
                 log_widget = self.query_one("#event-log", TextualLog)
-                log_widget.write_line("[bold green]✅ Event log initialized - testing tabbed interface[/bold green]")
+                log_widget.write_line(
+                    "[bold green]✅ Event log initialized - testing tabbed interface[/bold green]"
+                )
                 log_widget.write_line("Welcome to Supsrc TUI - logs will appear here")
 
                 # Test the message system too
@@ -268,6 +270,43 @@ class SupsrcTuiApp(TuiAppBase):
             log.exception("Orchestrator failed within TUI worker. The app will shut down.")
         finally:
             log.info("Orchestrator worker finished.")
+
+    def _update_repo_details_tab(self, repo_id: str) -> None:
+        """Update the repo details tab with information about the selected repository."""
+        try:
+            details_label = self.query_one("#repo-details-content", Label)
+
+            # Get repository information if orchestrator is available
+            if self._orchestrator and hasattr(self._orchestrator, "_repository_states"):
+                repo_state = self._orchestrator._repository_states.get(repo_id)
+                if repo_state:
+                    details_text = f"""📍 Repository: {repo_id}
+🌿 Branch: {repo_state.current_branch or "unknown"}
+📊 Status: {repo_state.display_status_emoji} {repo_state.status.name}
+📁 Total files: {repo_state.total_files}
+📝 Changed files: {repo_state.changed_files}
+➕ Added: {repo_state.added_files}
+➖ Deleted: {repo_state.deleted_files}
+✏️ Modified: {repo_state.modified_files}
+⏱️ Timer: {repo_state.timer_seconds_left}s remaining
+🔄 Last updated: {repo_state.last_updated.strftime("%Y-%m-%d %H:%M:%S") if repo_state.last_updated else "never"}
+
+🎯 Rule: {repo_state.rule_name or "default"}
+⏸️ Paused: {"Yes" if repo_state.is_paused else "No"}
+⏹️ Stopped: {"Yes" if repo_state.is_stopped else "No"}"""
+                else:
+                    details_text = f"📍 Repository: {repo_id}\n\n⚠️ No state information available"
+            else:
+                details_text = f"📍 Repository: {repo_id}\n\n⚠️ Orchestrator not ready"
+
+            details_label.update(details_text)
+
+            # Switch to the repo details tab
+            tabbed_content = self.query_one(TabbedContent)
+            tabbed_content.active = "details-tab"
+
+        except Exception as e:
+            log.error("Failed to update repo details tab", error=str(e), repo_id=repo_id)
 
     def on_log_message_update(self, message: LogMessageUpdate) -> None:
         """Handle log message updates."""
