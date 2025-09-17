@@ -18,6 +18,7 @@ from textual.widgets import Log as TextualLog
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.tui.base_app import TuiAppBase
 from supsrc.tui.managers import TimerManager
+from supsrc.tui.messages import LogMessageUpdate
 from textual.containers import Container, Horizontal, Vertical
 from supsrc.tui.widgets import DraggableSplitter
 
@@ -219,6 +220,17 @@ class SupsrcTuiApp(TuiAppBase):
             # Initialize timer manager
             self.timer_manager = TimerManager(self)
 
+            # Test log widget access and initialize it with a test message
+            try:
+                log_widget = self.query_one("#event-log", TextualLog)
+                log_widget.write_line("[bold green]✅ Event log initialized - testing tabbed interface[/bold green]")
+                log_widget.write_line("Welcome to Supsrc TUI - logs will appear here")
+
+                # Test the message system too
+                self.post_message(LogMessageUpdate(None, "INFO", "🚀 TUI initialized and ready"))
+            except Exception as e:
+                pass  # Fail silently for now
+
             # Set up a timer to check for external shutdown every 500ms
             self.set_interval(0.5, self._check_external_shutdown)
 
@@ -256,6 +268,24 @@ class SupsrcTuiApp(TuiAppBase):
             log.exception("Orchestrator failed within TUI worker. The app will shut down.")
         finally:
             log.info("Orchestrator worker finished.")
+
+    def on_log_message_update(self, message: LogMessageUpdate) -> None:
+        """Handle log message updates."""
+        try:
+            log_widget = self.query_one("#event-log", TextualLog)
+            # Format message with repo name if available
+            formatted_message = (
+                f"[{message.repo_id}] {message.message}" if message.repo_id else message.message
+            )
+            log_widget.write_line(formatted_message)
+        except Exception as e:
+            # Log errors but don't crash the app
+            log.error(
+                "Failed to write to TUI log widget",
+                error=str(e),
+                raw_message_level=message.level,
+                raw_message_content=message.message,
+            )
 
 
 # 🖥️✨
