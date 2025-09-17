@@ -81,9 +81,9 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
             )
         )
 
-        # Use public Foundation API
+        # Use new Foundation API
         hub = get_hub()
-        hub.initialize(config)
+        hub.initialize_foundation(config)
 
         # CRITICAL: Remove all console handlers to prevent app logs from appearing in TUI
         root_logger = logging.getLogger()
