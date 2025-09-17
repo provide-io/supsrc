@@ -57,6 +57,9 @@ dev = [
     "provide-testkit[standard,advanced-testing,build]",
     "supsrc[tui,llm]",
 ]
+docs = [
+    "provide-testkit[docs]",
+]
 
 # --- Optional Features (Extras) ---
 [project.optional-dependencies]
