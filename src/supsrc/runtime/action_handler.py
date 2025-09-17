@@ -326,6 +326,18 @@ class ActionHandler:
                         commit_result.commit_hash,
                     )
 
+                # Emit git commit event
+                if hasattr(self.tui.app, "event_collector"):
+                    from supsrc.engines.git.events import GitCommitEvent
+
+                    commit_event = GitCommitEvent(
+                        description=f"Committed {staged_result.files_changed} files to {repo_id}",
+                        commit_hash=commit_result.commit_hash,
+                        branch=repo_state.current_branch or "main",
+                        files_changed=staged_result.files_changed,
+                    )
+                    self.tui.app.event_collector.emit(commit_event)  # type: ignore[arg-type]
+
                 # 4. Perform Push
                 action_log.info("Commit successful", commit_hash=repo_state.last_commit_short_hash)
                 repo_state.update_status(RepositoryStatus.PUSHING)
@@ -340,6 +352,18 @@ class ActionHandler:
                     )
                 elif push_result.skipped:
                     self.tui.post_log_update(repo_id, "INFO", "Push skipped by configuration.")
+                else:
+                    # Push succeeded - emit push event
+                    if hasattr(self.tui.app, "event_collector"):
+                        from supsrc.engines.git.events import GitPushEvent
+
+                        push_event = GitPushEvent(
+                            description=f"Pushed {repo_id} to remote repository",
+                            remote_name=repo_config.repository.get("remote", "origin"),
+                            branch=repo_state.current_branch or "main",
+                            commit_hash=commit_result.commit_hash,
+                        )
+                        self.tui.app.event_collector.emit(push_event)  # type: ignore[arg-type]
 
                 repo_state.reset_after_action()
 

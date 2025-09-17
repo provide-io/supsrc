@@ -110,7 +110,7 @@ class EventProcessor:
                 self.tui.post_state_update(self.repo_states)
 
                 # Emit file change event for TUI event feed
-                if hasattr(self.tui.app, 'event_collector'):
+                if hasattr(self.tui.app, "event_collector"):
                     from supsrc.events.monitor import FileChangeEvent
 
                     change_event = FileChangeEvent(

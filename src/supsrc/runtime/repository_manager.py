@@ -143,7 +143,7 @@ class RepositoryManager:
                 enabled_repo_ids.append(repo_id)
 
                 # Emit monitoring start event
-                if hasattr(tui.app, 'event_collector'):
+                if hasattr(tui.app, "event_collector"):
                     start_event = MonitoringStartEvent(
                         description=f"Started monitoring repository {repo_id}",
                         repo_id=repo_id,
@@ -155,7 +155,7 @@ class RepositoryManager:
                 repo_state.update_status(RepositoryStatus.ERROR, f"Initialization failed: {e}")
 
                 # Emit error event for failed initialization
-                if hasattr(tui.app, 'event_collector'):
+                if hasattr(tui.app, "event_collector"):
                     error_event = ErrorEvent(
                         description=f"Failed to initialize repository {repo_id}: {e}",
                         source="repository_manager",
