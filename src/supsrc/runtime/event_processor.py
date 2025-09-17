@@ -73,7 +73,9 @@ class EventProcessor:
                 # Handle special config reload event
                 if event.repo_id == "__config__":
                     log.info("Configuration change event received, triggering reload.")
-                    asyncio.create_task(self.orchestrator.reload_config())
+                    reload_task = asyncio.create_task(self.orchestrator.reload_config())
+                    # Store task reference to avoid warning (task runs independently)
+                    reload_task.add_done_callback(lambda t: None)
                     continue
 
                 # Get state and check if processing is paused

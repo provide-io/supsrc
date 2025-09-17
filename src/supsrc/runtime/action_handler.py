@@ -331,10 +331,10 @@ class ActionHandler:
                     from supsrc.engines.git.events import GitCommitEvent
 
                     commit_event = GitCommitEvent(
-                        description=f"Committed {staged_result.files_changed} files to {repo_id}",
+                        description=f"Committed {stage_result.files_changed} files to {repo_id}",
                         commit_hash=commit_result.commit_hash,
                         branch=repo_state.current_branch or "main",
-                        files_changed=staged_result.files_changed,
+                        files_changed=stage_result.files_changed or 0,
                     )
                     self.tui.app.event_collector.emit(commit_event)  # type: ignore[arg-type]
 
