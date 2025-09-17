@@ -67,35 +67,22 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
     import logging
 
     log.info("Initializing interactive dashboard...")
-    log.info("🐛 Debug logging will be available at /tmp/supsrc_tui_debug.log")
+    log.info("🐛 Debug logging available at /tmp/supsrc_tui_debug.log")
 
-    # Set up additional file logging for debugging
+    # Set up file logging for debugging (without TUI handler)
     try:
         setup_logging(
             level=logging.DEBUG,
             log_file="/tmp/supsrc_tui_debug.log",
-            tui_app_instance=None,  # Will be set below
+            tui_app_instance=None,  # Keep None to avoid TextualLogHandler
             headless_mode=False,
         )
-        log.debug("📁 Debug file logging configured")
+        log.debug("Debug file logging configured")
     except Exception as e:
         log.warning("Failed to setup debug file logging", error=str(e))
 
     try:
         app = SupsrcTuiApp(config_path=config_path, cli_shutdown_event=_shutdown_requested)
-
-        # Now configure TUI-specific logging with the app instance
-        try:
-            setup_logging(
-                level=logging.DEBUG,
-                log_file="/tmp/supsrc_tui_debug.log",
-                tui_app_instance=app,
-                headless_mode=False,
-            )
-            log.debug("🎯 TUI-specific logging configured with app instance")
-        except Exception as e:
-            log.warning("Failed to setup TUI-specific logging", error=str(e))
-
         app.run()
         log.info("Interactive dashboard finished.")
     except KeyboardInterrupt:

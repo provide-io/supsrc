@@ -115,25 +115,12 @@ def setup_logging(
         except Exception as e:
             slog.error("Failed to setup file logging", file=log_file, error=str(e))
 
-    # Add TUI handler if needed
+    # TUI logging now handled separately via LogMessageUpdate messages
+    # TextualLogHandler is disabled to avoid mixing debug logs with functional logs
     is_tui_mode = tui_app_instance is not None
-    slog.debug(f"🎯 TUI handler setup: is_tui_mode={is_tui_mode}, app_instance={bool(tui_app_instance)}")
-    if is_tui_mode and tui_app_instance:
-        if HAS_TUI and TextualLogHandler:
-            import structlog
-
-            slog.debug("📦 Creating TextualLogHandler...")
-            textual_handler = TextualLogHandler(app=tui_app_instance)
-            textual_handler.setLevel(level)
-            # Use Foundation-compatible formatter
-            formatter = structlog.stdlib.ProcessorFormatter(
-                processor=structlog.dev.ConsoleRenderer(colors=True)
-            )
-            textual_handler.setFormatter(formatter)
-            root_logger.addHandler(textual_handler)
-            slog.info("✅ TextualLogHandler added for TUI", handler_level=level)
-        else:
-            slog.error("❌ TUI mode active but textual is not installed", HAS_TUI=HAS_TUI, TextualLogHandler=bool(TextualLogHandler))
+    if is_tui_mode:
+        slog.info("🎯 TUI mode active - functional logs will use LogMessageUpdate messages", app_instance=bool(tui_app_instance))
+    # Note: TextualLogHandler setup removed to separate functional logs from debug logs
 
     slog.info(
         "Foundation-based logging initialization complete",

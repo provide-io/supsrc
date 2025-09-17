@@ -158,7 +158,7 @@ class GitEngine(RepositoryEngine):
 
         try:
             status_dict = await asyncio.to_thread(_blocking_get_status)
-            return RepoStatusResult(**status_dict)
+            return RepoStatusResult(**status_dict)  # type: ignore[misc]
         except pygit2.GitError as e:
             self._log.error("Failed to get Git status", error=str(e), repo_id=state.repo_id)
             return RepoStatusResult(success=False, message=f"Git status error: {e}")
@@ -215,7 +215,7 @@ class GitEngine(RepositoryEngine):
 
         try:
             result_dict = await asyncio.to_thread(_blocking_stage_changes)
-            return StageResult(**result_dict)
+            return StageResult(**result_dict)  # type: ignore[misc]
         except pygit2.GitError as e:
             self._log.error("Failed to stage changes", error=str(e), repo_id=state.repo_id)
             return StageResult(success=False, message=f"Git staging error: {e}")
@@ -292,7 +292,7 @@ class GitEngine(RepositoryEngine):
 
         try:
             result_dict = await asyncio.to_thread(_blocking_perform_commit)
-            return CommitResult(**result_dict)
+            return CommitResult(**result_dict)  # type: ignore[misc]
         except pygit2.GitError as e:
             self._log.error("Failed to perform commit", error=str(e), repo_id=state.repo_id)
             return CommitResult(success=False, message=f"Git commit error: {e}")
@@ -339,7 +339,7 @@ class GitEngine(RepositoryEngine):
 
         try:
             result_dict = await asyncio.to_thread(_blocking_perform_push)
-            return PushResult(**result_dict)
+            return PushResult(**result_dict)  # type: ignore[misc]
         except (ValueError, KeyError):
             message = f"Remote '{remote_name}' not found."
             self._log.warning(

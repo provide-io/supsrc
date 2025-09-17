@@ -55,22 +55,12 @@ class TUIInterface:
 
     def post_log_update(self, repo_id: str | None, level: str, message: str) -> None:
         """Posts a log message to the TUI."""
-        log.debug(f"📨 TUI Interface posting: repo={repo_id}, level={level}, msg={message[:100]}...")
-
-        if not self.is_active:
-            log.debug("❌ TUI Interface not active, skipping log update")
-            return
-        if not self.app:
-            log.debug("❌ No app instance, skipping log update")
-            return
-        if not LogMessageUpdate:
-            log.debug("❌ LogMessageUpdate not available, skipping log update")
+        if not self.is_active or not self.app or not LogMessageUpdate:
             return
 
         try:
-            # The formatter in TextualLogHandler will create the rich markup.
+            # Create and post the log message to the TUI
             log_msg = LogMessageUpdate(repo_id, level.upper(), message)
             self.app.post_message(log_msg)
-            log.debug(f"✅ Successfully posted LogMessageUpdate to app")
         except Exception as e:
-            log.error("❌ Failed to post log message to TUI", error=str(e), exc_info=True)
+            log.warning("Failed to post log message to TUI", error=str(e), exc_info=False)
