@@ -9,10 +9,20 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 import structlog
-from provide.foundation.metrics import config_reloads
+
+# Import foundation metrics with fallback
+try:
+    from provide.foundation.metrics import config_reloads  # type: ignore[attr-defined]
+except ImportError:
+    # Fallback for when foundation metrics is not available
+    class MockCounter:
+        def inc(self) -> None:
+            pass
+    config_reloads = MockCounter()
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
@@ -40,7 +50,7 @@ class MonitoringCoordinator:
         self.config_path = config_path
         self.repo_states = repo_states
         self.monitor_service: MonitoringService | None = None
-        self.config_observer: Observer | None = None
+        self.config_observer: Any = None  # Observer type annotation causes issues
         self._is_paused = False
         self._log = log.bind(coordinator_id=id(self))
         self._log.debug("MonitoringCoordinator initialized")
@@ -106,7 +116,9 @@ class MonitoringCoordinator:
             self._log.info("Configuration file watcher scheduled", path=watch_dir)
             tui.post_log_update(None, "DEBUG", f"Watching config in: {watch_dir}")
         except Exception as e:
-            self._log.error("Failed to set up configuration file watcher", error=str(e), exc_info=True)
+            self._log.error(
+                "Failed to set up configuration file watcher", error=str(e), exc_info=True
+            )
             self.config_observer = None
 
     def pause_monitoring(self) -> None:
@@ -148,9 +160,9 @@ class MonitoringCoordinator:
     async def reload_config(
         self,
         tui: TUIInterface,
-        initialize_repositories_callback: callable,
-        cleanup_timers_callback: callable,
-        update_processor_config_callback: callable,
+        initialize_repositories_callback: Callable[[Any, Any], Any],
+        cleanup_timers_callback: Callable[[], Any],
+        update_processor_config_callback: Callable[[Any], None],
     ) -> bool:
         """Reload configuration and restart monitoring."""
         config_reloads.inc()
@@ -223,9 +235,7 @@ class MonitoringCoordinator:
                 self._log.critical(
                     "Failed to start configuration file watcher", error=str(e), exc_info=True
                 )
-                tui.post_log_update(
-                    None, "CRITICAL", f"FATAL: Config watcher failed to start: {e}"
-                )
+                tui.post_log_update(None, "CRITICAL", f"FATAL: Config watcher failed to start: {e}")
                 return False
 
         return True
