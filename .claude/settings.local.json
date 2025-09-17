@@ -33,7 +33,14 @@
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/runtime/monitoring_coordinator.py)",
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/runtime/monitoring_coordinator.py)",
       "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/runtime/monitoring_coordinator.py)",
-      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run mypy src/supsrc/runtime/monitoring_coordinator.py)"
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run mypy src/supsrc/runtime/monitoring_coordinator.py)",
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/events/)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/events/)",
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/events/feed.py)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run mypy src/supsrc/events/)",
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/events/)",
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/engines/git/events.py)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/engines/git/events.py)"
     ],
     "deny": [],
     "ask": [],

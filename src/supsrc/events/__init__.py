@@ -13,8 +13,8 @@ from supsrc.events.feed import EventFeed
 from supsrc.events.protocol import Event
 
 __all__ = [
-    "Event",
     "BaseEvent",
+    "Event",
     "EventCollector",
     "EventFeed",
 ]
