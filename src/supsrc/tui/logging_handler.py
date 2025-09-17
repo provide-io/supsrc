@@ -76,15 +76,14 @@ class TextualLogHandler(logging.Handler):
             # Post the message to the TUI application's message queue
             if self.app and hasattr(self.app, "post_message"):
                 self.app.post_message(log_update_msg)
+                # Write a quick debug note to stderr (not to file to avoid loops)
+                print(f"[TextualLogHandler] Posted: {record.levelname} - {message_str[:50]}...", flush=True)
             else:
-                # Fallback if app is not available or misconfigured (should not happen in normal operation)
-                pass
+                print(f"[TextualLogHandler] ERROR: No app or post_message: app={bool(self.app)}", flush=True)
 
-        except Exception:
-            # Fallback for any errors during log emission to TUI
-            # (e.g., if TUI is closing or an unexpected error occurs)
-            # We print to stderr to avoid a loop if this handler itself is part of the failing logging chain.
-            # Optionally, print the original message as well if self.format(record) failed
+        except Exception as e:
+            # Write debug info to stderr to avoid logging loops
+            print(f"[TextualLogHandler] EXCEPTION: {e}", flush=True)
             import contextlib
 
             with contextlib.suppress(Exception):

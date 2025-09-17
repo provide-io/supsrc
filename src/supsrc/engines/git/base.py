@@ -5,7 +5,6 @@ Implementation of the RepositoryEngine protocol using pygit2.
 """
 
 import asyncio
-import getpass  # For SSH agent username fallback
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -15,10 +14,11 @@ import structlog
 
 # Add Foundation resilience patterns for Git operations
 from provide.foundation.resilience import BackoffStrategy, RetryPolicy, retry
-from pygit2.credentials import CredentialType
 
 from supsrc.config import GlobalConfig
+from supsrc.engines.git.auth import GitAuthHandler
 from supsrc.engines.git.info import GitRepoSummary
+from supsrc.engines.git.operations import GitOperationsHelper
 
 # Use absolute imports
 from supsrc.protocols import (
@@ -32,14 +32,6 @@ from supsrc.state import RepositoryState
 
 log = structlog.get_logger("engines.git.base")
 
-# --- Constants for Change Summary ---
-MAX_SUMMARY_FILES = 10
-SUMMARY_ADDED_PREFIX = "A "
-SUMMARY_MODIFIED_PREFIX = "M "
-SUMMARY_DELETED_PREFIX = "D "
-SUMMARY_RENAMED_PREFIX = "R "  # R old -> new
-SUMMARY_TYPECHANGE_PREFIX = "T "
-
 
 class GitEngine(RepositoryEngine):
     """Implements RepositoryEngine using pygit2."""
@@ -47,66 +39,17 @@ class GitEngine(RepositoryEngine):
     def __init__(self) -> None:
         self._log = log.bind(engine_id=id(self))
         self._log.debug("GitEngine initialized")
+        self.operations = GitOperationsHelper()
+        self.auth_handler = GitAuthHandler()
+        self._credentials_callback = self.auth_handler.create_credentials_callback()
 
-    def _get_repo(self, working_dir: Path) -> pygit2.Repository:
-        """Helper to get the pygit2 Repository object."""
-        try:
-            # More robustly open the repository assuming working_dir is the root.
-            repo = pygit2.Repository(str(working_dir))
-            return repo
-        except pygit2.GitError as e:
-            self._log.error("Failed to open Git repository", path=str(working_dir), error=str(e))
-            raise
 
-    def _get_config_value(self, key: str, config: dict[str, Any], default: Any = None) -> Any:
-        """Safely gets a value from the engine-specific config dict."""
-        return config.get(key, default)
-
-    # --- Authentication Callback ---
-    def _credentials_callback(
-        self, url: str, username_from_url: str | None, allowed_types: int
-    ) -> CredentialType | None:
-        """Provides credentials to pygit2, attempting SSH agent first."""
-        cred_log = self._log.bind(
-            url=url, username_from_url=username_from_url, allowed_types=allowed_types
-        )
-        cred_log.debug("Credentials callback invoked")
-
-        # 1. Try SSH Agent (KeypairFromAgent) if SSH key is allowed
-        if allowed_types & CredentialType.SSH_KEY:
-            try:
-                ssh_user = username_from_url or getpass.getuser()
-                cred_log.debug("Attempting SSH agent authentication", ssh_user=ssh_user)
-                credentials = pygit2.KeypairFromAgent(ssh_user)
-                cred_log.info("Using SSH agent credentials.")
-                return credentials
-            except pygit2.GitError as e:
-                cred_log.debug("SSH agent authentication failed or not available", error=str(e))
-            except Exception as e:
-                cred_log.error(
-                    "Unexpected error during SSH agent auth attempt",
-                    error=str(e),
-                    exc_info=True,
-                )
-
-        # 2. TODO: Add HTTPS Token/UserPass from Environment Variables
-        # if allowed_types & CredentialType.USERPASS_PLAINTEXT:
-        #    git_user = os.getenv("GIT_USERNAME")
-        #    git_token = os.getenv("GIT_PASSWORD") # Treat as token
-        #    if git_user and git_token:
-        #        cred_log.info("Using User/Pass credentials from environment variables.")
-        #        return pygit2.UserPass(git_user, git_token)
-        #    else:
-        #        cred_log.debug("GIT_USERNAME or GIT_PASSWORD env vars not set for UserPass.")
-
-        cred_log.warning("No suitable credentials found or configured via callbacks.")
-        return None
 
     async def get_summary(self, working_dir: Path) -> GitRepoSummary:
         """Gets a summary of the repository's HEAD state."""
 
         def _blocking_get_summary():
-            repo = self._get_repo(working_dir)
+            repo = self.operations.get_repo(working_dir)
             if repo.is_empty:
                 return {"is_empty": True}
             if repo.head_is_unborn:
@@ -146,7 +89,7 @@ class GitEngine(RepositoryEngine):
     ) -> RepoStatusResult:
         def _blocking_get_status():
             status_log = self._log.bind(repo_id=state.repo_id, path=str(working_dir))
-            repo = self._get_repo(working_dir)
+            repo = self.operations.get_repo(working_dir)
             current_branch = "UNBORN" if repo.head_is_unborn else repo.head.shorthand
 
             if repo.is_bare:
@@ -241,7 +184,7 @@ class GitEngine(RepositoryEngine):
         working_dir: Path,
     ) -> StageResult:
         def _blocking_stage_changes():
-            repo = self._get_repo(working_dir)
+            repo = self.operations.get_repo(working_dir)
             index = repo.index
             staged_list = []
 
@@ -282,68 +225,6 @@ class GitEngine(RepositoryEngine):
             self._log.exception("Unexpected error staging changes", repo_id=state.repo_id)
             return StageResult(success=False, message=f"Unexpected staging error: {e}")
 
-    def _generate_change_summary(self, diff: pygit2.Diff) -> str:
-        # This method doesn't perform I/O, so it can remain synchronous.
-        added, modified, deleted, renamed, typechanged = [], [], [], [], []
-        for delta in diff.deltas:
-            path = (
-                delta.new_file.path
-                if delta.status != pygit2.GIT_DELTA_DELETED
-                else delta.old_file.path
-            )
-            if delta.status == pygit2.GIT_DELTA_ADDED:
-                added.append(path)
-            elif delta.status == pygit2.GIT_DELTA_MODIFIED:
-                modified.append(path)
-            elif delta.status == pygit2.GIT_DELTA_DELETED:
-                deleted.append(path)
-            elif delta.status == pygit2.GIT_DELTA_RENAMED:
-                renamed.append(f"{delta.old_file.path} -> {delta.new_file.path}")
-            elif delta.status == pygit2.GIT_DELTA_TYPECHANGE:
-                typechanged.append(path)
-
-        summary_lines = []
-        if added:
-            summary_lines.append(f"Added ({len(added)}):")
-            summary_lines.extend(
-                [f"  {SUMMARY_ADDED_PREFIX}{f}" for f in added[:MAX_SUMMARY_FILES]]
-            )
-            if len(added) > MAX_SUMMARY_FILES:
-                summary_lines.append(f"  ... ({len(added) - MAX_SUMMARY_FILES} more)")
-
-        if modified:
-            summary_lines.append(f"Modified ({len(modified)}):")
-            summary_lines.extend(
-                [f"  {SUMMARY_MODIFIED_PREFIX}{f}" for f in modified[:MAX_SUMMARY_FILES]]
-            )
-            if len(modified) > MAX_SUMMARY_FILES:
-                summary_lines.append(f"  ... ({len(modified) - MAX_SUMMARY_FILES} more)")
-
-        if deleted:
-            summary_lines.append(f"Deleted ({len(deleted)}):")
-            summary_lines.extend(
-                [f"  {SUMMARY_DELETED_PREFIX}{f}" for f in deleted[:MAX_SUMMARY_FILES]]
-            )
-            if len(deleted) > MAX_SUMMARY_FILES:
-                summary_lines.append(f"  ... ({len(deleted) - MAX_SUMMARY_FILES} more)")
-
-        if renamed:
-            summary_lines.append(f"Renamed ({len(renamed)}):")
-            summary_lines.extend(
-                [f"  {SUMMARY_RENAMED_PREFIX}{f}" for f in renamed[:MAX_SUMMARY_FILES]]
-            )
-            if len(renamed) > MAX_SUMMARY_FILES:
-                summary_lines.append(f"  ... ({len(renamed) - MAX_SUMMARY_FILES} more)")
-
-        if typechanged:
-            summary_lines.append(f"Type Changed ({len(typechanged)}):")
-            summary_lines.extend(
-                [f"  {SUMMARY_TYPECHANGE_PREFIX}{f}" for f in typechanged[:MAX_SUMMARY_FILES]]
-            )
-            if len(typechanged) > MAX_SUMMARY_FILES:
-                summary_lines.append(f"  ... ({len(typechanged) - MAX_SUMMARY_FILES} more)")
-
-        return "\n".join(summary_lines)
 
     @retry(
         pygit2.GitError,
@@ -361,7 +242,7 @@ class GitEngine(RepositoryEngine):
         working_dir: Path,
     ) -> CommitResult:
         def _blocking_perform_commit():
-            repo = self._get_repo(working_dir)
+            repo = self.operations.get_repo(working_dir)
             repo.index.read(force=True)  # Ensure index is fresh from disk
 
             is_unborn = repo.head_is_unborn
@@ -391,8 +272,8 @@ class GitEngine(RepositoryEngine):
                 offset = 0  # UTC
                 signature = pygit2.Signature(fallback_name, fallback_email, timestamp, offset)
 
-            change_summary = self._generate_change_summary(diff)
-            commit_message_template_str = message_template or self._get_config_value(
+            change_summary = self.operations.generate_change_summary(diff)
+            commit_message_template_str = message_template or self.operations.get_config_value(
                 "commit_message_template", config, "🔼⚙️ [skip ci] auto-commit\n\n{{change_summary}}"
             )
             timestamp_str = datetime.now(UTC).isoformat()
@@ -441,19 +322,19 @@ class GitEngine(RepositoryEngine):
         global_config: GlobalConfig,
         working_dir: Path,
     ) -> PushResult:
-        auto_push = self._get_config_value("auto_push", config, False)
+        auto_push = self.operations.get_config_value("auto_push", config, False)
         if not auto_push:
             return PushResult(success=True, skipped=True, message="Push disabled by config.")
 
-        remote_name = self._get_config_value("remote", config, "origin")
+        remote_name = self.operations.get_config_value("remote", config, "origin")
 
         def _blocking_perform_push():
-            repo = self._get_repo(working_dir)
+            repo = self.operations.get_repo(working_dir)
 
             if remote_name not in repo.remotes:
                 raise ValueError(f"Remote '{remote_name}' not found in repository.")
 
-            branch_name = self._get_config_value("branch", config) or repo.head.shorthand
+            branch_name = self.operations.get_config_value("branch", config) or repo.head.shorthand
             remote = repo.remotes[remote_name]
             callbacks = pygit2.RemoteCallbacks(credentials=self._credentials_callback)
             remote.push([f"refs/heads/{branch_name}"], callbacks=callbacks)
@@ -477,34 +358,7 @@ class GitEngine(RepositoryEngine):
 
     async def get_commit_history(self, working_dir: Path, limit: int = 10) -> list[str]:
         """Retrieves the last N commit messages from the repository asynchronously."""
-
-        def _blocking_get_history() -> list[str]:
-            repo = self._get_repo(working_dir)
-            if repo.is_empty or repo.head_is_unborn:
-                return ["Repository is empty or unborn."]
-
-            last_commits = []
-            for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):
-                if len(last_commits) >= limit:
-                    break
-                commit_time = datetime.fromtimestamp(commit.commit_time, tz=UTC).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-                summary = (commit.message or "").split("\n", 1)[0][:60]
-                author_name = commit.author.name if commit.author else "Unknown"
-                last_commits.append(
-                    f"{str(commit.id)[:7]} - {author_name} - {commit_time} - {summary}"
-                )
-            return last_commits
-
-        try:
-            return await asyncio.to_thread(_blocking_get_history)
-        except pygit2.GitError as e:
-            self._log.error("Failed to get commit history", error=str(e))
-            return [f"Error fetching history: {e}"]
-        except Exception as e:
-            self._log.exception("Unexpected error getting commit history")
-            return [f"Unexpected error fetching history: {e}"]
+        return await self.operations.get_commit_history(working_dir, limit)
 
 
 # 🔼⚙️

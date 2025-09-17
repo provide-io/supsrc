@@ -201,6 +201,9 @@ class SupsrcTuiApp(TuiAppBase):
 
     def on_mount(self) -> None:
         """Initialize data table and start the orchestrator."""
+        # Foundation/structlog logging is already set up by the CLI
+        log.info("🐛 TUI on_mount starting - debug info will go to Foundation logger")
+
         try:
             # Set up the data table
             table = self.query_one("#repository_table", DataTable)
@@ -224,17 +227,21 @@ class SupsrcTuiApp(TuiAppBase):
             # Test log widget access and initialize it with a test message
             try:
                 log_widget = self.query_one("#event-log", TextualLog)
+                log.debug("🎯 Found event log widget successfully")
                 log_widget.write_line(
                     "[bold green]✅ Event log initialized - testing tabbed interface[/bold green]"
                 )
                 log_widget.write_line("Welcome to Supsrc TUI - logs will appear here")
+                log.debug("📝 Direct log widget writes completed")
 
                 # Test the message system too
+                log.debug("📤 Posting test LogMessageUpdate messages...")
                 self.post_message(LogMessageUpdate(None, "INFO", "🚀 TUI initialized and ready"))
                 self.post_message(LogMessageUpdate(None, "DEBUG", "📊 Debug logging active"))
                 self.post_message(LogMessageUpdate("test-repo", "INFO", "📁 Test repository message"))
+                log.debug("📮 Posted 3 test LogMessageUpdate messages")
             except Exception as e:
-                pass  # Fail silently for now
+                log.error(f"❌ Failed log widget initialization: {e}", error=str(e))
 
             # Set up a timer to check for external shutdown every 500ms
             self.set_interval(0.5, self._check_external_shutdown)
@@ -331,6 +338,7 @@ class SupsrcTuiApp(TuiAppBase):
 
     def on_log_message_update(self, message: LogMessageUpdate) -> None:
         """Handle log message updates."""
+        log.debug(f"🔔 Received LogMessageUpdate: repo={message.repo_id}, level={message.level}, msg={message.message[:100]}...")
         try:
             log_widget = self.query_one("#event-log", TextualLog)
             # Format message with repo name if available
@@ -338,12 +346,11 @@ class SupsrcTuiApp(TuiAppBase):
                 f"[{message.repo_id}] {message.message}" if message.repo_id else message.message
             )
             log_widget.write_line(formatted_message)
-            # Debug: also log that we received the message
-            log.debug("TUI log message written", message=formatted_message)
+            log.debug(f"✅ Successfully wrote to log widget: {formatted_message[:100]}...")
         except Exception as e:
             # Log errors but don't crash the app
             log.error(
-                "Failed to write to TUI log widget",
+                f"❌ Failed to write to TUI log widget: {e}",
                 error=str(e),
                 raw_message_level=message.level,
                 raw_message_content=message.message,

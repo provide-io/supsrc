@@ -20,7 +20,8 @@
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/engines/git/operations.py)",
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/engines/git/operations.py)",
       "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/engines/git/operations.py)",
-      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run mypy src/supsrc/engines/git/operations.py)"
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run mypy src/supsrc/engines/git/operations.py)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src python3 -c \"\nimport pygit2\nprint(''Available constants:'')\nprint([attr for attr in dir(pygit2) if ''DELTA'' in attr])\nprint([attr for attr in dir(pygit2) if ''SORT'' in attr])\n\")"
     ],
     "deny": [],
     "ask": [],

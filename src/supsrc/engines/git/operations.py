@@ -52,18 +52,18 @@ class GitOperationsHelper:
         for delta in diff.deltas:
             path = (
                 delta.new_file.path
-                if delta.status != pygit2.GIT_DELTA_DELETED
+                if delta.status != pygit2.GIT_DELTA_DELETED  # type: ignore[attr-defined]
                 else delta.old_file.path
             )
-            if delta.status == pygit2.GIT_DELTA_ADDED:
+            if delta.status == pygit2.GIT_DELTA_ADDED:  # type: ignore[attr-defined]
                 added.append(path)
-            elif delta.status == pygit2.GIT_DELTA_MODIFIED:
+            elif delta.status == pygit2.GIT_DELTA_MODIFIED:  # type: ignore[attr-defined]
                 modified.append(path)
-            elif delta.status == pygit2.GIT_DELTA_DELETED:
+            elif delta.status == pygit2.GIT_DELTA_DELETED:  # type: ignore[attr-defined]
                 deleted.append(path)
-            elif delta.status == pygit2.GIT_DELTA_RENAMED:
+            elif delta.status == pygit2.GIT_DELTA_RENAMED:  # type: ignore[attr-defined]
                 renamed.append(f"{delta.old_file.path} -> {delta.new_file.path}")
-            elif delta.status == pygit2.GIT_DELTA_TYPECHANGE:
+            elif delta.status == pygit2.GIT_DELTA_TYPECHANGE:  # type: ignore[attr-defined]
                 typechanged.append(path)
 
         summary_lines = []
@@ -117,8 +117,8 @@ class GitOperationsHelper:
             if repo.is_empty or repo.head_is_unborn:
                 return ["Repository is empty or unborn."]
 
-            last_commits = []
-            for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):
+            last_commits: list[str] = []
+            for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):  # type: ignore[attr-defined]
                 if len(last_commits) >= limit:
                     break
                 commit_time = datetime.fromtimestamp(commit.commit_time, tz=UTC).strftime(
