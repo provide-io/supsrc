@@ -82,7 +82,8 @@
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/tui/handlers/actions.py)",
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/tui/handlers/actions.py)",
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/runtime/repository_manager.py src/supsrc/runtime/event_processor.py src/supsrc/runtime/action_handler.py)",
-      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check:*)"
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check:*)",
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/cli/watch_cmds.py)"
     ],
     "deny": [],
     "ask": [],

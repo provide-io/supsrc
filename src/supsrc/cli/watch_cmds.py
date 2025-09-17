@@ -63,8 +63,9 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
 
     # Step 2: Dependencies are available. Now run the TUI application.
     # Enable debug file logging for troubleshooting
-    from provide.foundation import TelemetryConfig, LoggingConfig, get_hub
     import logging
+
+    from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
 
     log.info("Initializing interactive dashboard...")
     log.info("🐛 Debug logging available at /tmp/supsrc_tui_debug.log")
@@ -84,10 +85,32 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
         hub = get_hub()
         hub.initialize_foundation(config)
 
+        # CRITICAL: Remove all console handlers to prevent app logs from appearing in TUI
+        root_logger = logging.getLogger()
+        console_handlers = [
+            h
+            for h in root_logger.handlers
+            if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+        ]
+        for handler in console_handlers:
+            root_logger.removeHandler(handler)
+
         # Add debug file handler
         file_handler = logging.FileHandler("/tmp/supsrc_tui_debug.log", encoding="utf-8")
         file_handler.setLevel(logging.DEBUG)
-        logging.getLogger().addHandler(file_handler)
+
+        # Set file handler formatter to include more detail for debugging
+        import structlog
+
+        file_formatter = structlog.stdlib.ProcessorFormatter(
+            processor=structlog.processors.JSONRenderer(sort_keys=True)
+        )
+        file_handler.setFormatter(file_formatter)
+
+        root_logger.addHandler(file_handler)
+
+        # Set root logger level to capture everything
+        root_logger.setLevel(logging.DEBUG)
 
         log.debug("Debug file logging configured")
     except Exception as e:
