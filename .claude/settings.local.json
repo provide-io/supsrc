@@ -76,7 +76,8 @@
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes tests/test_hot_reload.py tests/integration/test_monitoring.py tests/unit/test_orchestrator.py)",
       "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/tui/app.py)",
       "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run mypy src/supsrc/tui/app.py)",
-      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/runtime/event_processor.py tests/integration/test_monitoring.py)"
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/runtime/event_processor.py tests/integration/test_monitoring.py)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src pytest)"
     ],
     "deny": [],
     "ask": [],

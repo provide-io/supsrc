@@ -14,8 +14,8 @@ from textual.widgets import DataTable
 from textual.worker import Worker, WorkerState
 
 from supsrc.state import RepositoryState
-from supsrc.tui.app import LogMessageUpdate, SupsrcTuiApp, TimerManager
-from supsrc.tui.messages import StateUpdate
+from supsrc.tui.app import SupsrcTuiApp, TimerManager
+from supsrc.tui.messages import LogMessageUpdate, StateUpdate
 
 
 @pytest.fixture
