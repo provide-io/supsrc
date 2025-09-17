@@ -50,7 +50,7 @@ class EventHandlerMixin:
             # debug_message_content = repr(message.repo_states)
             # log.debug(f"DEBUG_TUI_APP: on_state_update received: {debug_message_content}")
 
-            table = self.query_one(DataTable)
+            table = self.query_one("#repository_table", DataTable)
             current_keys = set(table.rows.keys())
             incoming_keys = set(message.repo_states.keys())
 

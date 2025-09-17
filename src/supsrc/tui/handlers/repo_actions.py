@@ -20,7 +20,7 @@ class RepoActionHandlerMixin:
     def action_select_repo_for_detail(self) -> None:
         """Select a repository (simplified - no detail pane)."""
         try:
-            table = self.query_one(DataTable)
+            table = self.query_one("#repository_table", DataTable)
             # Get the row key using coordinate_to_cell_key
             try:
                 cell_key = table.coordinate_to_cell_key((table.cursor_row, 0))
@@ -49,7 +49,7 @@ class RepoActionHandlerMixin:
     def _get_selected_repo_id(self) -> str | None:
         """Helper to get the ID of the currently selected repository."""
         try:
-            table = self.query_one(DataTable)
+            table = self.query_one("#repository_table", DataTable)
             cell_key = table.coordinate_to_cell_key((table.cursor_row, 0))
             row_key = cell_key.row_key
             return str(row_key.value) if row_key else None

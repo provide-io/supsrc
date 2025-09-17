@@ -138,7 +138,7 @@ class SupsrcTuiApp(TuiAppBase):
         """Initialize data table and start the orchestrator."""
         try:
             # Set up the data table
-            table = self.query_one(DataTable)
+            table = self.query_one("#repository_table", DataTable)
             table.add_columns(
                 "Status",
                 "Timer",
