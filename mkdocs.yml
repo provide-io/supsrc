@@ -5,6 +5,9 @@ site_url: https://foundry.provide.io/supsrc/
 repo_url: https://github.com/provide-io/supsrc
 repo_name: provide-io/supsrc
 edit_uri: edit/main/docs/
+
+# Development server configuration
+dev_addr: '127.0.0.1:8011'
 copyright: Copyright &copy; 2024-2025 provide.io
 
 # Standalone mode settings
