@@ -26,12 +26,12 @@ class FileChangeEvent(BaseEvent):
         """Format file change event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         emoji_map = {
-            "created": "➕",
-            "modified": "✏️",
-            "deleted": "➖",
-            "moved": "🔄",
+            "created": "\u2795",  # HEAVY PLUS SIGN
+            "modified": "\u270f\ufe0f",  # PENCIL
+            "deleted": "\u2796",  # HEAVY MINUS SIGN
+            "moved": "\U0001f504",  # COUNTERCLOCKWISE ARROWS BUTTON
         }
-        emoji = emoji_map.get(self.change_type, "📄")
+        emoji = emoji_map.get(self.change_type, "\U0001f4c4")  # PAGE FACING UP
         return f"[{time_str}] {emoji} [{self.repo_id}] {self.file_path.name} {self.change_type}"
 
 
@@ -46,7 +46,7 @@ class MonitoringStartEvent(BaseEvent):
     def format(self) -> str:
         """Format monitoring start event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
-        return f"[{time_str}] 👁️ Started monitoring [{self.repo_id}] at {self.path}"
+        return f"[{time_str}] \U0001f441\ufe0f Started monitoring [{self.repo_id}] at {self.path}"  # EYE
 
 
 @attrs.define
@@ -59,4 +59,4 @@ class MonitoringStopEvent(BaseEvent):
     def format(self) -> str:
         """Format monitoring stop event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
-        return f"[{time_str}] 🛑 Stopped monitoring [{self.repo_id}]"
+        return f"[{time_str}] \U0001f6d1 Stopped monitoring [{self.repo_id}]"  # STOP SIGN
