@@ -63,14 +63,13 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
 
     # Step 2: Dependencies are available. Now run the TUI application.
     # Enable debug file logging for troubleshooting
-    from provide.foundation.setup import internal_setup
-    from provide.foundation.logger.config import TelemetryConfig, LoggingConfig
+    from provide.foundation import TelemetryConfig, LoggingConfig, get_hub
     import logging
 
     log.info("Initializing interactive dashboard...")
     log.info("🐛 Debug logging available at /tmp/supsrc_tui_debug.log")
 
-    # Set up file logging for debugging using Foundation directly
+    # Set up file logging for debugging using Foundation public API
     try:
         config = TelemetryConfig(
             logging=LoggingConfig(
@@ -80,7 +79,10 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
                 logger_name_emoji_prefix_enabled=True,
             )
         )
-        internal_setup(config)
+
+        # Use public Foundation API
+        hub = get_hub()
+        hub.initialize_foundation(config)
 
         # Add debug file handler
         file_handler = logging.FileHandler("/tmp/supsrc_tui_debug.log", encoding="utf-8")

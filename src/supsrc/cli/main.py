@@ -55,9 +55,8 @@ def cli(
         log_file=log_file,
     )
 
-    # Use Foundation's setup directly
-    from provide.foundation.setup import internal_setup
-    from provide.foundation.logger.config import TelemetryConfig, LoggingConfig
+    # Use Foundation's public API
+    from provide.foundation import TelemetryConfig, LoggingConfig, get_hub
     import logging
 
     try:
@@ -67,7 +66,7 @@ def cli(
         # Determine if JSON logs should be used
         json_logs = log_format == "json"
 
-        # Setup Foundation logging directly
+        # Setup Foundation using public API
         formatter = "json" if json_logs else "key_value"
         config = TelemetryConfig(
             logging=LoggingConfig(
@@ -77,7 +76,10 @@ def cli(
                 logger_name_emoji_prefix_enabled=True,
             )
         )
-        internal_setup(config)
+
+        # Use public Foundation API
+        hub = get_hub()
+        hub.initialize_foundation(config)
 
         # Add file handler if needed
         if log_file:
