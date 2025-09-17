@@ -4,5 +4,6 @@
 TUI widgets package.
 """
 
-# Widget components can be added here in the future
-__all__ = []
+from supsrc.tui.widgets.resizable_panes import ResizablePanes
+
+__all__ = ["ResizablePanes"]

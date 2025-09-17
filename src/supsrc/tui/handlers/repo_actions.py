@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import structlog
 from textual.widgets import DataTable
-from textual.widgets import Log as TextualLog
 
 from supsrc.tui.messages import LogMessageUpdate
 
@@ -19,7 +18,7 @@ class RepoActionHandlerMixin:
     """Mixin containing repository-specific action handler methods for the TUI."""
 
     def action_select_repo_for_detail(self) -> None:
-        """Show detail pane for the selected repository."""
+        """Select a repository (simplified - no detail pane)."""
         try:
             table = self.query_one(DataTable)
             # Get the row key using coordinate_to_cell_key
@@ -31,37 +30,21 @@ class RepoActionHandlerMixin:
                 self.selected_repo_id = None
 
             if self.selected_repo_id:
-                self.show_detail_pane = True
-
-                if self._orchestrator and self.selected_repo_id:
-                    detail_log = self.query_one("#repo_detail_log", TextualLog)
-                    detail_log.clear()
-                    detail_log.write_line(f"Fetching details for [b]{self.selected_repo_id}[/b]...")
-
-                    self.run_worker(
-                        self._fetch_repo_details_worker(self.selected_repo_id),
-                        thread=True,
-                        group="repo_detail_fetcher",
-                        name=f"fetch_details_{self.selected_repo_id}",
+                self.post_message(
+                    LogMessageUpdate(
+                        None, "INFO", f"📍 Selected repository: '{self.selected_repo_id}'"
                     )
+                )
         except Exception as e:
-            log.error("Error selecting repo for detail", error=str(e))
+            log.error("Error selecting repo", error=str(e))
 
     def action_hide_detail_pane(self) -> None:
-        """Hide the detail pane."""
-        if self.show_detail_pane:
-            self.show_detail_pane = False
-            self.selected_repo_id = None
-            try:
-                self.query_one("#repo_detail_log", TextualLog).clear()
-                self.query_one(DataTable).focus()
-            except Exception as e:
-                log.error("Error hiding detail pane", error=str(e))
+        """Legacy action - no longer used in simplified layout."""
+        pass
 
     def action_refresh_details(self) -> None:
-        """Refresh the current detail view."""
-        if self.show_detail_pane and self.selected_repo_id:
-            self.action_select_repo_for_detail()
+        """Legacy action - no longer used in simplified layout."""
+        pass
 
     def _get_selected_repo_id(self) -> str | None:
         """Helper to get the ID of the currently selected repository."""

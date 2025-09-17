@@ -11,7 +11,6 @@ from typing import Any, ClassVar
 
 import structlog
 from textual.app import ComposeResult
-from textual.containers import Container
 from textual.reactive import var
 from textual.widgets import DataTable, Footer, Header
 from textual.widgets import Log as TextualLog
@@ -19,6 +18,7 @@ from textual.widgets import Log as TextualLog
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.tui.base_app import TuiAppBase
 from supsrc.tui.managers import TimerManager
+from supsrc.tui.widgets import ResizablePanes
 
 log = structlog.get_logger("tui.app")
 
@@ -48,57 +48,44 @@ class SupsrcTuiApp(TuiAppBase):
         ("G", "resume_repo_monitoring", "Resume Repo Monitoring"),
     ]
 
-    # Updated CSS for better layout
+    # Simple 2-pane layout with resizable splitter
     CSS = """
     Screen {
         layout: vertical;
         overflow: hidden;
     }
 
-    #repository_pane_container { /* Was #table_container */
-        height: 40%; /* Initial height, can be adjusted by watch_show_detail_pane */
+    ResizablePanes {
+        height: 100%;
+    }
+
+    .resizable-pane {
         overflow-y: auto;
         scrollbar-gutter: stable;
-        border: round $accent;
+        border: round #888888;
         padding: 1;
         margin: 1;
     }
 
-    #detail_pane_container { /* Was #detail_container */
-        display: none; /* Hidden by default */
-        height: 30%; /* Height when visible, adjusted by watch_show_detail_pane */
-        overflow-y: auto;
-        scrollbar-gutter: stable;
-        border: round $accent;
-        padding: 1;
-        margin: 1;
+    #splitter {
+        height: 1;
+        background: #444444;
+        margin: 0;
+        padding: 0;
     }
 
-    #global_log_container { /* Was #log_container */
-        height: 30%; /* Relative height */
-        overflow-y: auto;
-        scrollbar-gutter: stable;
-        border: round $accent;
-        padding: 1;
-        margin: 1;
+    #splitter:hover {
+        background: #666666;
     }
 
     #event-log {
-        max-height: 100%;
-        overflow-y: auto;
-        scrollbar-gutter: stable;
-    }
-
-    #repo_detail_log {
-        max-height: 100%;
+        height: 100%;
         overflow-y: auto;
         scrollbar-gutter: stable;
     }
 
     DataTable {
         height: 100%;
-        cursor-background: $primary;
-        cursor-foreground: $text;
         scrollbar-gutter: stable;
     }
 
@@ -114,7 +101,6 @@ class SupsrcTuiApp(TuiAppBase):
     """
 
     # Reactive variables
-    show_detail_pane: bool = var(False, init=False)
     selected_repo_id: str | None = var(None, init=False)
 
     def __init__(self, config_path: Path, cli_shutdown_event: asyncio.Event, **kwargs: Any) -> None:
@@ -133,8 +119,9 @@ class SupsrcTuiApp(TuiAppBase):
         """Create child widgets for the app."""
         yield Header()
 
-        # Repository table container
-        with Container(id="repository_pane_container"):
+        # Resizable panes container
+        with ResizablePanes(id="main_panes"):
+            # Top pane: Repository table
             yield DataTable(
                 id="repository_table",
                 cursor_type="row",
@@ -142,14 +129,8 @@ class SupsrcTuiApp(TuiAppBase):
                 header_height=2,
                 show_row_labels=False,
             )
-
-        # Detail pane container (hidden by default)
-        with Container(id="detail_pane_container"):
-            yield TextualLog(id="repo_detail_log", highlight=True, markup=True)
-
-        # Global log container
-        with Container(id="global_log_container"):
-            yield TextualLog(id="event-log", highlight=True, markup=True)
+            # Bottom pane: Event log
+            yield TextualLog(id="event-log", highlight=True)
 
         yield Footer()
 
@@ -212,15 +193,6 @@ class SupsrcTuiApp(TuiAppBase):
             log.exception("Orchestrator failed within TUI worker. The app will shut down.")
         finally:
             log.info("Orchestrator worker finished.")
-
-    def _run_repo_details_fetch(self, repo_id: str) -> None:
-        """Helper method to run repository details fetch worker."""
-        self.run_worker(
-            self._fetch_repo_details_worker(repo_id),
-            thread=True,
-            group="repo_detail_fetcher",
-            name=f"fetch_details_{repo_id}",
-        )
 
 
 # 🖥️✨

@@ -203,18 +203,16 @@ class EventHandlerMixin:
             )
 
     def on_repo_detail_update(self, message: RepoDetailUpdate) -> None:
-        """Handle repository detail updates."""
-        if self.show_detail_pane and message.repo_id == self.selected_repo_id:
-            try:
-                detail_log = self.query_one("#repo_detail_log", TextualLog)
-                detail_log.clear()
-
-                commit_history = message.details.get("commit_history", [])
-                if not commit_history:
-                    detail_log.write_line("No commit history found or an error occurred.")
-                else:
-                    detail_log.write_line(f"[b]Commit History for {message.repo_id}:[/b]\n")
-                    for entry in commit_history:
-                        detail_log.write_line(entry)
-            except Exception as e:
-                log.error("Error updating repo details", error=str(e))
+        """Handle repository detail updates (simplified - log to main log)."""
+        try:
+            log_widget = self.query_one("#event-log", TextualLog)
+            commit_history = message.details.get("commit_history", [])
+            if commit_history:
+                log_widget.write_line(f"[b]Recent commits for {message.repo_id}:[/b]")
+                # Show only the first few commits to avoid flooding the log
+                for entry in commit_history[:3]:
+                    log_widget.write_line(f"  {entry}")
+                if len(commit_history) > 3:
+                    log_widget.write_line(f"  ... and {len(commit_history) - 3} more commits")
+        except Exception as e:
+            log.error("Error updating repo details", error=str(e))

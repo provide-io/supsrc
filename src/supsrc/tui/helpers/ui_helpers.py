@@ -7,7 +7,6 @@ UI helper methods for the TUI application.
 from __future__ import annotations
 
 import structlog
-from textual.containers import Container
 
 from supsrc.tui.messages import StateUpdate
 
@@ -35,18 +34,6 @@ class UIHelperMixin:
                 self.post_message(StateUpdate(self._orchestrator.repo_states))
         except Exception as e:
             log.debug(f"Error updating countdown: {e}")
-
-    def watch_show_detail_pane(self, show_detail: bool) -> None:
-        """Update layout when detail pane visibility changes."""
-        try:
-            detail_pane_container = self.query_one("#detail_pane_container", Container)  # New ID
-
-            if show_detail:
-                detail_pane_container.styles.display = "block"
-            else:
-                detail_pane_container.styles.display = "none"
-        except Exception as e:
-            log.error("Error updating detail pane visibility", error=str(e))  # Updated log message
 
     def _update_sub_title(self, text: str) -> None:
         """Update subtitle safely."""
