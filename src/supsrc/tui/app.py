@@ -48,6 +48,7 @@ class SupsrcTuiApp(TuiAppBase):
         ("S", "toggle_repo_stop", "Toggle Repo Stop"),
         ("shift+R", "refresh_repo_status", "Refresh Repo Status"),
         ("G", "resume_repo_monitoring", "Resume Repo Monitoring"),
+        ("t", "test_log_messages", "Test Log Messages"),
     ]
 
     # Simple 2-pane layout
@@ -230,6 +231,8 @@ class SupsrcTuiApp(TuiAppBase):
 
                 # Test the message system too
                 self.post_message(LogMessageUpdate(None, "INFO", "🚀 TUI initialized and ready"))
+                self.post_message(LogMessageUpdate(None, "DEBUG", "📊 Debug logging active"))
+                self.post_message(LogMessageUpdate("test-repo", "INFO", "📁 Test repository message"))
             except Exception as e:
                 pass  # Fail silently for now
 
@@ -308,6 +311,24 @@ class SupsrcTuiApp(TuiAppBase):
         except Exception as e:
             log.error("Failed to update repo details tab", error=str(e), repo_id=repo_id)
 
+    def action_test_log_messages(self) -> None:
+        """Test action to manually trigger log messages."""
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+
+        # Post several test messages
+        self.post_message(LogMessageUpdate(None, "INFO", f"🧪 Test message {timestamp}"))
+        self.post_message(LogMessageUpdate("test-repo", "DEBUG", f"🔍 Debug message {timestamp}"))
+        self.post_message(LogMessageUpdate(None, "WARNING", f"⚠️ Warning message {timestamp}"))
+        self.post_message(LogMessageUpdate("another-repo", "ERROR", f"❌ Error message {timestamp}"))
+
+        # Also write directly to log widget to test
+        try:
+            log_widget = self.query_one("#event-log", TextualLog)
+            log_widget.write_line(f"[bold yellow]Direct write test {timestamp}[/bold yellow]")
+        except Exception as e:
+            log.error("Failed direct log write test", error=str(e))
+
     def on_log_message_update(self, message: LogMessageUpdate) -> None:
         """Handle log message updates."""
         try:
@@ -317,6 +338,8 @@ class SupsrcTuiApp(TuiAppBase):
                 f"[{message.repo_id}] {message.message}" if message.repo_id else message.message
             )
             log_widget.write_line(formatted_message)
+            # Debug: also log that we received the message
+            log.debug("TUI log message written", message=formatted_message)
         except Exception as e:
             # Log errors but don't crash the app
             log.error(

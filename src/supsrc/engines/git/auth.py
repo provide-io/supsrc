@@ -8,14 +8,13 @@ from __future__ import annotations
 
 import getpass
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pygit2
 import structlog
-from pygit2.credentials import CredentialType
 
 if TYPE_CHECKING:
-    pass
+    from pygit2.credentials import CredentialType
 
 log = structlog.get_logger("engines.git.auth")
 
@@ -29,12 +28,12 @@ class GitAuthHandler:
 
     def create_credentials_callback(
         self,
-    ) -> Callable[[str, str | None, int], CredentialType | None]:
+    ) -> Callable[[str, str | None, int], Any]:
         """Creates a credentials callback function for pygit2 operations."""
 
         def credentials_callback(
             url: str, username_from_url: str | None, allowed_types: int
-        ) -> CredentialType | None:
+        ) -> Any:
             """Provides credentials to pygit2, attempting SSH agent first."""
             cred_log = self._log.bind(
                 url=url, username_from_url=username_from_url, allowed_types=allowed_types
@@ -42,7 +41,7 @@ class GitAuthHandler:
             cred_log.debug("Credentials callback invoked")
 
             # 1. Try SSH Agent (KeypairFromAgent) if SSH key is allowed
-            if allowed_types & CredentialType.SSH_KEY:
+            if allowed_types & pygit2.GIT_CREDENTIAL_SSH_KEY:
                 try:
                     ssh_user = username_from_url or getpass.getuser()
                     cred_log.debug("Attempting SSH agent authentication", ssh_user=ssh_user)
@@ -59,7 +58,7 @@ class GitAuthHandler:
                     )
 
             # 2. TODO: Add HTTPS Token/UserPass from Environment Variables
-            # if allowed_types & CredentialType.USERPASS_PLAINTEXT:
+            # if allowed_types & pygit2.GIT_CREDENTIAL_USERPASS_PLAINTEXT:
             #    git_user = os.getenv("GIT_USERNAME")
             #    git_token = os.getenv("GIT_PASSWORD") # Treat as token
             #    if git_user and git_token:
