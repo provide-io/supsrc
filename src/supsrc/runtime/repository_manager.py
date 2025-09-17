@@ -8,14 +8,13 @@ Handles repository initialization, state management, and lifecycle operations.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
 
 import structlog
-from provide.foundation.metrics import active_repositories
 
 from supsrc.config import SupsrcConfig
 from supsrc.engines.git import GitEngine, GitRepoSummary
-from supsrc.exceptions import MonitoringSetupError
 from supsrc.state import RepositoryState, RepositoryStatus
 
 if TYPE_CHECKING:
@@ -39,7 +38,7 @@ class RepositoryManager:
         self,
         repo_states: dict[str, RepositoryState],
         repo_engines: dict[str, RepositoryEngine],
-        tui_update_callback: callable | None = None,
+        tui_update_callback: Callable[[], None] | None = None,
     ) -> None:
         self.repo_states = repo_states
         self.repo_engines = repo_engines
@@ -293,11 +292,11 @@ class RepositoryManager:
 
         self._log.info("Repository timer cleanup complete", timers_cancelled=cleanup_count)
 
-    def refresh_repository_status(self, repo_id: str, status_manager: Any) -> bool:
+    async def refresh_repository_status(self, repo_id: str, status_manager: Any) -> bool:
         """Refresh the status and statistics for a specific repository."""
         if status_manager:
             # Delegate to status manager
-            return asyncio.create_task(status_manager.refresh_repository_status(repo_id))
+            return await status_manager.refresh_repository_status(repo_id)
         return False
 
     def set_repo_refreshing_status(
