@@ -154,14 +154,17 @@ class ActionHandlerMixin:
             # Check if repository table has focus
             repo_table = self.query_one("#repository_table", DataTable)
             if repo_table.has_focus:
-                # Move focus to the tabbed content area
+                # Move focus to the tabbed content area - focus the actual tabs bar
                 tabbed_content = self.query_one(TabbedContent)
-                tabbed_content.focus()
+                tabs = tabbed_content.query_one("Tabs")
+                tabs.focus()
+                log.debug("Focused tabs from repo table")
             else:
                 # Move focus back to repository table
                 repo_table.focus()
+                log.debug("Focused repo table from tabs")
         except Exception as e:
-            log.debug("Error in focus_next", error=str(e))
+            log.error("Error in focus_next", error=str(e))
 
     def action_focus_previous(self) -> None:
         """Focus the previous panel in the interface."""
