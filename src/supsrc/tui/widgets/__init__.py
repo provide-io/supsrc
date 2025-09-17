@@ -4,6 +4,6 @@
 TUI widgets package.
 """
 
-from supsrc.tui.widgets.resizable_panes import ResizablePanes
+from supsrc.tui.widgets.draggable_splitter import DraggableSplitter
 
-__all__ = ["ResizablePanes"]
+__all__ = ["DraggableSplitter"]

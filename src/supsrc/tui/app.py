@@ -12,13 +12,14 @@ from typing import Any, ClassVar
 import structlog
 from textual.app import ComposeResult
 from textual.reactive import var
-from textual.widgets import DataTable, Footer, Header
+from textual.widgets import DataTable, Footer, Header, Static
 from textual.widgets import Log as TextualLog
 
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.tui.base_app import TuiAppBase
 from supsrc.tui.managers import TimerManager
-from supsrc.tui.widgets import ResizablePanes
+from textual.containers import Container, Horizontal, Vertical
+from supsrc.tui.widgets import DraggableSplitter
 
 log = structlog.get_logger("tui.app")
 
@@ -48,67 +49,65 @@ class SupsrcTuiApp(TuiAppBase):
         ("G", "resume_repo_monitoring", "Resume Repo Monitoring"),
     ]
 
-    # Simple 2-pane layout with resizable splitter
+    # Simple 2-pane layout
     CSS = """
     Screen {
         layout: vertical;
-        overflow: hidden;
     }
 
-    ResizablePanes {
+    #main_container {
         height: 100%;
+        layout: vertical;
     }
 
-    .resizable-pane {
-        overflow-y: auto;
-        scrollbar-gutter: stable;
+    #repository_section {
+        height: 70%;
         border: round #888888;
-        padding: 0;
         margin: 1;
     }
 
-    #top_pane {
-        height: 70%;
-        min-height: 5;
+    #log_section {
+        height: 25%;
+        border: round #888888;
+        margin: 1;
     }
 
-    #bottom_pane {
-        height: 30%;
-        min-height: 3;
-    }
-
-    #splitter {
+    #splitter_line {
         height: 1;
         background: #444444;
-        margin: 0;
+        text-align: center;
+        margin: 0 1;
         padding: 0;
     }
 
-    #splitter:hover {
+    #splitter_line:hover {
         background: #666666;
+    }
+
+    .main-section {
+        padding: 1;
+        overflow: auto;
+        scrollbar-gutter: stable;
     }
 
     DataTable {
         height: 100%;
         scrollbar-gutter: stable;
-        border: none;
     }
 
     #event-log {
         height: 100%;
-        overflow-y: auto;
         scrollbar-gutter: stable;
-        border: none;
     }
 
     Footer {
         dock: bottom;
-        height: 3;
+        height: 2;
     }
 
     Header {
         dock: top;
-        height: 3;
+        height: 1;
     }
     """
 
@@ -131,18 +130,24 @@ class SupsrcTuiApp(TuiAppBase):
         """Create child widgets for the app."""
         yield Header()
 
-        # Resizable panes container
-        with ResizablePanes(id="main_panes"):
-            # Top pane: Repository table
-            yield DataTable(
-                id="repository_table",
-                cursor_type="row",
-                zebra_stripes=True,
-                header_height=2,
-                show_row_labels=False,
-            )
-            # Bottom pane: Event log
-            yield TextualLog(id="event-log", highlight=True)
+        # Simple vertical layout with two sections
+        with Vertical(id="main_container"):
+            # Top section: Repository table
+            with Container(id="repository_section", classes="main-section"):
+                yield DataTable(
+                    id="repository_table",
+                    cursor_type="row",
+                    zebra_stripes=True,
+                    header_height=2,
+                    show_row_labels=False,
+                )
+
+            # Draggable splitter
+            yield DraggableSplitter(id="splitter_line")
+
+            # Bottom section: Event log
+            with Container(id="log_section", classes="main-section"):
+                yield TextualLog(id="event-log", highlight=True)
 
         yield Footer()
 
@@ -152,15 +157,15 @@ class SupsrcTuiApp(TuiAppBase):
             # Set up the data table
             table = self.query_one("#repository_table", DataTable)
             table.add_columns(
-                "Status",
-                "Timer",
+                "📊",  # Status emoji header
+                "⏱️",   # Timer/countdown column
                 "Repository",
                 "Branch",
-                "Total",
-                "Changed",
-                "Added",
-                "Deleted",
-                "Modified",
+                "📁",  # Total files
+                "📝",  # Changed files count
+                "➕",  # Added files
+                "➖",  # Deleted files
+                "✏️",  # Modified files
                 "Last Commit",
                 "Rule",
             )
