@@ -61,22 +61,24 @@ class SupsrcTuiApp(TuiAppBase):
     }
 
     #repository_section {
-        height: 70%;
+        height: 80%;
         border: round #888888;
-        margin: 1;
+        margin: 0 1;
+        padding: 0;
     }
 
     #log_section {
-        height: 25%;
+        height: 15%;
         border: round #888888;
-        margin: 1;
+        margin: 0 1;
+        padding: 0;
     }
 
     #splitter_line {
         height: 1;
         background: #444444;
         text-align: center;
-        margin: 0 1;
+        margin: 0;
         padding: 0;
     }
 
@@ -85,7 +87,7 @@ class SupsrcTuiApp(TuiAppBase):
     }
 
     .main-section {
-        padding: 1;
+        padding: 0;
         overflow: auto;
         scrollbar-gutter: stable;
     }
@@ -138,7 +140,7 @@ class SupsrcTuiApp(TuiAppBase):
                     id="repository_table",
                     cursor_type="row",
                     zebra_stripes=True,
-                    header_height=2,
+                    header_height=1,
                     show_row_labels=False,
                 )
 

@@ -20,8 +20,8 @@ class DraggableSplitter(Static):
     def __init__(self, **kwargs) -> None:
         super().__init__("═══", **kwargs)
         self._drag_start_y = 0
-        self._initial_repo_height = 70
-        self._initial_log_height = 25
+        self._initial_repo_height = 80
+        self._initial_log_height = 15
 
     def on_mouse_down(self, event: MouseDown) -> None:
         """Start dragging the splitter."""
@@ -45,8 +45,8 @@ class DraggableSplitter(Static):
 
         except Exception:
             # Fallback to default values
-            self._initial_repo_height = 70
-            self._initial_log_height = 25
+            self._initial_repo_height = 80
+            self._initial_log_height = 15
 
     def on_mouse_move(self, event: MouseMove) -> None:
         """Handle splitter dragging."""
@@ -95,6 +95,22 @@ class DraggableSplitter(Static):
         """Stop dragging the splitter."""
         self.release_mouse()
         self.is_dragging = False
+
+        # Update stored heights to current values
+        try:
+            repo_section = self.app.query_one("#repository_section")
+            log_section = self.app.query_one("#log_section")
+
+            repo_height_str = str(repo_section.styles.height)
+            log_height_str = str(log_section.styles.height)
+
+            if repo_height_str.endswith('%'):
+                self._initial_repo_height = float(repo_height_str[:-1])
+            if log_height_str.endswith('%'):
+                self._initial_log_height = float(log_height_str[:-1])
+        except Exception:
+            # Keep existing values if we can't read them
+            pass
 
     def watch_is_dragging(self, is_dragging: bool) -> None:
         """Update appearance when dragging state changes."""
