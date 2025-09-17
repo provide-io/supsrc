@@ -85,9 +85,7 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
                 default_level="DEBUG",
                 das_emoji_prefix_enabled=True,
                 logger_name_emoji_prefix_enabled=True,
-                console_enabled=False,  # Disable console logging entirely
-                file_enabled=True,  # Enable file logging
-                file_path="/tmp/supsrc_tui_debug.log",
+                log_file=Path("/tmp/supsrc_tui_debug.log"),  # Enable file logging
             )
         )
 

@@ -111,13 +111,14 @@ class WatchOrchestrator:
 
             action_handler = ActionHandler(self.config, self.repo_states, self.repo_engines, tui)
             self.event_processor = EventProcessor(
-                self,
-                self.config,
-                self.event_queue,
-                self.shutdown_event,
-                action_handler,
-                self.repo_states,
-                tui,
+                config=self.config,
+                event_queue=self.event_queue,
+                shutdown_event=self.shutdown_event,
+                action_handler=action_handler,
+                repo_states=self.repo_states,
+                repo_engines=self.repo_engines,
+                tui=tui,
+                config_reload_callback=self.reload_config,
             )
 
             # Setup monitoring services
