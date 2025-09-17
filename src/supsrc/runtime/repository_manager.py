@@ -52,6 +52,10 @@ class RepositoryManager:
         tui.post_log_update(None, "INFO", "Initializing repositories...")
         enabled_repo_ids = []
 
+        # Import events for repository discovery
+        from supsrc.events.monitor import MonitoringStartEvent
+        from supsrc.events.system import ErrorEvent
+
         for repo_id, repo_config in config.repositories.items():
             init_log = self._log.bind(repo_id=repo_id)
             if not repo_config.enabled or not repo_config._path_valid:
@@ -137,9 +141,28 @@ class RepositoryManager:
                     init_log.warning("Error loading initial statistics", error=str(stats_error))
 
                 enabled_repo_ids.append(repo_id)
+
+                # Emit monitoring start event
+                if hasattr(tui.app, 'event_collector'):
+                    start_event = MonitoringStartEvent(
+                        description=f"Started monitoring repository {repo_id}",
+                        repo_id=repo_id,
+                        path=repo_config.path,
+                    )
+                    tui.app.event_collector.emit(start_event)  # type: ignore[arg-type]
             except Exception as e:
                 init_log.error("Failed to initialize repository", error=str(e), exc_info=True)
                 repo_state.update_status(RepositoryStatus.ERROR, f"Initialization failed: {e}")
+
+                # Emit error event for failed initialization
+                if hasattr(tui.app, 'event_collector'):
+                    error_event = ErrorEvent(
+                        description=f"Failed to initialize repository {repo_id}: {e}",
+                        source="repository_manager",
+                        error_type="InitializationError",
+                        repo_id=repo_id,
+                    )
+                    tui.app.event_collector.emit(error_event)  # type: ignore[arg-type]
                 continue
 
         tui.post_state_update(self.repo_states)

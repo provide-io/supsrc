@@ -109,6 +109,18 @@ class EventProcessor:
                 repo_state.record_change()
                 self.tui.post_state_update(self.repo_states)
 
+                # Emit file change event for TUI event feed
+                if hasattr(self.tui.app, 'event_collector'):
+                    from supsrc.events.monitor import FileChangeEvent
+
+                    change_event = FileChangeEvent(
+                        description=f"File {event.event_type}: {event.src_path.name}",
+                        repo_id=event.repo_id,
+                        file_path=event.src_path,
+                        change_type=event.event_type,
+                    )
+                    self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type]
+
                 # Instead of acting immediately, start a debounced check
                 self._debounce_trigger_check(event.repo_id)
 
