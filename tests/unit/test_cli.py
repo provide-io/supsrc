@@ -199,7 +199,9 @@ class TestCLIIntegration:
         result = runner.invoke(cli, ["--invalid-option"])
         assert result.exit_code != 0
 
-        result = runner.invoke(cli, ["config", "show", "--config-path", "/invalid/path/config.conf"])
+        result = runner.invoke(
+            cli, ["config", "show", "--config-path", "/invalid/path/config.conf"]
+        )
         assert result.exit_code != 0
         assert "error" in result.output.lower()
 
@@ -223,11 +225,16 @@ class TestCLIIntegration:
         result = runner.invoke(
             cli,
             [
-                "--log-level", "DEBUG",
-                "--log-file", str(log_file),
-                "--log-format", "json",
-                "config", "show",
-                "--config-path", str(config_file),
+                "--log-level",
+                "DEBUG",
+                "--log-file",
+                str(log_file),
+                "--log-format",
+                "json",
+                "config",
+                "show",
+                "--config-path",
+                str(config_file),
             ],
         )
 
@@ -263,5 +270,6 @@ class TestCLIUtilities:
         runner = CliRunner()
         result = runner.invoke(cli, ["--log-level", "DEBUG", "config", "show", "--help"])
         assert result.exit_code == 0
+
 
 # 🧪🖥️
