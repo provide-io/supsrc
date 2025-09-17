@@ -18,7 +18,9 @@
       "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src mypy src/supsrc/engines/git/auth.py)",
       "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run mypy src/supsrc/engines/git/auth.py)",
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/engines/git/operations.py)",
-      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/engines/git/operations.py)"
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/engines/git/operations.py)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/engines/git/operations.py)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run mypy src/supsrc/engines/git/operations.py)"
     ],
     "deny": [],
     "ask": [],
