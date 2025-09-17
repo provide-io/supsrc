@@ -49,7 +49,12 @@
       "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run pytest -x --tb=short)",
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/events/monitor.py)",
       "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src python3:*)",
-      "Bash(otool:*)"
+      "Bash(otool:*)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/events/monitor.py)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run mypy src/supsrc/events/monitor.py)",
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/events/monitor.py)",
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/events/system.py)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/events/system.py)"
     ],
     "deny": [],
     "ask": [],
