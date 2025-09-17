@@ -18,8 +18,6 @@ from provide.foundation.errors import with_error_handling
 from provide.foundation.metrics import counter, gauge
 from rich.console import Console
 from structlog.typing import FilteringBoundLogger as StructLogger
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
-from watchdog.observers import Observer
 
 from supsrc.config import SupsrcConfig, load_config
 from supsrc.engines.git import GitEngine, GitRepoSummary
@@ -127,7 +125,9 @@ class WatchOrchestrator:
             )
 
             # Setup monitoring services
-            monitor_service = self.monitoring_coordinator.setup_monitoring(self.config, enabled_repos, tui)
+            self.monitoring_coordinator.setup_monitoring(
+                self.config, enabled_repos, tui
+            )
             self.monitoring_coordinator.setup_config_watcher(tui)
 
             # Start monitoring services
@@ -182,7 +182,6 @@ class WatchOrchestrator:
             tui = TUIInterface(self.app)
             self.monitoring_coordinator.resume_monitoring(self.config, tui)
         self._post_tui_state_update()
-
 
     def toggle_repository_pause(self, repo_id: str) -> bool:
         if self.repository_manager:
@@ -481,10 +480,14 @@ class WatchOrchestrator:
     def set_repo_refreshing_status(self, repo_id: str, is_refreshing: bool) -> None:
         """Set the refreshing status for a repository."""
         if self.repository_manager:
-            self.repository_manager.set_repo_refreshing_status(repo_id, is_refreshing, self.status_manager)
+            self.repository_manager.set_repo_refreshing_status(
+                repo_id, is_refreshing, self.status_manager
+            )
 
     async def refresh_repository_status(self, repo_id: str) -> bool:
         """Refresh the status and statistics for a specific repository."""
         if self.repository_manager:
-            return await self.repository_manager.refresh_repository_status(repo_id, self.status_manager)
+            return await self.repository_manager.refresh_repository_status(
+                repo_id, self.status_manager
+            )
         return False

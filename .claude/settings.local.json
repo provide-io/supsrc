@@ -40,7 +40,13 @@
       "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run mypy src/supsrc/events/)",
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/events/)",
       "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/engines/git/events.py)",
-      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/engines/git/events.py)"
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/engines/git/events.py)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run mypy src/supsrc/engines/git/events.py)",
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/runtime/orchestrator.py)",
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff check --fix --unsafe-fixes src/supsrc/runtime/orchestrator.py)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/runtime/orchestrator.py)",
+      "Bash(./workenv/wrkenv_darwin_arm64/bin/ruff format src/supsrc/engines/git/events.py)",
+      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run pytest -x --tb=short)"
     ],
     "deny": [],
     "ask": [],
