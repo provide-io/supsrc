@@ -40,7 +40,6 @@ Example: Adding additional debug logging to path.py
 """
 
 
-
 # --- Code Review ---
 
 CODE_REVIEW_PROMPT_TEMPLATE = """

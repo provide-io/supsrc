@@ -104,6 +104,7 @@ class GitEngine(RepositoryEngine):
 
     async def get_summary(self, working_dir: Path) -> GitRepoSummary:
         """Gets a summary of the repository's HEAD state."""
+
         def _blocking_get_summary():
             repo = self._get_repo(working_dir)
             if repo.is_empty:
@@ -177,11 +178,18 @@ class GitEngine(RepositoryEngine):
                 for flags in pygit2_status.values():
                     if (flags & pygit2.GIT_STATUS_WT_NEW) or (flags & pygit2.GIT_STATUS_INDEX_NEW):
                         added_files += 1
-                    elif (flags & pygit2.GIT_STATUS_WT_DELETED) or (flags & pygit2.GIT_STATUS_INDEX_DELETED):
+                    elif (flags & pygit2.GIT_STATUS_WT_DELETED) or (
+                        flags & pygit2.GIT_STATUS_INDEX_DELETED
+                    ):
                         deleted_files += 1
-                    elif ((flags & pygit2.GIT_STATUS_WT_MODIFIED) or (flags & pygit2.GIT_STATUS_INDEX_MODIFIED) or
-                          (flags & pygit2.GIT_STATUS_WT_RENAMED) or (flags & pygit2.GIT_STATUS_INDEX_RENAMED) or
-                          (flags & pygit2.GIT_STATUS_WT_TYPECHANGE) or (flags & pygit2.GIT_STATUS_INDEX_TYPECHANGE)):
+                    elif (
+                        (flags & pygit2.GIT_STATUS_WT_MODIFIED)
+                        or (flags & pygit2.GIT_STATUS_INDEX_MODIFIED)
+                        or (flags & pygit2.GIT_STATUS_WT_RENAMED)
+                        or (flags & pygit2.GIT_STATUS_INDEX_RENAMED)
+                        or (flags & pygit2.GIT_STATUS_WT_TYPECHANGE)
+                        or (flags & pygit2.GIT_STATUS_INDEX_TYPECHANGE)
+                    ):
                         modified_files += 1
 
             changed_files = added_files + deleted_files + modified_files
@@ -218,13 +226,11 @@ class GitEngine(RepositoryEngine):
             return RepoStatusResult(success=False, message=f"Unexpected status error: {e}")
 
     @retry(
-        pygit2.GitError, OSError,
+        pygit2.GitError,
+        OSError,
         policy=RetryPolicy(
-            max_attempts=3,
-            backoff=BackoffStrategy.EXPONENTIAL,
-            base_delay=0.5,
-            max_delay=5.0
-        )
+            max_attempts=3, backoff=BackoffStrategy.EXPONENTIAL, base_delay=0.5, max_delay=5.0
+        ),
     )
     async def stage_changes(
         self,
@@ -257,7 +263,11 @@ class GitEngine(RepositoryEngine):
                         )
             else:
                 index.add_all()
-                staged_list = [filepath for filepath, flags in repo.status().items() if flags != pygit2.GIT_STATUS_CURRENT]
+                staged_list = [
+                    filepath
+                    for filepath, flags in repo.status().items()
+                    if flags != pygit2.GIT_STATUS_CURRENT
+                ]
 
             index.write()
             return {"success": True, "files_staged": staged_list}
@@ -295,7 +305,9 @@ class GitEngine(RepositoryEngine):
         summary_lines = []
         if added:
             summary_lines.append(f"Added ({len(added)}):")
-            summary_lines.extend([f"  {SUMMARY_ADDED_PREFIX}{f}" for f in added[:MAX_SUMMARY_FILES]])
+            summary_lines.extend(
+                [f"  {SUMMARY_ADDED_PREFIX}{f}" for f in added[:MAX_SUMMARY_FILES]]
+            )
             if len(added) > MAX_SUMMARY_FILES:
                 summary_lines.append(f"  ... ({len(added) - MAX_SUMMARY_FILES} more)")
 
@@ -334,13 +346,11 @@ class GitEngine(RepositoryEngine):
         return "\n".join(summary_lines)
 
     @retry(
-        pygit2.GitError, OSError,
+        pygit2.GitError,
+        OSError,
         policy=RetryPolicy(
-            max_attempts=3,
-            backoff=BackoffStrategy.EXPONENTIAL,
-            base_delay=1.0,
-            max_delay=10.0
-        )
+            max_attempts=3, backoff=BackoffStrategy.EXPONENTIAL, base_delay=1.0, max_delay=10.0
+        ),
     )
     async def perform_commit(
         self,
@@ -397,7 +407,9 @@ class GitEngine(RepositoryEngine):
             parents = [] if is_unborn else [repo.head.target]
             tree = repo.index.write_tree()
 
-            commit_oid = repo.create_commit("HEAD", signature, signature, commit_message, tree, parents)
+            commit_oid = repo.create_commit(
+                "HEAD", signature, signature, commit_message, tree, parents
+            )
             return {"success": True, "commit_hash": str(commit_oid)}
 
         try:
@@ -411,13 +423,16 @@ class GitEngine(RepositoryEngine):
             return CommitResult(success=False, message=f"Unexpected commit error: {e}")
 
     @retry(
-        pygit2.GitError, OSError, ConnectionError, TimeoutError,
+        pygit2.GitError,
+        OSError,
+        ConnectionError,
+        TimeoutError,
         policy=RetryPolicy(
             max_attempts=5,  # More retries for network operations
             backoff=BackoffStrategy.EXPONENTIAL,
             base_delay=2.0,
-            max_delay=30.0
-        )
+            max_delay=30.0,
+        ),
     )
     async def perform_push(
         self,
@@ -449,7 +464,9 @@ class GitEngine(RepositoryEngine):
             return PushResult(**result_dict)
         except (ValueError, KeyError):
             message = f"Remote '{remote_name}' not found."
-            self._log.warning("Push failed: remote not found.", remote_name=remote_name, repo_id=state.repo_id)
+            self._log.warning(
+                "Push failed: remote not found.", remote_name=remote_name, repo_id=state.repo_id
+            )
             return PushResult(success=False, message=message)
         except pygit2.GitError as e:
             self._log.error("Failed to perform push", error=str(e), repo_id=state.repo_id)
@@ -460,6 +477,7 @@ class GitEngine(RepositoryEngine):
 
     async def get_commit_history(self, working_dir: Path, limit: int = 10) -> list[str]:
         """Retrieves the last N commit messages from the repository asynchronously."""
+
         def _blocking_get_history() -> list[str]:
             repo = self._get_repo(working_dir)
             if repo.is_empty or repo.head_is_unborn:
@@ -469,10 +487,14 @@ class GitEngine(RepositoryEngine):
             for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):
                 if len(last_commits) >= limit:
                     break
-                commit_time = datetime.fromtimestamp(commit.commit_time, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
+                commit_time = datetime.fromtimestamp(commit.commit_time, tz=UTC).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
                 summary = (commit.message or "").split("\n", 1)[0][:60]
                 author_name = commit.author.name if commit.author else "Unknown"
-                last_commits.append(f"{str(commit.id)[:7]} - {author_name} - {commit_time} - {summary}")
+                last_commits.append(
+                    f"{str(commit.id)[:7]} - {author_name} - {commit_time} - {summary}"
+                )
             return last_commits
 
         try:
@@ -483,5 +505,6 @@ class GitEngine(RepositoryEngine):
         except Exception as e:
             self._log.exception("Unexpected error getting commit history")
             return [f"Unexpected error fetching history: {e}"]
+
 
 # 🔼⚙️

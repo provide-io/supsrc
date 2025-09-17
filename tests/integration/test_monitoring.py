@@ -75,8 +75,8 @@ async def monitoring_setup(tmp_path: Path):
         "repo_path": repo_path,
         "config_file": config_file,
         "config": config,
-        "tmp_path": tmp_path, # This tmp_path is for the repo
-        "config_dir": config_dir, # Add config_dir to cleanup
+        "tmp_path": tmp_path,  # This tmp_path is for the repo
+        "config_dir": config_dir,  # Add config_dir to cleanup
     }
 
     # Teardown: Clean up the separate config directory
@@ -174,7 +174,7 @@ class TestMonitoringIntegration:
 
         shutdown_event = asyncio.Event()
         orchestrator = WatchOrchestrator(config_file, shutdown_event)
-        orchestrator.setup_config_watcher = Mock() # Prevent config watcher from interfering
+        orchestrator.setup_config_watcher = Mock()  # Prevent config watcher from interfering
         # Start orchestrator in background
         orchestrator_task = asyncio.create_task(orchestrator.run())
 
@@ -206,7 +206,9 @@ class TestMonitoringIntegration:
                     break
                 await asyncio.sleep(0.1)
                 if asyncio.get_event_loop().time() - start_time > timeout:
-                    raise TimeoutError(f"Timed out waiting for save_count to become 1. Current: {current_repo_state.save_count}")
+                    raise TimeoutError(
+                        f"Timed out waiting for save_count to become 1. Current: {current_repo_state.save_count}"
+                    )
 
             # Verify state update
             assert current_repo_state.save_count == 1
@@ -220,11 +222,16 @@ class TestMonitoringIntegration:
             start_time = asyncio.get_event_loop().time()
             while True:
                 current_repo_state = orchestrator.repo_states["test-repo"]
-                if current_repo_state.save_count == 0 and current_repo_state.status == RepositoryStatus.IDLE:
+                if (
+                    current_repo_state.save_count == 0
+                    and current_repo_state.status == RepositoryStatus.IDLE
+                ):
                     break
                 await asyncio.sleep(0.1)
                 if asyncio.get_event_loop().time() - start_time > timeout:
-                    raise TimeoutError("Timed out waiting for action to complete and state to reset.")
+                    raise TimeoutError(
+                        "Timed out waiting for action to complete and state to reset."
+                    )
 
             # Verify Git commit was created
             result = subprocess.run(
@@ -279,8 +286,10 @@ class TestErrorHandling:
         # Should handle invalid path gracefully
         try:
             # Call the method with the required arguments
-            await asyncio.wait_for(orchestrator._initialize_repositories(config, mock_tui), timeout=5.0)
-            
+            await asyncio.wait_for(
+                orchestrator._initialize_repositories(config, mock_tui), timeout=5.0
+            )
+
             # The invalid repo should be skipped, leaving repo_states empty
             assert len(orchestrator.repo_states) == 0
 
@@ -359,7 +368,6 @@ class TestConcurrency:
 
             repos[f"repo-{i}"] = repo_path
 
-
         # Create configuration for all repositories
         config_content = '[global]\nlog_level = "DEBUG"\n\n[repositories]\n'
         for repo_id, repo_path in repos.items():
@@ -409,8 +417,8 @@ class TestConcurrency:
             start_time = asyncio.get_event_loop().time()
             while True:
                 all_done = all(
-                    orchestrator.repo_states[repo_id].save_count == 0 and
-                    orchestrator.repo_states[repo_id].status == RepositoryStatus.IDLE
+                    orchestrator.repo_states[repo_id].save_count == 0
+                    and orchestrator.repo_states[repo_id].status == RepositoryStatus.IDLE
                     for repo_id in repos
                 )
                 if all_done:

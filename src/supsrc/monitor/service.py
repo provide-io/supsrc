@@ -153,7 +153,9 @@ class MonitoringService:
             await asyncio.to_thread(_blocking_shutdown)
             self._logger.info("Monitoring service shutdown complete.")
         except Exception as e:
-            self._logger.error("Error during monitoring service shutdown", error=str(e), exc_info=True)
+            self._logger.error(
+                "Error during monitoring service shutdown", error=str(e), exc_info=True
+            )
         finally:
             self._is_running = False
 
@@ -164,5 +166,6 @@ class MonitoringService:
             hasattr(self, "_observer") and self._observer is not None and self._observer.is_alive()
         )
         return self._is_running and observer_alive
+
 
 # 🔼⚙️

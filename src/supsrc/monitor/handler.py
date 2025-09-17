@@ -35,7 +35,6 @@ DEFAULT_IGNORE_PATTERNS = [
     "*.pyc",
     "*.pyo",
     "*.pyd",
-
     # Node.js / TypeScript
     "node_modules/",
     "dist/",
@@ -45,21 +44,19 @@ DEFAULT_IGNORE_PATTERNS = [
     "*.tsbuildinfo",
     "npm-debug.log*",
     "yarn-error.log*",
-    "yarn.lock", # Often generated but not always committed, can be noisy
+    "yarn.lock",  # Often generated but not always committed, can be noisy
     "pnpm-lock.yaml",
-
     # Go
     "bin/",
-
     # Rust
     "target/",
-
     # General / Secrets / Logs
     ".env",
     ".env.local",
     ".env.*",
     "*.log",
 ]
+
 
 class SupsrcEventHandler(FileSystemEventHandler):
     """
@@ -107,7 +104,9 @@ class SupsrcEventHandler(FileSystemEventHandler):
                 self.logger.info("Loaded .gitignore patterns", path=str(gitignore_path))
                 return spec
             except Exception as e:
-                self.logger.error("Failed to load or parse .gitignore", path=str(gitignore_path), error=str(e))
+                self.logger.error(
+                    "Failed to load or parse .gitignore", path=str(gitignore_path), error=str(e)
+                )
         return None
 
     def _is_ignored(self, file_path: Path) -> bool:
@@ -126,7 +125,9 @@ class SupsrcEventHandler(FileSystemEventHandler):
 
         # --- MODIFIED: Check both default spec and .gitignore spec ---
         if self.default_spec.match_file(str(relative_path)):
-            self.logger.debug("Ignoring event due to default supsrc ignore match", path=str(file_path))
+            self.logger.debug(
+                "Ignoring event due to default supsrc ignore match", path=str(file_path)
+            )
             return True
 
         if self.gitignore_spec and self.gitignore_spec.match_file(str(relative_path)):
@@ -160,7 +161,10 @@ class SupsrcEventHandler(FileSystemEventHandler):
             src_path = Path(event.src_path).resolve()
         except (FileNotFoundError, RuntimeError):
             # The file might be gone before we can resolve it, especially with temp files.
-            self.logger.debug("Could not resolve path for event, likely a transient file.", src_path=event.src_path)
+            self.logger.debug(
+                "Could not resolve path for event, likely a transient file.",
+                src_path=event.src_path,
+            )
             return
 
         if self._is_ignored(src_path):
@@ -171,11 +175,15 @@ class SupsrcEventHandler(FileSystemEventHandler):
             try:
                 dest_path = Path(getattr(event, "dest_path", None)).resolve()
                 if self._is_ignored(dest_path):
-                    self.logger.debug("Ignoring 'moved' event, destination is ignored", dest_path=str(dest_path))
+                    self.logger.debug(
+                        "Ignoring 'moved' event, destination is ignored", dest_path=str(dest_path)
+                    )
                     return
             except (FileNotFoundError, RuntimeError):
-                 self.logger.debug("Could not resolve moved dest_path", dest_path=getattr(event, "dest_path", None))
-                 return # Ignore if destination is gone
+                self.logger.debug(
+                    "Could not resolve moved dest_path", dest_path=getattr(event, "dest_path", None)
+                )
+                return  # Ignore if destination is gone
 
         monitored_event = MonitoredEvent(
             repo_id=self.repo_id,
@@ -199,5 +207,6 @@ class SupsrcEventHandler(FileSystemEventHandler):
 
     def on_moved(self, event: FileSystemEvent):
         self._process_and_queue_event(event)
+
 
 # 🔼⚙️

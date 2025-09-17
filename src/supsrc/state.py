@@ -53,6 +53,7 @@ class RepositoryState:
     """
     Holds the dynamic state for a single monitored repository.
     """
+
     repo_id: str = field()
     status: RepositoryStatus = field(default=RepositoryStatus.IDLE)
     last_change_time: datetime | None = field(default=None)
@@ -164,7 +165,12 @@ class RepositoryState:
         self.inactivity_timer_handle = handle
         self._timer_total_seconds = total_seconds
         self._timer_start_time = asyncio.get_event_loop().time()
-        log.debug("Inactivity timer set", repo_id=self.repo_id, timer_handle=repr(handle), total_seconds=total_seconds)
+        log.debug(
+            "Inactivity timer set",
+            repo_id=self.repo_id,
+            timer_handle=repr(handle),
+            total_seconds=total_seconds,
+        )
 
     def cancel_inactivity_timer(self) -> None:
         """Cancels the pending inactivity timer, if one exists."""
@@ -205,5 +211,6 @@ class RepositoryState:
             self.display_status_emoji = "🔄"
         else:
             self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
+
 
 # 🔼⚙️

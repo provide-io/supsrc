@@ -56,7 +56,7 @@ class TestOrchestratorLifecycle:
         with patch("supsrc.runtime.orchestrator.load_config", return_value=minimal_config):
             shutdown_event = asyncio.Event()
             orchestrator = WatchOrchestrator(Path("fake.conf"), shutdown_event)
-            
+
             async def run_and_shutdown():
                 run_task = asyncio.create_task(orchestrator.run())
                 await asyncio.sleep(0.01)
@@ -89,7 +89,7 @@ class TestOrchestratorLifecycle:
         mock_engine = AsyncMock(spec=GitEngine)
         mock_engine.get_commit_history.return_value = ["commit1", "commit2"]
         mock_orchestrator.repo_engines = {repo_id: mock_engine}
-        mock_orchestrator.config.repositories[repo_id] = MagicMock() # Ensure config exists
+        mock_orchestrator.config.repositories[repo_id] = MagicMock()  # Ensure config exists
 
         details = await mock_orchestrator.get_repository_details(repo_id)
 

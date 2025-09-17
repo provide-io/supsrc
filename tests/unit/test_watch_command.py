@@ -55,7 +55,7 @@ class TestWatchCommand:
 
         runner = CliRunner()
         result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
-        
+
         assert result.exit_code == 0
         mock_tui_app_class.assert_called_once()
         _args, kwargs = mock_tui_app_class.call_args
@@ -116,17 +116,19 @@ class TestWatchCommand:
     @patch("supsrc.cli.watch_cmds.log")
     @patch("supsrc.cli.watch_cmds.TEXTUAL_AVAILABLE", True)
     @patch("supsrc.cli.watch_cmds.SupsrcTuiApp")
-    def test_watch_logging_setup(self, mock_tui_app_class: Mock, mock_log: Mock, tmp_path: Path) -> None:
+    def test_watch_logging_setup(
+        self, mock_tui_app_class: Mock, mock_log: Mock, tmp_path: Path
+    ) -> None:
         """Test that watch command sets up logging correctly."""
         mock_app_instance = mock_tui_app_class.return_value
         mock_app_instance.run = Mock()
-    
+
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
-    
+
         runner = CliRunner()
         runner.invoke(cli, ["watch", "--config-path", str(config_file)])
-    
+
         # Use assert_any_call to check if this was logged at any point.
         mock_log.info.assert_any_call("Initializing interactive dashboard...")
 
@@ -135,14 +137,14 @@ class TestWatchCommand:
     def test_watch_handles_tui_errors(self, mock_tui_app_class: Mock, tmp_path: Path) -> None:
         """Test watch command handles TUI errors gracefully."""
         mock_tui_app_class.side_effect = Exception("TUI crashed!")
-        
+
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
 
         runner = CliRunner()
         # Remove the invalid mix_stderr argument from the invoke call.
         result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
-        
+
         assert result.exit_code != 0
         # Check the combined output stream for the error message.
         assert "error" in result.output.lower()
@@ -157,11 +159,12 @@ class TestWatchCommand:
 
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
-        
+
         runner = CliRunner()
         result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
 
         assert result.exit_code == 1
-        assert "aborted" in result.output.lower()    
+        assert "aborted" in result.output.lower()
+
 
 # 🧪👀

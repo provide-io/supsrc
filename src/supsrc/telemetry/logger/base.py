@@ -13,6 +13,7 @@ from structlog.typing import FilteringBoundLogger
 
 try:
     from supsrc.tui.logging_handler import TextualLogHandler
+
     HAS_TUI = True
 except ImportError:
     TextualLogHandler = None
@@ -36,15 +37,16 @@ _supsrc_event_mapping = EventMapping(
         "success": "🎉",
         "general": "➡️",
     },
-    default_key="general"
+    default_key="general",
 )
 
 _supsrc_event_set = EventSet(
     name="supsrc",
     description="Event set for supsrc operations",
     mappings=[_supsrc_event_mapping],
-    priority=100
+    priority=100,
 )
+
 
 def _register_supsrc_event_set():
     """Register supsrc-specific event set with Foundation registry."""
@@ -54,7 +56,7 @@ def _register_supsrc_event_set():
         value=_supsrc_event_set,
         dimension=ComponentCategory.EVENT_SET.value,
         metadata={"domain": "supsrc", "priority": 100},
-        replace=True
+        replace=True,
     )
 
 
@@ -100,6 +102,7 @@ def setup_logging(
     if log_file:
         try:
             import structlog
+
             file_handler = logging.FileHandler(log_file, encoding="utf-8")
             file_formatter = structlog.stdlib.ProcessorFormatter(
                 processor=structlog.processors.JSONRenderer(sort_keys=True)
@@ -116,6 +119,7 @@ def setup_logging(
     if is_tui_mode and tui_app_instance:
         if HAS_TUI and TextualLogHandler:
             import structlog
+
             textual_handler = TextualLogHandler(app=tui_app_instance)
             textual_handler.setLevel(level)
             # Use Foundation-compatible formatter

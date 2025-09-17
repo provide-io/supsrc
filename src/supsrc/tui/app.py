@@ -299,7 +299,7 @@ class SupsrcTuiApp(App):
             table.cursor_type = "row"
             table.add_columns(
                 "📊",  # Action/Status emoji header
-                "⏱️",   # Timer/countdown column
+                "⏱️",  # Timer/countdown column
                 "Repository",
                 "Branch",  # New branch column
                 "📁",  # Total files
@@ -404,7 +404,9 @@ class SupsrcTuiApp(App):
                 # If the app was NOT shutting down, this is an unexpected crash.
                 log.error("Orchestrator worker stopped unexpectedly. Initiating shutdown.")
                 self.post_message(
-                    LogMessageUpdate(None, "CRITICAL", "Orchestrator worker crashed. TUI will now exit.")
+                    LogMessageUpdate(
+                        None, "CRITICAL", "Orchestrator worker crashed. TUI will now exit."
+                    )
                 )
                 self.call_later(self.action_quit)
 
@@ -613,7 +615,11 @@ class SupsrcTuiApp(App):
         """Toggle pause state for the selected repository."""
         repo_id = self._get_selected_repo_id()
         if not repo_id or not self._orchestrator:
-            self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
+            self.post_message(
+                LogMessageUpdate(
+                    None, "WARNING", "No repository selected or orchestrator not ready."
+                )
+            )
             return
 
         success = self._orchestrator.toggle_repository_pause(repo_id)
@@ -623,57 +629,93 @@ class SupsrcTuiApp(App):
 
             repo_state = self._orchestrator.repo_states.get(repo_id)
             if repo_state and repo_state.is_paused:
-                self.post_message(LogMessageUpdate(None, "INFO", f"⏸️ Repository '{repo_id}' paused."))
+                self.post_message(
+                    LogMessageUpdate(None, "INFO", f"⏸️ Repository '{repo_id}' paused.")
+                )
             else:
-                self.post_message(LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed."))
+                self.post_message(
+                    LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed.")
+                )
         else:
-            self.post_message(LogMessageUpdate(None, "ERROR", f"Failed to toggle pause for '{repo_id}'."))
+            self.post_message(
+                LogMessageUpdate(None, "ERROR", f"Failed to toggle pause for '{repo_id}'.")
+            )
 
     async def action_toggle_repo_stop(self) -> None:
         """Toggle stop state for the selected repository."""
         repo_id = self._get_selected_repo_id()
         if not repo_id or not self._orchestrator:
-            self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
+            self.post_message(
+                LogMessageUpdate(
+                    None, "WARNING", "No repository selected or orchestrator not ready."
+                )
+            )
             return
 
         success = await self._orchestrator.toggle_repository_stop(repo_id)
         if success:
             repo_state = self._orchestrator.repo_states.get(repo_id)
             if repo_state and repo_state.is_stopped:
-                self.post_message(LogMessageUpdate(None, "INFO", f"⏹️ Repository '{repo_id}' stopped from monitoring."))
+                self.post_message(
+                    LogMessageUpdate(
+                        None, "INFO", f"⏹️ Repository '{repo_id}' stopped from monitoring."
+                    )
+                )
             else:
-                self.post_message(LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed monitoring."))
+                self.post_message(
+                    LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed monitoring.")
+                )
         else:
-            self.post_message(LogMessageUpdate(None, "ERROR", f"Failed to toggle stop for '{repo_id}'."))
+            self.post_message(
+                LogMessageUpdate(None, "ERROR", f"Failed to toggle stop for '{repo_id}'.")
+            )
 
     async def action_refresh_repo_status(self) -> None:
         """Force refresh status for the selected repository."""
         repo_id = self._get_selected_repo_id()
         if not repo_id or not self._orchestrator:
-            self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
+            self.post_message(
+                LogMessageUpdate(
+                    None, "WARNING", "No repository selected or orchestrator not ready."
+                )
+            )
             return
 
         self._orchestrator.set_repo_refreshing_status(repo_id, True)
-        self.post_message(LogMessageUpdate(None, "INFO", f"🔄 Refreshing status for '{repo_id}'..."))
+        self.post_message(
+            LogMessageUpdate(None, "INFO", f"🔄 Refreshing status for '{repo_id}'...")
+        )
         success = await self._orchestrator.refresh_repository_status(repo_id)
         self._orchestrator.set_repo_refreshing_status(repo_id, False)
         if success:
-            self.post_message(LogMessageUpdate(None, "INFO", f"✅ Status for '{repo_id}' refreshed."))
+            self.post_message(
+                LogMessageUpdate(None, "INFO", f"✅ Status for '{repo_id}' refreshed.")
+            )
         else:
-            self.post_message(LogMessageUpdate(None, "ERROR", f"❌ Failed to refresh status for '{repo_id}'."))
+            self.post_message(
+                LogMessageUpdate(None, "ERROR", f"❌ Failed to refresh status for '{repo_id}'.")
+            )
 
     async def action_resume_repo_monitoring(self) -> None:
         """Resume monitoring for the selected repository (unpause/unstop)."""
         repo_id = self._get_selected_repo_id()
         if not repo_id or not self._orchestrator:
-            self.post_message(LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready."))
+            self.post_message(
+                LogMessageUpdate(
+                    None, "WARNING", "No repository selected or orchestrator not ready."
+                )
+            )
             return
 
         success = await self._orchestrator.resume_repository_monitoring(repo_id)
         if success:
-            self.post_message(LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed monitoring."))
+            self.post_message(
+                LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed monitoring.")
+            )
         else:
-            self.post_message(LogMessageUpdate(None, "ERROR", f"Failed to resume monitoring for '{repo_id}'."))
+            self.post_message(
+                LogMessageUpdate(None, "ERROR", f"Failed to resume monitoring for '{repo_id}'.")
+            )
 
     def action_quit(self) -> None:
         """Initiates a graceful shutdown of the application."""
@@ -744,11 +786,13 @@ class SupsrcTuiApp(App):
                 # Use relative time for recent changes, full date for older ones
                 # Get threshold from config if available
                 threshold = 3.0  # default
-                if hasattr(self, "_orchestrator") and self._orchestrator and self._orchestrator.config:
+                if (
+                    hasattr(self, "_orchestrator")
+                    and self._orchestrator
+                    and self._orchestrator.config
+                ):
                     threshold = getattr(
-                        self._orchestrator.config.global_config,
-                        "last_change_threshold_hours",
-                        3.0
+                        self._orchestrator.config.global_config, "last_change_threshold_hours", 3.0
                     )
                 # Use actual Git commit timestamp if available, fallback to last_change_time
                 timestamp = state.last_commit_timestamp or state.last_change_time
@@ -760,7 +804,11 @@ class SupsrcTuiApp(App):
 
                 # Format file statistics with color based on commit status
                 # Show loading indicator for repos that haven't been initialized yet
-                if state.total_files == 0 and not state.has_uncommitted_changes and state.status == RepositoryStatus.IDLE:
+                if (
+                    state.total_files == 0
+                    and not state.has_uncommitted_changes
+                    and state.status == RepositoryStatus.IDLE
+                ):
                     # Likely still loading
                     total_files_display = "[dim]...[/dim]"
                 elif state.total_files == 0:
@@ -771,16 +819,40 @@ class SupsrcTuiApp(App):
 
                 if state.has_uncommitted_changes:
                     # Active colors for uncommitted changes
-                    changed_files_display = f"[bold yellow]{state.changed_files}[/bold yellow]" if state.changed_files > 0 else "0"
-                    added_display = f"[bold green]{state.added_files}[/bold green]" if state.added_files > 0 else "0"
-                    deleted_display = f"[bold red]{state.deleted_files}[/bold red]" if state.deleted_files > 0 else "0"
-                    modified_display = f"[bold blue]{state.modified_files}[/bold blue]" if state.modified_files > 0 else "0"
+                    changed_files_display = (
+                        f"[bold yellow]{state.changed_files}[/bold yellow]"
+                        if state.changed_files > 0
+                        else "0"
+                    )
+                    added_display = (
+                        f"[bold green]{state.added_files}[/bold green]"
+                        if state.added_files > 0
+                        else "0"
+                    )
+                    deleted_display = (
+                        f"[bold red]{state.deleted_files}[/bold red]"
+                        if state.deleted_files > 0
+                        else "0"
+                    )
+                    modified_display = (
+                        f"[bold blue]{state.modified_files}[/bold blue]"
+                        if state.modified_files > 0
+                        else "0"
+                    )
                 else:
                     # Grey/dim for committed state
-                    changed_files_display = f"[dim]{state.changed_files}[/dim]" if state.changed_files > 0 else "0"
-                    added_display = f"[dim]{state.added_files}[/dim]" if state.added_files > 0 else "0"
-                    deleted_display = f"[dim]{state.deleted_files}[/dim]" if state.deleted_files > 0 else "0"
-                    modified_display = f"[dim]{state.modified_files}[/dim]" if state.modified_files > 0 else "0"
+                    changed_files_display = (
+                        f"[dim]{state.changed_files}[/dim]" if state.changed_files > 0 else "0"
+                    )
+                    added_display = (
+                        f"[dim]{state.added_files}[/dim]" if state.added_files > 0 else "0"
+                    )
+                    deleted_display = (
+                        f"[dim]{state.deleted_files}[/dim]" if state.deleted_files > 0 else "0"
+                    )
+                    modified_display = (
+                        f"[dim]{state.modified_files}[/dim]" if state.modified_files > 0 else "0"
+                    )
 
                 # Get branch display - truncate from beginning if too long
                 branch_name = state.current_branch or "main"
@@ -823,7 +895,9 @@ class SupsrcTuiApp(App):
         try:
             log_widget = self.query_one("#event-log", TextualLog)
             # Format message with repo name if available
-            formatted_message = f"[{message.repo_id}] {message.message}" if message.repo_id else message.message
+            formatted_message = (
+                f"[{message.repo_id}] {message.message}" if message.repo_id else message.message
+            )
             log_widget.write_line(formatted_message)
         except Exception as e:
             # Using the app's own logger here is fine for TUI-specific errors.
@@ -871,5 +945,6 @@ class SupsrcTuiApp(App):
             "SUCCESS": "bold green",
         }
         return styles.get(level, "white")
+
 
 # 🖥️✨

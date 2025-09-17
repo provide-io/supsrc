@@ -99,9 +99,7 @@ class TestTailCommand:
         assert call_kwargs["level"] == 10  # DEBUG
 
     @patch("supsrc.cli.tail_cmds._run_headless_orchestrator")
-    def test_tail_runner_returns_error_code(
-        self, mock_runner: Mock, tmp_path: Path
-    ) -> None:
+    def test_tail_runner_returns_error_code(self, mock_runner: Mock, tmp_path: Path) -> None:
         """Test that a non-zero exit code from the runner is propagated."""
         mock_runner.return_value = 130  # Simulate exit code from interrupt
         config_file = tmp_path / "test.conf"
@@ -115,9 +113,7 @@ class TestTailCommand:
         assert result.exit_code == 130
 
     @patch("supsrc.cli.tail_cmds._run_headless_orchestrator")
-    def test_tail_runner_raises_keyboard_interrupt(
-        self, mock_runner: Mock, tmp_path: Path
-    ) -> None:
+    def test_tail_runner_raises_keyboard_interrupt(self, mock_runner: Mock, tmp_path: Path) -> None:
         """Test that tail command handles KeyboardInterrupt from the runner."""
         mock_runner.side_effect = KeyboardInterrupt()
         config_file = tmp_path / "test.conf"

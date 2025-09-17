@@ -28,7 +28,7 @@ def get_version() -> str:
 
     Reads from VERSION file if it exists, otherwise falls back to package metadata,
     then to default development version.
-    
+
     Returns:
         str: The current version string
     """
@@ -42,6 +42,7 @@ def get_version() -> str:
     # Fallback to package metadata
     try:
         from importlib.metadata import PackageNotFoundError, version
+
         return version("supsrc")
     except PackageNotFoundError:
         pass

@@ -12,6 +12,7 @@ from supsrc.exceptions import ConfigurationError
 
 try:
     from rich.pretty import pretty_repr
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -53,6 +54,7 @@ def show_config(ctx: click.Context, config_path: Path, **kwargs):
         else:
             import io
             import pprint
+
             with io.StringIO() as buffer:
                 pprint.pprint(config, stream=buffer)
                 output_str = buffer.getvalue()
@@ -79,5 +81,6 @@ def show_config(ctx: click.Context, config_path: Path, **kwargs):
         )
         click.echo(f"Error: An unexpected issue occurred: {e}", err=True)
         ctx.exit(2)
+
 
 # 🔼⚙️

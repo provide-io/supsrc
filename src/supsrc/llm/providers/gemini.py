@@ -4,6 +4,7 @@
 """
 LLMProvider implementation for Google Gemini.
 """
+
 import asyncio
 import re
 
@@ -55,7 +56,7 @@ class GeminiProvider:
         self._rate_limiter = TokenBucketRateLimiter(
             capacity=60,  # Max 60 requests
             refill_rate=1.0,  # 1 token per second = 60 per minute
-            initial_tokens=10  # Start with some tokens available
+            initial_tokens=10,  # Start with some tokens available
         )
 
         log.info("GeminiProvider initialized", model=model, rate_limit="60 req/min")
@@ -81,7 +82,7 @@ class GeminiProvider:
                 "Gemini API call completed",
                 duration_ms=timer.elapsed_ms,
                 model=self.model_name,
-                tokens_remaining=self._rate_limiter.available_tokens()
+                tokens_remaining=self._rate_limiter.available_tokens(),
             )
             return result
 
@@ -116,9 +117,7 @@ class GeminiProvider:
 
     async def generate_change_fragment(self, diff: str, commit_message: str) -> str:
         log.debug("Generating change fragment with Gemini")
-        prompt = CHANGE_FRAGMENT_PROMPT_TEMPLATE.format(
-            commit_message=commit_message, diff=diff
-        )
+        prompt = CHANGE_FRAGMENT_PROMPT_TEMPLATE.format(commit_message=commit_message, diff=diff)
         raw_response = await self._generate(prompt)
         return _clean_llm_output(raw_response)
 

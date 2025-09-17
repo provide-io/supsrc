@@ -2,6 +2,7 @@
 """
 Handles the execution of the triggered action sequence for a repository.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -68,9 +69,7 @@ class ActionHandler:
         if provider_key in self._llm_providers:
             return self._llm_providers[provider_key]
 
-        api_key = (
-            os.environ.get(llm_config.api_key_env_var) if llm_config.api_key_env_var else None
-        )
+        api_key = os.environ.get(llm_config.api_key_env_var) if llm_config.api_key_env_var else None
 
         provider_map = {"gemini": GeminiProvider, "ollama": OllamaProvider}
         provider_class = provider_map.get(llm_config.provider)
@@ -119,9 +118,7 @@ class ActionHandler:
         log.warning("Could not infer a default test command.", repo_path=str(workdir))
         return None
 
-    async def _run_tests(
-        self, command: str | None, workdir: Path
-    ) -> tuple[int, str, str]:
+    async def _run_tests(self, command: str | None, workdir: Path) -> tuple[int, str, str]:
         """Runs the configured or inferred test command."""
         effective_command = command or self._infer_test_command(workdir)
 
@@ -159,7 +156,10 @@ class ActionHandler:
     @with_error_handling(
         log_errors=True,
         suppress=(Exception,),  # Suppress all errors to avoid crashing the orchestrator
-        context_provider=lambda: {"component": "action_handler", "method": "execute_action_sequence"}
+        context_provider=lambda: {
+            "component": "action_handler",
+            "method": "execute_action_sequence",
+        },
     )
     async def execute_action_sequence(self, repo_id: str) -> None:
         """Runs the full action workflow, including optional LLM steps."""
@@ -189,14 +189,16 @@ class ActionHandler:
             )
             if not status_result.success or status_result.is_conflicted or status_result.is_clean:
                 if not status_result.success:
-                    repo_state.update_status(RepositoryStatus.ERROR, f"Status check failed: {status_result.message}")
+                    repo_state.update_status(
+                        RepositoryStatus.ERROR, f"Status check failed: {status_result.message}"
+                    )
                     repo_state.action_description = "Status check failed."
                 elif status_result.is_conflicted:
                     repo_state.update_status(RepositoryStatus.ERROR, "Repo has conflicts.")
                     repo_state.action_description = "Merge conflict detected."
                     repo_state.is_frozen = True
                     repo_state.freeze_reason = "Merge conflicts detected"
-                else: # is_clean
+                else:  # is_clean
                     repo_state.reset_after_action()
                 self.tui.post_state_update(self.repo_states)
                 return
@@ -205,10 +207,16 @@ class ActionHandler:
             repo_state.update_status(RepositoryStatus.STAGING)
             repo_state.action_description = "Staging changes..."
             stage_result: StageResult = await repo_engine.stage_changes(
-                None, repo_state, repo_config.repository, self.config.global_config, repo_config.path
+                None,
+                repo_state,
+                repo_config.repository,
+                self.config.global_config,
+                repo_config.path,
             )
             if not stage_result.success:
-                repo_state.update_status(RepositoryStatus.ERROR, f"Staging failed: {stage_result.message}")
+                repo_state.update_status(
+                    RepositoryStatus.ERROR, f"Staging failed: {stage_result.message}"
+                )
                 repo_state.action_description = "Staging failed."
                 self.tui.post_state_update(self.repo_states)
                 return
@@ -231,7 +239,9 @@ class ActionHandler:
                     repo_state.action_description = "Reviewing changes with LLM..."
                     veto, reason = await llm_provider.review_changes(staged_diff)
                     if veto:
-                        repo_state.update_status(RepositoryStatus.ERROR, f"LLM Review Veto: {reason}")
+                        repo_state.update_status(
+                            RepositoryStatus.ERROR, f"LLM Review Veto: {reason}"
+                        )
                         repo_state.action_description = f"LLM Review Veto: {reason}"
                         self.tui.post_state_update(self.repo_states)
                         return
@@ -239,7 +249,9 @@ class ActionHandler:
                 if llm_config.run_tests:
                     repo_state.update_status(RepositoryStatus.TESTING)
                     repo_state.action_description = "Running automated tests..."
-                    exit_code, stdout, stderr = await self._run_tests(llm_config.test_command, repo_config.path)
+                    exit_code, stdout, stderr = await self._run_tests(
+                        llm_config.test_command, repo_config.path
+                    )
                     if exit_code != 0:
                         failure_output = f"STDOUT:\n{stdout}\n\nSTDERR:\n{stderr}"
                         analysis = "Test run failed."
@@ -247,7 +259,9 @@ class ActionHandler:
                             repo_state.update_status(RepositoryStatus.ANALYZING)
                             repo_state.action_description = "Analyzing test failure with LLM..."
                             analysis = await llm_provider.analyze_test_failure(failure_output)
-                        repo_state.update_status(RepositoryStatus.ERROR, f"Tests Failed: {analysis}")
+                        repo_state.update_status(
+                            RepositoryStatus.ERROR, f"Tests Failed: {analysis}"
+                        )
                         repo_state.action_description = "Automated tests failed."
                         self.tui.post_state_update(self.repo_states)
                         return
@@ -266,22 +280,40 @@ class ActionHandler:
             repo_state.update_status(RepositoryStatus.COMMITTING)
             repo_state.action_description = "Performing commit..."
             commit_result: CommitResult = await repo_engine.perform_commit(
-                commit_message, repo_state, repo_config.repository, self.config.global_config, repo_config.path
+                commit_message,
+                repo_state,
+                repo_config.repository,
+                self.config.global_config,
+                repo_config.path,
             )
 
             if not commit_result.success:
-                repo_state.update_status(RepositoryStatus.ERROR, f"Commit failed: {commit_result.message}")
+                repo_state.update_status(
+                    RepositoryStatus.ERROR, f"Commit failed: {commit_result.message}"
+                )
                 repo_state.action_description = "Commit operation failed."
             elif commit_result.commit_hash is None:
                 repo_state.reset_after_action()
             else:
                 repo_state.last_commit_short_hash = commit_result.commit_hash[:7]
 
-                if llm_config and llm_config.enabled and llm_config.generate_change_fragment and llm_provider:
+                if (
+                    llm_config
+                    and llm_config.enabled
+                    and llm_config.generate_change_fragment
+                    and llm_provider
+                ):
                     summary_result = await repo_engine.get_summary(repo_config.path)
                     final_commit_message = summary_result.head_commit_message_summary or ""
-                    fragment = await llm_provider.generate_change_fragment(staged_diff, final_commit_message)
-                    await self._save_change_fragment(fragment, repo_config.path, llm_config.change_fragment_dir, commit_result.commit_hash)
+                    fragment = await llm_provider.generate_change_fragment(
+                        staged_diff, final_commit_message
+                    )
+                    await self._save_change_fragment(
+                        fragment,
+                        repo_config.path,
+                        llm_config.change_fragment_dir,
+                        commit_result.commit_hash,
+                    )
 
                 # 4. Perform Push
                 action_log.info("Commit successful", commit_hash=repo_state.last_commit_short_hash)
@@ -292,7 +324,9 @@ class ActionHandler:
                 )
                 if not push_result.success:
                     action_log.warning("Push failed", reason=push_result.message)
-                    self.tui.post_log_update(repo_id, "WARNING", f"Push failed: {push_result.message}")
+                    self.tui.post_log_update(
+                        repo_id, "WARNING", f"Push failed: {push_result.message}"
+                    )
                 elif push_result.skipped:
                     self.tui.post_log_update(repo_id, "INFO", "Push skipped by configuration.")
 

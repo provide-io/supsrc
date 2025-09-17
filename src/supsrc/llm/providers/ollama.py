@@ -4,6 +4,7 @@
 """
 LLMProvider implementation for Ollama.
 """
+
 import re
 
 import structlog
@@ -54,7 +55,7 @@ class OllamaProvider:
         self._rate_limiter = TokenBucketRateLimiter(
             capacity=30,  # Max 30 concurrent requests
             refill_rate=2.0,  # 2 tokens per second = 120 per minute
-            initial_tokens=5  # Start with some tokens available
+            initial_tokens=5,  # Start with some tokens available
         )
 
         log.info("OllamaProvider initialized", model=model, rate_limit="120 req/min")
@@ -74,15 +75,22 @@ class OllamaProvider:
                 "Ollama API call completed",
                 duration_ms=timer.elapsed_ms,
                 model=self.model,
-                tokens_remaining=self._rate_limiter.available_tokens()
+                tokens_remaining=self._rate_limiter.available_tokens(),
             )
             return result
 
         except ollama.ResponseError as e:
-            log.error("Ollama API call failed", error=str(e.body), status_code=e.status_code, exc_info=True)
+            log.error(
+                "Ollama API call failed",
+                error=str(e.body),
+                status_code=e.status_code,
+                exc_info=True,
+            )
             return f"Error: LLM generation failed. Status: {e.status_code}"
         except Exception as e:
-            log.error("An unexpected error occurred with the Ollama provider", error=str(e), exc_info=True)
+            log.error(
+                "An unexpected error occurred with the Ollama provider", error=str(e), exc_info=True
+            )
             return f"Error: An unexpected error occurred. {e}"
 
     async def generate_commit_message(self, diff: str, conventional: bool) -> str:
@@ -112,9 +120,7 @@ class OllamaProvider:
 
     async def generate_change_fragment(self, diff: str, commit_message: str) -> str:
         log.debug("Generating change fragment with Ollama")
-        prompt = CHANGE_FRAGMENT_PROMPT_TEMPLATE.format(
-            commit_message=commit_message, diff=diff
-        )
+        prompt = CHANGE_FRAGMENT_PROMPT_TEMPLATE.format(commit_message=commit_message, diff=diff)
         raw_response = await self._generate(prompt)
         return _clean_llm_output(raw_response)
 

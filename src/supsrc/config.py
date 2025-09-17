@@ -36,6 +36,7 @@ def _validate_positive_int(inst: Any, attr: Any, value: int) -> None:
 @define(slots=True)
 class InactivityRuleConfig:
     """Configuration for the inactivity rule."""
+
     type: str = field(default="supsrc.rules.inactivity", kw_only=True)
     period: timedelta = field()
 
@@ -43,6 +44,7 @@ class InactivityRuleConfig:
 @define(slots=True)
 class SaveCountRuleConfig:
     """Configuration for the save count rule."""
+
     type: str = field(default="supsrc.rules.save_count", kw_only=True)
     count: int = field(validator=_validate_positive_int)
 
@@ -50,6 +52,7 @@ class SaveCountRuleConfig:
 @define(slots=True)
 class ManualRuleConfig:
     """Configuration for the manual rule."""
+
     type: str = field(default="supsrc.rules.manual", kw_only=True)
 
 
@@ -60,6 +63,7 @@ RuleConfig: TypeAlias = InactivityRuleConfig | SaveCountRuleConfig | ManualRuleC
 @define(frozen=True, slots=True)
 class LLMConfig:
     """Configuration for optional LLM features."""
+
     enabled: bool = field(default=False)
     provider: str = field(default="gemini")
     model: str = field(default="gemini-1.5-flash")
@@ -82,6 +86,7 @@ class LLMConfig:
 @mutable(slots=True)
 class RepositoryConfig:
     """Configuration for a repository. Mutable to allow disabling on load if path invalid."""
+
     path: Path = field()
     rule: RuleConfig = field()
     repository: Mapping[str, Any] = field(factory=dict)
@@ -93,6 +98,7 @@ class RepositoryConfig:
 @define(frozen=True, slots=True)
 class GlobalConfig:
     """Global default settings for supsrc."""
+
     log_level: str = field(default="INFO", validator=_validate_log_level)
 
     @property
@@ -117,7 +123,6 @@ def load_config(config_path: Path) -> SupsrcConfig:
     from supsrc.exceptions import ConfigFileNotFoundError, ConfigParsingError
 
     try:
-
         # Use Foundation error handling but keep our TOML loading logic
         if not config_path.is_file():
             raise ConfigFileNotFoundError(f"Config file not found: {config_path}")
@@ -162,13 +167,18 @@ def load_config(config_path: Path) -> SupsrcConfig:
                 raise ValueError(f"Unknown rule type specified: '{rule_type}'")
 
             data_copy = dict(data)
-            if hasattr(target_class.__attrs_attrs__, "type") and target_class.__attrs_attrs__.type.kw_only:
+            if (
+                hasattr(target_class.__attrs_attrs__, "type")
+                and target_class.__attrs_attrs__.type.kw_only
+            ):
                 data_copy.pop("type", None)
 
             return converter.structure(data_copy, target_class)
 
         converter.register_structure_hook(Path, _structure_path_simple)
-        converter.register_structure_hook(timedelta, lambda d, t: timedelta(seconds=parse_duration(d)))
+        converter.register_structure_hook(
+            timedelta, lambda d, t: timedelta(seconds=parse_duration(d))
+        )
         converter.register_structure_hook(RuleConfig, structure_rule_hook)
 
         config_object = converter.structure(toml_data, SupsrcConfig)
