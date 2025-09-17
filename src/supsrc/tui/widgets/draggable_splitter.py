@@ -20,8 +20,8 @@ class DraggableSplitter(Static):
     def __init__(self, **kwargs) -> None:
         super().__init__("═══", **kwargs)
         self._drag_start_y = 0
-        self._initial_repo_height = 80
-        self._initial_log_height = 15
+        self._initial_repo_height = 60
+        self._initial_log_height = 35
 
     def on_mouse_down(self, event: MouseDown) -> None:
         """Start dragging the splitter."""
@@ -45,8 +45,8 @@ class DraggableSplitter(Static):
 
         except Exception:
             # Fallback to default values
-            self._initial_repo_height = 80
-            self._initial_log_height = 15
+            self._initial_repo_height = 60
+            self._initial_log_height = 35
 
     def on_mouse_move(self, event: MouseMove) -> None:
         """Handle splitter dragging."""

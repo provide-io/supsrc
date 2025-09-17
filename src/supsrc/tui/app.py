@@ -12,7 +12,7 @@ from typing import Any, ClassVar
 import structlog
 from textual.app import ComposeResult
 from textual.reactive import var
-from textual.widgets import DataTable, Footer, Header, Static
+from textual.widgets import DataTable, Footer, Header, Label, Static, TabbedContent, TabPane
 from textual.widgets import Log as TextualLog
 
 from supsrc.runtime.orchestrator import WatchOrchestrator
@@ -61,14 +61,14 @@ class SupsrcTuiApp(TuiAppBase):
     }
 
     #repository_section {
-        height: 80%;
+        height: 60%;
         border: round #888888;
         margin: 0 1;
         padding: 0;
     }
 
     #log_section {
-        height: 15%;
+        height: 35%;
         border: round #888888;
         margin: 0 1;
         padding: 0;
@@ -111,6 +111,39 @@ class SupsrcTuiApp(TuiAppBase):
         dock: top;
         height: 1;
     }
+
+    /* Tab styling */
+    TabbedContent {
+        height: 100%;
+    }
+
+    TabPane {
+        padding: 0;
+    }
+
+    Tabs {
+        background: #333333;
+        color: #ffffff;
+        height: 1;
+        dock: top;
+    }
+
+    Tab {
+        background: #444444;
+        color: #aaaaaa;
+        margin: 0 1;
+        padding: 0 1;
+    }
+
+    Tab.-active {
+        background: #0066cc;
+        color: #ffffff;
+    }
+
+    Tab:hover {
+        background: #555555;
+        color: #ffffff;
+    }
     """
 
     # Reactive variables
@@ -147,9 +180,20 @@ class SupsrcTuiApp(TuiAppBase):
             # Draggable splitter
             yield DraggableSplitter(id="splitter_line")
 
-            # Bottom section: Event log
+            # Bottom section: Info pane with tabs
             with Container(id="log_section", classes="main-section"):
-                yield TextualLog(id="event-log", highlight=True)
+                with TabbedContent(initial="logs-tab"):
+                    with TabPane("Logs", id="logs-tab"):
+                        yield TextualLog(id="event-log", highlight=True)
+                    with TabPane("Repo Details", id="details-tab"):
+                        yield Label(
+                            "Repository details will appear here when selected",
+                            id="repo-details-content",
+                        )
+                    with TabPane("About", id="about-tab"):
+                        yield Label(
+                            "Supsrc TUI v1.0\nMonitoring and auto-commit system", id="about-content"
+                        )
 
         yield Footer()
 
@@ -160,7 +204,7 @@ class SupsrcTuiApp(TuiAppBase):
             table = self.query_one("#repository_table", DataTable)
             table.add_columns(
                 "📊",  # Status emoji header
-                "⏱️",   # Timer/countdown column
+                "⏱️",  # Timer/countdown column
                 "Repository",
                 "Branch",
                 "📁",  # Total files
