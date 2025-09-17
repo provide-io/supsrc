@@ -140,3 +140,4 @@ Rules determine when to trigger Git operations:
 - Environment variables can override configuration (prefix: `SUPSRC_`)
 - TUI is optional and requires separate installation (`supsrc[tui]`)
 - "import annotations" is okay so I can use the unquoted types.
+- After writing each Python file, run the code quality tools - ruff check --fix --unsafe-fixes, ty check, mypy, ruff format, then run each of the tools again. this way CQ is performed during the dev process.
