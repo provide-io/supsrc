@@ -47,9 +47,7 @@ class RepositoryManager:
         self._log = log.bind(manager_id=id(self))
         self._log.debug("RepositoryManager initialized")
 
-    async def initialize_repositories(
-        self, config: SupsrcConfig, tui: TUIInterface
-    ) -> list[str]:
+    async def initialize_repositories(self, config: SupsrcConfig, tui: TUIInterface) -> list[str]:
         """Initialize all enabled repositories from config."""
         self._log.info("Initializing repositories...")
         tui.post_log_update(None, "INFO", "Initializing repositories...")
@@ -153,12 +151,16 @@ class RepositoryManager:
         """Toggle pause state for a specific repository."""
         repo_state = self.repo_states.get(repo_id)
         if not repo_state:
-            self._log.warning("Attempted to toggle pause on non-existent repo state", repo_id=repo_id)
+            self._log.warning(
+                "Attempted to toggle pause on non-existent repo state", repo_id=repo_id
+            )
             return False
 
         repo_state.is_paused = not repo_state.is_paused
         repo_state._update_display_emoji()
-        self._log.info("Toggled repository pause state", repo_id=repo_id, paused=repo_state.is_paused)
+        self._log.info(
+            "Toggled repository pause state", repo_id=repo_id, paused=repo_state.is_paused
+        )
         return True
 
     async def toggle_repository_stop(
@@ -169,11 +171,15 @@ class RepositoryManager:
         repo_state = self.repo_states.get(repo_id)
 
         if not repo_config:
-            self._log.warning("Attempted to toggle stop on non-existent repo config", repo_id=repo_id)
+            self._log.warning(
+                "Attempted to toggle stop on non-existent repo config", repo_id=repo_id
+            )
             return False
 
         if not repo_state:
-            self._log.warning("Attempted to toggle stop on non-existent repo state", repo_id=repo_id)
+            self._log.warning(
+                "Attempted to toggle stop on non-existent repo state", repo_id=repo_id
+            )
             return False
 
         repo_state.is_stopped = not repo_state.is_stopped
@@ -243,7 +249,9 @@ class RepositoryManager:
                 history = await repo_engine.get_commit_history(repo_config.path, limit=20)
                 return {"commit_history": history}
             except Exception as e:
-                self._log.error("Failed to get commit history from engine", repo_id=repo_id, error=str(e))
+                self._log.error(
+                    "Failed to get commit history from engine", repo_id=repo_id, error=str(e)
+                )
                 return {"commit_history": [f"[bold red]Error fetching history: {e}[/]"]}
 
         return {"commit_history": ["Details not available for this engine type."]}
@@ -292,7 +300,9 @@ class RepositoryManager:
             return asyncio.create_task(status_manager.refresh_repository_status(repo_id))
         return False
 
-    def set_repo_refreshing_status(self, repo_id: str, is_refreshing: bool, status_manager: Any) -> None:
+    def set_repo_refreshing_status(
+        self, repo_id: str, is_refreshing: bool, status_manager: Any
+    ) -> None:
         """Set the refreshing status for a repository."""
         if status_manager:
             status_manager.set_repo_refreshing_status(repo_id, is_refreshing)
