@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" python3 -c \"\nfrom supsrc.utils.streams import NoOpStream\nfrom supsrc.events.processor import EventProcessor\nfrom supsrc.runtime.orchestrator import WatchOrchestrator\nprint(''✅ All imports successful'')\nprint(''NoOpStream:'', NoOpStream())\nprint(''EventProcessor imported from events module'')\nprint(''WatchOrchestrator imported with absolute imports'')\n\")"
+      "Bash(PYTHONPATH=. python3 -c \"\nfrom supsrc.utils.streams import NoOpStream\nprint(''✅ NoOpStream import successful'')\n\")",
+      "Bash(PYTHONPATH=./src python3 -c \"\nfrom supsrc.utils.streams import NoOpStream\nprint(''✅ NoOpStream import successful'')\nprint(''NoOpStream test:'', NoOpStream().write(''test''))\n\")"
     ],
     "deny": [],
     "ask": [],
