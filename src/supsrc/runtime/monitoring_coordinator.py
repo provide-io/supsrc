@@ -56,6 +56,7 @@ class MonitoringCoordinator:
         self.monitor_service: MonitoringService | None = None
         self.config_observer: Any = None  # Observer type annotation causes issues
         self._is_paused = False
+        self._is_suspended = False
         self._log = log.bind(coordinator_id=id(self))
         self._log.debug("MonitoringCoordinator initialized")
 
@@ -137,6 +138,7 @@ class MonitoringCoordinator:
     def suspend_monitoring(self) -> None:
         """Suspend filesystem monitoring service."""
         self._log.warning("Suspending filesystem monitoring service.")
+        self._is_suspended = True
         if self.monitor_service and self.monitor_service.is_running:
             asyncio.create_task(self.monitor_service.stop())  # noqa: RUF006
 
@@ -144,6 +146,7 @@ class MonitoringCoordinator:
         """Resume event processing and monitoring."""
         self._log.info("Resuming event processing and monitoring.")
         self._is_paused = False
+        self._is_suspended = False
 
         if config and self.monitor_service and not self.monitor_service.is_running:
             self._log.info("Restarting suspended monitoring service...")
@@ -268,3 +271,8 @@ class MonitoringCoordinator:
             return self.state_manager.is_paused(repo_id=None)  # Check global pause
 
         return False
+
+    @property
+    def is_suspended(self) -> bool:
+        """Check if monitoring is currently suspended."""
+        return self._is_suspended

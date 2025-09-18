@@ -192,6 +192,11 @@ class WatchOrchestrator:
         """Check if monitoring is currently paused."""
         return self.monitoring_coordinator._is_paused if self.monitoring_coordinator else False
 
+    @property
+    def _is_suspended(self) -> bool:
+        """Check if monitoring is currently suspended."""
+        return self.monitoring_coordinator._is_suspended if self.monitoring_coordinator else False
+
     def pause_monitoring(self) -> None:
         if self.monitoring_coordinator:
             self.monitoring_coordinator.pause_monitoring()
