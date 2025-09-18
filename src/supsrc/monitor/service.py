@@ -45,12 +45,13 @@ class MonitoringService:
 
     def unschedule_repository(self, repo_id: str) -> None:
         """Unschedule a specific repository from being monitored."""
+        watch = self._watches.pop(repo_id, None)
         handler = self._handlers.pop(repo_id, None)
-        if handler:
-            self._observer.unschedule(handler)
+        if watch:
+            self._observer.unschedule(watch)
             self._logger.info("Unscheduled repository from monitoring", repo_id=repo_id)
         else:
-            self._logger.warning("Attempted to unschedule non-existent handler", repo_id=repo_id)
+            self._logger.warning("Attempted to unschedule non-existent watch", repo_id=repo_id)
 
     def add_repository(
         self,
@@ -85,7 +86,8 @@ class MonitoringService:
         )
         self._handlers[repo_id] = handler
         try:
-            self._observer.schedule(handler, str(repo_path), recursive=True)
+            watch = self._observer.schedule(handler, str(repo_path), recursive=True)
+            self._watches[repo_id] = watch
             self._logger.debug("Scheduled handler with observer", repo_id=repo_id)
         except Exception as e:
             self._logger.error(
@@ -97,6 +99,8 @@ class MonitoringService:
             )
             if repo_id in self._handlers:
                 del self._handlers[repo_id]
+            if repo_id in self._watches:
+                del self._watches[repo_id]
             raise MonitoringSetupError(
                 f"Failed to schedule monitoring: {e}",
                 repo_id=repo_id,
