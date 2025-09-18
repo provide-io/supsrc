@@ -28,7 +28,7 @@ from supsrc.protocols import (
     RepoStatusResult,
     StageResult,
 )
-from supsrc.state import RepositoryState, RepositoryStatus
+from supsrc.state import RepositoryState
 
 log = structlog.get_logger("engines.git.base")
 
@@ -211,7 +211,12 @@ class GitEngine(RepositoryEngine):
                 ]
 
             index.write()
-            return {"success": True, "files_staged": staged_list}
+            return {
+                "success": True,
+                "files_staged": staged_list,
+                "message": f"Successfully staged {len(staged_list)} files",
+                "details": {"staged_files": staged_list},
+            }
 
         try:
             result_dict = await asyncio.to_thread(_blocking_stage_changes)
