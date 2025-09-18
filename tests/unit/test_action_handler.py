@@ -34,6 +34,7 @@ def action_handler(
     states = {repo_id: RepositoryState(repo_id=repo_id)}
     engines = {repo_id: mock_repo_engine}
     tui = MagicMock(spec=TUIInterface)
+    tui.app = MagicMock()  # Add app attribute for event emission
     return ActionHandler(minimal_config, states, engines, tui)
 
 

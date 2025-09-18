@@ -29,7 +29,8 @@
       "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 25s python -m supsrc.cli.main sui -c /Users/tim/code/gh/provide-io/supsrc/examples/supsrc_test.conf)",
       "Bash(printf '\\e[?1000l\\e[?1002l\\e[?1003l\\e[?10061l')",
       "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" uv run pytest tests/unit/test_action_handler.py::TestActionHandler::test_execute_full_sequence_success -v)",
-      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" ./workenv/wrkenv_darwin_arm64/bin/python3 -m pip install pygit2)"
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" ./workenv/wrkenv_darwin_arm64/bin/python3 -m pip install pygit2)",
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_action_handler.py::TestActionHandler::test_execute_full_sequence_success -v)"
     ],
     "deny": [],
     "ask": [],
