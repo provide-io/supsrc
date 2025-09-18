@@ -137,7 +137,7 @@ class MonitoringCoordinator:
 
     def suspend_monitoring(self) -> None:
         """Suspend filesystem monitoring service."""
-        self._log.warning("Suspending filesystem monitoring service.")
+        self._log.info("Suspending filesystem monitoring service.")
         self._is_suspended = True
         if self.monitor_service and self.monitor_service.is_running:
             asyncio.create_task(self.monitor_service.stop())  # noqa: RUF006

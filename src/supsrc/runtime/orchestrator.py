@@ -205,6 +205,7 @@ class WatchOrchestrator:
     def suspend_monitoring(self) -> None:
         if self.monitoring_coordinator:
             self.monitoring_coordinator.suspend_monitoring()
+        self._post_tui_state_update()
 
     def resume_monitoring(self) -> None:
         if self.monitoring_coordinator and self.config:
