@@ -1,6 +1,6 @@
-# src/supsrc/state/models.py
+# src/supsrc/state/control.py
 """
-Data models and validation for supsrc state management.
+Data models and validation for external supsrc state control.
 """
 
 from __future__ import annotations
@@ -65,10 +65,10 @@ class StateData:
         repositories = {}
         for repo_id, repo_data in state_section.get("repositories", {}).items():
             repositories[repo_id] = RepositoryStateOverride(
-                paused=repo_data.get("paused", False),
-                save_count_disabled=repo_data.get("save_count_disabled", False),
+                paused=bool(repo_data.get("paused", False)),
+                save_count_disabled=bool(repo_data.get("save_count_disabled", False)),
                 inactivity_seconds=repo_data.get("inactivity_seconds"),
-                rule_overrides=repo_data.get("rule_overrides", {}),
+                rule_overrides=dict(repo_data.get("rule_overrides", {})),
             )
 
         return cls(
@@ -77,7 +77,7 @@ class StateData:
             paused_by=state_section.get("paused_by"),
             pause_reason=state_section.get("pause_reason"),
             repositories=repositories,
-            version=metadata_section.get("version", "1.0.0"),
+            version=str(metadata_section.get("version", "1.0.0")),
             updated_at=updated_at,
             updated_by=metadata_section.get("updated_by"),
             pid=metadata_section.get("pid"),
@@ -158,10 +158,7 @@ def validate_state_file(file_path: Path) -> bool:
         if not isinstance(metadata, dict):
             return False
 
-        if "version" not in metadata:
-            return False
-
-        return True
+        return "version" in metadata
 
     except (json.JSONDecodeError, OSError):
         return False

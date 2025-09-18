@@ -28,7 +28,7 @@ from supsrc.protocols import (
     RepoStatusResult,
     StageResult,
 )
-from supsrc.state import RepositoryState
+from supsrc.state import RepositoryState, RepositoryStatus
 
 log = structlog.get_logger("engines.git.base")
 

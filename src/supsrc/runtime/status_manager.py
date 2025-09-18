@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from supsrc.protocols import RepositoryEngine
-from supsrc.state import RepositoryState
+from supsrc.state import RepositoryState, RepositoryStatus
 
 if TYPE_CHECKING:
     from supsrc.config import SupsrcConfig

@@ -9,11 +9,9 @@ import asyncio
 import os
 from pathlib import Path
 
-import structlog
-
 # Add Foundation error handling patterns
 from provide.foundation.errors import with_error_handling
-from structlog.typing import FilteringBoundLogger as StructLogger
+from provide.foundation.logger import get_logger
 
 from supsrc.config import LLMConfig, SupsrcConfig
 from supsrc.protocols import (
@@ -40,7 +38,7 @@ except ImportError:
     OllamaProvider = None
 
 
-log: StructLogger = structlog.get_logger("runtime.action_handler")
+log = get_logger("runtime.action_handler")
 
 
 class ActionHandler:

@@ -9,8 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import attrs
-import structlog
-from structlog.typing import FilteringBoundLogger as StructLogger
+from provide.foundation.logger import get_logger
 
 from supsrc.state import RepositoryState
 
@@ -27,7 +26,7 @@ except ImportError:
     StateUpdate = None  # type: ignore
     LogMessageUpdate = None  # type: ignore
 
-log: StructLogger = structlog.get_logger("runtime.tui_interface")
+log = get_logger("runtime.tui_interface")
 
 
 class TUIInterface:

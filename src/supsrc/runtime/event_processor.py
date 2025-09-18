@@ -7,8 +7,7 @@ import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import structlog
-from structlog.typing import FilteringBoundLogger as StructLogger
+from provide.foundation.logger import get_logger
 
 from supsrc.config import InactivityRuleConfig, RepositoryConfig, SupsrcConfig
 from supsrc.monitor import MonitoredEvent
@@ -20,7 +19,7 @@ from supsrc.state import RepositoryState, RepositoryStatus
 if TYPE_CHECKING:
     from supsrc.runtime.orchestrator import WatchOrchestrator
 
-log: StructLogger = structlog.get_logger("runtime.event_processor")
+log = get_logger("runtime.event_processor")
 # Debounce delay to group rapid file system events (e.g., create + modify) into one action.
 DEBOUNCE_DELAY = 0.25  # 250 milliseconds
 
@@ -121,7 +120,7 @@ class EventProcessor:
                         file_path=event.src_path,
                         change_type=event.event_type,
                     )
-                    self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type]
+                    self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
 
                 # Instead of acting immediately, start a debounced check
                 self._debounce_trigger_check(event.repo_id)
