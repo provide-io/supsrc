@@ -14,9 +14,12 @@ from typing import Any, TypeAlias
 # Foundation includes attrs as a dependency
 from attrs import define, field, mutable
 from provide.foundation.errors.config import ConfigurationError
+from provide.foundation.file import read_toml
 
 # Add Foundation parsing utilities
 from provide.foundation.utils import parse_duration
+
+from supsrc.utils.directories import SupsrcDirectories
 
 
 def _validate_log_level(inst: Any, attr: Any, value: str) -> None:
@@ -206,6 +209,23 @@ def load_config(config_path: Path) -> SupsrcConfig:
         raise ConfigurationError(f"Failed to load config from {config_path}: {e}") from e
 
 
+def load_repository_config(repo_path: Path) -> dict[str, Any] | None:
+    """Load repository-specific config from .supsrc/config.toml if it exists.
+
+    Args:
+        repo_path: Path to the repository
+
+    Returns:
+        Dictionary of config values if file exists, None otherwise
+    """
+    config_file = SupsrcDirectories.get_config_file(repo_path)
+
+    if not config_file.exists():
+        return None
+
+    return read_toml(config_file, default=None)
+
+
 # Export all the models and functions that were in the original config package
 __all__ = [
     "ConfigurationError",
@@ -218,6 +238,7 @@ __all__ = [
     "SaveCountRuleConfig",
     "SupsrcConfig",
     "load_config",
+    "load_repository_config",
 ]
 
 # 🔼⚙️
