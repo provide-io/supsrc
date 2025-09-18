@@ -84,6 +84,13 @@ class RepositoryState:
     deleted_files: int = field(default=0)
     modified_files: int = field(default=0)
     has_uncommitted_changes: bool = field(default=False)
+
+    # Previous commit statistics for TUI display of faded previous values
+    last_committed_changed: int = field(default=0)
+    last_committed_added: int = field(default=0)
+    last_committed_deleted: int = field(default=0)
+    last_committed_modified: int = field(default=0)
+
     _timer_total_seconds: int | None = field(default=None, init=False)
     _timer_start_time: float | None = field(default=None, init=False)
 
@@ -147,7 +154,28 @@ class RepositoryState:
     def reset_after_action(self) -> None:
         """Resets state fields typically after a successful commit/push sequence."""
         log.debug("Resetting state after action", repo_id=self.repo_id)
+
+        # Save current statistics as last committed before resetting
+        self.last_committed_changed = self.changed_files
+        self.last_committed_added = self.added_files
+        self.last_committed_deleted = self.deleted_files
+        self.last_committed_modified = self.modified_files
+
+        log.debug(
+            "Preserved last commit statistics",
+            repo_id=self.repo_id,
+            last_committed_changed=self.last_committed_changed,
+            last_committed_added=self.last_committed_added,
+            last_committed_deleted=self.last_committed_deleted,
+            last_committed_modified=self.last_committed_modified,
+        )
+
+        # Reset current counters
         self.save_count = 0
+        self.changed_files = 0
+        self.added_files = 0
+        self.deleted_files = 0
+        self.modified_files = 0
         self.active_rule_description = None
         self.rule_dynamic_indicator = None
         self.action_description = None
