@@ -18,6 +18,8 @@ from provide.foundation.metrics import counter, gauge
 from rich.console import Console
 
 from supsrc.config import SupsrcConfig, load_config
+from supsrc.events.collector import EventCollector
+from supsrc.events.json_logger import JSONEventLogger
 from supsrc.events.processor import EventProcessor
 from supsrc.exceptions import ConfigurationError
 from supsrc.monitor import MonitoredEvent
@@ -58,17 +60,23 @@ class WatchOrchestrator:
         shutdown_event: asyncio.Event,
         app: SupsrcTuiApp | None = None,
         console: Console | None = None,
+        event_log_path: Path | None = None,
     ):
         self.config_path = config_path
         self.shutdown_event = shutdown_event
         self.app = app
         self.console = console
+        self.event_log_path = event_log_path
         self.event_queue: asyncio.Queue[MonitoredEvent] = asyncio.Queue()
         self.repo_states: RepositoryStatesMap = {}
         self.repo_engines: dict[str, RepositoryEngine] = {}
         self.event_processor: EventProcessor | None = None
         self.config: SupsrcConfig | None = None
         self.status_manager: StatusManager | None = None
+
+        # Event system for headless mode
+        self.event_collector: EventCollector | None = None
+        self.json_logger: JSONEventLogger | None = None
 
         # Initialize helper managers
         self.repository_manager: RepositoryManager | None = None
@@ -93,6 +101,16 @@ class WatchOrchestrator:
                 await asyncio.sleep(0.1)
                 return
 
+            # Initialize event system for headless mode
+            if not self.app and self.event_log_path:
+                log.info(
+                    "Initializing headless event collection",
+                    event_log_path=str(self.event_log_path),
+                )
+                self.event_collector = EventCollector()
+                self.json_logger = JSONEventLogger(self.event_log_path)
+                self.event_collector.subscribe(self.json_logger.log_event)
+
             # Initialize helper managers
             self.repository_manager = RepositoryManager(
                 self.repo_states, self.repo_engines, self._post_tui_state_update
@@ -109,7 +127,9 @@ class WatchOrchestrator:
                 self.repo_states, self.repo_engines, self.config, self._post_tui_state_update
             )
 
-            action_handler = ActionHandler(self.config, self.repo_states, self.repo_engines, tui)
+            action_handler = ActionHandler(
+                self.config, self.repo_states, self.repo_engines, tui, self.event_collector
+            )
             self.event_processor = EventProcessor(
                 config=self.config,
                 event_queue=self.event_queue,
@@ -158,6 +178,10 @@ class WatchOrchestrator:
             # Stop monitoring services
             if self.monitoring_coordinator:
                 await self.monitoring_coordinator.stop_services()
+
+            # Close JSON logger
+            if self.json_logger:
+                self.json_logger.close()
 
             # Reset metrics
             active_repositories.set(0)

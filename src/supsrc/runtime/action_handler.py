@@ -14,6 +14,7 @@ from provide.foundation.errors import with_error_handling
 from provide.foundation.logger import get_logger
 
 from supsrc.config import LLMConfig, SupsrcConfig
+from supsrc.events.collector import EventCollector
 from supsrc.protocols import (
     CommitResult,
     PushResult,
@@ -50,13 +51,24 @@ class ActionHandler:
         repo_states: dict[str, RepositoryState],
         repo_engines: dict[str, RepositoryEngine],
         tui: TUIInterface,
+        event_collector: EventCollector | None = None,
     ):
         self.config = config
         self.repo_states = repo_states
         self.repo_engines = repo_engines
         self.tui = tui
+        self.event_collector = event_collector
         self._llm_providers: dict[str, LLMProvider] = {}
         log.debug("ActionHandler initialized.")
+
+    def _emit_event(self, event) -> None:
+        """Emit event to available event collector (TUI or standalone)."""
+        # Try standalone event collector first (headless mode)
+        if self.event_collector:
+            self.event_collector.emit(event)
+        # Fall back to TUI event collector if available
+        elif hasattr(self.tui.app, "event_collector"):
+            self.tui.app.event_collector.emit(event)
 
     def _get_llm_provider(self, llm_config: LLMConfig) -> LLMProvider | None:
         """Instantiates and returns an LLM provider based on config."""
@@ -325,16 +337,15 @@ class ActionHandler:
                     )
 
                 # Emit git commit event
-                if hasattr(self.tui.app, "event_collector"):
-                    from supsrc.engines.git.events import GitCommitEvent
+                from supsrc.engines.git.events import GitCommitEvent
 
-                    commit_event = GitCommitEvent(
-                        description=f"Committed {len(stage_result.files_staged or [])} files to {repo_id}",
-                        commit_hash=commit_result.commit_hash,
-                        branch=repo_state.current_branch or "main",
-                        files_changed=len(stage_result.files_staged or []),
-                    )
-                    self.tui.app.event_collector.emit(commit_event)  # type: ignore[arg-type]
+                commit_event = GitCommitEvent(
+                    description=f"Committed {len(stage_result.files_staged or [])} files to {repo_id}",
+                    commit_hash=commit_result.commit_hash,
+                    branch=repo_state.current_branch or "main",
+                    files_changed=len(stage_result.files_staged or []),
+                )
+                self._emit_event(commit_event)
 
                 # 4. Perform Push
                 action_log.info("Commit successful", commit_hash=repo_state.last_commit_short_hash)
@@ -352,16 +363,15 @@ class ActionHandler:
                     self.tui.post_log_update(repo_id, "INFO", "Push skipped by configuration.")
                 else:
                     # Push succeeded - emit push event
-                    if hasattr(self.tui.app, "event_collector"):
-                        from supsrc.engines.git.events import GitPushEvent
+                    from supsrc.engines.git.events import GitPushEvent
 
-                        push_event = GitPushEvent(
-                            description=f"Pushed {repo_id} to remote repository",
-                            remote_name=repo_config.repository.get("remote", "origin"),
-                            branch=repo_state.current_branch or "main",
-                            commit_hash=commit_result.commit_hash,
-                        )
-                        self.tui.app.event_collector.emit(push_event)  # type: ignore[arg-type]
+                    push_event = GitPushEvent(
+                        description=f"Pushed {repo_id} to remote repository",
+                        remote_name=repo_config.repository.get("remote", "origin"),
+                        branch=repo_state.current_branch or "main",
+                        commit_hash=commit_result.commit_hash,
+                    )
+                    self._emit_event(push_event)
 
                 # Refresh repository statistics after successful commit to update UI
                 try:

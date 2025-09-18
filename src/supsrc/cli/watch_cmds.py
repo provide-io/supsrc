@@ -85,6 +85,7 @@ def watch_cli(ctx: click.Context, config_path: Path, app_log: Path, event_log: P
         shutdown_event=shutdown_event,
         app=None,  # No TUI
         console=None,
+        event_log_path=event_log,
     )
 
     exit_code = _run_headless_orchestrator(orchestrator)
