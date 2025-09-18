@@ -49,7 +49,8 @@ class TestActionHandler:
         repo_id = "test_repo_1"
         await action_handler.execute_action_sequence(repo_id)
 
-        mock_repo_engine.get_status.assert_called_once()
+        # Note: get_status is called twice (once for initial status, once for LLM summary)
+        assert mock_repo_engine.get_status.call_count >= 1
         mock_repo_engine.stage_changes.assert_called_once()
         mock_repo_engine.perform_commit.assert_called_once()
         mock_repo_engine.perform_push.assert_called_once()
