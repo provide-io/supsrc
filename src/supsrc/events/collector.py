@@ -9,12 +9,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-import structlog
+from provide.foundation.logger import get_logger
 
 if TYPE_CHECKING:
     from supsrc.events.protocol import Event
 
-log = structlog.get_logger("events.collector")
+log = get_logger("events.collector")
 
 
 class EventCollector:

@@ -84,6 +84,17 @@ class RepositoryState:
     deleted_files: int = field(default=0)
     modified_files: int = field(default=0)
     has_uncommitted_changes: bool = field(default=False)
+
+    # Previous commit statistics for TUI display of faded previous values
+    last_committed_changed: int = field(default=0)
+    last_committed_added: int = field(default=0)
+    last_committed_deleted: int = field(default=0)
+    last_committed_modified: int = field(default=0)
+
+    # Cached commit stats from Git history to avoid repeated queries
+    cached_last_commit_hash: str | None = field(default=None)
+    cached_last_commit_stats_loaded: bool = field(default=False)
+
     _timer_total_seconds: int | None = field(default=None, init=False)
     _timer_start_time: float | None = field(default=None, init=False)
 
@@ -147,7 +158,28 @@ class RepositoryState:
     def reset_after_action(self) -> None:
         """Resets state fields typically after a successful commit/push sequence."""
         log.debug("Resetting state after action", repo_id=self.repo_id)
+
+        # Save current statistics as last committed before resetting
+        self.last_committed_changed = self.changed_files
+        self.last_committed_added = self.added_files
+        self.last_committed_deleted = self.deleted_files
+        self.last_committed_modified = self.modified_files
+
+        log.debug(
+            "Preserved last commit statistics",
+            repo_id=self.repo_id,
+            last_committed_changed=self.last_committed_changed,
+            last_committed_added=self.last_committed_added,
+            last_committed_deleted=self.last_committed_deleted,
+            last_committed_modified=self.last_committed_modified,
+        )
+
+        # Reset current counters
         self.save_count = 0
+        self.changed_files = 0
+        self.added_files = 0
+        self.deleted_files = 0
+        self.modified_files = 0
         self.active_rule_description = None
         self.rule_dynamic_indicator = None
         self.action_description = None
@@ -157,6 +189,38 @@ class RepositoryState:
         self.cancel_inactivity_timer()
         self.cancel_debounce_timer()
         self.update_status(RepositoryStatus.IDLE)
+
+    def update_cached_commit_stats(self, commit_hash: str | None) -> None:
+        """Update the cached commit hash to invalidate stats when needed."""
+        if self.cached_last_commit_hash != commit_hash:
+            log.debug(
+                "Commit hash changed, invalidating cached stats",
+                repo_id=self.repo_id,
+                old_hash=self.cached_last_commit_hash,
+                new_hash=commit_hash,
+            )
+            self.cached_last_commit_hash = commit_hash
+            self.cached_last_commit_stats_loaded = False
+
+    def set_cached_commit_stats(
+        self, commit_hash: str | None, added: int, deleted: int, modified: int
+    ) -> None:
+        """Set the cached commit statistics."""
+        self.cached_last_commit_hash = commit_hash
+        self.last_committed_added = added
+        self.last_committed_deleted = deleted
+        self.last_committed_modified = modified
+        self.last_committed_changed = added + deleted + modified
+        self.cached_last_commit_stats_loaded = True
+
+        log.debug(
+            "Cached commit stats updated",
+            repo_id=self.repo_id,
+            commit_hash=commit_hash,
+            added=added,
+            deleted=deleted,
+            modified=modified,
+        )
 
     def set_inactivity_timer(self, handle: asyncio.TimerHandle, total_seconds: int) -> None:
         """Stores the handle for a scheduled inactivity timer, cancelling any previous one."""

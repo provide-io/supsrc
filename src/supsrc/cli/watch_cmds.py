@@ -1,7 +1,9 @@
 # src/supsrc/cli/watch_cmds.py
 
 import asyncio
-import signal
+import contextlib
+import logging
+import sys
 from pathlib import Path
 
 import click
@@ -9,28 +11,109 @@ import structlog
 from provide.foundation.cli.decorators import logging_options
 from structlog.typing import FilteringBoundLogger as StructLogger
 
-try:
-    from supsrc.tui.app import SupsrcTuiApp
-
-    TEXTUAL_AVAILABLE = True
-except ImportError:
-    TEXTUAL_AVAILABLE = False
-    SupsrcTuiApp = None
+from supsrc.runtime.orchestrator import WatchOrchestrator
 
 log: StructLogger = structlog.get_logger("cli.watch")
 
-_shutdown_requested = asyncio.Event()
+
+async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
+    """Periodically print repository status to stdout."""
+    while True:
+        try:
+            await asyncio.sleep(10)  # Report status every 10 seconds
+
+            if not orchestrator.repo_states:
+                continue
+
+            status_lines = []
+            for repo_id, state in orchestrator.repo_states.items():
+                # Format status line
+                status_emoji = state.display_status_emoji
+                status_name = state.status.name.lower()
+
+                # Add file change counts if any
+                if state.has_uncommitted_changes:
+                    change_info = (
+                        f" (+{state.added_files}/-{state.deleted_files}/~{state.modified_files})"
+                    )
+                else:
+                    change_info = " (clean)"
+
+                # Add timer if active
+                timer_info = ""
+                if state.timer_seconds_left:
+                    timer_info = f" ({state.timer_seconds_left}s)"
+
+                # Add pause/stop indicators
+                pause_info = ""
+                if state.is_stopped:
+                    pause_info = " [STOPPED]"
+                elif state.is_paused:
+                    pause_info = " [PAUSED]"
+
+                status_line = (
+                    f"{status_emoji} {repo_id}: {status_name}{change_info}{timer_info}{pause_info}"
+                )
+                status_lines.append(status_line)
+
+            # Print status summary
+            print(
+                f"[{len(orchestrator.repo_states)} repos] " + " | ".join(status_lines), flush=True
+            )
+
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            log.debug("Status reporter error", error=str(e))
 
 
-async def _handle_signal_async(sig: int):
-    signame = signal.Signals(sig).name
-    base_log = structlog.get_logger("cli.watch.signal")
-    base_log.warning("Received shutdown signal", signal=signame, signal_num=sig)
-    if not _shutdown_requested.is_set():
-        base_log.info("Setting shutdown requested event.")
-        _shutdown_requested.set()
-    else:
-        base_log.warning("Shutdown already requested, signal ignored.")
+async def _run_orchestrator_with_status(orchestrator: WatchOrchestrator) -> None:
+    """Run orchestrator with periodic status reporting."""
+    # Start status reporter task
+    status_task = asyncio.create_task(_status_reporter(orchestrator))
+
+    try:
+        # Run orchestrator
+        await orchestrator.run()
+    finally:
+        # Cancel status reporter
+        status_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await status_task
+
+
+def _run_headless_orchestrator(orchestrator: WatchOrchestrator) -> int:
+    """
+    Runs the orchestrator using the standard asyncio.run(), which provides
+    robust signal handling and lifecycle management.
+    """
+    try:
+        # Print initial status message
+        print("Starting supsrc watch mode with status output...", flush=True)
+
+        # asyncio.run() is the preferred, high-level way to run an async application.
+        # It creates a new event loop, runs the coroutine until it completes,
+        # and handles cleanup. Crucially, it also adds its own signal handlers
+        # for SIGINT and SIGTERM that will correctly cancel the main task.
+        asyncio.run(_run_orchestrator_with_status(orchestrator))
+        return 0
+    except KeyboardInterrupt:
+        # This block is entered when CTRL-C is pressed.
+        # The finally block within orchestrator.run() will have already been
+        # executed by the time we get here, due to the task cancellation
+        # handled by asyncio.run().
+        print("\nShutdown initiated by KeyboardInterrupt (CTRL-C).", flush=True)
+        log.warning("Shutdown initiated by KeyboardInterrupt (CTRL-C).")
+        return 130  # Standard exit code for SIGINT
+    except Exception:
+        # This catches any other unhandled exceptions from the orchestrator.
+        print("Orchestrator exited with an unhandled exception.", flush=True)
+        log.critical("Orchestrator exited with an unhandled exception.", exc_info=True)
+        return 1
+    finally:
+        # Final log message after the event loop is closed.
+        print("Watch mode stopped.", flush=True)
+        logging.shutdown()
 
 
 @click.command(name="watch")
@@ -44,105 +127,45 @@ async def _handle_signal_async(sig: int):
     help="Path to the supsrc configuration file (env var SUPSRC_CONF).",
     show_envvar=True,
 )
+@click.option(
+    "--app-log",
+    type=click.Path(path_type=Path),
+    default=Path("/tmp/supsrc_app.log"),
+    show_default=True,
+    help="Path to write application debug logs.",
+)
+@click.option(
+    "--event-log",
+    type=click.Path(path_type=Path),
+    default=Path("/tmp/supsrc_events.json"),
+    show_default=True,
+    help="Path to write structured event logs in JSON format.",
+)
 @logging_options
 @click.pass_context
-def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
-    """Interactive dashboard for monitoring repositories."""
-    # Step 1: Check for TUI dependencies before configuring logging.
-    if not TEXTUAL_AVAILABLE or SupsrcTuiApp is None:
-        # Set up basic console logging to ensure the error is visible.
-        # Foundation's CLI framework handles logging setup via decorators
-        log.error("TUI dependencies not installed for 'watch' command.")
-        click.echo(
-            "Error: The 'watch' command requires the 'textual' library, provided by the 'tui' extra.",
-            err=True,
-        )
-        click.echo("Hint: pip install 'supsrc[tui]' or uv pip install 'supsrc[tui]'", err=True)
-        ctx.exit(1)
-        return
+def watch_cli(ctx: click.Context, config_path: Path, app_log: Path, event_log: Path, **kwargs):
+    """Watch repository changes and trigger actions (non-interactive mode)."""
+    # The shutdown event is still necessary to signal between async components.
+    # asyncio.run() will manage propagating the initial cancellation.
+    shutdown_event = asyncio.Event()
 
-    # Step 2: Dependencies are available. Now run the TUI application.
-    # Enable debug file logging for troubleshooting
-    import logging
+    # Foundation's CLI framework handles logging setup via decorators
 
-    from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
+    log.info("Initializing watch command...")
 
-    log.info("Initializing interactive dashboard...")
-    log.info("🐛 Debug logging available at /tmp/supsrc_tui_debug.log")
+    orchestrator = WatchOrchestrator(
+        config_path=config_path,
+        shutdown_event=shutdown_event,
+        app=None,  # No TUI
+        console=None,
+        event_log_path=event_log,
+    )
 
-    # Set up file logging for debugging using Foundation public API
-    try:
-        config = TelemetryConfig(
-            logging=LoggingConfig(
-                console_formatter="key_value",
-                default_level="DEBUG",
-                das_emoji_prefix_enabled=True,
-                logger_name_emoji_prefix_enabled=True,
-                console_enabled=False,  # Disable console logging entirely
-                file_enabled=True,  # Enable file logging
-                file_path="/tmp/supsrc_tui_debug.log",
-            )
-        )
+    exit_code = _run_headless_orchestrator(orchestrator)
 
-        # Use new Foundation API
-        hub = get_hub()
-        hub.initialize_foundation(config)
-
-        # CRITICAL: Remove all console handlers to prevent app logs from appearing in TUI
-        # Must be done AFTER Foundation initialization
-        root_logger = logging.getLogger()
-        all_loggers = [root_logger] + [
-            logging.getLogger(name) for name in logging.root.manager.loggerDict
-        ]
-
-        for logger in all_loggers:
-            console_handlers = [
-                h
-                for h in logger.handlers
-                if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
-            ]
-            for handler in console_handlers:
-                logger.removeHandler(handler)
-
-        # Also disable propagation for structlog loggers to prevent console output
-        for name in logging.root.manager.loggerDict:
-            if any(pattern in name for pattern in ["provide.foundation", "supsrc"]):
-                logger = logging.getLogger(name)
-                logger.propagate = False
-
-        # Add debug file handler
-        file_handler = logging.FileHandler("/tmp/supsrc_tui_debug.log", encoding="utf-8")
-        file_handler.setLevel(logging.DEBUG)
-
-        # Set file handler formatter to include more detail for debugging
-        import structlog
-
-        file_formatter = structlog.stdlib.ProcessorFormatter(
-            processor=structlog.processors.JSONRenderer(sort_keys=True)
-        )
-        file_handler.setFormatter(file_formatter)
-
-        root_logger.addHandler(file_handler)
-
-        # Set root logger level to capture everything
-        root_logger.setLevel(logging.DEBUG)
-
-        log.debug("Debug file logging configured")
-    except Exception as e:
-        log.warning("Failed to setup debug file logging", error=str(e))
-
-    try:
-        app = SupsrcTuiApp(config_path=config_path, cli_shutdown_event=_shutdown_requested)
-        app.run()
-        log.info("Interactive dashboard finished.")
-    except KeyboardInterrupt:
-        log.warning("Shutdown requested via KeyboardInterrupt during TUI run.")
-        click.echo("\nAborted!")
-        ctx.exit(1)
-    except Exception as e:
-        log.critical("The TUI application crashed unexpectedly.", error=str(e), exc_info=True)
-        click.echo(f"\nAn unexpected error occurred in the TUI: {e}", err=True)
-        ctx.exit(1)
+    log.info("'watch' command finished.")
+    if exit_code != 0:
+        sys.exit(exit_code)
 
 
 # 🔼⚙️
