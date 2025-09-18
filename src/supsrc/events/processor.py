@@ -5,7 +5,7 @@ Consumes filesystem events, checks rules, manages timers, and triggers actions.
 
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from provide.foundation.logger import get_logger
 
@@ -84,18 +84,9 @@ class EventProcessor:
                 if not repo_state:
                     log.warning("Ignoring event for unknown repo", repo_id=event.repo_id)
                     continue
-                orchestrator_paused = (
-                    (
-                        self.orchestrator.monitoring_coordinator
-                        and self.orchestrator.monitoring_coordinator.is_paused
-                    )
-                    if self.orchestrator.monitoring_coordinator
-                    else False
-                )
-                if repo_state.is_paused or orchestrator_paused:
-                    log.debug(
-                        "Repo or orchestrator is paused, event ignored", repo_id=event.repo_id
-                    )
+
+                if repo_state.is_paused:
+                    log.debug("Repo is paused, event ignored", repo_id=event.repo_id)
                     continue
 
                 # Deduplicate moved/deleted events
@@ -118,16 +109,24 @@ class EventProcessor:
                 self.tui.post_state_update(self.repo_states)
 
                 # Emit file change event for TUI event feed
-                if hasattr(self.tui.app, "event_collector"):
-                    from supsrc.events.monitor import FileChangeEvent
+                if (
+                    self.tui
+                    and hasattr(self.tui, "app")
+                    and self.tui.app
+                    and hasattr(self.tui.app, "event_collector")
+                ):
+                    try:
+                        from supsrc.events.monitor import FileChangeEvent
 
-                    change_event = FileChangeEvent(
-                        description=f"File {event.event_type}: {event.src_path.name}",
-                        repo_id=event.repo_id,
-                        file_path=event.src_path,
-                        change_type=event.event_type,
-                    )
-                    self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
+                        change_event = FileChangeEvent(
+                            description=f"File {event.event_type}: {event.src_path.name}",
+                            repo_id=event.repo_id,
+                            file_path=event.src_path,
+                            change_type=event.event_type,
+                        )
+                        self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
+                    except Exception as e:
+                        log.debug("Failed to emit TUI event", error=str(e))
 
                 # Instead of acting immediately, start a debounced check
                 self._debounce_trigger_check(event.repo_id)
@@ -135,8 +134,8 @@ class EventProcessor:
             except asyncio.CancelledError:
                 log.info("Event processor run loop cancelled.")
                 break
-            except Exception:
-                log.exception("Error in event processor loop.")
+            except Exception as e:
+                log.exception("Error in event processor loop", error=str(e), exc_info=True)
 
         await self.stop()
         log.info("Event processor has stopped.")

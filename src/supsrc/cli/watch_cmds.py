@@ -81,8 +81,8 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
     try:
         config = TelemetryConfig(
             logging=LoggingConfig(
-                console_formatter="key_value",
-                default_level="DEBUG",
+                console_formatter="json",
+                default_level="TRACE",
                 das_emoji_prefix_enabled=True,
                 logger_name_emoji_prefix_enabled=True,
                 log_file=Path("/tmp/supsrc_tui_debug.log"),  # Enable file logging
@@ -114,23 +114,6 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
             if any(pattern in name for pattern in ["provide.foundation", "supsrc"]):
                 logger = logging.getLogger(name)
                 logger.propagate = False
-
-        # Add debug file handler
-        file_handler = logging.FileHandler("/tmp/supsrc_tui_debug.log", encoding="utf-8")
-        file_handler.setLevel(logging.DEBUG)
-
-        # Set file handler formatter to include more detail for debugging
-        import structlog
-
-        file_formatter = structlog.stdlib.ProcessorFormatter(
-            processor=structlog.processors.JSONRenderer(sort_keys=True)
-        )
-        file_handler.setFormatter(file_formatter)
-
-        root_logger.addHandler(file_handler)
-
-        # Set root logger level to capture everything
-        root_logger.setLevel(logging.DEBUG)
 
         log.debug("Debug file logging configured")
     except Exception as e:
