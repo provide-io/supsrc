@@ -101,8 +101,13 @@ class WatchOrchestrator:
                 await asyncio.sleep(0.1)
                 return
 
-            # Initialize event system for headless mode
-            if not self.app and self.event_log_path:
+            # Initialize event system
+            if self.app:
+                # TUI mode: use the app's event collector
+                log.info("Using TUI app event collector for event collection")
+                self.event_collector = self.app.event_collector
+            elif self.event_log_path:
+                # Headless mode: create standalone event collector with JSON logging
                 log.info(
                     "Initializing headless event collection",
                     event_log_path=str(self.event_log_path),
@@ -110,6 +115,9 @@ class WatchOrchestrator:
                 self.event_collector = EventCollector()
                 self.json_logger = JSONEventLogger(self.event_log_path)
                 self.event_collector.subscribe(self.json_logger.log_event)
+            else:
+                # No event collection configured
+                log.debug("No event collection configured")
 
             # Initialize helper managers
             self.repository_manager = RepositoryManager(
