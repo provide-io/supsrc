@@ -187,6 +187,7 @@ class EventHandlerMixin:
     def on_log_message_update(self, message: LogMessageUpdate) -> None:
         """Handle log message updates."""
         try:
+            # Try to find the log widget - it should be findable even inside a TabPane
             log_widget = self.query_one("#event-log", TextualLog)
             # Format message with repo name if available
             formatted_message = (

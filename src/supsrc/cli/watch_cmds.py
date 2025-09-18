@@ -62,12 +62,77 @@ def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
         return
 
     # Step 2: Dependencies are available. Now run the TUI application.
-    # The TUI app itself will configure the final logging setup.
+    # Enable debug file logging for troubleshooting
+    import logging
+
+    from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
+
     log.info("Initializing interactive dashboard...")
+    log.info("🐛 Debug logging available at /tmp/supsrc_tui_debug.log")
+
+    # Set up file logging for debugging using Foundation public API
+    try:
+        config = TelemetryConfig(
+            logging=LoggingConfig(
+                console_formatter="key_value",
+                default_level="DEBUG",
+                das_emoji_prefix_enabled=True,
+                logger_name_emoji_prefix_enabled=True,
+                console_enabled=False,  # Disable console logging entirely
+                file_enabled=True,  # Enable file logging
+                file_path="/tmp/supsrc_tui_debug.log",
+            )
+        )
+
+        # Use new Foundation API
+        hub = get_hub()
+        hub.initialize_foundation(config)
+
+        # CRITICAL: Remove all console handlers to prevent app logs from appearing in TUI
+        # Must be done AFTER Foundation initialization
+        root_logger = logging.getLogger()
+        all_loggers = [root_logger] + [
+            logging.getLogger(name) for name in logging.root.manager.loggerDict
+        ]
+
+        for logger in all_loggers:
+            console_handlers = [
+                h
+                for h in logger.handlers
+                if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+            ]
+            for handler in console_handlers:
+                logger.removeHandler(handler)
+
+        # Also disable propagation for structlog loggers to prevent console output
+        for name in logging.root.manager.loggerDict:
+            if any(pattern in name for pattern in ["provide.foundation", "supsrc"]):
+                logger = logging.getLogger(name)
+                logger.propagate = False
+
+        # Add debug file handler
+        file_handler = logging.FileHandler("/tmp/supsrc_tui_debug.log", encoding="utf-8")
+        file_handler.setLevel(logging.DEBUG)
+
+        # Set file handler formatter to include more detail for debugging
+        import structlog
+
+        file_formatter = structlog.stdlib.ProcessorFormatter(
+            processor=structlog.processors.JSONRenderer(sort_keys=True)
+        )
+        file_handler.setFormatter(file_formatter)
+
+        root_logger.addHandler(file_handler)
+
+        # Set root logger level to capture everything
+        root_logger.setLevel(logging.DEBUG)
+
+        log.debug("Debug file logging configured")
+    except Exception as e:
+        log.warning("Failed to setup debug file logging", error=str(e))
 
     try:
         app = SupsrcTuiApp(config_path=config_path, cli_shutdown_event=_shutdown_requested)
-        # The app's on_mount will configure logging with the Textual handler.
         app.run()
         log.info("Interactive dashboard finished.")
     except KeyboardInterrupt:

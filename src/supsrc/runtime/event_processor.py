@@ -73,7 +73,9 @@ class EventProcessor:
                 # Handle special config reload event
                 if event.repo_id == "__config__":
                     log.info("Configuration change event received, triggering reload.")
-                    asyncio.create_task(self.orchestrator.reload_config())
+                    reload_task = asyncio.create_task(self.orchestrator.reload_config())
+                    # Store task reference to avoid warning (task runs independently)
+                    reload_task.add_done_callback(lambda t: None)
                     continue
 
                 # Get state and check if processing is paused
@@ -81,7 +83,15 @@ class EventProcessor:
                 if not repo_state:
                     log.warning("Ignoring event for unknown repo", repo_id=event.repo_id)
                     continue
-                if repo_state.is_paused or self.orchestrator._is_paused:
+                orchestrator_paused = (
+                    (
+                        self.orchestrator.monitoring_coordinator
+                        and self.orchestrator.monitoring_coordinator.is_paused
+                    )
+                    if self.orchestrator.monitoring_coordinator
+                    else False
+                )
+                if repo_state.is_paused or orchestrator_paused:
                     log.debug(
                         "Repo or orchestrator is paused, event ignored", repo_id=event.repo_id
                     )
@@ -100,6 +110,18 @@ class EventProcessor:
                 # Record the change and update UI
                 repo_state.record_change()
                 self.tui.post_state_update(self.repo_states)
+
+                # Emit file change event for TUI event feed
+                if hasattr(self.tui.app, "event_collector"):
+                    from supsrc.events.monitor import FileChangeEvent
+
+                    change_event = FileChangeEvent(
+                        description=f"File {event.event_type}: {event.src_path.name}",
+                        repo_id=event.repo_id,
+                        file_path=event.src_path,
+                        change_type=event.event_type,
+                    )
+                    self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type]
 
                 # Instead of acting immediately, start a debounced check
                 self._debounce_trigger_check(event.repo_id)

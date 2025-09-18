@@ -6,7 +6,7 @@ from typing import Any
 import click
 import structlog
 
-from supsrc.telemetry import setup_logging as core_setup_logging
+# No need for custom setup - Foundation handles everything via Hub
 
 log = structlog.get_logger("cli.utils")
 

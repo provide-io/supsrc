@@ -7,10 +7,9 @@ Action handler methods for the TUI application.
 from __future__ import annotations
 
 import structlog
-from textual.widgets import DataTable
-from textual.widgets import Log as TextualLog
+from textual.widgets import DataTable, TabbedContent
 
-from supsrc.tui.messages import LogMessageUpdate
+from supsrc.events.system import UserActionEvent
 
 log = structlog.get_logger("tui.actions")
 
@@ -24,58 +23,88 @@ class ActionHandlerMixin:
         log.debug("Dark mode toggled", dark_mode=self.dark)
 
     def action_clear_log(self) -> None:
-        """Clear the event log."""
-        self.query_one("#event-log", TextualLog).clear()
-        self.post_message(LogMessageUpdate(None, "INFO", "Log cleared."))
+        """Clear the event feed."""
+        from supsrc.events.feed import EventFeed
+
+        self.query_one("#event-feed", EventFeed).clear()
+
+        # Emit event instead of log message
+        event = UserActionEvent(
+            description="Event feed cleared",
+            action="clear_feed",
+        )
+        self.event_collector.emit(event)  # type: ignore[arg-type]
 
     def action_pause_monitoring(self) -> None:
         """Pause/resume monitoring for all repositories."""
         if self._orchestrator:
             if self._orchestrator._is_paused:
                 self._orchestrator.resume_monitoring()
-                self.post_message(LogMessageUpdate(None, "INFO", "▶️  Monitoring RESUMED"))
+                event = UserActionEvent(
+                    description="Monitoring resumed for all repositories",
+                    action="resume_monitoring",
+                )
             else:
                 self._orchestrator.pause_monitoring()
-                self.post_message(
-                    LogMessageUpdate(None, "WARNING", "⏸️  Monitoring PAUSED - Press 'p' to resume")
+                event = UserActionEvent(
+                    description="Monitoring paused for all repositories - Press 'p' to resume",
+                    action="pause_monitoring",
                 )
+
+            self.event_collector.emit(event)  # type: ignore[arg-type]
 
     def action_suspend_monitoring(self) -> None:
         """Suspend/resume monitoring (stronger than pause)."""
         if self._orchestrator:
             if self._orchestrator._is_paused:  # Using same flag for now
                 self._orchestrator.resume_monitoring()
-                self.post_message(
-                    LogMessageUpdate(None, "INFO", "▶️  Monitoring RESUMED from suspension")
+                event = UserActionEvent(
+                    description="Monitoring resumed from suspension",
+                    action="resume_suspension",
                 )
             else:
                 self._orchestrator.suspend_monitoring()
-                self.post_message(
-                    LogMessageUpdate(
-                        None, "WARNING", "⏹️  Monitoring SUSPENDED - Press 's' to resume"
-                    )
+                event = UserActionEvent(
+                    description="Monitoring suspended - Press 's' to resume",
+                    action="suspend_monitoring",
                 )
+
+            self.event_collector.emit(event)  # type: ignore[arg-type]
 
     async def action_reload_config(self) -> None:
         """Reload configuration from file."""
-        self.post_message(LogMessageUpdate(None, "INFO", "🔄 Reloading configuration..."))
+        from supsrc.events.system import ConfigReloadEvent, ErrorEvent
+
+        # Emit start event
+        start_event = UserActionEvent(
+            description="Configuration reload initiated",
+            action="reload_config_start",
+        )
+        self.event_collector.emit(start_event)  # type: ignore[arg-type]
 
         async def _reload():
             if self._orchestrator:
                 try:
                     success = await self._orchestrator.reload_config()
                     if success:
-                        self.post_message(
-                            LogMessageUpdate(
-                                None, "SUCCESS", "✅ Configuration reloaded successfully"
-                            )
+                        event = ConfigReloadEvent(
+                            description="Configuration reloaded successfully",
+                            config_path=str(self._config_path),
                         )
                     else:
-                        self.post_message(
-                            LogMessageUpdate(None, "ERROR", "❌ Configuration reload failed")
+                        event = ErrorEvent(
+                            description="Configuration reload failed",
+                            source="config",
+                            error_type="ReloadError",
                         )
+                    self.event_collector.emit(event)  # type: ignore[arg-type]
                 except Exception as e:
-                    self.post_message(LogMessageUpdate(None, "ERROR", f"❌ Error reloading: {e}"))
+                    event = ErrorEvent(
+                        description=f"Error during configuration reload: {e}",
+                        source="config",
+                        error_type="ReloadException",
+                    )
+                    self.event_collector.emit(event)  # type: ignore[arg-type]
 
         self.run_worker(_reload)
 
@@ -102,7 +131,12 @@ class ActionHandlerMixin:
             "\\n"
             "i  Repository table shows real-time status, file counts, and timer information."
         )
-        self.post_message(LogMessageUpdate(None, "INFO", help_text))
+        # Emit help event instead of log message
+        event = UserActionEvent(
+            description=help_text,
+            action="show_help",
+        )
+        self.event_collector.emit(event)  # type: ignore[arg-type]
 
     def action_select_repo_for_detail(self) -> None:
         """Select a repository for detailed view."""
@@ -113,31 +147,73 @@ class ActionHandlerMixin:
 
             if repo_id:
                 log.debug("Repository selected for detail view", repo_id=repo_id)
-                self.post_message(
-                    LogMessageUpdate(
-                        None,
-                        "INFO",
-                        f"📖 Loading details for '{repo_id}'. Use 'Escape' to hide details.",
-                    )
+                self.selected_repo_id = repo_id
+                # Emit repository selection event
+                event = UserActionEvent(
+                    description=f"Repository '{repo_id}' selected for details",
+                    action="select_repository",
+                    target=repo_id,
                 )
-                self.show_detail_pane = True
-                self._run_repo_details_fetch(repo_id)
+                self.event_collector.emit(event)  # type: ignore[arg-type]
+                # Update the repo details tab content
+                self._update_repo_details_tab(repo_id)
 
     def action_hide_detail_pane(self) -> None:
-        """Hide the repository detail pane."""
-        if self.show_detail_pane:
-            self.show_detail_pane = False
-            log.debug("Detail pane hidden")
-            # Clear the detail log when hiding
-            self.query_one("#repo_detail_log", TextualLog).clear()
-            self.query_one(DataTable).focus()
+        """Hide the repository detail pane (legacy - now clears selection)."""
+        # In the new tabbed interface, this just clears the selection
+        self.selected_repo_id = None
+        log.debug("Repository selection cleared")
+        # Emit clear selection event
+        event = UserActionEvent(
+            description="Repository selection cleared",
+            action="clear_selection",
+        )
+        self.event_collector.emit(event)  # type: ignore[arg-type]
+        # Focus back to the repository table
+        self.query_one(DataTable).focus()
 
     def action_refresh_details(self) -> None:
         """Refresh the currently displayed repository details."""
-        if self.show_detail_pane:
-            repo_id = self._get_selected_repo_id()
-            if repo_id:
-                self._run_repo_details_fetch(repo_id)
+        if self.selected_repo_id:
+            # Emit refresh event
+            event = UserActionEvent(
+                description=f"Refreshing details for repository '{self.selected_repo_id}'",
+                action="refresh_details",
+                target=self.selected_repo_id,
+            )
+            self.event_collector.emit(event)  # type: ignore[arg-type]
+            self._update_repo_details_tab(self.selected_repo_id)
+        else:
+            # Emit warning event
+            event = UserActionEvent(
+                description="No repository selected to refresh",
+                action="refresh_details_failed",
+            )
+            self.event_collector.emit(event)  # type: ignore[arg-type]
+
+    def action_focus_next(self) -> None:
+        """Focus the next panel in the interface."""
+        # Simple two-pane navigation: repo table <-> info pane tabs
+        try:
+            # Check if repository table has focus
+            repo_table = self.query_one("#repository_table", DataTable)
+            if repo_table.has_focus:
+                # Move focus to the tabbed content area - focus the actual tabs bar
+                tabbed_content = self.query_one(TabbedContent)
+                tabs = tabbed_content.query_one("Tabs")
+                tabs.focus()
+                log.debug("Focused tabs from repo table")
+            else:
+                # Move focus back to repository table
+                repo_table.focus()
+                log.debug("Focused repo table from tabs")
+        except Exception as e:
+            log.error("Error in focus_next", error=str(e))
+
+    def action_focus_previous(self) -> None:
+        """Focus the previous panel in the interface."""
+        # Same as focus_next for a two-pane layout
+        self.action_focus_next()
 
     def action_quit(self) -> None:
         """Quit the application."""

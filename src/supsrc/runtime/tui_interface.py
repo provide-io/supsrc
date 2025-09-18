@@ -59,7 +59,8 @@ class TUIInterface:
             return
 
         try:
-            # The formatter in TextualLogHandler will create the rich markup.
-            self.app.post_message(LogMessageUpdate(repo_id, level.upper(), message))
+            # Create and post the log message to the TUI
+            log_msg = LogMessageUpdate(repo_id, level.upper(), message)
+            self.app.post_message(log_msg)
         except Exception as e:
             log.warning("Failed to post log message to TUI", error=str(e), exc_info=False)
