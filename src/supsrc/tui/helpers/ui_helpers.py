@@ -53,15 +53,13 @@ class UIHelperMixin:
                             # Update only column 1 (timer column) to avoid full row refresh
                             table.update_cell(row_index, 1, timer_display)
                         except Exception as e:
-                            # If this fails, fall back to posting a state update
-                            log.debug(f"Failed to update timer cell for {repo_id_str}: {e}")
-                            self.post_message(StateUpdate(self._orchestrator.repo_states))
-                            break
+                            # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
+                            log.debug(f"Failed to update timer cell for {repo_id_str}, skipping update: {e}")
+                            # Continue to next repository instead of breaking/posting StateUpdate
+                            continue
         except Exception as e:
-            log.debug(f"Error in timer column update: {e}")
-            # Fallback to full state update if timer-only update fails
-            if hasattr(self, "_orchestrator") and self._orchestrator:
-                self.post_message(StateUpdate(self._orchestrator.repo_states))
+            # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
+            log.debug(f"Error in timer column update, skipping timer updates: {e}")
 
     def _update_sub_title(self, text: str) -> None:
         """Update subtitle safely."""

@@ -184,39 +184,55 @@ class EventHandlerMixin:
                     # Update existing row in-place to prevent counter resets and cursor jumps
                     try:
                         row_index = table.get_row_index(repo_id_str)
-                        # Always try to update cells first, only remove/re-add if absolutely necessary
+                        # Save current cursor position to restore if needed
+                        original_cursor_row = table.cursor_row
+
+                        # Try to update cells first, with improved error handling
+                        cell_update_failed = False
                         for col_index, cell_value in enumerate(row_data):
                             if col_index < len(table.columns):
                                 try:
                                     table.update_cell(row_index, col_index, cell_value)
                                 except Exception as cell_err:
-                                    # If cell update fails, we need to remove and re-add the row
-                                    log.warning(
-                                        "Cell update failed, removing and re-adding row - THIS CAUSES CURSOR JUMP",
+                                    log.debug(
+                                        "Cell update failed, will need to remove/re-add row",
                                         repo_id=repo_id_str,
                                         row_index=row_index,
                                         col_index=col_index,
-                                        original_cursor_row=table.cursor_row,
                                         error=str(cell_err),
                                     )
-                                    table.remove_row(repo_id_str)
-                                    table.add_row(*row_data, key=repo_id_str)
-                                    log.warning(
-                                        "Row removed and re-added, cursor may have jumped",
-                                        repo_id=repo_id_str,
-                                        new_cursor_row=table.cursor_row,
-                                    )
+                                    cell_update_failed = True
                                     break
+
+                        # Only remove/re-add if cell updates failed
+                        if cell_update_failed:
+                            log.debug("Removing and re-adding row due to cell update failure", repo_id=repo_id_str)
+                            table.remove_row(repo_id_str)
+                            table.add_row(*row_data, key=repo_id_str)
+                            # Try to restore cursor position to minimize jumping
+                            try:
+                                if original_cursor_row < len(table.rows):
+                                    table.cursor_row = original_cursor_row
+                            except Exception:
+                                pass  # Ignore cursor restoration errors
+
                     except Exception as e:
-                        log.warning(
+                        log.debug(
                             "Failed to update row in-place, re-adding",
                             repo_id=repo_id_str,
                             error=str(e),
                         )
-                        # Fallback: remove and re-add
+                        # Fallback: remove and re-add with cursor preservation attempt
+                        original_cursor_row = getattr(table, 'cursor_row', 0)
                         with contextlib.suppress(Exception):
                             table.remove_row(repo_id_str)
                         table.add_row(*row_data, key=repo_id_str)
+                        # Try to restore cursor position
+                        try:
+                            if original_cursor_row < len(table.rows):
+                                table.cursor_row = original_cursor_row
+                        except Exception:
+                            pass  # Ignore cursor restoration errors
                 else:
                     table.add_row(*row_data, key=repo_id_str)
 
