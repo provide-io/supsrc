@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from provide.foundation import LoggingConfig, TelemetryConfig, logger, setup_telemetry
+from provide.foundation import LoggingConfig, TelemetryConfig, logger
+from provide.foundation.setup import internal_setup
 from provide.foundation.eventsets.types import EventMapping, EventSet
 from provide.foundation.hub import get_component_registry
 from provide.foundation.hub.components import ComponentCategory
@@ -91,7 +92,7 @@ def setup_logging(
         )
     )
 
-    setup_telemetry(config)
+    internal_setup(config)
 
     # Get Foundation's logger for supsrc-specific setup
     slog = logger.bind(logger_name=BASE_LOGGER_NAME)
