@@ -55,66 +55,26 @@ def cli(
         log_file=log_file,
     )
 
-    # Use Foundation's setup approach with error handling for file I/O
-    from provide.foundation.logger import LoggingConfig, TelemetryConfig
-    from provide.foundation.setup import setup_telemetry
+    # Use supsrc's own logging setup which properly handles Foundation
+    from supsrc.telemetry.logger.base import setup_logging
+    import logging
 
     try:
-        # Detect if we're in a test environment
-        import os
+        # Convert log level string to integer
+        level = getattr(logging, (log_level or "WARNING").upper(), logging.WARNING)
 
-        is_test_env = (
-            "pytest" in os.environ.get("_", "")
-            or "PYTEST_CURRENT_TEST" in os.environ
-            or hasattr(__import__("sys"), "_called_from_test")
+        # Determine if JSON logs should be used
+        json_logs = log_format == "json"
+
+        # Setup logging using supsrc's Foundation integration
+        setup_logging(
+            level=level,
+            json_logs=json_logs,
+            log_file=str(log_file) if log_file else None,
+            headless_mode=True,
         )
-
-        # Validate log file accessibility if provided
-        log_file_path = None
-        if log_file:
-            log_file_path = str(log_file)
-            # Test if we can write to the file (skip for temporary files in tests)
-            if not is_test_env or not log_file_path.startswith("/tmp"):
-                try:
-                    with open(log_file_path, "a") as f:
-                        pass  # Just test accessibility
-                except (OSError, ValueError):
-                    # If file is closed or inaccessible, disable file logging
-                    log_file_path = None
-
-        # Configure logging with Foundation but handle test environment carefully
-        config = TelemetryConfig(
-            logging=LoggingConfig(
-                console_formatter=log_format,
-                default_level=log_level or "WARNING",
-                log_file=log_file_path,
-            )
-        )
-
-        if is_test_env:
-            # In test mode, be more cautious about file logging
-            try:
-                setup_telemetry(config)
-            except Exception:
-                # If Foundation fails in test mode, use basic logging
-                import logging
-
-                level = getattr(logging, (log_level or "WARNING").upper())
-                logging.basicConfig(level=level, format="%(levelname)s: %(message)s", force=True)
-
-                # Still try to set up file logging if explicitly requested
-                if log_file_path:
-                    try:
-                        file_handler = logging.FileHandler(log_file_path)
-                        file_handler.setLevel(level)
-                        file_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
-                        logging.getLogger().addHandler(file_handler)
-                    except Exception:
-                        pass  # If file logging fails, just continue without it
-        else:
-            setup_telemetry(config)
     except Exception:
-        # Fallback to basic logging setup if Foundation fails
+        # Fallback to basic logging setup if supsrc logging fails
         import logging
 
         logging.basicConfig(

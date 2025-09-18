@@ -85,9 +85,9 @@ class TextualLogHandler(logging.Handler):
             # (e.g., if TUI is closing or an unexpected error occurs)
             # We print to stderr to avoid a loop if this handler itself is part of the failing logging chain.
             # Optionally, print the original message as well if self.format(record) failed
-            try:
-                pass
-            except Exception:
+            import contextlib
+
+            with contextlib.suppress(Exception):
                 pass  # Avoid further errors if getMessage itself fails
 
 

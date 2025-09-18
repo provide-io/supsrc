@@ -30,6 +30,7 @@ from supsrc.state import RepositoryState, RepositoryStatus
 
 from .action_handler import ActionHandler
 from .event_processor import EventProcessor
+from .status_manager import StatusManager
 from .tui_interface import TUIInterface
 
 if TYPE_CHECKING:
@@ -74,6 +75,7 @@ class WatchOrchestrator:
         self.config: SupsrcConfig | None = None
         self._is_paused = False
         self.config_observer: Observer | None = None
+        self.status_manager: StatusManager | None = None
 
     @with_error_handling(
         log_errors=True, context_provider=lambda: {"component": "orchestrator", "method": "run"}
@@ -96,6 +98,11 @@ class WatchOrchestrator:
 
             enabled_repos = await self._initialize_repositories(self.config, tui)
             active_repositories.set(len(enabled_repos))
+
+            # Initialize status manager for repository status updates
+            self.status_manager = StatusManager(
+                self.repo_states, self.repo_engines, self.config, self._post_tui_state_update
+            )
 
             action_handler = ActionHandler(self.config, self.repo_states, self.repo_engines, tui)
             self.event_processor = EventProcessor(
@@ -384,6 +391,11 @@ class WatchOrchestrator:
                     if summary.head_commit_hash:
                         repo_state.last_commit_short_hash = summary.head_commit_hash[:7]
                         repo_state.last_commit_message_summary = summary.head_commit_message_summary
+                        if (
+                            hasattr(summary, "head_commit_timestamp")
+                            and summary.head_commit_timestamp
+                        ):
+                            repo_state.last_commit_timestamp = summary.head_commit_timestamp
                         msg = (
                             f"HEAD at {summary.head_ref_name} ({repo_state.last_commit_short_hash})"
                         )
@@ -405,6 +417,32 @@ class WatchOrchestrator:
                         init_log.warning(
                             "Could not determine initial HEAD commit.", summary_details=summary
                         )
+
+                # Load initial repository statistics
+                init_log.debug("Loading initial repository statistics")
+                try:
+                    status_result = await engine.get_status(
+                        repo_state, repo_config.repository, config.global_config, repo_config.path
+                    )
+                    if status_result.success:
+                        repo_state.total_files = status_result.total_files or 0
+                        repo_state.changed_files = status_result.changed_files or 0
+                        repo_state.added_files = status_result.added_files or 0
+                        repo_state.deleted_files = status_result.deleted_files or 0
+                        repo_state.modified_files = status_result.modified_files or 0
+                        repo_state.has_uncommitted_changes = not status_result.is_clean
+                        repo_state.current_branch = status_result.current_branch
+                        init_log.debug(
+                            "Repository statistics loaded",
+                            total_files=repo_state.total_files,
+                            changed_files=repo_state.changed_files,
+                        )
+                    else:
+                        init_log.warning(
+                            "Failed to load initial statistics", error=status_result.message
+                        )
+                except Exception as stats_error:
+                    init_log.warning("Error loading initial statistics", error=str(stats_error))
 
                 enabled_repo_ids.append(repo_id)
             except Exception as e:
@@ -520,3 +558,14 @@ class WatchOrchestrator:
                 )
 
         log.info("Repository timer cleanup complete", timers_cancelled=cleanup_count)
+
+    def set_repo_refreshing_status(self, repo_id: str, is_refreshing: bool) -> None:
+        """Set the refreshing status for a repository."""
+        if self.status_manager:
+            self.status_manager.set_repo_refreshing_status(repo_id, is_refreshing)
+
+    async def refresh_repository_status(self, repo_id: str) -> bool:
+        """Refresh the status and statistics for a specific repository."""
+        if self.status_manager:
+            return await self.status_manager.refresh_repository_status(repo_id)
+        return False
