@@ -189,16 +189,23 @@ class EventHandlerMixin:
                             if col_index < len(table.columns):
                                 try:
                                     table.update_cell(row_index, col_index, cell_value)
-                                except Exception:
+                                except Exception as cell_err:
                                     # If cell update fails, we need to remove and re-add the row
-                                    log.debug(
-                                        "Cell update failed, removing and re-adding row",
+                                    log.warning(
+                                        "Cell update failed, removing and re-adding row - THIS CAUSES CURSOR JUMP",
                                         repo_id=repo_id_str,
                                         row_index=row_index,
                                         col_index=col_index,
+                                        original_cursor_row=table.cursor_row,
+                                        error=str(cell_err),
                                     )
                                     table.remove_row(repo_id_str)
                                     table.add_row(*row_data, key=repo_id_str)
+                                    log.warning(
+                                        "Row removed and re-added, cursor may have jumped",
+                                        repo_id=repo_id_str,
+                                        new_cursor_row=table.cursor_row,
+                                    )
                                     break
                     except Exception as e:
                         log.warning(
