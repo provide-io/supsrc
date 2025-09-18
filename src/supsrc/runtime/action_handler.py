@@ -187,6 +187,17 @@ class ActionHandler:
             status_result: RepoStatusResult = await repo_engine.get_status(
                 repo_state, repo_config.repository, self.config.global_config, repo_config.path
             )
+
+            # Update repository statistics if status was retrieved successfully
+            if status_result.success:
+                repo_state.total_files = status_result.total_files or 0
+                repo_state.changed_files = status_result.changed_files or 0
+                repo_state.added_files = status_result.added_files or 0
+                repo_state.deleted_files = status_result.deleted_files or 0
+                repo_state.modified_files = status_result.modified_files or 0
+                repo_state.has_uncommitted_changes = not status_result.is_clean
+                repo_state.current_branch = status_result.current_branch
+
             if not status_result.success or status_result.is_conflicted or status_result.is_clean:
                 if not status_result.success:
                     repo_state.update_status(
