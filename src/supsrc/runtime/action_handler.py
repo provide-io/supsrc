@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 # Add Foundation error handling patterns
-from provide.foundation.errors import with_error_handling
+from provide.foundation.errors import resilient
 from provide.foundation.logger import get_logger
 
 from supsrc.config import LLMConfig, SupsrcConfig
@@ -163,7 +163,7 @@ class ActionHandler:
         except OSError as e:
             log.error("Failed to save change fragment", path=str(file_path), error=str(e))
 
-    @with_error_handling(
+    @resilient(
         log_errors=True,
         suppress=(Exception,),  # Suppress all errors to avoid crashing the orchestrator
         context_provider=lambda: {

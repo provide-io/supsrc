@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 # Add Foundation error handling and metrics patterns
-from provide.foundation.errors import with_error_handling
+from provide.foundation.errors import resilient
 from provide.foundation.logger import get_logger
 from provide.foundation.metrics import counter, gauge
 from rich.console import Console
@@ -82,7 +82,7 @@ class WatchOrchestrator:
         self.repository_manager: RepositoryManager | None = None
         self.monitoring_coordinator: MonitoringCoordinator | None = None
 
-    @with_error_handling(
+    @resilient(
         log_errors=True, context_provider=lambda: {"component": "orchestrator", "method": "run"}
     )
     async def run(self) -> None:
