@@ -22,6 +22,7 @@ except ImportError:
     class MockCounter:
         def inc(self) -> None:
             pass
+
     config_reloads = MockCounter()
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer

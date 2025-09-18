@@ -371,5 +371,4 @@ class SupsrcTuiApp(TuiAppBase):
             self.event_collector.emit(event)  # type: ignore[arg-type]
 
 
-
 # 🖥️✨
