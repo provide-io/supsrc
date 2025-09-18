@@ -79,23 +79,6 @@ class EventHandlerMixin:
             current_keys = set(table.rows.keys())
             incoming_keys = set(message.repo_states.keys())
 
-            # Preserve cursor position during updates
-            original_cursor_row = table.cursor_row
-            original_repo_id = None
-            try:
-                if table.cursor_row < table.row_count:
-                    cell_key = table.coordinate_to_cell_key((table.cursor_row, 0))
-                    if cell_key.row_key:
-                        original_repo_id = str(cell_key.row_key.value)
-                        log.debug(
-                            "Preserving cursor position",
-                            original_row=original_cursor_row,
-                            original_repo_id=original_repo_id,
-                            table_row_count=table.row_count,
-                        )
-            except Exception as e:
-                log.debug("Failed to capture cursor position", error=str(e))
-
             # Remove obsolete rows
             for key_to_remove in current_keys - incoming_keys:
                 try:  # noqa: SIM105
@@ -198,17 +181,25 @@ class EventHandlerMixin:
                 )
 
                 if repo_id_str in table.rows:
-                    # Update existing row in-place to prevent counter resets
+                    # Update existing row in-place to prevent counter resets and cursor jumps
                     try:
                         row_index = table.get_row_index(repo_id_str)
-                        if 0 <= row_index < table.row_count:
-                            for col_index, cell_value in enumerate(row_data):
-                                if col_index < len(table.columns):
+                        # Always try to update cells first, only remove/re-add if absolutely necessary
+                        for col_index, cell_value in enumerate(row_data):
+                            if col_index < len(table.columns):
+                                try:
                                     table.update_cell(row_index, col_index, cell_value)
-                        else:
-                            # Row index invalid, re-add the row
-                            table.remove_row(repo_id_str)
-                            table.add_row(*row_data, key=repo_id_str)
+                                except Exception:
+                                    # If cell update fails, we need to remove and re-add the row
+                                    log.debug(
+                                        "Cell update failed, removing and re-adding row",
+                                        repo_id=repo_id_str,
+                                        row_index=row_index,
+                                        col_index=col_index,
+                                    )
+                                    table.remove_row(repo_id_str)
+                                    table.add_row(*row_data, key=repo_id_str)
+                                    break
                     except Exception as e:
                         log.warning(
                             "Failed to update row in-place, re-adding",
@@ -221,47 +212,6 @@ class EventHandlerMixin:
                         table.add_row(*row_data, key=repo_id_str)
                 else:
                     table.add_row(*row_data, key=repo_id_str)
-
-            # Restore cursor position after the table refresh is complete
-            def restore_cursor():
-                if original_repo_id:
-                    try:
-                        # Try to find the same repository ID in the updated table
-                        for row_index, row_key in enumerate(table.rows.keys()):
-                            if str(row_key) == original_repo_id:
-                                # Use the table's move_cursor method instead of setting coordinate directly
-                                current_row = table.cursor_row
-                                if current_row != row_index:
-                                    table.move_cursor(row=row_index)
-                                    log.debug(
-                                        "Restored cursor position",
-                                        original_row=original_cursor_row,
-                                        original_repo_id=original_repo_id,
-                                        restored_row=row_index,
-                                        current_row_after=table.cursor_row,
-                                    )
-                                return
-                    except Exception as e:
-                        log.debug("Failed to restore cursor to original repo", error=str(e))
-
-                    # If we can't restore to the exact repo, try to restore to the same row number
-                    try:
-                        if (
-                            original_cursor_row < table.row_count
-                            and table.cursor_row != original_cursor_row
-                        ):
-                            table.move_cursor(row=original_cursor_row)
-                            log.debug(
-                                "Restored cursor to original row",
-                                original_row=original_cursor_row,
-                                current_row_after=table.cursor_row,
-                            )
-                    except Exception as e2:
-                        log.debug("Failed to restore cursor to original row", error=str(e2))
-
-            # Schedule cursor restoration after refresh
-            if original_repo_id:
-                self.call_after_refresh(restore_cursor)
 
         except Exception as e:
             log.error("Failed to update TUI table", error=str(e))
