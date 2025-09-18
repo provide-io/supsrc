@@ -54,9 +54,23 @@ def _run_headless_orchestrator(orchestrator: WatchOrchestrator) -> int:
     help="Path to the supsrc configuration file (env var SUPSRC_CONF).",
     show_envvar=True,
 )
+@click.option(
+    "--app-log",
+    type=click.Path(path_type=Path),
+    default=Path("/tmp/supsrc_app.log"),
+    show_default=True,
+    help="Path to write application debug logs.",
+)
+@click.option(
+    "--event-log",
+    type=click.Path(path_type=Path),
+    default=Path("/tmp/supsrc_events.json"),
+    show_default=True,
+    help="Path to write structured event logs in JSON format.",
+)
 @logging_options
 @click.pass_context
-def watch_cli(ctx: click.Context, config_path: Path, **kwargs):
+def watch_cli(ctx: click.Context, config_path: Path, app_log: Path, event_log: Path, **kwargs):
     """Watch repository changes and trigger actions (non-interactive mode)."""
     # The shutdown event is still necessary to signal between async components.
     # asyncio.run() will manage propagating the initial cancellation.
