@@ -28,6 +28,7 @@ class RepositoryStatus(Enum):
     GENERATING_COMMIT = auto()
     COMMITTING = auto()
     PUSHING = auto()
+    COMPLETED = auto()
     ERROR = auto()
 
 
@@ -43,6 +44,7 @@ STATUS_EMOJI_MAP = {
     RepositoryStatus.GENERATING_COMMIT: "✍️",
     RepositoryStatus.COMMITTING: "💾",
     RepositoryStatus.PUSHING: "🚀",
+    RepositoryStatus.COMPLETED: "✅",
     RepositoryStatus.ERROR: "❌",
 }
 
@@ -188,7 +190,7 @@ class RepositoryState:
         self.has_uncommitted_changes = False
         self.cancel_inactivity_timer()
         self.cancel_debounce_timer()
-        self.update_status(RepositoryStatus.IDLE)
+        self.update_status(RepositoryStatus.ERROR)
 
     def update_cached_commit_stats(self, commit_hash: str | None) -> None:
         """Update the cached commit hash to invalidate stats when needed."""
