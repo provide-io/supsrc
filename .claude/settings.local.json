@@ -3,7 +3,8 @@
     "allow": [
       "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" uv run pytest tests/unit/test_dual_logging.py -v)",
       "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" uv run pytest tests/unit/test_config.py tests/unit/test_state.py tests/unit/test_protocols.py tests/unit/test_dual_logging.py -v)",
-      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" uv run pytest tests/unit/test_config.py tests/unit/test_state.py tests/unit/test_dual_logging.py -v)"
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" uv run pytest tests/unit/test_config.py tests/unit/test_state.py tests/unit/test_dual_logging.py -v)",
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" uv run pytest tests/unit/test_state.py::TestRepositoryStatePreviousStatistics -v)"
     ],
     "deny": [],
     "ask": [],
