@@ -5,19 +5,19 @@ Consumes filesystem events, checks rules, manages timers, and triggers actions.
 
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from provide.foundation.logger import get_logger
 
 from supsrc.config import InactivityRuleConfig, RepositoryConfig, SupsrcConfig
 from supsrc.monitor import MonitoredEvent
 from supsrc.rules import check_trigger_condition
-from supsrc.runtime.action_handler import ActionHandler
-from supsrc.runtime.tui_interface import TUIInterface
 from supsrc.state import RepositoryState, RepositoryStatus
 
 if TYPE_CHECKING:
-    from supsrc.runtime.orchestrator import WatchOrchestrator
+    from supsrc.protocols import RepositoryEngine
+    from supsrc.runtime.action_handler import ActionHandler
+    from supsrc.runtime.tui_interface import TUIInterface
 
 log = get_logger("runtime.event_processor")
 # Debounce delay to group rapid file system events (e.g., create + modify) into one action.
@@ -29,21 +29,23 @@ class EventProcessor:
 
     def __init__(
         self,
-        orchestrator: "WatchOrchestrator",
         config: SupsrcConfig,
         event_queue: asyncio.Queue[MonitoredEvent],
         shutdown_event: asyncio.Event,
-        action_handler: ActionHandler,
+        action_handler: "ActionHandler",
         repo_states: dict[str, RepositoryState],
-        tui: TUIInterface,
+        repo_engines: dict[str, "RepositoryEngine"],
+        tui: "TUIInterface",
+        config_reload_callback: "Any",
     ):
-        self.orchestrator = orchestrator
         self.config = config
         self.event_queue = event_queue
         self.shutdown_event = shutdown_event
         self.action_handler = action_handler
         self.repo_states = repo_states
+        self.repo_engines = repo_engines
         self.tui = tui
+        self.config_reload_callback = config_reload_callback
         self._action_tasks: set[asyncio.Task] = set()
         self._recent_moves: set[Path] = set()
         log.debug("EventProcessor initialized.")
@@ -72,7 +74,7 @@ class EventProcessor:
                 # Handle special config reload event
                 if event.repo_id == "__config__":
                     log.info("Configuration change event received, triggering reload.")
-                    reload_task = asyncio.create_task(self.orchestrator.reload_config())
+                    reload_task = asyncio.create_task(self.config_reload_callback())
                     # Store task reference to avoid warning (task runs independently)
                     reload_task.add_done_callback(lambda t: None)
                     continue
@@ -82,18 +84,9 @@ class EventProcessor:
                 if not repo_state:
                     log.warning("Ignoring event for unknown repo", repo_id=event.repo_id)
                     continue
-                orchestrator_paused = (
-                    (
-                        self.orchestrator.monitoring_coordinator
-                        and self.orchestrator.monitoring_coordinator.is_paused
-                    )
-                    if self.orchestrator.monitoring_coordinator
-                    else False
-                )
-                if repo_state.is_paused or orchestrator_paused:
-                    log.debug(
-                        "Repo or orchestrator is paused, event ignored", repo_id=event.repo_id
-                    )
+
+                if repo_state.is_paused:
+                    log.debug("Repo is paused, event ignored", repo_id=event.repo_id)
                     continue
 
                 # Deduplicate moved/deleted events
@@ -108,19 +101,32 @@ class EventProcessor:
 
                 # Record the change and update UI
                 repo_state.record_change()
+
+                # Schedule async refresh of repository statistics for real-time UI updates
+                task = asyncio.create_task(self._refresh_repository_statistics(event.repo_id))
+                task.add_done_callback(lambda _: None)  # Ensure task is properly handled
+
                 self.tui.post_state_update(self.repo_states)
 
                 # Emit file change event for TUI event feed
-                if hasattr(self.tui.app, "event_collector"):
-                    from supsrc.events.monitor import FileChangeEvent
+                if (
+                    self.tui
+                    and hasattr(self.tui, "app")
+                    and self.tui.app
+                    and hasattr(self.tui.app, "event_collector")
+                ):
+                    try:
+                        from supsrc.events.monitor import FileChangeEvent
 
-                    change_event = FileChangeEvent(
-                        description=f"File {event.event_type}: {event.src_path.name}",
-                        repo_id=event.repo_id,
-                        file_path=event.src_path,
-                        change_type=event.event_type,
-                    )
-                    self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
+                        change_event = FileChangeEvent(
+                            description=f"File {event.event_type}: {event.src_path.name}",
+                            repo_id=event.repo_id,
+                            file_path=event.src_path,
+                            change_type=event.event_type,
+                        )
+                        self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
+                    except Exception as e:
+                        log.debug("Failed to emit TUI event", error=str(e))
 
                 # Instead of acting immediately, start a debounced check
                 self._debounce_trigger_check(event.repo_id)
@@ -128,8 +134,8 @@ class EventProcessor:
             except asyncio.CancelledError:
                 log.info("Event processor run loop cancelled.")
                 break
-            except Exception:
-                log.exception("Error in event processor loop.")
+            except Exception as e:
+                log.exception("Error in event processor loop", error=str(e), exc_info=True)
 
         await self.stop()
         log.info("Event processor has stopped.")
@@ -198,6 +204,40 @@ class EventProcessor:
         loop = asyncio.get_running_loop()
         handle = loop.call_later(delay, self._schedule_action, state.repo_id)
         state.set_inactivity_timer(handle, int(delay))
+
+    async def _refresh_repository_statistics(self, repo_id: str) -> None:
+        """Refresh repository file statistics after file changes for real-time UI updates."""
+        repo_state = self.repo_states.get(repo_id)
+        repo_config = self.config.repositories.get(repo_id)
+        repo_engine = self.repo_engines.get(repo_id)
+
+        if not all((repo_state, repo_config, repo_engine)):
+            log.debug(
+                "Cannot refresh statistics: missing state, config, or engine", repo_id=repo_id
+            )
+            return
+
+        try:
+            status_result = await repo_engine.get_status(
+                repo_state, repo_config.repository, self.config.global_config, repo_config.path
+            )
+            if status_result.success:
+                repo_state.total_files = status_result.total_files or 0
+                repo_state.changed_files = status_result.changed_files or 0
+                repo_state.added_files = status_result.added_files or 0
+                repo_state.deleted_files = status_result.deleted_files or 0
+                repo_state.modified_files = status_result.modified_files or 0
+                repo_state.has_uncommitted_changes = not status_result.is_clean
+                repo_state.current_branch = status_result.current_branch
+                log.debug(
+                    "Repository statistics refreshed",
+                    repo_id=repo_id,
+                    changed_files=repo_state.changed_files,
+                )
+                # Update UI with refreshed statistics
+                self.tui.post_state_update(self.repo_states)
+        except Exception as e:
+            log.debug("Failed to refresh repository statistics", repo_id=repo_id, error=str(e))
 
     async def stop(self) -> None:
         """Gracefully stop all scheduled action tasks."""

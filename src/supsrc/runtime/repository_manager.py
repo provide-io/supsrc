@@ -133,6 +133,23 @@ class RepositoryManager:
                             total_files=repo_state.total_files,
                             changed_files=repo_state.changed_files,
                         )
+
+                        # Load cached commit stats for TUI display
+                        try:
+                            commit_stats = await engine.get_last_commit_stats(
+                                repo_state, repo_config.repository, config.global_config, repo_config.path
+                            )
+                            if commit_stats.get("success", False):
+                                init_log.debug(
+                                    "Last commit stats loaded",
+                                    commit_hash=commit_stats.get("commit_hash"),
+                                    added=commit_stats.get("added", 0),
+                                    deleted=commit_stats.get("deleted", 0),
+                                    modified=commit_stats.get("modified", 0),
+                                )
+                        except Exception as e:
+                            init_log.warning("Failed to load commit stats", error=str(e))
+
                     else:
                         init_log.warning(
                             "Failed to load initial statistics", error=status_result.message

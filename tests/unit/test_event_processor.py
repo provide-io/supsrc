@@ -12,7 +12,7 @@ import pytest
 from supsrc.config import SupsrcConfig
 from supsrc.monitor import MonitoredEvent
 from supsrc.runtime.action_handler import ActionHandler
-from supsrc.runtime.event_processor import DEBOUNCE_DELAY, EventProcessor
+from supsrc.events.processor import DEBOUNCE_DELAY, EventProcessor
 from supsrc.runtime.tui_interface import TUIInterface
 from supsrc.state import RepositoryState
 
@@ -43,13 +43,14 @@ def event_processor(
     tui = MagicMock(spec=TUIInterface)
     # The first argument, `orchestrator`, is now provided by the mock_orchestrator fixture.
     return EventProcessor(
-        orchestrator=mock_orchestrator,
         config=minimal_config,
         event_queue=asyncio.Queue(),
         shutdown_event=asyncio.Event(),
         action_handler=mock_action_handler,
         repo_states=states,
+        repo_engines={},
         tui=tui,
+        config_reload_callback=AsyncMock(),
     )
 
 
