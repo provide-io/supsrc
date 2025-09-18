@@ -11,13 +11,11 @@ import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias
 
-import structlog
-
 # Add Foundation error handling and metrics patterns
 from provide.foundation.errors import with_error_handling
+from provide.foundation.logger import get_logger
 from provide.foundation.metrics import counter, gauge
 from rich.console import Console
-from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.config import SupsrcConfig, load_config
 from supsrc.exceptions import ConfigurationError
@@ -36,7 +34,7 @@ if TYPE_CHECKING:
     from supsrc.tui.app import SupsrcTuiApp
 
 
-log: StructLogger = structlog.get_logger("runtime.orchestrator")
+log = get_logger("runtime.orchestrator")
 RepositoryStatesMap: TypeAlias = dict[str, RepositoryState]
 RULE_EMOJI_MAP: dict[str, str] = {
     "supsrc.rules.inactivity": "⏳",

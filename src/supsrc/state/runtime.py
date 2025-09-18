@@ -1,5 +1,4 @@
-# src/supsrc/state.py
-#
+# src/supsrc/state/runtime.py
 """
 Defines the dynamic state management models for monitored repositories in supsrc.
 """
@@ -12,7 +11,7 @@ import structlog
 from attrs import field, mutable
 
 # Logger specific to state management
-log: structlog.stdlib.BoundLogger = structlog.get_logger("state")
+log: structlog.stdlib.BoundLogger = structlog.get_logger("state.runtime")
 
 
 class RepositoryStatus(Enum):
@@ -211,6 +210,3 @@ class RepositoryState:
             self.display_status_emoji = "🔄"
         else:
             self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
-
-
-# 🔼⚙️

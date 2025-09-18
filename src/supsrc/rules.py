@@ -10,8 +10,7 @@ based on the current state of a repository.
 
 from datetime import UTC, datetime
 
-import structlog
-from structlog.typing import FilteringBoundLogger as StructLogger  # Assuming this type hint exists
+from provide.foundation.logger import get_logger
 
 # Use ABSOLUTE imports based on the 'src' layout
 # --- Import the RENAMED config model classes ---
@@ -24,7 +23,7 @@ from supsrc.config import (
 from supsrc.state import RepositoryState
 
 # Logger specific to the rule engine
-log: StructLogger = structlog.get_logger("rules")
+log = get_logger("rules")
 
 # --- Helper Functions (Specific Checkers) ---
 

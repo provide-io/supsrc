@@ -11,7 +11,7 @@ import asyncio
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
 
-import structlog
+from provide.foundation.logger import get_logger
 
 from supsrc.config import SupsrcConfig
 from supsrc.engines.git import GitEngine, GitRepoSummary
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from supsrc.protocols import RepositoryEngine
     from supsrc.runtime.tui_interface import TUIInterface
 
-log = structlog.get_logger("runtime.repository_manager")
+log = get_logger("runtime.repository_manager")
 
 RULE_EMOJI_MAP: dict[str, str] = {
     "supsrc.rules.inactivity": "⏳",

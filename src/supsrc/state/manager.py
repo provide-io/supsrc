@@ -6,19 +6,20 @@ Main state management coordination class.
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any
 
-import structlog
+from provide.foundation.logger import get_logger
 
 if TYPE_CHECKING:
-    from supsrc.state.models import StateData
+    from supsrc.state.control import StateData
     from supsrc.state.monitor import StateMonitor
-    from supsrc.state import RepositoryState
+    from supsrc.state.runtime import RepositoryState
 
-log = structlog.get_logger("state.manager")
+log = get_logger("state.manager")
 
 
 class StateManager:
@@ -59,8 +60,11 @@ class StateManager:
         if repo_id == "global":
             log.info("Global state changed", paused=state_data.paused if state_data else False)
         else:
-            log.info("Repository state changed", repo_id=repo_id,
-                    paused=state_data.is_repo_paused(repo_id) if state_data else False)
+            log.info(
+                "Repository state changed",
+                repo_id=repo_id,
+                paused=state_data.is_repo_paused(repo_id) if state_data else False,
+            )
 
         # Apply state changes to repository states
         if state_data:
@@ -154,8 +158,8 @@ class StateManager:
         Returns:
             True if pause was successful
         """
+        from supsrc.state.control import RepositoryStateOverride, StateData
         from supsrc.state.file import StateFile
-        from supsrc.state.models import RepositoryStateOverride, StateData
 
         try:
             # Determine target path
@@ -169,10 +173,7 @@ class StateManager:
 
             # Load existing state or create new
             existing_state = StateFile.load(repo_path=repo_path)
-            if existing_state:
-                state_data = existing_state
-            else:
-                state_data = StateData()
+            state_data = existing_state if existing_state else StateData()
 
             # Calculate pause until time
             paused_until = None
@@ -246,8 +247,14 @@ class StateManager:
                     state_data.repositories[repo_id].paused = False
                     # Remove empty repository entries
                     repo_override = state_data.repositories[repo_id]
-                    if not any([repo_override.paused, repo_override.save_count_disabled,
-                              repo_override.inactivity_seconds, repo_override.rule_overrides]):
+                    if not any(
+                        [
+                            repo_override.paused,
+                            repo_override.save_count_disabled,
+                            repo_override.inactivity_seconds,
+                            repo_override.rule_overrides,
+                        ]
+                    ):
                         del state_data.repositories[repo_id]
             else:
                 # Global resume
@@ -260,9 +267,11 @@ class StateManager:
             state_data.updated_by = "state_manager"
 
             # If no active state remains, delete the file
-            if (not state_data.paused and
-                not state_data.repositories and
-                not state_data.pause_reason):
+            if (
+                not state_data.paused
+                and not state_data.repositories
+                and not state_data.pause_reason
+            ):
                 success = StateFile.delete(repo_path=repo_path)
             else:
                 success = StateFile.save(state_data, repo_path=repo_path)
@@ -328,8 +337,12 @@ class StateManager:
 
         info = {
             "state_file_exists": True,
-            "paused": state_data.paused if not repo_id else state_data.is_repo_paused(repo_id or ""),
-            "paused_until": state_data.paused_until.isoformat() if state_data.paused_until else None,
+            "paused": state_data.paused
+            if not repo_id
+            else state_data.is_repo_paused(repo_id or ""),
+            "paused_until": state_data.paused_until.isoformat()
+            if state_data.paused_until
+            else None,
             "pause_reason": state_data.pause_reason,
             "updated_by": state_data.updated_by,
             "updated_at": state_data.updated_at.isoformat(),
