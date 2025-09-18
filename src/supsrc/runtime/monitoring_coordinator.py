@@ -8,8 +8,8 @@ Handles filesystem monitoring setup, control, and configuration watching.
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from provide.foundation.logger import get_logger
@@ -30,7 +30,7 @@ from watchdog.observers import Observer
 from supsrc.config import SupsrcConfig, load_config
 from supsrc.exceptions import ConfigurationError, MonitoringSetupError
 from supsrc.monitor import MonitoredEvent, MonitoringService
-from supsrc.state import RepositoryState, RepositoryStatus
+from supsrc.state import RepositoryStatus
 from supsrc.state.manager import StateManager
 
 if TYPE_CHECKING:

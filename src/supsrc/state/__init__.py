@@ -26,19 +26,18 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .file import StateFile
-
 # Import main classes
 from .control import RepositoryStateOverride, StateData
+from .file import StateFile
 from .manager import StateManager
 from .monitor import StateMonitor
-from .runtime import RepositoryState, RepositoryStatus, STATUS_EMOJI_MAP
+from .runtime import STATUS_EMOJI_MAP, RepositoryState, RepositoryStatus
 
 __all__ = [
+    "STATUS_EMOJI_MAP",
     "RepositoryState",
     "RepositoryStateOverride",
     "RepositoryStatus",
-    "STATUS_EMOJI_MAP",
     "StateData",
     "StateFile",
     "StateManager",
