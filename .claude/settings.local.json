@@ -37,7 +37,8 @@
       "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_orchestrator.py -v)",
       "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" uv run pytest tests/unit/test_orchestrator.py::TestOrchestratorLifecycle::test_run_initializes_all_components -v)",
       "Bash(./examples/setup_examples.sh:*)",
-      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 20s python -m supsrc.cli.main sui -c /Users/tim/code/gh/provide-io/supsrc/examples/supsrc_test.conf)"
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 20s python -m supsrc.cli.main sui -c /Users/tim/code/gh/provide-io/supsrc/examples/supsrc_test.conf)",
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 10s python -m supsrc.cli.main watch -c /Users/tim/code/gh/provide-io/supsrc/examples/supsrc_test.conf)"
     ],
     "deny": [],
     "ask": [],
