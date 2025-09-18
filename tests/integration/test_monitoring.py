@@ -182,7 +182,11 @@ class TestMonitoringIntegration:
             # Wait for the monitoring service to be running, which is more reliable than a fixed sleep.
             timeout = 10.0
             start_time = asyncio.get_event_loop().time()
-            while not (orchestrator.monitor_service and orchestrator.monitor_service.is_running):
+            while not (
+                orchestrator.monitoring_coordinator
+                and orchestrator.monitoring_coordinator.monitor_service
+                and orchestrator.monitoring_coordinator.monitor_service.is_running
+            ):
                 if asyncio.get_event_loop().time() - start_time > timeout:
                     raise TimeoutError("Timed out waiting for monitoring service to start.")
                 await asyncio.sleep(0.1)
@@ -286,8 +290,15 @@ class TestErrorHandling:
         # Should handle invalid path gracefully
         try:
             # Call the method with the required arguments
+            # Initialize repository manager and call the method through it
+            from supsrc.runtime.repository_manager import RepositoryManager
+
+            orchestrator.repository_manager = RepositoryManager(
+                orchestrator.repo_states, orchestrator.repo_engines
+            )
             await asyncio.wait_for(
-                orchestrator._initialize_repositories(config, mock_tui), timeout=5.0
+                orchestrator.repository_manager.initialize_repositories(config, mock_tui),
+                timeout=5.0,
             )
 
             # The invalid repo should be skipped, leaving repo_states empty

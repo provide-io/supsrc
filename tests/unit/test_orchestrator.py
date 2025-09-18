@@ -76,7 +76,28 @@ class TestOrchestratorLifecycle:
     async def test_initialize_repositories_success(self, mock_orchestrator: WatchOrchestrator):
         """Test that repositories are initialized correctly from config."""
         mock_tui = MagicMock()
-        await mock_orchestrator._initialize_repositories(mock_orchestrator.config, mock_tui)
+        # Use real repository manager but mock the git operations
+        from supsrc.runtime.repository_manager import RepositoryManager
+
+        mock_orchestrator.repository_manager = RepositoryManager(
+            mock_orchestrator.repo_states, mock_orchestrator.repo_engines
+        )
+
+        # Mock the git engine creation and status operations to avoid file system ops
+        with patch("supsrc.runtime.repository_manager.GitEngine") as MockGitEngine:
+            mock_engine = MagicMock()
+            mock_engine.get_summary.return_value = MagicMock(
+                head_commit_hash=None, is_empty=True, head_ref_name="UNBORN"
+            )
+            mock_engine.get_status.return_value = MagicMock(
+                success=True, total_files=0, changed_files=0, added_files=0,
+                deleted_files=0, modified_files=0, is_clean=True, current_branch="main"
+            )
+            MockGitEngine.return_value = mock_engine
+
+            await mock_orchestrator.repository_manager.initialize_repositories(
+                mock_orchestrator.config, mock_tui
+            )
 
         assert "test_repo_1" in mock_orchestrator.repo_states
         assert "test_repo_1" in mock_orchestrator.repo_engines
@@ -90,6 +111,12 @@ class TestOrchestratorLifecycle:
         mock_engine.get_commit_history.return_value = ["commit1", "commit2"]
         mock_orchestrator.repo_engines = {repo_id: mock_engine}
         mock_orchestrator.config.repositories[repo_id] = MagicMock()  # Ensure config exists
+
+        # Set up repository manager for delegation
+        from supsrc.runtime.repository_manager import RepositoryManager
+        mock_orchestrator.repository_manager = RepositoryManager(
+            mock_orchestrator.repo_states, mock_orchestrator.repo_engines
+        )
 
         details = await mock_orchestrator.get_repository_details(repo_id)
 
