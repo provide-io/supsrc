@@ -187,6 +187,11 @@ class WatchOrchestrator:
             active_repositories.set(0)
             log.info("Orchestrator cleanup complete.")
 
+    @property
+    def _is_paused(self) -> bool:
+        """Check if monitoring is currently paused."""
+        return self.monitoring_coordinator._is_paused if self.monitoring_coordinator else False
+
     def pause_monitoring(self) -> None:
         if self.monitoring_coordinator:
             self.monitoring_coordinator.pause_monitoring()
