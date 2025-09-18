@@ -96,14 +96,33 @@ class TestRepositoryState:
         mock_timer = Mock()
         mock_timer.cancel = Mock()
 
-        # Set timer
-        state.set_inactivity_timer(mock_timer, 60)
-        assert state.inactivity_timer_handle == mock_timer
+        # Mock asyncio.get_event_loop().time() to avoid event loop requirement
+        with Mock() as mock_asyncio:
+            mock_loop = Mock()
+            mock_loop.time.return_value = 12345.0
+            mock_asyncio.get_event_loop.return_value = mock_loop
+
+            # Patch asyncio in the state module
+            import asyncio
+            original_get_loop = asyncio.get_event_loop
+            asyncio.get_event_loop = mock_asyncio.get_event_loop
+
+            try:
+                # Set timer
+                state.set_inactivity_timer(mock_timer, 60)
+                assert state.inactivity_timer_handle == mock_timer
+                assert state._timer_total_seconds == 60
+                assert state._timer_start_time == 12345.0
+            finally:
+                # Restore original
+                asyncio.get_event_loop = original_get_loop
 
         # Cancel timer
         state.cancel_inactivity_timer()
         mock_timer.cancel.assert_called_once()
         assert state.inactivity_timer_handle is None
+        assert state._timer_total_seconds is None
+        assert state._timer_start_time is None
 
         # Test canceling when no timer exists
         state.cancel_inactivity_timer()  # Should not raise
