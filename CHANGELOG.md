@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced `env.sh` script with improved functionality and robustness
 - Simplified `pyproject.toml` - removed many optional dependencies
 - Updated dependency versions in `uv.lock`
-- Improved terminal control handling in tail command - removed Rich console to fix signal issues
+- Improved terminal control handling in watch command - removed Rich console to fix signal issues
 - Changed timer cancellation emoji from stop (🛑) to clock (🕐) for better clarity
 - Enhanced TUI app with better timer management and lifecycle handling
 - Improved orchestrator with stats refresh and move event handling
@@ -30,8 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced file monitoring with proper move/rename detection
 
 ### Fixed
-- Ctrl+C not working properly in tail command due to Rich terminal control
-- Terminal control issues in tail command by removing Rich console usage
+- Ctrl+C not working properly in watch command due to Rich terminal control
+- Terminal control issues in watch command by removing Rich console usage
 - Duplicate delete events when files are moved/renamed
 - Timer not cancelling when repository becomes clean
 - Config watcher issues causing UI problems
@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extensive test updates for new functionality
 - Improved integration tests for monitoring features
 - Enhanced unit tests for CLI commands, config, orchestrator, state, and TUI
-- Better test coverage for tail and watch commands
+- Better test coverage for watch and sui commands
 
 ### Internal
 - Major refactoring of orchestrator runtime (836 lines changed)
