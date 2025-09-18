@@ -16,6 +16,7 @@ from provide.foundation.logger import get_logger
 from supsrc.config import SupsrcConfig
 from supsrc.engines.git import GitEngine, GitRepoSummary
 from supsrc.state import RepositoryState, RepositoryStatus
+from supsrc.utils.directories import SupsrcDirectories
 
 if TYPE_CHECKING:
     from supsrc.protocols import RepositoryEngine
@@ -60,6 +61,14 @@ class RepositoryManager:
             init_log = self._log.bind(repo_id=repo_id)
             if not repo_config.enabled or not repo_config._path_valid:
                 init_log.info("Skipping disabled/invalid repo")
+                continue
+
+            # Ensure .supsrc directory structure exists
+            try:
+                SupsrcDirectories.ensure_structure(repo_config.path)
+                init_log.debug("Directory structure ensured")
+            except Exception as e:
+                init_log.error("Failed to create directory structure", error=str(e))
                 continue
 
             repo_state = RepositoryState(repo_id=repo_id)
