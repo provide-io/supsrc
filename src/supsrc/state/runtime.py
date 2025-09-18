@@ -91,6 +91,10 @@ class RepositoryState:
     last_committed_deleted: int = field(default=0)
     last_committed_modified: int = field(default=0)
 
+    # Cached commit stats from Git history to avoid repeated queries
+    cached_last_commit_hash: str | None = field(default=None)
+    cached_last_commit_stats_loaded: bool = field(default=False)
+
     _timer_total_seconds: int | None = field(default=None, init=False)
     _timer_start_time: float | None = field(default=None, init=False)
 
@@ -185,6 +189,38 @@ class RepositoryState:
         self.cancel_inactivity_timer()
         self.cancel_debounce_timer()
         self.update_status(RepositoryStatus.IDLE)
+
+    def update_cached_commit_stats(self, commit_hash: str | None) -> None:
+        """Update the cached commit hash to invalidate stats when needed."""
+        if self.cached_last_commit_hash != commit_hash:
+            log.debug(
+                "Commit hash changed, invalidating cached stats",
+                repo_id=self.repo_id,
+                old_hash=self.cached_last_commit_hash,
+                new_hash=commit_hash,
+            )
+            self.cached_last_commit_hash = commit_hash
+            self.cached_last_commit_stats_loaded = False
+
+    def set_cached_commit_stats(
+        self, commit_hash: str | None, added: int, deleted: int, modified: int
+    ) -> None:
+        """Set the cached commit statistics."""
+        self.cached_last_commit_hash = commit_hash
+        self.last_committed_added = added
+        self.last_committed_deleted = deleted
+        self.last_committed_modified = modified
+        self.last_committed_changed = added + deleted + modified
+        self.cached_last_commit_stats_loaded = True
+
+        log.debug(
+            "Cached commit stats updated",
+            repo_id=self.repo_id,
+            commit_hash=commit_hash,
+            added=added,
+            deleted=deleted,
+            modified=modified,
+        )
 
     def set_inactivity_timer(self, handle: asyncio.TimerHandle, total_seconds: int) -> None:
         """Stores the handle for a scheduled inactivity timer, cancelling any previous one."""

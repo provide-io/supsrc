@@ -137,9 +137,13 @@ class GitEngine(RepositoryEngine):
             total_files = 0
             try:
                 if not repo.is_empty and not repo.head_is_unborn:
-                    total_files = len(repo.index)
+                    # Count only tracked files (exclude directories)
+                    for entry in repo.index:
+                        # Skip directories (GIT_FILEMODE_TREE = 0o040000)
+                        if entry.mode != pygit2.GIT_FILEMODE_TREE:
+                            total_files += 1
             except Exception as e:
-                status_log.error(f"Error counting files: {e}")
+                status_log.error(f"Error counting tracked files: {e}")
 
             return {
                 "success": True,
