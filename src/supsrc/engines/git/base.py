@@ -170,6 +170,111 @@ class GitEngine(RepositoryEngine):
             self._log.exception("Unexpected status error getting Git status", repo_id=state.repo_id)
             return RepoStatusResult(success=False, message=f"Unexpected status error: {e}")
 
+    async def get_last_commit_stats(
+        self, state: RepositoryState, repository_config: dict[str, Any], global_config: dict[str, Any], repo_path: Path
+    ) -> dict[str, Any]:
+        """Get statistics from the last commit for caching in state.
+
+        Returns:
+            Dict with success, commit_hash, added, deleted, modified
+        """
+
+        def _blocking_get_commit_stats() -> dict[str, Any]:
+            try:
+                repo = pygit2.Repository(str(repo_path))
+
+                if repo.is_empty or repo.head_is_unborn:
+                    return {
+                        "success": True,
+                        "commit_hash": None,
+                        "added": 0,
+                        "deleted": 0,
+                        "modified": 0,
+                    }
+
+                # Get the last commit
+                last_commit = repo.head.peel()
+                commit_hash = str(last_commit.id)
+
+                # Check if we need to update cached stats
+                if state.cached_last_commit_stats_loaded and state.cached_last_commit_hash == commit_hash:
+                    self._log.debug("Using cached commit stats", commit_hash=commit_hash)
+                    return {
+                        "success": True,
+                        "commit_hash": commit_hash,
+                        "added": state.last_committed_added,
+                        "deleted": state.last_committed_deleted,
+                        "modified": state.last_committed_modified,
+                    }
+
+                # Get parent commit for diff
+                if len(last_commit.parents) == 0:
+                    # Initial commit - everything is added
+                    added_files = 0
+                    try:
+                        for entry in last_commit.tree:
+                            if entry.type != "tree":  # Skip directories
+                                added_files += 1
+                    except Exception:
+                        pass
+
+                    stats = {
+                        "success": True,
+                        "commit_hash": commit_hash,
+                        "added": added_files,
+                        "deleted": 0,
+                        "modified": 0,
+                    }
+                else:
+                    # Compare with parent commit
+                    parent_commit = last_commit.parents[0]
+                    diff = repo.diff(parent_commit.tree, last_commit.tree)
+
+                    added = 0
+                    deleted = 0
+                    modified = 0
+
+                    for delta in diff.deltas:
+                        if delta.status == pygit2.GIT_DELTA_ADDED:
+                            added += 1
+                        elif delta.status == pygit2.GIT_DELTA_DELETED:
+                            deleted += 1
+                        elif delta.status == pygit2.GIT_DELTA_MODIFIED:
+                            modified += 1
+
+                    stats = {
+                        "success": True,
+                        "commit_hash": commit_hash,
+                        "added": added,
+                        "deleted": deleted,
+                        "modified": modified,
+                    }
+
+                # Cache the stats in state
+                state.set_cached_commit_stats(
+                    commit_hash, stats["added"], stats["deleted"], stats["modified"]
+                )
+
+                self._log.debug(
+                    "Loaded commit stats from Git",
+                    commit_hash=commit_hash,
+                    added=stats["added"],
+                    deleted=stats["deleted"],
+                    modified=stats["modified"],
+                )
+
+                return stats
+
+            except Exception as e:
+                self._log.error(f"Unable to get last commit stats: {e}")
+                return {"success": False, "error": str(e)}
+
+        try:
+            return await asyncio.to_thread(_blocking_get_commit_stats)
+        except Exception as e:
+            self._log.exception("Unexpected error getting commit stats", repo_id=state.repo_id)
+            return {"success": False, "error": str(e)}
+
     @retry(
         pygit2.GitError,
         OSError,
