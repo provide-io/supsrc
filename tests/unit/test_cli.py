@@ -27,7 +27,7 @@ class TestMainCLI:
         assert result.exit_code == 0
         assert "supsrc" in result.output.lower()
         assert "watch" in result.output
-        assert "tail" in result.output
+        assert "sui" in result.output
         assert "config" in result.output
 
     def test_cli_version(self) -> None:
@@ -252,7 +252,7 @@ class TestCLIUtilities:
         """Test that Click properly parses our commands."""
         assert "config" in cli.commands
         assert "watch" in cli.commands
-        assert "tail" in cli.commands
+        assert "sui" in cli.commands
 
         config_cmd = cli.commands["config"]
         assert "show" in config_cmd.commands
