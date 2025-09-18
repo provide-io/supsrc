@@ -6,14 +6,15 @@ Monitoring for state file changes.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import structlog
 
 if TYPE_CHECKING:
-    from supsrc.state.models import StateData
+    from supsrc.state.control import StateData
 
 log = structlog.get_logger("state.monitor")
 
@@ -71,10 +72,8 @@ class StateMonitor:
         self._is_running = False
         if self._monitor_task:
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitor_task
-            except asyncio.CancelledError:
-                pass
 
         log.info("State monitor stopped")
 

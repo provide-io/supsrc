@@ -9,15 +9,15 @@ and standard result objects. Uses concrete attrs classes for results.
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
-import structlog
 from attrs import define, field
+from provide.foundation.logger import get_logger
 
 from supsrc.config import GlobalConfig
 
-# Re-export or define core types needed by protocols
-from supsrc.state import RepositoryState  # Assuming state.py exists
+# Import runtime state classes
+from supsrc.state import RepositoryState
 
-log = structlog.get_logger("protocols")
+log = get_logger("protocols")
 
 # --- Concrete Result Objects (using attrs) ---
 # These are returned by engine implementations.

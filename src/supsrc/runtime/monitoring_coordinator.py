@@ -12,7 +12,7 @@ from pathlib import Path
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-import structlog
+from provide.foundation.logger import get_logger
 
 # Import foundation metrics with fallback
 try:
@@ -29,12 +29,13 @@ from watchdog.observers import Observer
 from supsrc.config import SupsrcConfig, load_config
 from supsrc.exceptions import ConfigurationError, MonitoringSetupError
 from supsrc.monitor import MonitoredEvent, MonitoringService
-from supsrc.state import RepositoryStatus
+from supsrc.state import RepositoryState, RepositoryStatus
+from supsrc.state.manager import StateManager
 
 if TYPE_CHECKING:
     from supsrc.runtime.tui_interface import TUIInterface
 
-log = structlog.get_logger("runtime.monitoring_coordinator")
+log = get_logger("runtime.monitoring_coordinator")
 
 
 class MonitoringCoordinator:
@@ -45,10 +46,12 @@ class MonitoringCoordinator:
         event_queue: asyncio.Queue[MonitoredEvent],
         config_path: Path,
         repo_states: dict[str, Any],
+        state_manager: StateManager | None = None,
     ) -> None:
         self.event_queue = event_queue
         self.config_path = config_path
         self.repo_states = repo_states
+        self.state_manager = state_manager
         self.monitor_service: MonitoringService | None = None
         self.config_observer: Any = None  # Observer type annotation causes issues
         self._is_paused = False
@@ -256,4 +259,11 @@ class MonitoringCoordinator:
     @property
     def is_paused(self) -> bool:
         """Check if monitoring is currently paused."""
-        return self._is_paused
+        # Check both internal pause state and external state manager
+        if self._is_paused:
+            return True
+
+        if self.state_manager:
+            return self.state_manager.is_paused(repo_id=None)  # Check global pause
+
+        return False
