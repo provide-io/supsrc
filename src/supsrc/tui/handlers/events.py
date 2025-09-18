@@ -23,7 +23,9 @@ log = structlog.get_logger("tui.events")
 class EventHandlerMixin:
     """Mixin containing event handler methods for the TUI."""
 
-    def _format_change_display(self, current: int, previous: int, color: str, has_changes: bool) -> str:
+    def _format_change_display(
+        self, current: int, previous: int, color: str, has_changes: bool
+    ) -> str:
         """Format change display: bright current values when changes exist, dim previous values otherwise."""
         if has_changes and current > 0:
             return f"[bold {color}]{current}[/bold {color}]"
@@ -136,16 +138,28 @@ class EventHandlerMixin:
 
                 # Format file statistics: current (bright) when changes exist, previous (dim) otherwise
                 changed_files_display = self._format_change_display(
-                    state.changed_files, state.last_committed_changed, "yellow", state.has_uncommitted_changes
+                    state.changed_files,
+                    state.last_committed_changed,
+                    "yellow",
+                    state.has_uncommitted_changes,
                 )
                 added_display = self._format_change_display(
-                    state.added_files, state.last_committed_added, "green", state.has_uncommitted_changes
+                    state.added_files,
+                    state.last_committed_added,
+                    "green",
+                    state.has_uncommitted_changes,
                 )
                 deleted_display = self._format_change_display(
-                    state.deleted_files, state.last_committed_deleted, "red", state.has_uncommitted_changes
+                    state.deleted_files,
+                    state.last_committed_deleted,
+                    "red",
+                    state.has_uncommitted_changes,
                 )
                 modified_display = self._format_change_display(
-                    state.modified_files, state.last_committed_modified, "blue", state.has_uncommitted_changes
+                    state.modified_files,
+                    state.last_committed_modified,
+                    "blue",
+                    state.has_uncommitted_changes,
                 )
 
                 # Get branch display - truncate from beginning if too long
