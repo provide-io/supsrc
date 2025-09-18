@@ -39,7 +39,8 @@
       "Bash(./examples/setup_examples.sh:*)",
       "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 20s python -m supsrc.cli.main sui -c /Users/tim/code/gh/provide-io/supsrc/examples/supsrc_test.conf)",
       "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 10s python -m supsrc.cli.main watch -c /Users/tim/code/gh/provide-io/supsrc/examples/supsrc_test.conf)",
-      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 8s python -m supsrc.cli.main watch -c /Users/tim/code/gh/provide-io/supsrc/examples/supsrc_test.conf)"
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 8s python -m supsrc.cli.main watch -c /Users/tim/code/gh/provide-io/supsrc/examples/supsrc_test.conf)",
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 15s python -m supsrc.cli.main sui -c /Users/tim/code/gh/provide-io/supsrc/examples/supsrc_test.conf)"
     ],
     "deny": [],
     "ask": [],
