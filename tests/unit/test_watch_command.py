@@ -56,50 +56,50 @@ class TestWatchCommand:
         assert kwargs["console"] is None
         mock_runner.assert_called_once_with(mock_orchestrator_instance)
 
-    def test_tail_with_invalid_config(self) -> None:
-        """Test tail command with invalid config path."""
+    def test_watch_with_invalid_config(self) -> None:
+        """Test watch command with invalid config path."""
         runner = CliRunner()
-        result = runner.invoke(cli, ["tail", "--config-path", "/nonexistent/config.conf"])
+        result = runner.invoke(cli, ["watch", "--config-path", "/nonexistent/config.conf"])
         assert result.exit_code != 0
         assert "Error" in result.output or "does not exist" in result.output
 
-    @patch("supsrc.cli.tail_cmds._run_headless_orchestrator")
-    @patch("supsrc.cli.tail_cmds.WatchOrchestrator")
-    def test_tail_with_env_config(
+    @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
+    @patch("supsrc.cli.watch_cmds.WatchOrchestrator")
+    def test_watch_with_env_config(
         self, mock_orchestrator_class: Mock, mock_runner: Mock, tmp_path: Path
     ) -> None:
-        """Test tail command with config from environment variable."""
+        """Test watch command with config from environment variable."""
         mock_runner.return_value = 0
         config_file = tmp_path / "env_test.conf"
         config_file.write_text("[repositories.env-test]\npath = '/tmp/env-test'")
         runner = CliRunner()
 
         with patch.dict("os.environ", {"SUPSRC_CONF": str(config_file)}):
-            result = runner.invoke(cli, ["tail"])
+            result = runner.invoke(cli, ["watch"])
 
         assert result.exit_code == 0
         mock_orchestrator_class.assert_called_once()
         args, kwargs = mock_orchestrator_class.call_args
         assert kwargs["config_path"] == config_file
 
-    @patch("supsrc.cli.tail_cmds._run_headless_orchestrator")
+    @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
     @patch("supsrc.cli.utils.core_setup_logging")
-    def test_tail_logging_setup(
+    def test_watch_logging_setup(
         self, mock_setup_logging: Mock, mock_runner: Mock, tmp_path: Path
     ) -> None:
-        """Test that tail command sets up logging correctly."""
+        """Test that watch command sets up logging correctly."""
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
         runner = CliRunner()
 
-        runner.invoke(cli, ["tail", "--log-level", "DEBUG", "--config-path", str(config_file)])
+        runner.invoke(cli, ["watch", "--log-level", "DEBUG", "--config-path", str(config_file)])
 
         mock_setup_logging.assert_called()
         call_args, call_kwargs = mock_setup_logging.call_args
         assert call_kwargs["level"] == 10  # DEBUG
 
-    @patch("supsrc.cli.tail_cmds._run_headless_orchestrator")
-    def test_tail_runner_returns_error_code(self, mock_runner: Mock, tmp_path: Path) -> None:
+    @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
+    def test_watch_runner_returns_error_code(self, mock_runner: Mock, tmp_path: Path) -> None:
         """Test that a non-zero exit code from the runner is propagated."""
         mock_runner.return_value = 130  # Simulate exit code from interrupt
         config_file = tmp_path / "test.conf"
@@ -112,9 +112,9 @@ class TestWatchCommand:
         # The CliRunner catches the sys.exit and reports the code here. This is the robust way to test it.
         assert result.exit_code == 130
 
-    @patch("supsrc.cli.tail_cmds._run_headless_orchestrator")
-    def test_tail_runner_raises_keyboard_interrupt(self, mock_runner: Mock, tmp_path: Path) -> None:
-        """Test that tail command handles KeyboardInterrupt from the runner."""
+    @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
+    def test_watch_runner_raises_keyboard_interrupt(self, mock_runner: Mock, tmp_path: Path) -> None:
+        """Test that watch command handles KeyboardInterrupt from the runner."""
         mock_runner.side_effect = KeyboardInterrupt()
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
