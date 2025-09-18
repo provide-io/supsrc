@@ -163,9 +163,24 @@ class EventHandlerMixin:
 
                 if repo_id_str in table.rows:
                     # Update existing row in-place to prevent counter resets
-                    row_index = table.get_row_index(repo_id_str)
-                    for col_index, cell_value in enumerate(row_data):
-                        table.update_cell(row_index, col_index, cell_value)
+                    try:
+                        row_index = table.get_row_index(repo_id_str)
+                        if 0 <= row_index < table.row_count:
+                            for col_index, cell_value in enumerate(row_data):
+                                if col_index < len(table.columns):
+                                    table.update_cell(row_index, col_index, cell_value)
+                        else:
+                            # Row index invalid, re-add the row
+                            table.remove_row(repo_id_str)
+                            table.add_row(*row_data, key=repo_id_str)
+                    except Exception as e:
+                        log.warning("Failed to update row in-place, re-adding", repo_id=repo_id_str, error=str(e))
+                        # Fallback: remove and re-add
+                        try:
+                            table.remove_row(repo_id_str)
+                        except Exception:
+                            pass
+                        table.add_row(*row_data, key=repo_id_str)
                 else:
                     table.add_row(*row_data, key=repo_id_str)
 

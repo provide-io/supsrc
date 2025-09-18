@@ -19,8 +19,15 @@ class ActionHandlerMixin:
 
     def action_toggle_dark(self) -> None:
         """Toggle between light and dark mode."""
-        self.dark = not self.dark
-        log.debug("Dark mode toggled", dark_mode=self.dark)
+        # Use Textual's theme switching API
+        current_theme = getattr(self, 'theme', 'textual-dark')
+        if current_theme == 'textual-dark':
+            self.theme = 'textual-light'
+            new_mode = 'light'
+        else:
+            self.theme = 'textual-dark'
+            new_mode = 'dark'
+        log.debug("Theme toggled", theme=new_mode)
 
     def action_clear_log(self) -> None:
         """Clear the event feed."""
