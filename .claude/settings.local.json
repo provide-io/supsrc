@@ -32,7 +32,8 @@
       "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" ./workenv/wrkenv_darwin_arm64/bin/python3 -m pip install pygit2)",
       "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_action_handler.py::TestActionHandler::test_execute_full_sequence_success -v)",
       "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_action_handler.py::TestActionHandler::test_execute_full_sequence_success -v -s)",
-      "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_action_handler.py -v)"
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_action_handler.py -v)",
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_event_processor.py -v)"
     ],
     "deny": [],
     "ask": [],
