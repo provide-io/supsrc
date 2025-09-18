@@ -80,7 +80,7 @@ class TestSuiCommand:
     def test_sui_with_invalid_config(self) -> None:
         """Test sui command with invalid config path."""
         runner = CliRunner()
-        result = runner.invoke(cli, ["watch", "--config-path", "/nonexistent/config.conf"])
+        result = runner.invoke(cli, ["sui", "--config-path", "/nonexistent/config.conf"])
 
         assert result.exit_code != 0
 
@@ -127,8 +127,9 @@ class TestSuiCommand:
         config_file.write_text("[repositories]")
 
         runner = CliRunner()
-        runner.invoke(cli, ["watch", "--config-path", str(config_file)])
+        result = runner.invoke(cli, ["sui", "--config-path", str(config_file)])
 
+        assert result.exit_code == 0
         # Use assert_any_call to check if this was logged at any point.
         mock_log.info.assert_any_call("Initializing interactive dashboard...")
 
