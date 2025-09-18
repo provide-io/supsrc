@@ -1,6 +1,7 @@
-# src/supsrc/cli/tail_cmds.py
+# src/supsrc/cli/watch_cmds.py
 
 import asyncio
+import contextlib
 import logging
 import sys
 from pathlib import Path
@@ -15,31 +16,103 @@ from supsrc.runtime.orchestrator import WatchOrchestrator
 log: StructLogger = structlog.get_logger("cli.watch")
 
 
+async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
+    """Periodically print repository status to stdout."""
+    while True:
+        try:
+            await asyncio.sleep(10)  # Report status every 10 seconds
+
+            if not orchestrator.repo_states:
+                continue
+
+            status_lines = []
+            for repo_id, state in orchestrator.repo_states.items():
+                # Format status line
+                status_emoji = state.display_status_emoji
+                status_name = state.status.name.lower()
+
+                # Add file change counts if any
+                if state.has_uncommitted_changes:
+                    change_info = (
+                        f" (+{state.added_files}/-{state.deleted_files}/~{state.modified_files})"
+                    )
+                else:
+                    change_info = " (clean)"
+
+                # Add timer if active
+                timer_info = ""
+                if state.timer_seconds_left:
+                    timer_info = f" ({state.timer_seconds_left}s)"
+
+                # Add pause/stop indicators
+                pause_info = ""
+                if state.is_stopped:
+                    pause_info = " [STOPPED]"
+                elif state.is_paused:
+                    pause_info = " [PAUSED]"
+
+                status_line = (
+                    f"{status_emoji} {repo_id}: {status_name}{change_info}{timer_info}{pause_info}"
+                )
+                status_lines.append(status_line)
+
+            # Print status summary
+            print(
+                f"[{len(orchestrator.repo_states)} repos] " + " | ".join(status_lines), flush=True
+            )
+
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            log.debug("Status reporter error", error=str(e))
+
+
+async def _run_orchestrator_with_status(orchestrator: WatchOrchestrator) -> None:
+    """Run orchestrator with periodic status reporting."""
+    # Start status reporter task
+    status_task = asyncio.create_task(_status_reporter(orchestrator))
+
+    try:
+        # Run orchestrator
+        await orchestrator.run()
+    finally:
+        # Cancel status reporter
+        status_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await status_task
+
+
 def _run_headless_orchestrator(orchestrator: WatchOrchestrator) -> int:
     """
     Runs the orchestrator using the standard asyncio.run(), which provides
     robust signal handling and lifecycle management.
     """
     try:
+        # Print initial status message
+        print("Starting supsrc watch mode with status output...", flush=True)
+
         # asyncio.run() is the preferred, high-level way to run an async application.
         # It creates a new event loop, runs the coroutine until it completes,
         # and handles cleanup. Crucially, it also adds its own signal handlers
         # for SIGINT and SIGTERM that will correctly cancel the main task.
-        asyncio.run(orchestrator.run())
+        asyncio.run(_run_orchestrator_with_status(orchestrator))
         return 0
     except KeyboardInterrupt:
         # This block is entered when CTRL-C is pressed.
         # The finally block within orchestrator.run() will have already been
         # executed by the time we get here, due to the task cancellation
         # handled by asyncio.run().
+        print("\nShutdown initiated by KeyboardInterrupt (CTRL-C).", flush=True)
         log.warning("Shutdown initiated by KeyboardInterrupt (CTRL-C).")
         return 130  # Standard exit code for SIGINT
     except Exception:
         # This catches any other unhandled exceptions from the orchestrator.
+        print("Orchestrator exited with an unhandled exception.", flush=True)
         log.critical("Orchestrator exited with an unhandled exception.", exc_info=True)
         return 1
     finally:
         # Final log message after the event loop is closed.
+        print("Watch mode stopped.", flush=True)
         logging.shutdown()
 
 
