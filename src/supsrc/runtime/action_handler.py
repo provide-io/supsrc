@@ -367,9 +367,9 @@ class ActionHandler:
 
                     push_event = GitPushEvent(
                         description=f"Pushed {repo_id} to remote repository",
-                        remote_name=repo_config.repository.get("remote", "origin"),
+                        remote=repo_config.repository.get("remote", "origin"),
                         branch=repo_state.current_branch or "main",
-                        commit_hash=commit_result.commit_hash,
+                        commits_pushed=1,
                     )
                     self._emit_event(push_event)
 

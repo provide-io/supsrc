@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(PYTHONPATH=./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src uv run ty check src/supsrc/events/collector.py src/supsrc/runtime/orchestrator.py src/supsrc/runtime/action_handler.py)"
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" uv run pytest tests/unit/test_dual_logging.py -v)"
     ],
     "deny": [],
     "ask": [],
