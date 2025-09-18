@@ -26,7 +26,8 @@
       "Bash(./test_tui.sh:*)",
       "Bash(LOG_DIR=supsrc_logs_20250918_113420)",
       "Bash(tail:*)",
-      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 25s python -m supsrc.cli.main sui -c /Users/tim/code/gh/provide-io/supsrc/examples/supsrc_test.conf)"
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 25s python -m supsrc.cli.main sui -c /Users/tim/code/gh/provide-io/supsrc/examples/supsrc_test.conf)",
+      "Bash(printf '\\e[?1000l\\e[?1002l\\e[?1003l\\e[?10061l')"
     ],
     "deny": [],
     "ask": [],
