@@ -12,7 +12,8 @@
       "Bash(PYTHONPATH=./workenv/wrknv_darwin_arm64/lib/python3.13/site-packages:./src ./workenv/wrknv_darwin_arm64/bin/python3 -c \"\ntry:\n    import pygit2\n    print(''✅ pygit2 imported successfully'')\n    print(''pygit2 version:'', pygit2.__version__)\nexcept ImportError as e:\n    print(''❌ pygit2 import failed:'', e)\n\")",
       "Bash(./workenv/wrknv_darwin_arm64/bin/uv pip install pygit2)",
       "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 10s python -m supsrc.cli.main watch --tui)",
-      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 10s python3 -m supsrc.cli.main watch --tui)"
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 10s python3 -m supsrc.cli.main watch --tui)",
+      "Read(//dev/**)"
     ],
     "deny": [],
     "ask": [],
