@@ -33,7 +33,8 @@
       "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_action_handler.py::TestActionHandler::test_execute_full_sequence_success -v)",
       "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_action_handler.py::TestActionHandler::test_execute_full_sequence_success -v -s)",
       "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_action_handler.py -v)",
-      "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_event_processor.py -v)"
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_event_processor.py -v)",
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./src\" python -m pytest tests/unit/test_orchestrator.py -v)"
     ],
     "deny": [],
     "ask": [],

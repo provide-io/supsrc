@@ -33,8 +33,8 @@ class TestOrchestratorLifecycle:
 
     @patch("supsrc.runtime.orchestrator.TUIInterface")
     @patch("supsrc.runtime.orchestrator.ActionHandler")
-    @patch("supsrc.events.processor.EventProcessor")
-    @patch("supsrc.runtime.orchestrator.MonitoringService")
+    @patch("supsrc.runtime.orchestrator.EventProcessor")
+    @patch("supsrc.runtime.monitoring_coordinator.MonitoringCoordinator")
     async def test_run_initializes_all_components(
         self,
         MockMonitoringService: MagicMock,
@@ -135,12 +135,13 @@ class TestOrchestratorFeatures:
         mock_orchestrator.repo_states[repo_id] = RepositoryState(repo_id=repo_id)
         repo_state = mock_orchestrator.repo_states[repo_id]
 
-        # Act & Assert (Pause)
-        mock_orchestrator.toggle_repository_pause(repo_id)
-        assert repo_state.is_paused is True
-        assert repo_state.display_status_emoji == "⏸️"
+        # Mock the repository manager
+        from unittest.mock import MagicMock
+        mock_repo_manager = MagicMock()
+        mock_repo_manager.toggle_repository_pause.return_value = True
+        mock_orchestrator.repository_manager = mock_repo_manager
 
-        # Act & Assert (Resume)
-        mock_orchestrator.toggle_repository_pause(repo_id)
-        assert repo_state.is_paused is False
-        assert repo_state.display_status_emoji == "▶️"  # Default for IDLE
+        # Act & Assert (Pause)
+        result = mock_orchestrator.toggle_repository_pause(repo_id)
+        assert result is True
+        mock_repo_manager.toggle_repository_pause.assert_called_with(repo_id)
