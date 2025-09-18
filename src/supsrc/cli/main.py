@@ -18,7 +18,7 @@ from provide.foundation.context import CLIContext
 from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.cli.config_cmds import config_cli
-from supsrc.cli.tail_cmds import tail_cli
+from supsrc.cli.sui_cmds import sui_cli
 from supsrc.cli.watch_cmds import watch_cli
 
 try:
@@ -109,7 +109,7 @@ def cli(
 
 
 cli.add_command(config_cli)
-cli.add_command(tail_cli)
+cli.add_command(sui_cli)
 cli.add_command(watch_cli)
 
 if __name__ == "__main__":

@@ -21,6 +21,17 @@ log = structlog.get_logger("tui.events")
 class EventHandlerMixin:
     """Mixin containing event handler methods for the TUI."""
 
+    def _format_file_count_with_previous(self, current: int, previous: int, color: str) -> str:
+        """Format file count with current value in color and previous value dimmed."""
+        current_display = f"[bold {color}]{current}[/bold {color}]" if current > 0 else "0"
+        if previous > 0 and previous != current:
+            return f"{current_display} [dim]({previous})[/dim]"
+        return current_display
+
+    def _format_previous_only(self, previous: int) -> str:
+        """Format display showing only previous value in dim style when no current changes."""
+        return f"[dim]{previous}[/dim]" if previous > 0 else "0"
+
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         """Handle worker state changes."""
         try:
@@ -112,41 +123,25 @@ class EventHandlerMixin:
                     total_files_display = str(state.total_files)
 
                 if state.has_uncommitted_changes:
-                    # Active colors for uncommitted changes
-                    changed_files_display = (
-                        f"[bold yellow]{state.changed_files}[/bold yellow]"
-                        if state.changed_files > 0
-                        else "0"
+                    # Active colors for uncommitted changes with previous values in dim
+                    changed_files_display = self._format_file_count_with_previous(
+                        state.changed_files, state.last_committed_changed, "yellow"
                     )
-                    added_display = (
-                        f"[bold green]{state.added_files}[/bold green]"
-                        if state.added_files > 0
-                        else "0"
+                    added_display = self._format_file_count_with_previous(
+                        state.added_files, state.last_committed_added, "green"
                     )
-                    deleted_display = (
-                        f"[bold red]{state.deleted_files}[/bold red]"
-                        if state.deleted_files > 0
-                        else "0"
+                    deleted_display = self._format_file_count_with_previous(
+                        state.deleted_files, state.last_committed_deleted, "red"
                     )
-                    modified_display = (
-                        f"[bold blue]{state.modified_files}[/bold blue]"
-                        if state.modified_files > 0
-                        else "0"
+                    modified_display = self._format_file_count_with_previous(
+                        state.modified_files, state.last_committed_modified, "blue"
                     )
                 else:
-                    # Grey/dim for committed state
-                    changed_files_display = (
-                        f"[dim]{state.changed_files}[/dim]" if state.changed_files > 0 else "0"
-                    )
-                    added_display = (
-                        f"[dim]{state.added_files}[/dim]" if state.added_files > 0 else "0"
-                    )
-                    deleted_display = (
-                        f"[dim]{state.deleted_files}[/dim]" if state.deleted_files > 0 else "0"
-                    )
-                    modified_display = (
-                        f"[dim]{state.modified_files}[/dim]" if state.modified_files > 0 else "0"
-                    )
+                    # No uncommitted changes - show previous values from last commit as faded
+                    changed_files_display = self._format_previous_only(state.last_committed_changed)
+                    added_display = self._format_previous_only(state.last_committed_added)
+                    deleted_display = self._format_previous_only(state.last_committed_deleted)
+                    modified_display = self._format_previous_only(state.last_committed_modified)
 
                 # Get branch display - truncate from beginning if too long
                 branch_name = state.current_branch or "main"
@@ -167,17 +162,10 @@ class EventHandlerMixin:
                 )
 
                 if repo_id_str in table.rows:
-                    # Save cursor position before update
-                    cursor_row = table.cursor_row
-                    cursor_column = table.cursor_column
-
-                    # Update existing row by removing and re-adding
-                    table.remove_row(repo_id_str)
-                    table.add_row(*row_data, key=repo_id_str)
-
-                    # Restore cursor position if it's still valid
-                    if cursor_row < table.row_count:
-                        table.cursor_coordinate = (cursor_row, cursor_column)
+                    # Update existing row in-place to prevent counter resets
+                    row_index = table.get_row_index(repo_id_str)
+                    for col_index, cell_value in enumerate(row_data):
+                        table.update_cell(row_index, col_index, cell_value)
                 else:
                     table.add_row(*row_data, key=repo_id_str)
 

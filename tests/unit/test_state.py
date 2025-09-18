@@ -120,4 +120,117 @@ class TestRepositoryStatusEnum:
             assert status in STATUS_EMOJI_MAP, f"Missing emoji for {status}"
 
 
+class TestRepositoryStatePreviousStatistics:
+    """Test repository state previous statistics functionality."""
+
+    def test_initial_previous_statistics(self) -> None:
+        """Test that previous statistics are initialized to zero."""
+        state = RepositoryState(repo_id="test-repo")
+
+        assert state.last_committed_changed == 0
+        assert state.last_committed_added == 0
+        assert state.last_committed_deleted == 0
+        assert state.last_committed_modified == 0
+
+    def test_reset_after_action_preserves_statistics(self) -> None:
+        """Test that reset_after_action preserves current statistics as previous."""
+        state = RepositoryState(repo_id="test-repo")
+
+        # Set up some file changes
+        state.changed_files = 5
+        state.added_files = 2
+        state.deleted_files = 1
+        state.modified_files = 2
+        state.has_uncommitted_changes = True
+        state.save_count = 3
+
+        # Call reset_after_action
+        state.reset_after_action()
+
+        # Current statistics should be reset to zero
+        assert state.changed_files == 0
+        assert state.added_files == 0
+        assert state.deleted_files == 0
+        assert state.modified_files == 0
+        assert state.has_uncommitted_changes is False
+        assert state.save_count == 0
+        assert state.status == RepositoryStatus.IDLE
+
+        # Previous statistics should preserve the old values
+        assert state.last_committed_changed == 5
+        assert state.last_committed_added == 2
+        assert state.last_committed_deleted == 1
+        assert state.last_committed_modified == 2
+
+    def test_multiple_resets_update_previous_statistics(self) -> None:
+        """Test that multiple resets update previous statistics correctly."""
+        state = RepositoryState(repo_id="test-repo")
+
+        # First commit cycle
+        state.changed_files = 3
+        state.added_files = 1
+        state.deleted_files = 0
+        state.modified_files = 2
+        state.reset_after_action()
+
+        # Check first preservation
+        assert state.last_committed_changed == 3
+        assert state.last_committed_added == 1
+        assert state.last_committed_deleted == 0
+        assert state.last_committed_modified == 2
+
+        # Second commit cycle with different values
+        state.changed_files = 7
+        state.added_files = 3
+        state.deleted_files = 2
+        state.modified_files = 2
+        state.reset_after_action()
+
+        # Check second preservation (should overwrite previous)
+        assert state.last_committed_changed == 7
+        assert state.last_committed_added == 3
+        assert state.last_committed_deleted == 2
+        assert state.last_committed_modified == 2
+
+    def test_reset_after_action_with_zero_values(self) -> None:
+        """Test that reset_after_action handles zero values correctly."""
+        state = RepositoryState(repo_id="test-repo")
+
+        # All values are already zero (initial state)
+        state.reset_after_action()
+
+        # Previous statistics should remain zero
+        assert state.last_committed_changed == 0
+        assert state.last_committed_added == 0
+        assert state.last_committed_deleted == 0
+        assert state.last_committed_modified == 0
+
+    def test_reset_after_action_preserves_other_fields(self) -> None:
+        """Test that reset_after_action preserves non-statistics fields correctly."""
+        state = RepositoryState(repo_id="test-repo")
+
+        # Set up some state that should NOT be reset
+        state.total_files = 100
+        state.current_branch = "feature-branch"
+        state.last_change_time = state.last_change_time  # Keep existing time
+
+        # Set up some file changes
+        state.changed_files = 3
+        state.added_files = 1
+        state.deleted_files = 1
+        state.modified_files = 1
+
+        state.reset_after_action()
+
+        # Non-statistics fields should be preserved
+        assert state.total_files == 100
+        assert state.current_branch == "feature-branch"
+
+        # Previous statistics should be preserved
+        assert state.last_committed_changed == 3
+        assert state.last_committed_added == 1
+        assert state.last_committed_deleted == 1
+        assert state.last_committed_modified == 1
+
+
 # 🧪📊
