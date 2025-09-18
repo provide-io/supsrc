@@ -15,7 +15,8 @@
       "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" timeout 10s python3 -m supsrc.cli.main watch --tui)",
       "Read(//dev/**)",
       "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" uv run pytest tests/unit/test_orchestrator.py -v -k \"pause\")",
-      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" uv run pytest tests/unit/test_state.py -v -k \"pause\")"
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" uv run pytest tests/unit/test_state.py -v -k \"pause\")",
+      "Bash(PYTHONPATH=\"../provide-foundation/src:./workenv/wrkenv_darwin_arm64/lib/python3.11/site-packages:./src\" python test_pause_fixes.py)"
     ],
     "deny": [],
     "ask": [],
