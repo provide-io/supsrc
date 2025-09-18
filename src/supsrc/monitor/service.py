@@ -32,6 +32,7 @@ class MonitoringService:
         self._event_queue = event_queue
         self._observer = Observer()
         self._handlers: dict[str, SupsrcEventHandler] = {}
+        self._watches: dict[str, any] = {}  # Store watch objects returned by observer.schedule()
         self._logger = log
         self._is_running = False
         log.debug("MonitoringService initialized")
@@ -39,6 +40,7 @@ class MonitoringService:
     def clear_handlers(self) -> None:
         """Clears all internal handler references. Note: Watchdog's Observer.stop() handles unscheduling from the observer itself."""
         self._handlers.clear()
+        self._watches.clear()
         self._logger.debug("Cleared all monitoring handlers.")
 
     def unschedule_repository(self, repo_id: str) -> None:
