@@ -32,7 +32,7 @@ class EventHandlerMixin:
         elif not has_changes and previous > 0:
             return f"[dim]{previous}[/dim]"
         else:
-            return "0"
+            return "[dim]0[/dim]"
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         """Handle worker state changes."""

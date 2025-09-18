@@ -190,7 +190,7 @@ class RepositoryState:
         self.has_uncommitted_changes = False
         self.cancel_inactivity_timer()
         self.cancel_debounce_timer()
-        self.update_status(RepositoryStatus.ERROR)
+        self.update_status(RepositoryStatus.IDLE)
 
     def update_cached_commit_stats(self, commit_hash: str | None) -> None:
         """Update the cached commit hash to invalidate stats when needed."""
