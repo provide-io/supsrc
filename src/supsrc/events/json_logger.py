@@ -47,6 +47,26 @@ class JSONEventLogger:
             )
             raise
 
+    def _serialize_metadata(self, metadata: dict[str, Any]) -> dict[str, Any]:
+        """Recursively serialize metadata, converting Path objects to strings."""
+        if not isinstance(metadata, dict):
+            return metadata
+
+        serialized = {}
+        for key, value in metadata.items():
+            if isinstance(value, Path):
+                serialized[key] = str(value)
+            elif isinstance(value, dict):
+                serialized[key] = self._serialize_metadata(value)
+            elif isinstance(value, (list, tuple)):
+                serialized[key] = [
+                    str(item) if isinstance(item, Path) else item
+                    for item in value
+                ]
+            else:
+                serialized[key] = value
+        return serialized
+
     def log_event(self, event: Event) -> None:
         """Log an event to the JSON file.
 
@@ -63,7 +83,7 @@ class JSONEventLogger:
                 "timestamp": event.timestamp.isoformat(),
                 "source": event.source,
                 "description": event.description,
-                "metadata": getattr(event, "metadata", {}),
+                "metadata": self._serialize_metadata(getattr(event, "metadata", {})),
             }
 
             # Add event-specific fields if available
