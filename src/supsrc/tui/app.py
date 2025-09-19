@@ -162,6 +162,7 @@ class SupsrcTuiApp(TuiAppBase):
         self._shutdown_event = asyncio.Event()
         self._orchestrator: WatchOrchestrator | None = None  # type: ignore[assignment]
         self._worker = None
+        self._countdown_task = None
         self._is_shutting_down = False
         self.timer_manager: TimerManager | None = None
         self._timer_manager = TimerManager(self)
@@ -211,7 +212,8 @@ class SupsrcTuiApp(TuiAppBase):
     def on_mount(self) -> None:
         """Initialize data table and start the orchestrator."""
         # Foundation/structlog logging is already set up by the CLI
-        print("🚀 TUI on_mount starting...")
+        import sys
+        print("🚀 TUI on_mount starting...", file=sys.stderr)
         log.info("🐛 TUI on_mount starting - debug info will go to Foundation logger")
 
         try:
@@ -232,11 +234,11 @@ class SupsrcTuiApp(TuiAppBase):
             )
 
             # Initialize timer manager
-            print("🔧 Initializing timer manager...")
+            print("🔧 Initializing timer manager...", file=sys.stderr)
             self.timer_manager = TimerManager(self)
 
             # Initialize the event feed widget
-            print("🔧 Initializing event feed...")
+            print("🔧 Initializing event feed...", file=sys.stderr)
             try:
                 self._event_feed = self.query_one("#event-feed", EventFeed)
                 self.event_collector.subscribe(self._event_feed.add_event)
@@ -256,14 +258,20 @@ class SupsrcTuiApp(TuiAppBase):
             # Set up a timer to check for external shutdown every 500ms
             self.set_interval(0.5, self._check_external_shutdown)
 
-            # Set up a timer to update countdowns every second
-            print("🚀 Setting up countdown timer interval...")
+            # Set up a timer to update countdowns every second - use asyncio instead of Textual set_interval
+            print("🚀 Starting asyncio countdown timer task...", file=sys.stderr)
             try:
-                timer = self.set_interval(1.0, self._update_countdown_display)
-                print(f"✅ Timer created successfully: {timer}")
+                # Start an async task for periodic countdown updates
+                self._countdown_task = self.run_worker(
+                    self._periodic_countdown_updater(),
+                    thread=False,
+                    group="countdown_updater",
+                    name="countdown_timer",
+                )
+                print(f"✅ Countdown task created successfully: {self._countdown_task}", file=sys.stderr)
             except Exception as e:
-                print(f"❌ Failed to create timer: {e}")
-                log.error("Failed to create countdown timer", error=str(e))
+                print(f"❌ Failed to create countdown task: {e}", file=sys.stderr)
+                log.error("Failed to create countdown task", error=str(e))
 
             # Set the main worker
             self._worker = self.run_worker(  # type: ignore[assignment]
@@ -279,6 +287,22 @@ class SupsrcTuiApp(TuiAppBase):
         except Exception as e:
             log.exception("Error during TUI mount")
             self._update_sub_title(f"Initialization Error: {e}")
+
+    async def _periodic_countdown_updater(self) -> None:
+        """Async task to update countdown displays every second."""
+        log.info("Countdown updater task started.")
+        try:
+            while not self._shutdown_event.is_set():
+                # Update countdown displays
+                self._update_countdown_display()
+                # Wait 1 second before next update
+                await asyncio.sleep(1.0)
+        except asyncio.CancelledError:
+            log.info("Countdown updater task was cancelled gracefully.")
+        except Exception:
+            log.exception("Countdown updater task failed.")
+        finally:
+            log.info("Countdown updater task finished.")
 
     async def _run_orchestrator(self) -> None:
         """Run the orchestrator with comprehensive error handling."""
