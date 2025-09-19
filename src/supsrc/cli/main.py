@@ -49,15 +49,16 @@ def cli(
     ctx.ensure_object(dict)
 
     # Create Foundation CLI context and setup logging
-    cli_context = CLIContext(
+    CLIContext(
         log_level=log_level or "WARNING",
         log_format=log_format,
         log_file=log_file,
     )
 
     # Use Foundation's public API
-    from provide.foundation import TelemetryConfig, LoggingConfig, get_hub
     import logging
+
+    from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
 
     try:
         # Convert log level string to integer

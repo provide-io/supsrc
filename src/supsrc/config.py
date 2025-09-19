@@ -184,7 +184,7 @@ def load_config(config_path: Path) -> SupsrcConfig:
         config_object = converter.structure(toml_data, SupsrcConfig)
 
         # Validate paths and disable repos with invalid paths
-        for repo_id, repo_config in config_object.repositories.items():
+        for _repo_id, repo_config in config_object.repositories.items():
             p = repo_config.path
             path_valid = True
             try:
