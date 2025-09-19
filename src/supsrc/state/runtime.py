@@ -30,6 +30,9 @@ class RepositoryStatus(Enum):
     PUSHING = auto()
     COMPLETED = auto()
     ERROR = auto()
+    EXTERNAL_COMMIT_DETECTED = auto()
+    CONFLICT_DETECTED = auto()
+    FROZEN = auto()
 
 
 STATUS_EMOJI_MAP = {
@@ -46,6 +49,9 @@ STATUS_EMOJI_MAP = {
     RepositoryStatus.PUSHING: "🚀",
     RepositoryStatus.COMPLETED: "✅",
     RepositoryStatus.ERROR: "❌",
+    RepositoryStatus.EXTERNAL_COMMIT_DETECTED: "🤔",
+    RepositoryStatus.CONFLICT_DETECTED: "⚠️",
+    RepositoryStatus.FROZEN: "🧊",
 }
 
 
