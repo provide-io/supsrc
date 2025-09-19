@@ -69,7 +69,7 @@ class TestEventProcessor:
         with patch("supsrc.events.processor.check_trigger_condition", return_value=True):
             run_task = asyncio.create_task(event_processor.run())
             await event_processor.event_queue.put(event)
-            await asyncio.sleep(DEBOUNCE_DELAY + 0.1)
+            await asyncio.sleep(DEFAULT_DEBOUNCE_DELAY + 0.1)
 
             # Stop the processor
             run_task.cancel()
@@ -90,7 +90,7 @@ class TestEventProcessor:
             await event_processor.event_queue.put(event)
 
             # Wait for the debounce timer to fire and the inactivity timer to be set
-            await asyncio.sleep(DEBOUNCE_DELAY + 0.1)
+            await asyncio.sleep(DEFAULT_DEBOUNCE_DELAY + 0.1)
 
             state = event_processor.repo_states[repo_id]
             assert state.inactivity_timer_handle is not None
@@ -115,7 +115,7 @@ class TestEventProcessor:
         with patch("supsrc.events.processor.check_trigger_condition", return_value=False):
             await event_processor.event_queue.put(event)
             task = asyncio.create_task(event_processor.run())
-            await asyncio.sleep(DEBOUNCE_DELAY + 0.1)
+            await asyncio.sleep(DEFAULT_DEBOUNCE_DELAY + 0.1)
             event_processor.shutdown_event.set()
             await task
 
@@ -166,3 +166,4 @@ class TestEventProcessor:
 
         # Assert: The event should have been consumed and ignored, leaving the queue empty.
         assert event_processor.event_queue.qsize() == 0
+
