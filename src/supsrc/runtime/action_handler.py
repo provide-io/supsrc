@@ -373,6 +373,9 @@ class ActionHandler:
                     )
                     self._emit_event(push_event)
 
+                # Reset state after action (preserves current stats as last_committed before clearing)
+                repo_state.reset_after_action()
+
                 # Refresh repository statistics after successful commit to update UI
                 try:
                     status_result = await repo_engine.get_status(
@@ -393,8 +396,6 @@ class ActionHandler:
                     action_log.warning(
                         "Failed to refresh repository statistics after commit", error=str(e)
                     )
-
-                repo_state.reset_after_action()
 
             self.tui.post_state_update(self.repo_states)
 

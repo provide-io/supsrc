@@ -89,18 +89,18 @@ pip install 'supsrc[llm]'
 2.  **Run the Watcher:**
 
     ```bash
-    # Run in standard console mode
+    # Run with interactive dashboard (TUI mode)
+    supsrc sui
+
+    # Run in headless mode (non-interactive)
     supsrc watch
 
     # Specify a different config file
+    supsrc sui -c /path/to/your/config.toml
     supsrc watch -c /path/to/your/config.toml
 
     # Increase log verbosity
     supsrc watch --log-level DEBUG
-
-    # Run in tail mode (headless, non-interactive)
-    supsrc tail
-    supsrc tail -c /path/to/your/config.toml
     ```
 
 3.  **Check Configuration:** Validate and display the loaded configuration (including environment variable overrides):

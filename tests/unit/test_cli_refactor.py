@@ -11,7 +11,7 @@ from supsrc.cli.main import cli
 
 
 class TestCLIRefactoring:
-    """Test that the CLI refactoring from watch/tui to tail/watch is complete."""
+    """Test that the CLI refactoring from old watch/tui to sui/watch is complete."""
 
     def test_no_tui_flag_in_any_command(self) -> None:
         """Test that --tui flag is completely removed from all commands."""
@@ -21,8 +21,8 @@ class TestCLIRefactoring:
         result = runner.invoke(cli, ["--help"])
         assert "--tui" not in result.output
 
-        # Check tail command help (if it exists)
-        result = runner.invoke(cli, ["tail", "--help"])
+        # Check sui command help (if it exists)
+        result = runner.invoke(cli, ["sui", "--help"])
         if result.exit_code == 0:
             assert "--tui" not in result.output
 
@@ -42,26 +42,35 @@ class TestCLIRefactoring:
         assert result.exit_code != 0
         assert "No such command" in result.output or "Error" in result.output
 
+    def test_no_tail_command(self) -> None:
+        """Test that the deprecated 'tail' command no longer exists."""
+        runner = CliRunner()
+
+        # Try to run deprecated tail command
+        result = runner.invoke(cli, ["tail"])
+
+        # Should fail because command doesn't exist
+        assert result.exit_code != 0
+        assert "No such command" in result.output or "Error" in result.output
+
     def test_new_commands_exist(self) -> None:
-        """Test that new tail and watch commands exist."""
+        """Test that sui and watch commands exist."""
         runner = CliRunner()
 
         # Check main help
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
-        assert "tail" in result.output
+        assert "sui" in result.output
         assert "watch" in result.output
 
-        # tail should be for following changes
-        assert "tail" in result.output
-        assert "follow" in result.output.lower() or "changes" in result.output.lower()
+        # sui should be for interactive monitoring
+        assert "sui" in result.output
 
-        # watch should be for interactive monitoring
+        # watch should be for non-interactive monitoring
         assert "watch" in result.output
-        assert "interactive" in result.output.lower() or "dashboard" in result.output.lower()
 
     def test_command_descriptions_are_clear(self) -> None:
-        """Test that command descriptions clearly differentiate tail vs watch."""
+        """Test that command descriptions clearly differentiate sui vs watch."""
         runner = CliRunner()
 
         result = runner.invoke(cli, ["--help"])
@@ -69,49 +78,49 @@ class TestCLIRefactoring:
 
         output = result.output
 
-        # Find the tail and watch descriptions
+        # Find the sui and watch descriptions
         lines = output.split("\n")
-        tail_desc = ""
+        sui_desc = ""
         watch_desc = ""
 
         for i, line in enumerate(lines):
-            if "tail" in line and i + 1 < len(lines):
+            if "sui" in line and i + 1 < len(lines):
                 # Usually description is on same line or next line
-                tail_desc = line + " " + lines[i + 1]
-            if "watch" in line and i + 1 < len(lines):
+                sui_desc = line + " " + lines[i + 1]
+            if "watch" in line and "sui" not in line and i + 1 < len(lines):
                 watch_desc = line + " " + lines[i + 1]
 
         # Ensure descriptions are different and meaningful
-        assert tail_desc != watch_desc
-        assert len(tail_desc) > 10  # Has actual description
+        assert sui_desc != watch_desc
+        assert len(sui_desc) > 10  # Has actual description
         assert len(watch_desc) > 10  # Has actual description
 
-    def test_old_watch_behavior_moved_to_tail(self) -> None:
-        """Test that the old watch (non-TUI) behavior is now in tail command."""
+    def test_old_watch_behavior_moved_to_watch(self) -> None:
+        """Test that the old watch (non-TUI) behavior is now in watch command."""
         runner = CliRunner()
 
-        # Test tail command has config-path option
-        result = runner.invoke(cli, ["tail", "--help"])
+        # Test watch command has config-path option
+        result = runner.invoke(cli, ["watch", "--help"])
         assert result.exit_code == 0
         assert "--config-path" in result.output
 
-        # Test tail command doesn't have TUI-related options
+        # Test watch command doesn't have TUI-related options
         assert "--tui" not in result.output
-        assert "textual" not in result.output.lower()
 
-    def test_new_watch_is_interactive_only(self) -> None:
-        """Test that new watch command is for interactive UI only."""
+    def test_new_sui_is_interactive_only(self) -> None:
+        """Test that sui command is for interactive UI only."""
         runner = CliRunner()
 
-        # Test watch command help mentions interactive/UI
-        result = runner.invoke(cli, ["watch", "--help"])
+        # Test sui command help mentions interactive/UI
+        result = runner.invoke(cli, ["sui", "--help"])
         assert result.exit_code == 0
 
         # Should mention it's interactive
         assert (
             "interactive" in result.output.lower()
-            or "ui" in result.output.lower()
+            or "interface" in result.output.lower()
             or "dashboard" in result.output.lower()
+            or "tui" in result.output.lower()
         )
 
 

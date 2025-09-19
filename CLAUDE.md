@@ -52,9 +52,8 @@ uv run pyre check        # Run Pyre type checker
 ### Running the Application
 ```bash
 # Start monitoring repositories
-uv run supsrc watch              # Standard console mode
-uv run supsrc watch --tui        # With Terminal UI
-uv run supsrc tail               # Headless mode (no terminal control)
+uv run supsrc watch              # Headless mode (non-interactive)
+uv run supsrc sui               # With Terminal UI (interactive dashboard)
 
 # Configuration commands
 uv run supsrc config show        # Display current configuration
