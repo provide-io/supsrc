@@ -215,6 +215,9 @@ class EventProcessor:
         handle = loop.call_later(delay, self._schedule_action, state.repo_id)
         state.set_inactivity_timer(handle, int(delay))
 
+        # Immediately notify TUI that timer has started so countdown is visible
+        self.tui.post_state_update(self.repo_states)
+
     async def _refresh_repository_statistics(self, repo_id: str) -> None:
         """Refresh repository file statistics after file changes for real-time UI updates."""
         repo_state = self.repo_states.get(repo_id)
