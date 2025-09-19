@@ -71,6 +71,7 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
             # Print status summary (only when there are changes or active timers)
             if status_lines and (active_timers or sleep_interval == 10.0):
                 print("\n".join(status_lines))
+                print()  # Add blank line for readability
 
         except asyncio.CancelledError:
             break

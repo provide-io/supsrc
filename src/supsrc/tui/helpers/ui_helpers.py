@@ -52,6 +52,13 @@ class UIHelperMixin:
                             timer_display = get_countdown_display(repo_state.timer_seconds_left)
                             # Update only column 1 (timer column) to avoid full row refresh
                             table.update_cell(row_index, 1, timer_display)
+                            log.debug(
+                                "Updated timer column",
+                                repo_id=str(repo_id_str),
+                                timer_seconds_left=repo_state.timer_seconds_left,
+                                timer_display=repr(timer_display),
+                                row_index=row_index,
+                            )
                         except Exception as e:
                             # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
                             log.debug(f"Failed to update timer cell for {repo_id_str}, skipping update: {e}")
