@@ -59,6 +59,8 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
                 status_lines.append(status_line)
 
             # Print status summary
+            if status_lines:
+                print("\n".join(status_lines))
 
         except asyncio.CancelledError:
             break
