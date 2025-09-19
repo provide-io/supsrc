@@ -31,8 +31,12 @@ async def monitoring_setup(tmp_path: Path):
     # Initialize Git repository
     subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
     # Configure Git user for integration testing (disable GPG signing to avoid issues)
-    subprocess.run(["git", "config", "user.name", "Integration Test User"], cwd=repo_path, check=True)
-    subprocess.run(["git", "config", "user.email", "integration@supsrc.example.com"], cwd=repo_path, check=True)
+    subprocess.run(
+        ["git", "config", "user.name", "Integration Test User"], cwd=repo_path, check=True
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "integration@supsrc.example.com"], cwd=repo_path, check=True
+    )
     # Disable GPG signing to prevent tests from failing if user has global GPG config
     subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo_path, check=True)
     subprocess.run(["git", "config", "gpg.program", ""], cwd=repo_path, check=True)
@@ -367,7 +371,11 @@ class TestConcurrency:
 
             subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
             # Configure Git user for multi-repo testing (disable GPG signing to avoid issues)
-            subprocess.run(["git", "config", "user.name", f"Multi-Repo Test User {i}"], cwd=repo_path, check=True)
+            subprocess.run(
+                ["git", "config", "user.name", f"Multi-Repo Test User {i}"],
+                cwd=repo_path,
+                check=True,
+            )
             subprocess.run(
                 ["git", "config", "user.email", f"multirepo{i}@supsrc.example.com"],
                 cwd=repo_path,

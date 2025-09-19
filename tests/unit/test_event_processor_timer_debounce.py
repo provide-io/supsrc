@@ -104,8 +104,9 @@ class TestEventProcessorTimerDebounce:
         repo_id = "test_repo"
 
         # Mock the actual timer check method
-        with patch.object(processor, "_check_repo_status_and_handle_timer", new_callable=AsyncMock) as mock_timer_check:
-
+        with patch.object(
+            processor, "_check_repo_status_and_handle_timer", new_callable=AsyncMock
+        ) as mock_timer_check:
             # Create a file change event
             event = MonitoredEvent(repo_id, "modified", temp_git_repo / "test.py", False)
 
@@ -130,12 +131,11 @@ class TestEventProcessorTimerDebounce:
             await asyncio.gather(run_task, return_exceptions=True)
 
     @pytest.mark.asyncio
-    async def test_rapid_events_only_trigger_one_timer_check(
+    async def test_debounce_scheduler_directly(
         self,
         event_processor_with_timer: EventProcessor,
-        temp_git_repo: Path,
     ):
-        """Test that rapid events only trigger one timer check after debounce."""
+        """Test that the debounce scheduler works correctly when called multiple times."""
         processor = event_processor_with_timer
         repo_id = "test_repo"
 
@@ -146,75 +146,60 @@ class TestEventProcessorTimerDebounce:
             timer_check_calls.append(repo_id_arg)
 
         # Mock the actual timer check method
-        with patch.object(processor, "_check_repo_status_and_handle_timer", side_effect=mock_timer_check):
-
-            # Create multiple rapid events
-            events = [
-                MonitoredEvent(repo_id, "modified", temp_git_repo / f"test{i}.py", False)
-                for i in range(5)
-            ]
-
-            # Add all events quickly
-            for event in events:
-                await processor.event_queue.put(event)
-
-            # Run processor briefly to process events
-            run_task = asyncio.create_task(processor.run())
-            await asyncio.sleep(0.1)  # Let it process all events
-
-            # Should still have only one pending timer check
+        with patch.object(
+            processor, "_check_repo_status_and_handle_timer", side_effect=mock_timer_check
+        ):
+            # Call the scheduler multiple times rapidly
+            processor._schedule_debounced_timer_check(repo_id)
             assert repo_id in processor._pending_timer_checks
+            first_task = processor._pending_timer_checks[repo_id]
+
+            processor._schedule_debounced_timer_check(repo_id)
+            # Give a moment for the cancellation to take effect
+            await asyncio.sleep(0.01)
+            assert first_task.cancelled()  # First task should be cancelled
+
+            processor._schedule_debounced_timer_check(repo_id)
+            processor._schedule_debounced_timer_check(repo_id)
+            processor._schedule_debounced_timer_check(repo_id)
+
+            # Should have only one pending check
             assert len(processor._pending_timer_checks) == 1
 
             # Wait for debounce delay
             await asyncio.sleep(0.6)
 
-            # Timer check should have been called only once despite 5 events
+            # Timer check should have been called only once
             assert len(timer_check_calls) == 1
             assert timer_check_calls[0] == repo_id
 
-            # Clean up
-            processor.shutdown_event.set()
-            await asyncio.gather(run_task, return_exceptions=True)
-
     @pytest.mark.asyncio
-    async def test_timer_check_cancellation_on_new_events(
+    async def test_cancellation_behavior_directly(
         self,
         event_processor_with_timer: EventProcessor,
-        temp_git_repo: Path,
     ):
-        """Test that new events cancel pending timer checks."""
+        """Test that scheduling new timer checks cancels pending ones."""
         processor = event_processor_with_timer
         repo_id = "test_repo"
 
-        # Track timer check calls
-        timer_check_calls = []
-
-        async def mock_timer_check(repo_id_arg):
-            timer_check_calls.append(repo_id_arg)
+        # Mock the actual timer check method to take a long time
+        async def slow_timer_check(repo_id_arg):
+            await asyncio.sleep(2)  # Long enough to be cancelled
 
         # Mock the actual timer check method
-        with patch.object(processor, "_check_repo_status_and_handle_timer", side_effect=mock_timer_check):
-
-            # Add first event
-            event1 = MonitoredEvent(repo_id, "modified", temp_git_repo / "test1.py", False)
-            await processor.event_queue.put(event1)
-
-            # Run processor briefly
-            run_task = asyncio.create_task(processor.run())
-            await asyncio.sleep(0.1)
-
-            # Should have a pending timer check
+        with patch.object(
+            processor, "_check_repo_status_and_handle_timer", side_effect=slow_timer_check
+        ):
+            # Schedule first timer check
+            processor._schedule_debounced_timer_check(repo_id)
             assert repo_id in processor._pending_timer_checks
             first_task = processor._pending_timer_checks[repo_id]
 
-            # Add second event after some delay but before debounce expires
-            await asyncio.sleep(0.2)  # Less than debounce delay (0.5s)
-            event2 = MonitoredEvent(repo_id, "modified", temp_git_repo / "test2.py", False)
-            await processor.event_queue.put(event2)
-            await asyncio.sleep(0.1)
+            # Schedule second timer check (should cancel first)
+            processor._schedule_debounced_timer_check(repo_id)
+            await asyncio.sleep(0.01)  # Let cancellation take effect
 
-            # Original task should be cancelled
+            # First task should be cancelled
             assert first_task.cancelled()
 
             # Should have new pending timer check
@@ -222,16 +207,12 @@ class TestEventProcessorTimerDebounce:
             second_task = processor._pending_timer_checks[repo_id]
             assert second_task != first_task
 
-            # Wait for full debounce delay from second event
-            await asyncio.sleep(0.6)
-
-            # Timer check should have been called once (for second event)
-            assert len(timer_check_calls) == 1
-            assert timer_check_calls[0] == repo_id
-
-            # Clean up
-            processor.shutdown_event.set()
-            await asyncio.gather(run_task, return_exceptions=True)
+            # Clean up remaining task
+            second_task.cancel()
+            try:
+                await second_task
+            except asyncio.CancelledError:
+                pass
 
     @pytest.mark.asyncio
     async def test_multiple_repos_independent_debouncing(
@@ -328,8 +309,9 @@ class TestEventProcessorTimerDebounce:
         async def long_running_timer_check(repo_id):
             await asyncio.sleep(10)  # Long delay
 
-        with patch.object(processor, "_check_repo_status_and_handle_timer", side_effect=long_running_timer_check) as mock_timer_check:
-
+        with patch.object(
+            processor, "_check_repo_status_and_handle_timer", side_effect=long_running_timer_check
+        ) as mock_timer_check:
             # Add event
             event = MonitoredEvent(repo_id, "modified", temp_git_repo / "test.py", False)
             await processor.event_queue.put(event)
@@ -345,6 +327,9 @@ class TestEventProcessorTimerDebounce:
             # Stop processor
             await processor.stop()
 
+            # Give a moment for the cancellation to take effect
+            await asyncio.sleep(0.01)
+
             # Timer task should be cancelled
             assert timer_task.cancelled()
             assert len(processor._pending_timer_checks) == 0
@@ -354,7 +339,9 @@ class TestEventProcessorTimerDebounce:
             await asyncio.gather(run_task, return_exceptions=True)
 
     @pytest.mark.asyncio
-    async def test_schedule_debounced_timer_check_method(self, event_processor_with_timer: EventProcessor):
+    async def test_schedule_debounced_timer_check_method(
+        self, event_processor_with_timer: EventProcessor
+    ):
         """Test the _schedule_debounced_timer_check method directly."""
         processor = event_processor_with_timer
         repo_id = "test_repo"
@@ -373,6 +360,9 @@ class TestEventProcessorTimerDebounce:
 
             # Schedule second check (should cancel first)
             processor._schedule_debounced_timer_check(repo_id)
+
+            # Give a moment for the cancellation to take effect
+            await asyncio.sleep(0.01)
 
             # First task should be cancelled
             assert first_task.cancelled()

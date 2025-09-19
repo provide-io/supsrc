@@ -166,4 +166,3 @@ class TestEventProcessor:
 
         # Assert: The event should have been consumed and ignored, leaving the queue empty.
         assert event_processor.event_queue.qsize() == 0
-

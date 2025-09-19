@@ -128,7 +128,6 @@ type = "supsrc.engines.git"
 
         orchestrator.reload_config.assert_called_once()
 
-
     finally:
         config_path.unlink(missing_ok=True)
 

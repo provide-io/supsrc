@@ -93,8 +93,14 @@ class TestOrchestratorLifecycle:
                 head_commit_hash=None, is_empty=True, head_ref_name="UNBORN"
             )
             mock_engine.get_status.return_value = MagicMock(
-                success=True, total_files=0, changed_files=0, added_files=0,
-                deleted_files=0, modified_files=0, is_clean=True, current_branch="main"
+                success=True,
+                total_files=0,
+                changed_files=0,
+                added_files=0,
+                deleted_files=0,
+                modified_files=0,
+                is_clean=True,
+                current_branch="main",
             )
             MockGitEngine.return_value = mock_engine
 
@@ -117,6 +123,7 @@ class TestOrchestratorLifecycle:
 
         # Set up repository manager for delegation
         from supsrc.runtime.repository_manager import RepositoryManager
+
         mock_orchestrator.repository_manager = RepositoryManager(
             mock_orchestrator.repo_states, mock_orchestrator.repo_engines
         )
@@ -140,6 +147,7 @@ class TestOrchestratorFeatures:
 
         # Mock the repository manager
         from unittest.mock import MagicMock
+
         mock_repo_manager = MagicMock()
         mock_repo_manager.toggle_repository_pause.return_value = True
         mock_orchestrator.repository_manager = mock_repo_manager

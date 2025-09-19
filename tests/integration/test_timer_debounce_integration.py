@@ -13,9 +13,14 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
-from supsrc.config.loader import load_config
 
-from supsrc.config import GlobalConfig, InactivityRuleConfig, RepositoryConfig, SupsrcConfig
+from supsrc.config import (
+    GlobalConfig,
+    InactivityRuleConfig,
+    RepositoryConfig,
+    SupsrcConfig,
+    load_config,
+)
 from supsrc.events.processor import EventProcessor
 from supsrc.monitor import MonitoredEvent
 from supsrc.runtime.action_handler import ActionHandler
@@ -34,7 +39,9 @@ async def rapid_change_test_setup(tmp_path: Path):
     subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
     # Configure Git user for timer integration testing
     subprocess.run(["git", "config", "user.name", "Timer Test User"], cwd=repo_path, check=True)
-    subprocess.run(["git", "config", "user.email", "timer@supsrc.example.com"], cwd=repo_path, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "timer@supsrc.example.com"], cwd=repo_path, check=True
+    )
     # Disable GPG signing to prevent tests from failing
     subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo_path, check=True)
     subprocess.run(["git", "config", "gpg.program", ""], cwd=repo_path, check=True)
@@ -129,9 +136,7 @@ class TestTimerDebounceIntegration:
         try:
             # Simulate rapid file changes (5 events in quick succession)
             for i in range(5):
-                event = MonitoredEvent(
-                    "timer-repo", "modified", repo_path / f"file{i}.py", False
-                )
+                event = MonitoredEvent("timer-repo", "modified", repo_path / f"file{i}.py", False)
                 await event_queue.put(event)
                 await asyncio.sleep(0.05)  # 50ms between events
 
@@ -366,7 +371,9 @@ class TestTimerDebounceIntegration:
             repo_path.mkdir()
             subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
             subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True)
-            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True
+            )
             subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo_path, check=True)
             subprocess.run(["git", "config", "gpg.program", ""], cwd=repo_path, check=True)
 

@@ -266,7 +266,5 @@ class TestEventBufferPatterns:
         # Should detect atomic pattern and handle remaining events
         assert len(grouped) >= 1
         # Check if any atomic rewrite was detected
-        has_atomic = any(
-            event.operation_type == "atomic_rewrite" for event in grouped
-        )
+        has_atomic = any(event.operation_type == "atomic_rewrite" for event in grouped)
         assert has_atomic or len(grouped) >= 2  # Either atomic detected or simple grouping applied
