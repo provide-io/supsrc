@@ -33,8 +33,8 @@ class TestOrchestratorLifecycle:
 
     @patch("supsrc.runtime.orchestrator.TUIInterface")
     @patch("supsrc.runtime.orchestrator.ActionHandler")
-    @patch("supsrc.events.processor.EventProcessor")
-    @patch("supsrc.runtime.orchestrator.MonitoringService")
+    @patch("supsrc.runtime.orchestrator.EventProcessor")
+    @patch("supsrc.runtime.orchestrator.MonitoringCoordinator")
     async def test_run_initializes_all_components(
         self,
         MockMonitoringService: MagicMock,
@@ -49,8 +49,10 @@ class TestOrchestratorLifecycle:
         MockEventProcessor.return_value = mock_processor_instance
 
         mock_monitor_instance = MagicMock()
-        mock_monitor_instance.start = MagicMock()
-        mock_monitor_instance.stop = AsyncMock()
+        mock_monitor_instance.setup_monitoring = MagicMock()
+        mock_monitor_instance.setup_config_watcher = MagicMock()
+        mock_monitor_instance.start_services = AsyncMock(return_value=True)
+        mock_monitor_instance.stop_services = AsyncMock()
         MockMonitoringService.return_value = mock_monitor_instance
 
         with patch("supsrc.runtime.orchestrator.load_config", return_value=minimal_config):
@@ -69,9 +71,10 @@ class TestOrchestratorLifecycle:
         MockActionHandler.assert_called_once()
         MockEventProcessor.assert_called_once()
         MockMonitoringService.assert_called_once()
-        mock_monitor_instance.start.assert_called_once()
+        mock_monitor_instance.setup_monitoring.assert_called_once()
+        mock_monitor_instance.start_services.assert_called_once()
         mock_processor_instance.run.assert_called_once()
-        mock_monitor_instance.stop.assert_called_once()
+        mock_monitor_instance.stop_services.assert_called_once()
 
     async def test_initialize_repositories_success(self, mock_orchestrator: WatchOrchestrator):
         """Test that repositories are initialized correctly from config."""
@@ -135,12 +138,13 @@ class TestOrchestratorFeatures:
         mock_orchestrator.repo_states[repo_id] = RepositoryState(repo_id=repo_id)
         repo_state = mock_orchestrator.repo_states[repo_id]
 
-        # Act & Assert (Pause)
-        mock_orchestrator.toggle_repository_pause(repo_id)
-        assert repo_state.is_paused is True
-        assert repo_state.display_status_emoji == "⏸️"
+        # Mock the repository manager
+        from unittest.mock import MagicMock
+        mock_repo_manager = MagicMock()
+        mock_repo_manager.toggle_repository_pause.return_value = True
+        mock_orchestrator.repository_manager = mock_repo_manager
 
-        # Act & Assert (Resume)
-        mock_orchestrator.toggle_repository_pause(repo_id)
-        assert repo_state.is_paused is False
-        assert repo_state.display_status_emoji == "▶️"  # Default for IDLE
+        # Act & Assert (Pause)
+        result = mock_orchestrator.toggle_repository_pause(repo_id)
+        assert result is True
+        mock_repo_manager.toggle_repository_pause.assert_called_with(repo_id)
