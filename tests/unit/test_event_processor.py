@@ -89,8 +89,8 @@ class TestEventProcessor:
             run_task = asyncio.create_task(event_processor.run())
             await event_processor.event_queue.put(event)
 
-            # Wait for the debounce timer to fire and the inactivity timer to be set
-            await asyncio.sleep(DEFAULT_DEBOUNCE_DELAY + 0.1)
+            # Wait for the debounced timer check to fire and the inactivity timer to be set
+            await asyncio.sleep(0.6)  # Timer check debounce delay is 500ms
 
             state = event_processor.repo_states[repo_id]
             assert state.inactivity_timer_handle is not None
