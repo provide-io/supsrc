@@ -101,11 +101,6 @@ class EventProcessor:
                 # Record the change and update UI
                 repo_state.record_change()
 
-                # Start inactivity timer immediately if this is an inactivity rule
-                repo_config = self.config.repositories.get(event.repo_id)
-                if repo_config and isinstance(repo_config.rule, InactivityRuleConfig):
-                    self._start_inactivity_timer(repo_state, repo_config)
-
                 # Schedule async refresh of repository statistics for real-time UI updates
                 task = asyncio.create_task(self._refresh_repository_statistics(event.repo_id))
                 task.add_done_callback(lambda _: None)  # Ensure task is properly handled

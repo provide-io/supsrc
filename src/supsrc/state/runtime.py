@@ -139,9 +139,8 @@ class RepositoryState:
             **({"error": self.error_message} if new_status == RepositoryStatus.ERROR else {}),
         )
 
-        if new_status == RepositoryStatus.IDLE:
+        if new_status in (RepositoryStatus.IDLE, RepositoryStatus.CHANGED):
             self.cancel_inactivity_timer()
-        # Don't cancel timer when changing to CHANGED status - let the debounce mechanism handle it
 
     def record_change(self) -> None:
         """Records a file change event, updating time and count, and sets status to CHANGED."""
@@ -156,7 +155,7 @@ class RepositoryState:
             new_save_count=self.save_count,
             current_status=self.status.name,
         )
-        # Don't cancel timer here - let debounce mechanism handle timer lifecycle
+        self.cancel_inactivity_timer()
 
     def reset_after_action(self) -> None:
         """Resets state fields typically after a successful commit/push sequence."""
