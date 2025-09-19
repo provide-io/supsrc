@@ -101,17 +101,12 @@ class EventProcessor:
                 # Record the change and update UI
                 repo_state.record_change()
 
-                # Handle timer logic based on event type
+                # Handle timer logic - check if repo is clean after any change
                 repo_config = self.config.repositories.get(event.repo_id)
                 if repo_config and isinstance(repo_config.rule, InactivityRuleConfig):
-                    if event.event_type == "deleted":
-                        # For delete events, check if repo is now clean after refresh
-                        # Schedule a delayed check to see if we should stop the timer
-                        task = asyncio.create_task(self._check_repo_clean_after_delete(event.repo_id))
-                        task.add_done_callback(lambda _: None)
-                    else:
-                        # For create/modify events, start inactivity timer immediately
-                        self._start_inactivity_timer(repo_state, repo_config)
+                    # After any file change, check if repo is clean and handle timer accordingly
+                    task = asyncio.create_task(self._check_repo_status_and_handle_timer(event.repo_id))
+                    task.add_done_callback(lambda _: None)
 
                 # Schedule async refresh of repository statistics for real-time UI updates
                 task = asyncio.create_task(self._refresh_repository_statistics(event.repo_id))
@@ -262,8 +257,8 @@ class EventProcessor:
         except Exception as e:
             log.debug("Failed to refresh repository statistics", repo_id=repo_id, error=str(e))
 
-    async def _check_repo_clean_after_delete(self, repo_id: str) -> None:
-        """Check if repository is clean after a file deletion and stop timer if so."""
+    async def _check_repo_status_and_handle_timer(self, repo_id: str) -> None:
+        """Check repository status after any change and start/stop timer accordingly."""
         # Wait a moment for filesystem changes to settle
         await asyncio.sleep(0.1)
 
@@ -280,31 +275,32 @@ class EventProcessor:
                 repo_state, repo_config.repository, self.config.global_config, repo_config.path
             )
 
-            if status_result.success and status_result.is_clean:
-                # Repository is clean - stop timer and set to IDLE
-                log.debug(f"Repository {repo_id} is clean after deletion, stopping timer")
-                repo_state.cancel_inactivity_timer()
-                repo_state.update_status(RepositoryStatus.IDLE)
+            if status_result.success:
+                if status_result.is_clean:
+                    # Repository is clean - stop timer and set to IDLE
+                    log.debug(f"Repository {repo_id} is clean, stopping timer")
+                    repo_state.cancel_inactivity_timer()
+                    repo_state.update_status(RepositoryStatus.IDLE)
 
-                # Update repository statistics
-                repo_state.total_files = status_result.total_files or 0
-                repo_state.changed_files = 0
-                repo_state.added_files = 0
-                repo_state.deleted_files = 0
-                repo_state.modified_files = 0
-                repo_state.has_uncommitted_changes = False
-                repo_state.current_branch = status_result.current_branch
+                    # Update repository statistics to reflect clean state
+                    repo_state.total_files = status_result.total_files or 0
+                    repo_state.changed_files = 0
+                    repo_state.added_files = 0
+                    repo_state.deleted_files = 0
+                    repo_state.modified_files = 0
+                    repo_state.has_uncommitted_changes = False
+                    repo_state.current_branch = status_result.current_branch
+                else:
+                    # Repository has changes - start inactivity timer
+                    log.debug(f"Repository {repo_id} has changes, starting timer")
+                    if isinstance(repo_config.rule, InactivityRuleConfig):
+                        self._start_inactivity_timer(repo_state, repo_config)
 
-                # Update UI to reflect clean state
+                # Always update UI to reflect current state
                 self.tui.post_state_update(self.repo_states)
-            else:
-                # Repository still has changes - continue with timer
-                log.debug(f"Repository {repo_id} still has changes after deletion, keeping timer")
-                if isinstance(repo_config.rule, InactivityRuleConfig):
-                    self._start_inactivity_timer(repo_state, repo_config)
 
         except Exception as e:
-            log.debug("Failed to check repository clean status after delete", repo_id=repo_id, error=str(e))
+            log.debug("Failed to check repository status", repo_id=repo_id, error=str(e))
 
     async def stop(self) -> None:
         """Gracefully stop all scheduled action tasks."""
