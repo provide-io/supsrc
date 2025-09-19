@@ -118,12 +118,12 @@ class EventFeedTable(DataTable):
             # Pattern: [timestamp] [source] [repo_id] description
             parts = description.split("] ")
             if len(parts) >= 3:
-                # Third part should contain [repo_id
-                third_part = parts[2]
-                if third_part.startswith("["):
-                    end_bracket = third_part.find("]")
+                # Look for remaining brackets in the full description after the first two parts
+                remaining_text = "] ".join(parts[2:])  # Rejoin in case there are more parts
+                if remaining_text.startswith("[") and "]" in remaining_text:
+                    end_bracket = remaining_text.find("]")
                     if end_bracket != -1:
-                        return third_part[1:end_bracket]
+                        return remaining_text[1:end_bracket]
 
         # Fallback to event source
         return getattr(event, "source", "unknown")
