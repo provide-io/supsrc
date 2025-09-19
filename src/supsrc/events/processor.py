@@ -170,10 +170,21 @@ class EventProcessor:
             )
             return
 
-        if check_trigger_condition(repo_state, repo_config):
+        trigger_met = check_trigger_condition(repo_state, repo_config)
+        log.debug(
+            "Trigger check result",
+            repo_id=repo_id,
+            trigger_met=trigger_met,
+            rule_type=type(repo_config.rule).__name__,
+            is_inactivity_rule=isinstance(repo_config.rule, InactivityRuleConfig),
+        )
+
+        if trigger_met:
+            log.debug("Scheduling immediate action", repo_id=repo_id)
             self._schedule_action(repo_id)
         elif isinstance(repo_config.rule, InactivityRuleConfig):
             # If the save count rule wasn't met, the inactivity rule might still apply
+            log.debug("Starting inactivity timer", repo_id=repo_id)
             self._start_inactivity_timer(repo_state, repo_config)
 
     def _schedule_action(self, repo_id: str) -> None:
