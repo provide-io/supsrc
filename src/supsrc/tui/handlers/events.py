@@ -56,6 +56,15 @@ class EventHandlerMixin:
             repo_ids=list(message.repo_states.keys()),
         )
 
+        # Skip StateUpdate if cursor is on last row to prevent jumping
+        try:
+            table = self.query_one("#repository_table", DataTable)
+            if table.cursor_row == len(table.rows) - 1:
+                log.debug("Skipping StateUpdate to prevent cursor jumping from last row")
+                return
+        except Exception:
+            pass  # Continue with normal processing if check fails
+
         # Log individual repository states for debugging
         for repo_id, state in message.repo_states.items():
             log.info(
