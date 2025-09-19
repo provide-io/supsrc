@@ -156,6 +156,10 @@ monitor_logs() {
     kill ${TAIL_PID} 2>/dev/null
     kill ${SIMULATOR_PID} 2>/dev/null
 
+    # Reset terminal mouse tracking modes that may be left enabled by TUI
+    printf '\e[?1000l\e[?1002l\e[?1003l\e[?10061l'
+    echo "🔄 Terminal reset complete"
+
     echo ""
     echo "================================================================================"
     echo "🏁 Test completed!"
@@ -180,6 +184,11 @@ cleanup() {
     kill ${TUI_PID} 2>/dev/null
     kill ${SIMULATOR_PID} 2>/dev/null
     kill ${TAIL_PID} 2>/dev/null
+
+    # Reset terminal mouse tracking modes that may be left enabled by TUI
+    printf '\e[?1000l\e[?1002l\e[?1003l\e[?10061l'
+    echo "🔄 Terminal reset complete"
+
     exit 0
 }
 
