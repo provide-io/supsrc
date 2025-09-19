@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from unittest.mock import Mock, patch
-from datetime import datetime
+from unittest.mock import Mock
+
 import pytest
 
-from supsrc.events.buffer import EventBuffer, BufferedFileChangeEvent
+from supsrc.events.buffer import BufferedFileChangeEvent, EventBuffer
 from supsrc.events.monitor import FileChangeEvent
 
 
@@ -421,18 +421,22 @@ class TestEventBuffer:
         )
 
         # Add events to multiple repos
-        buffer.add_event(FileChangeEvent(
-            description="Repo 1 event",
-            repo_id="repo1",
-            file_path=Path("/test/file1.py"),
-            change_type="modified",
-        ))
-        buffer.add_event(FileChangeEvent(
-            description="Repo 2 event",
-            repo_id="repo2",
-            file_path=Path("/test/file2.py"),
-            change_type="modified",
-        ))
+        buffer.add_event(
+            FileChangeEvent(
+                description="Repo 1 event",
+                repo_id="repo1",
+                file_path=Path("/test/file1.py"),
+                change_type="modified",
+            )
+        )
+        buffer.add_event(
+            FileChangeEvent(
+                description="Repo 2 event",
+                repo_id="repo2",
+                file_path=Path("/test/file2.py"),
+                change_type="modified",
+            )
+        )
 
         assert len(buffer._buffers) == 2
         assert len(buffer._timers) == 2
