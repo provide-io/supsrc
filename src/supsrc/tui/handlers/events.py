@@ -56,15 +56,6 @@ class EventHandlerMixin:
             repo_ids=list(message.repo_states.keys()),
         )
 
-        # Skip StateUpdate if cursor is on last row to prevent jumping
-        try:
-            table = self.query_one("#repository_table", DataTable)
-            if table.cursor_row == len(table.rows) - 1:
-                log.debug("Skipping StateUpdate to prevent cursor jumping from last row")
-                return
-        except Exception:
-            pass  # Continue with normal processing if check fails
-
         # Log individual repository states for debugging
         for repo_id, state in message.repo_states.items():
             log.info(
@@ -85,6 +76,17 @@ class EventHandlerMixin:
             # log.debug(f"DEBUG_TUI_APP: on_state_update received: {debug_message_content}")
 
             table = self.query_one("#repository_table", DataTable)
+
+            # Save cursor position using row key (more stable than index)
+            cursor_row_key = None
+            try:
+                if table.cursor_row < len(table.rows):
+                    cursor_coordinate = table.coordinate_to_cell_key((table.cursor_row, 0))
+                    cursor_row_key = cursor_coordinate.row_key
+                    log.debug(f"Saved cursor position for row key: {cursor_row_key}")
+            except Exception:
+                pass
+
             current_keys = set(table.rows.keys())
             incoming_keys = set(message.repo_states.keys())
 
@@ -247,6 +249,20 @@ class EventHandlerMixin:
                         table.add_row(*row_data, key=repo_id_str)
                 else:
                     table.add_row(*row_data, key=repo_id_str)
+
+            # Restore cursor position using row key
+            if cursor_row_key is not None:
+                try:
+                    # Find the row index for the saved row key
+                    if cursor_row_key in table.rows:
+                        new_cursor_row = table.get_row_index(cursor_row_key)
+                        if new_cursor_row != table.cursor_row:
+                            table.cursor_row = new_cursor_row
+                            log.debug(
+                                f"Restored cursor to row {new_cursor_row} for key {cursor_row_key}"
+                            )
+                except Exception as e:
+                    log.debug(f"Failed to restore cursor position: {e}")
 
         except Exception as e:
             log.error("Failed to update TUI table", error=str(e))
