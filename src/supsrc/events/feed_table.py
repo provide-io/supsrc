@@ -136,6 +136,18 @@ class EventFeedTable(DataTable):
 
     def _get_event_emoji(self, event: Event) -> str:
         """Get appropriate emoji for the event type."""
+        # Check for specific event types first (new system events)
+        event_type = type(event).__name__
+        event_type_emojis = {
+            "ExternalCommitEvent": "🤔",  # THINKING FACE
+            "ConflictDetectedEvent": "⚠️",  # WARNING SIGN
+            "RepositoryFrozenEvent": "🧊",  # ICE CUBE
+            "TestFailureEvent": "🔬",  # MICROSCOPE
+            "LLMVetoEvent": "🧠",  # BRAIN
+        }
+        if event_type in event_type_emojis:
+            return event_type_emojis[event_type]
+
         # Check if it's a BufferedFileChangeEvent with specific operations
         if hasattr(event, "operation_type"):
             if event.operation_type == "atomic_rewrite":
@@ -291,6 +303,24 @@ class EventFeedTable(DataTable):
 
     def _extract_message(self, event: Event) -> str:
         """Extract a message from the event."""
+        # Handle specific event types with custom messages
+        event_type = type(event).__name__
+        if event_type == "ExternalCommitEvent":
+            commit_hash = getattr(event, "commit_hash", None)
+            return f"Committed externally{f' ({commit_hash[:7]})' if commit_hash else ''}"
+        elif event_type == "ConflictDetectedEvent":
+            conflict_files = getattr(event, "conflict_files", [])
+            file_count = len(conflict_files)
+            return f"Conflicts in {file_count} file{'s' if file_count != 1 else ''}" if file_count > 0 else "Merge conflicts"
+        elif event_type == "RepositoryFrozenEvent":
+            reason = getattr(event, "reason", "Unknown reason")
+            return f"Frozen: {reason}"
+        elif event_type == "TestFailureEvent":
+            return "Tests failed"
+        elif event_type == "LLMVetoEvent":
+            reason = getattr(event, "reason", "Review failed")
+            return f"Blocked: {reason[:20]}..." if len(reason) > 20 else f"Blocked: {reason}"
+
         # For BufferedFileChangeEvent, create a descriptive message
         if hasattr(event, "operation_type"):
             op_type = getattr(event, "operation_type", "")

@@ -85,6 +85,12 @@ class ActionHandler:
                 "No event collector available to emit event", event_type=type(event).__name__
             )
 
+    async def _delayed_reset_after_external_commit(self, repo_state: RepositoryState) -> None:
+        """Reset repository state after a brief delay to show external commit status."""
+        await asyncio.sleep(2.0)  # Show the status for 2 seconds
+        repo_state.reset_after_action()
+        self.tui.post_state_update(self.repo_states)
+
     def _get_llm_provider(self, llm_config: LLMConfig) -> LLMProvider | None:
         """Instantiates and returns an LLM provider based on config."""
         if not LLM_AVAILABLE:
@@ -267,7 +273,8 @@ class ActionHandler:
                     self._emit_event(external_commit_event)
 
                     # Reset after brief pause to show the status
-                    asyncio.create_task(self._delayed_reset_after_external_commit(repo_state))
+                    _reset_task = asyncio.create_task(self._delayed_reset_after_external_commit(repo_state))  # noqa: RUF006
+                    # Task will run independently and complete the reset
                 self.tui.post_state_update(self.repo_states)
                 return
 
@@ -311,6 +318,15 @@ class ActionHandler:
                             RepositoryStatus.ERROR, f"LLM Review Veto: {reason}"
                         )
                         repo_state.action_description = f"LLM Review Veto: {reason}"
+
+                        # Emit LLM veto event
+                        veto_event = LLMVetoEvent(
+                            description=f"LLM review blocked commit: {reason}",
+                            repo_id=repo_id,
+                            reason=reason,
+                        )
+                        self._emit_event(veto_event)
+
                         self.tui.post_state_update(self.repo_states)
                         return
 
@@ -331,6 +347,15 @@ class ActionHandler:
                             RepositoryStatus.ERROR, f"Tests Failed: {analysis}"
                         )
                         repo_state.action_description = "Automated tests failed."
+
+                        # Emit test failure event
+                        test_failure_event = TestFailureEvent(
+                            description=f"Automated tests failed: {analysis}",
+                            repo_id=repo_id,
+                            test_output=failure_output,
+                        )
+                        self._emit_event(test_failure_event)
+
                         self.tui.post_state_update(self.repo_states)
                         return
 
