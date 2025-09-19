@@ -14,7 +14,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
-from supsrc.config.loader import load_config
+from supsrc.config import load_config
 
 from supsrc.tui.app import SupsrcTuiApp
 from tests.helpers.config_testing import (

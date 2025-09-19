@@ -21,7 +21,7 @@ from supsrc.config import (
     RepositoryConfig,
     SupsrcConfig,
 )
-from supsrc.config.loader import load_config
+from supsrc.config import load_config
 from supsrc.tui.app import SupsrcTuiApp
 from tests.helpers.config_testing import (
     real_config_path,
