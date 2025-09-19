@@ -115,24 +115,32 @@ class EventProcessor:
                 self.tui.post_state_update(self.repo_states)
 
                 # Emit file change event for TUI event feed
-                if (
-                    self.tui
-                    and hasattr(self.tui, "app")
-                    and self.tui.app
-                    and hasattr(self.tui.app, "event_collector")
-                ):
-                    try:
-                        from supsrc.events.monitor import FileChangeEvent
+                if self.tui and hasattr(self.tui, "app") and self.tui.app:
+                    if hasattr(self.tui.app, "event_collector"):
+                        try:
+                            from supsrc.events.monitor import FileChangeEvent
 
-                        change_event = FileChangeEvent(
-                            description=f"File {event.event_type}: {event.src_path.name}",
-                            repo_id=event.repo_id,
-                            file_path=event.src_path,
-                            change_type=event.event_type,
-                        )
-                        self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
-                    except Exception as e:
-                        log.debug("Failed to emit TUI event", error=str(e))
+                            change_event = FileChangeEvent(
+                                description=f"File {event.event_type}: {event.src_path.name}",
+                                repo_id=event.repo_id,
+                                file_path=event.src_path,
+                                change_type=event.event_type,
+                            )
+                            self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
+                            log.debug("File change event emitted successfully",
+                                     event_type=event.event_type,
+                                     file_name=event.src_path.name,
+                                     repo_id=event.repo_id)
+                        except Exception as e:
+                            log.warning("Failed to emit TUI file change event",
+                                       error=str(e),
+                                       event_type=event.event_type,
+                                       repo_id=event.repo_id,
+                                       exc_info=True)
+                    else:
+                        log.warning("TUI app exists but no event_collector found")
+                else:
+                    log.debug("TUI or TUI app not available for event emission")
 
                 # Start debounced check for save count rules and other trigger conditions
                 self._debounce_trigger_check(event.repo_id)

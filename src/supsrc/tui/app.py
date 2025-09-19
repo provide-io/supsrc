@@ -238,6 +238,8 @@ class SupsrcTuiApp(TuiAppBase):
             try:
                 self._event_feed = self.query_one("#event-feed", EventFeed)
                 self.event_collector.subscribe(self._event_feed.add_event)
+                log.info("Event feed widget found and subscribed to event collector",
+                        handler_count=len(self.event_collector._handlers))
 
                 # Create a welcome event
                 from supsrc.events.system import UserActionEvent
@@ -247,9 +249,9 @@ class SupsrcTuiApp(TuiAppBase):
                     action="start",
                 )
                 self.event_collector.emit(welcome_event)  # type: ignore[arg-type]
-                log.debug("Event feed widget initialized successfully")
+                log.info("Welcome event emitted to test event feed")
             except Exception as e:
-                log.error("Failed to initialize event feed widget", error=str(e))
+                log.error("Failed to initialize event feed widget", error=str(e), exc_info=True)
 
             # Set up a timer to check for external shutdown every 500ms
             self.set_interval(0.5, self._check_external_shutdown)
