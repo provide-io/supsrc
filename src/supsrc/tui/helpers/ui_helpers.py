@@ -57,10 +57,9 @@ class UIHelperMixin:
 
             table = self.query_one("#repository_table", DataTable)
 
-            # Skip timer updates if cursor is on the last row to prevent jumping
-            if table.cursor_row == len(table.rows) - 1:
-                log.debug("Skipping timer update to prevent cursor jumping from last row")
-                return
+            # Save cursor position
+            saved_cursor_row = table.cursor_row
+            saved_cursor_col = table.cursor_column
 
             if hasattr(self, "_orchestrator") and self._orchestrator:
                 for repo_id_str, repo_state in self._orchestrator.repo_states.items():
@@ -68,8 +67,18 @@ class UIHelperMixin:
                         try:
                             row_index = table.get_row_index(str(repo_id_str))
                             timer_display = get_countdown_display(repo_state.timer_seconds_left)
+
                             # Update only column 1 (timer column) to avoid full row refresh
                             table.update_cell(row_index, 1, timer_display)
+
+                            # Immediately restore cursor position after each update
+                            if saved_cursor_row < len(table.rows) and (
+                                table.cursor_row != saved_cursor_row
+                                or table.cursor_column != saved_cursor_col
+                            ):
+                                table.cursor_row = saved_cursor_row
+                                table.cursor_column = saved_cursor_col
+
                             log.debug(
                                 "Updated timer column",
                                 repo_id=str(repo_id_str),
