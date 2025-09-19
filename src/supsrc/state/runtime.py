@@ -28,6 +28,7 @@ class RepositoryStatus(Enum):
     GENERATING_COMMIT = auto()
     COMMITTING = auto()
     PUSHING = auto()
+    COMPLETED = auto()
     ERROR = auto()
 
 
@@ -43,6 +44,7 @@ STATUS_EMOJI_MAP = {
     RepositoryStatus.GENERATING_COMMIT: "✍️",
     RepositoryStatus.COMMITTING: "💾",
     RepositoryStatus.PUSHING: "🚀",
+    RepositoryStatus.COMPLETED: "✅",
     RepositoryStatus.ERROR: "❌",
 }
 

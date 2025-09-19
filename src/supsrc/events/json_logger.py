@@ -59,10 +59,7 @@ class JSONEventLogger:
             elif isinstance(value, dict):
                 serialized[key] = self._serialize_metadata(value)
             elif isinstance(value, (list, tuple)):
-                serialized[key] = [
-                    str(item) if isinstance(item, Path) else item
-                    for item in value
-                ]
+                serialized[key] = [str(item) if isinstance(item, Path) else item for item in value]
             else:
                 serialized[key] = value
         return serialized
