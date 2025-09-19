@@ -354,15 +354,19 @@ class EventProcessor:
 
         # Schedule new timer check after debounce delay
         async def debounced_timer_check():
-            await asyncio.sleep(self._timer_check_delay)
-            # Remove from pending checks since we're about to execute
-            self._pending_timer_checks.pop(repo_id, None)
-            # Now actually check repo status and handle timer
-            await self._check_repo_status_and_handle_timer(repo_id)
+            try:
+                await asyncio.sleep(self._timer_check_delay)
+                # Remove from pending checks since we're about to execute
+                self._pending_timer_checks.pop(repo_id, None)
+                # Now actually check repo status and handle timer
+                await self._check_repo_status_and_handle_timer(repo_id)
+            except asyncio.CancelledError:
+                # Clean up if cancelled
+                self._pending_timer_checks.pop(repo_id, None)
+                raise
 
         task = asyncio.create_task(debounced_timer_check())
         self._pending_timer_checks[repo_id] = task
-        task.add_done_callback(lambda _: self._pending_timer_checks.pop(repo_id, None))
 
         log.debug(
             "Scheduled debounced timer check",
