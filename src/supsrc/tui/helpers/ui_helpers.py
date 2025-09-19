@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import structlog
 
-from supsrc.tui.messages import StateUpdate
-
 log = structlog.get_logger("tui.ui_helpers")
 
 
@@ -33,7 +31,8 @@ class UIHelperMixin:
                 # Update only the timer column directly to avoid cursor jumping
                 self._update_timer_columns_only()
         except Exception as e:
-            log.debug(f"Error updating countdown: {e}")
+            # Use warning level to make errors more visible during debugging
+            log.warning(f"Error updating countdown display: {e}", exc_info=True)
 
     def _update_timer_columns_only(self) -> None:
         """Update only the timer column for all repositories to avoid cursor jumping."""
@@ -61,12 +60,12 @@ class UIHelperMixin:
                             )
                         except Exception as e:
                             # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
-                            log.debug(f"Failed to update timer cell for {repo_id_str}, skipping update: {e}")
+                            log.warning(f"Failed to update timer cell for {repo_id_str}, skipping update: {e}", exc_info=True)
                             # Continue to next repository instead of breaking/posting StateUpdate
                             continue
         except Exception as e:
             # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
-            log.debug(f"Error in timer column update, skipping timer updates: {e}")
+            log.warning(f"Error in timer column update, skipping timer updates: {e}", exc_info=True)
 
     def _update_sub_title(self, text: str) -> None:
         """Update subtitle safely."""
