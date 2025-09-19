@@ -15,6 +15,13 @@ from provide.foundation.logger import get_logger
 
 from supsrc.config import LLMConfig, SupsrcConfig
 from supsrc.events.collector import EventCollector
+from supsrc.events.system import (
+    ConflictDetectedEvent,
+    ExternalCommitEvent,
+    LLMVetoEvent,
+    RepositoryFrozenEvent,
+    TestFailureEvent,
+)
 from supsrc.protocols import (
     CommitResult,
     PushResult,
@@ -223,12 +230,44 @@ class ActionHandler:
                     )
                     repo_state.action_description = "Status check failed."
                 elif status_result.is_conflicted:
-                    repo_state.update_status(RepositoryStatus.ERROR, "Repo has conflicts.")
+                    repo_state.update_status(RepositoryStatus.CONFLICT_DETECTED, "Repo has conflicts.")
                     repo_state.action_description = "Merge conflict detected."
                     repo_state.is_frozen = True
                     repo_state.freeze_reason = "Merge conflicts detected"
-                else:  # is_clean
-                    repo_state.reset_after_action()
+
+                    # Emit conflict detected event
+                    conflict_event = ConflictDetectedEvent(
+                        description="Merge conflicts detected in repository",
+                        repo_id=repo_id,
+                        conflict_files=[],  # Could be enhanced to show specific files
+                    )
+                    self._emit_event(conflict_event)
+
+                    # Emit repository frozen event
+                    frozen_event = RepositoryFrozenEvent(
+                        description="Repository frozen due to merge conflicts",
+                        repo_id=repo_id,
+                        reason="Merge conflicts detected",
+                    )
+                    self._emit_event(frozen_event)
+                else:  # is_clean - likely external commit
+                    # Update status to indicate external commit was detected
+                    repo_state.update_status(
+                        RepositoryStatus.EXTERNAL_COMMIT_DETECTED,
+                        "Changes committed externally"
+                    )
+                    repo_state.action_description = "External commit detected"
+
+                    # Emit external commit event
+                    external_commit_event = ExternalCommitEvent(
+                        description="Changes were committed externally",
+                        repo_id=repo_id,
+                        commit_hash=None,  # Could be enhanced to get actual commit hash
+                    )
+                    self._emit_event(external_commit_event)
+
+                    # Reset after brief pause to show the status
+                    asyncio.create_task(self._delayed_reset_after_external_commit(repo_state))
                 self.tui.post_state_update(self.repo_states)
                 return
 
