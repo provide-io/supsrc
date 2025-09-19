@@ -137,18 +137,19 @@ def tui_with_real_config(real_config):
 
 @pytest.fixture
 def subprocess_runner():
-    """Pytest fixture for running CLI commands as subprocesses."""
+    """Pytest fixture for running CLI commands using foundation's process utilities."""
+    from provide.foundation.process import run_command as foundation_run_command
+
     def run_command(args: list[str], cwd: Path | None = None, timeout: float = 10.0):
         """Run a supsrc CLI command and return the result."""
         import sys
         full_args = [sys.executable, "-m", "supsrc.cli.main"] + args
 
-        return subprocess.run(
+        return foundation_run_command(
             full_args,
             cwd=cwd,
-            capture_output=True,
-            text=True,
             timeout=timeout,
+            check=False,
         )
 
     return run_command
