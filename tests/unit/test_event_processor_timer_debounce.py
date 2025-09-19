@@ -139,8 +139,14 @@ class TestEventProcessorTimerDebounce:
         processor = event_processor_with_timer
         repo_id = "test_repo"
 
+        # Track timer check calls
+        timer_check_calls = []
+
+        async def mock_timer_check(repo_id_arg):
+            timer_check_calls.append(repo_id_arg)
+
         # Mock the actual timer check method
-        with patch.object(processor, "_check_repo_status_and_handle_timer", new_callable=AsyncMock) as mock_timer_check:
+        with patch.object(processor, "_check_repo_status_and_handle_timer", side_effect=mock_timer_check):
 
             # Create multiple rapid events
             events = [
@@ -152,7 +158,7 @@ class TestEventProcessorTimerDebounce:
             for event in events:
                 await processor.event_queue.put(event)
 
-            # Run processor briefly
+            # Run processor briefly to process events
             run_task = asyncio.create_task(processor.run())
             await asyncio.sleep(0.1)  # Let it process all events
 
@@ -163,8 +169,9 @@ class TestEventProcessorTimerDebounce:
             # Wait for debounce delay
             await asyncio.sleep(0.6)
 
-            # Timer check should have been called only once
-            mock_timer_check.assert_called_once_with(repo_id)
+            # Timer check should have been called only once despite 5 events
+            assert len(timer_check_calls) == 1
+            assert timer_check_calls[0] == repo_id
 
             # Clean up
             processor.shutdown_event.set()
@@ -180,8 +187,14 @@ class TestEventProcessorTimerDebounce:
         processor = event_processor_with_timer
         repo_id = "test_repo"
 
+        # Track timer check calls
+        timer_check_calls = []
+
+        async def mock_timer_check(repo_id_arg):
+            timer_check_calls.append(repo_id_arg)
+
         # Mock the actual timer check method
-        with patch.object(processor, "_check_repo_status_and_handle_timer", new_callable=AsyncMock) as mock_timer_check:
+        with patch.object(processor, "_check_repo_status_and_handle_timer", side_effect=mock_timer_check):
 
             # Add first event
             event1 = MonitoredEvent(repo_id, "modified", temp_git_repo / "test1.py", False)
@@ -213,7 +226,8 @@ class TestEventProcessorTimerDebounce:
             await asyncio.sleep(0.6)
 
             # Timer check should have been called once (for second event)
-            mock_timer_check.assert_called_once_with(repo_id)
+            assert len(timer_check_calls) == 1
+            assert timer_check_calls[0] == repo_id
 
             # Clean up
             processor.shutdown_event.set()

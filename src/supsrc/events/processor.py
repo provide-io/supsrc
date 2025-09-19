@@ -350,17 +350,21 @@ class EventProcessor:
         """Schedule a debounced timer check to prevent constant timer resets with rapid changes."""
         # Cancel any pending timer check for this repo
         if repo_id in self._pending_timer_checks:
+            log.debug("Cancelling existing timer check", repo_id=repo_id)
             self._pending_timer_checks[repo_id].cancel()
 
         # Schedule new timer check after debounce delay
         async def debounced_timer_check():
             try:
+                log.debug("Timer check sleeping", repo_id=repo_id, delay=self._timer_check_delay)
                 await asyncio.sleep(self._timer_check_delay)
                 # Remove from pending checks since we're about to execute
                 self._pending_timer_checks.pop(repo_id, None)
+                log.debug("Executing timer check", repo_id=repo_id)
                 # Now actually check repo status and handle timer
                 await self._check_repo_status_and_handle_timer(repo_id)
             except asyncio.CancelledError:
+                log.debug("Timer check cancelled", repo_id=repo_id)
                 # Clean up if cancelled
                 self._pending_timer_checks.pop(repo_id, None)
                 raise
@@ -372,6 +376,7 @@ class EventProcessor:
             "Scheduled debounced timer check",
             repo_id=repo_id,
             delay_ms=self._timer_check_delay * 1000,
+            pending_count=len(self._pending_timer_checks),
         )
 
     def _emit_buffered_event(self, event: Any) -> None:
