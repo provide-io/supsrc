@@ -231,6 +231,12 @@ class ActionHandler:
 
             if not status_result.success or status_result.is_conflicted or status_result.is_clean:
                 if not status_result.success:
+                    # Log the failure for debugging
+                    action_log.warning(
+                        "Git status check failed during action",
+                        message=status_result.message,
+                        success=status_result.success
+                    )
                     repo_state.update_status(
                         RepositoryStatus.ERROR, f"Status check failed: {status_result.message}"
                     )
@@ -257,6 +263,14 @@ class ActionHandler:
                     )
                     self._emit_event(frozen_event)
                 else:  # is_clean - likely external commit
+                    # Log the detection for debugging
+                    action_log.info(
+                        "Repository is clean during action - external commit detected",
+                        success=status_result.success,
+                        is_clean=status_result.is_clean,
+                        is_conflicted=status_result.is_conflicted
+                    )
+
                     # Update status to indicate external commit was detected
                     repo_state.update_status(
                         RepositoryStatus.EXTERNAL_COMMIT_DETECTED,
