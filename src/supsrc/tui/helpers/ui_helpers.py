@@ -40,8 +40,11 @@ class UIHelperMixin:
                     f"UPDATED {len(self._orchestrator.repo_states)} repo states, {active_timers} active timers"
                 )
 
-                # Update only the timer column directly to avoid cursor jumping
-                self._update_timer_columns_only()
+                # Post full StateUpdate to ensure timers update properly
+                if hasattr(self, "post_message"):
+                    from supsrc.tui.messages import StateUpdate
+
+                    self.post_message(StateUpdate(self._orchestrator.repo_states))
             else:
                 log.warning("NO ORCHESTRATOR AVAILABLE FOR COUNTDOWN UPDATE")
         except Exception as e:
