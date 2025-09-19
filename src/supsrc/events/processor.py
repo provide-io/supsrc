@@ -49,6 +49,10 @@ class EventProcessor:
         self._action_tasks: set[asyncio.Task] = set()
         self._recent_moves: set[Path] = set()
 
+        # Initialize timer check debouncing to prevent constant timer resets
+        self._pending_timer_checks: dict[str, asyncio.Task] = {}
+        self._timer_check_delay = 0.5  # 500ms debounce delay for timer checks
+
         # Initialize event buffer for TUI events
         global_config = config.global_config
         if global_config.event_buffering_enabled:
@@ -119,14 +123,11 @@ class EventProcessor:
                 # Record the change and update UI
                 repo_state.record_change()
 
-                # Handle timer logic - check if repo is clean after any change
+                # Handle timer logic - check if repo is clean after any change (with debouncing)
                 repo_config = self.config.repositories.get(event.repo_id)
                 if repo_config and isinstance(repo_config.rule, InactivityRuleConfig):
-                    # After any file change, check if repo is clean and handle timer accordingly
-                    task = asyncio.create_task(
-                        self._check_repo_status_and_handle_timer(event.repo_id)
-                    )
-                    task.add_done_callback(lambda _: None)
+                    # Use debounced timer check to prevent constant timer resets
+                    self._schedule_debounced_timer_check(event.repo_id)
 
                 # Schedule async refresh of repository statistics for real-time UI updates
                 task = asyncio.create_task(self._refresh_repository_statistics(event.repo_id))
@@ -345,6 +346,30 @@ class EventProcessor:
         except Exception as e:
             log.debug("Failed to check repository status", repo_id=repo_id, error=str(e))
 
+    def _schedule_debounced_timer_check(self, repo_id: str) -> None:
+        """Schedule a debounced timer check to prevent constant timer resets with rapid changes."""
+        # Cancel any pending timer check for this repo
+        if repo_id in self._pending_timer_checks:
+            self._pending_timer_checks[repo_id].cancel()
+
+        # Schedule new timer check after debounce delay
+        async def debounced_timer_check():
+            await asyncio.sleep(self._timer_check_delay)
+            # Remove from pending checks since we're about to execute
+            self._pending_timer_checks.pop(repo_id, None)
+            # Now actually check repo status and handle timer
+            await self._check_repo_status_and_handle_timer(repo_id)
+
+        task = asyncio.create_task(debounced_timer_check())
+        self._pending_timer_checks[repo_id] = task
+        task.add_done_callback(lambda _: self._pending_timer_checks.pop(repo_id, None))
+
+        log.debug(
+            "Scheduled debounced timer check",
+            repo_id=repo_id,
+            delay_ms=self._timer_check_delay * 1000,
+        )
+
     def _emit_buffered_event(self, event: Any) -> None:
         """Emit a buffered event to the TUI event collector."""
         if (
@@ -373,6 +398,12 @@ class EventProcessor:
         # Flush any pending buffered events
         if self._event_buffer:
             self._event_buffer.flush_all()
+
+        # Cancel any pending timer checks
+        for _repo_id, task in self._pending_timer_checks.items():
+            task.cancel()
+        self._pending_timer_checks.clear()
+        log.debug("Cancelled pending timer checks")
 
         if not self._action_tasks:
             return
