@@ -13,6 +13,7 @@ from typing import Any, TypeAlias
 
 # Foundation includes attrs as a dependency
 from attrs import define, field, mutable
+from attrs.validators import instance_of
 from provide.foundation.errors.config import ConfigurationError
 from provide.foundation.file import read_toml
 

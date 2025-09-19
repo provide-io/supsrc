@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,21 @@ class BufferedFileChangeEvent(Event):
     )  # "single_file", "atomic_rewrite", "batch_operation"
     event_count: int = attrs.field(kw_only=True)
     primary_change_type: str = attrs.field(kw_only=True, default="modified")
+
+    # Required by Event protocol
+    description: str = attrs.field(init=False)
+    timestamp: datetime = attrs.field(factory=datetime.now, init=False)
+
+    def __attrs_post_init__(self):
+        """Set description after initialization."""
+        if self.operation_type == "atomic_rewrite":
+            desc = f"Atomic rewrite of {len(self.file_paths)} file(s)"
+        elif self.operation_type == "batch_operation":
+            desc = f"Batch operation on {len(self.file_paths)} files"
+        else:
+            desc = f"File {self.primary_change_type}: {self.file_paths[0].name if self.file_paths else 'unknown'}"
+
+        object.__setattr__(self, "description", desc)
 
     def format(self) -> str:
         """Format buffered file change event for display."""
@@ -265,11 +281,17 @@ class EventBuffer:
             # Pattern 2: .filename.xxx (where xxx is random chars)
             elif name.startswith(".") and len(name) > 8:
                 # Look for files without the leading dot and random suffix
-                base_name = name[1:].split(".")[0]
-                if base_name:
-                    potential_original = file_path.parent / base_name
-                    if potential_original in file_paths:
-                        temp_patterns[potential_original].append(file_path)
+                # Handle cases like .file.py.abcd1234 -> file.py
+                name_parts = name[1:].split(".")
+                if len(name_parts) >= 2:
+                    # Try different combinations
+                    for i in range(1, len(name_parts)):
+                        potential_name = ".".join(name_parts[:i])
+                        if potential_name:
+                            potential_original = file_path.parent / potential_name
+                            if potential_original in file_paths:
+                                temp_patterns[potential_original].append(file_path)
+                                break
 
         return temp_patterns
 
