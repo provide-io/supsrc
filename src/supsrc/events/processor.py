@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from provide.foundation.logger import get_logger
 
 from supsrc.config import InactivityRuleConfig, RepositoryConfig, SupsrcConfig
+from supsrc.constants import DEFAULT_DEBOUNCE_DELAY
 from supsrc.monitor import MonitoredEvent
 from supsrc.rules import check_trigger_condition
 from supsrc.state import RepositoryState, RepositoryStatus
@@ -20,8 +21,6 @@ if TYPE_CHECKING:
     from supsrc.runtime.tui_interface import TUIInterface
 
 log = get_logger("runtime.event_processor")
-# Debounce delay to group rapid file system events (e.g., create + modify) into one action.
-DEBOUNCE_DELAY = 0.25  # 250 milliseconds
 
 
 class EventProcessor:
@@ -148,9 +147,9 @@ class EventProcessor:
 
         repo_state.cancel_debounce_timer()
         loop = asyncio.get_running_loop()
-        handle = loop.call_later(DEBOUNCE_DELAY, self._execute_trigger_check, repo_id)
+        handle = loop.call_later(DEFAULT_DEBOUNCE_DELAY, self._execute_trigger_check, repo_id)
         repo_state.set_debounce_timer(handle)
-        log.debug("Debounce timer set", repo_id=repo_id, delay=DEBOUNCE_DELAY)
+        log.debug("Debounce timer set", repo_id=repo_id, delay=DEFAULT_DEBOUNCE_DELAY)
 
     def _execute_trigger_check(self, repo_id: str):
         """Called by the debounce timer. Checks rules and triggers the appropriate action."""

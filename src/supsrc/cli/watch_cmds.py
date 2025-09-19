@@ -12,6 +12,7 @@ from provide.foundation.cli.decorators import logging_options
 from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.config import load_config
+from supsrc.constants import DEFAULT_WATCH_ACTIVE_INTERVAL, DEFAULT_WATCH_IDLE_INTERVAL
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.utils.directories import SupsrcDirectories
 
@@ -31,7 +32,7 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
                         active_timers = True
 
             # Sleep based on whether timers are active
-            sleep_interval = 1.0 if active_timers else 10.0
+            sleep_interval = DEFAULT_WATCH_ACTIVE_INTERVAL if active_timers else DEFAULT_WATCH_IDLE_INTERVAL
             await asyncio.sleep(sleep_interval)
 
             if not orchestrator.repo_states:
@@ -69,7 +70,7 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
                 status_lines.append(status_line)
 
             # Print status summary (only when there are changes or active timers)
-            if status_lines and (active_timers or sleep_interval == 10.0):
+            if status_lines and (active_timers or sleep_interval == DEFAULT_WATCH_IDLE_INTERVAL):
                 print("\n".join(status_lines))
                 print()  # Add blank line for readability
 
