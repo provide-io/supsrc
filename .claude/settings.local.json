@@ -8,7 +8,8 @@
       "Read(//Users/tim/code/gh/**)",
       "Bash(timeout:*)",
       "Bash(tee:*)",
-      "Bash(PYTHONPATH=\"/Users/tim/code/gh/provide-io/provide-foundation/src:./src\" python3 scripts/test_interactive.py --auto-run)"
+      "Bash(PYTHONPATH=\"/Users/tim/code/gh/provide-io/provide-foundation/src:./src\" python3 scripts/test_interactive.py --auto-run)",
+      "Bash(printf '\\e[?1000l\\e[?1002l\\e[?1003l\\e[?1006l')"
     ],
     "deny": [],
     "ask": [],
