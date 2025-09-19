@@ -147,7 +147,11 @@ class ActionHandlerMixin:
 
     def action_select_repo_for_detail(self) -> None:
         """Select a repository for detailed view."""
-        table = self.query_one(DataTable)
+        # Only work when the repository table is focused
+        table = self.query_one("#repository_table", DataTable)
+        if not table.has_focus:
+            return  # Let other widgets handle Enter key
+
         if table.cursor_coordinate.row < len(table.rows):
             selected_row = table.get_row_at(table.cursor_coordinate.row)
             repo_id = str(selected_row[2])  # Repository name is in column 2

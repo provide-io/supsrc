@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from provide.foundation.logger import get_logger
 from rich.text import Text
+from textual import events
 from textual.widgets import RichLog
 
 if TYPE_CHECKING:
@@ -68,3 +69,13 @@ class EventFeed(RichLog):
                 event_source=getattr(event, "source", "unknown"),
                 exc_info=True,
             )
+
+    def on_key(self, event: events.Key) -> None:
+        """Handle key events for navigation."""
+        # Allow normal RichLog scrolling behavior
+        if event.key in ("up", "down", "page_up", "page_down", "home", "end"):
+            # Let RichLog handle these keys
+            super().on_key(event)
+        else:
+            # For other keys, let the parent handle them
+            event.stop()
