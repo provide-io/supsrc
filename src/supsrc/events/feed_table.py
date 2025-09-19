@@ -111,11 +111,16 @@ class EventFeedTable(DataTable):
         # Try to extract from description for other events
         description = getattr(event, "description", "")
         if "[" in description and "]" in description:
-            # Look for [repo_id] pattern in description
-            start = description.find("[")
-            end = description.find("]", start)
-            if start != -1 and end != -1:
-                return description[start + 1 : end]
+            # Look for [repo_id] pattern in description after source
+            # Pattern: [timestamp] [source] [repo_id] description
+            parts = description.split("] ")
+            if len(parts) >= 3:
+                # Third part should contain [repo_id
+                third_part = parts[2]
+                if third_part.startswith("["):
+                    end_bracket = third_part.find("]")
+                    if end_bracket != -1:
+                        return third_part[1:end_bracket]
 
         # Fallback to event source
         return getattr(event, "source", "unknown")
@@ -240,7 +245,9 @@ class EventFeedTable(DataTable):
 
     def clear(self) -> None:
         """Clear all events from the table."""
-        self.clear(columns=False)
+        # Clear all rows but keep columns
+        for row_key in list(self.rows.keys()):
+            self.remove_row(row_key)
 
         # Add back the ready message
         self.add_row(
