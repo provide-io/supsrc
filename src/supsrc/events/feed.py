@@ -74,19 +74,19 @@ class EventFeed(RichLog):
 
     def key_up(self) -> None:
         """Handle up arrow key for scrolling."""
-        self.scroll_up()
+        self.scroll_relative(y=-1)
 
     def key_down(self) -> None:
         """Handle down arrow key for scrolling."""
-        self.scroll_down()
+        self.scroll_relative(y=1)
 
     def key_page_up(self) -> None:
         """Handle page up key for scrolling."""
-        self.scroll_page_up()
+        self.scroll_relative(y=-10)
 
     def key_page_down(self) -> None:
         """Handle page down key for scrolling."""
-        self.scroll_page_down()
+        self.scroll_relative(y=10)
 
     def key_home(self) -> None:
         """Handle home key for scrolling."""

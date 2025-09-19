@@ -32,18 +32,16 @@ class UIHelperMixin:
                     repo_state.update_timer_countdown()
                     if repo_state.timer_seconds_left is not None:
                         active_timers += 1
-                        log.warning(f"ACTIVE TIMER: {repo_state.repo_id} = {repo_state.timer_seconds_left}s")
+                        log.warning(
+                            f"ACTIVE TIMER: {repo_state.repo_id} = {repo_state.timer_seconds_left}s"
+                        )
 
-                log.warning(f"UPDATED {len(self._orchestrator.repo_states)} repo states, {active_timers} active timers")
+                log.warning(
+                    f"UPDATED {len(self._orchestrator.repo_states)} repo states, {active_timers} active timers"
+                )
 
                 # Update only the timer column directly to avoid cursor jumping
                 self._update_timer_columns_only()
-
-                # Also try posting a full state update to see if that works
-                log.warning("POSTING STATE UPDATE AFTER TIMER REFRESH")
-                if hasattr(self, 'post_message'):
-                    from supsrc.tui.messages import StateUpdate
-                    self.post_message(StateUpdate(self._orchestrator.repo_states))
             else:
                 log.warning("NO ORCHESTRATOR AVAILABLE FOR COUNTDOWN UPDATE")
         except Exception as e:
@@ -76,7 +74,10 @@ class UIHelperMixin:
                             )
                         except Exception as e:
                             # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
-                            log.warning(f"Failed to update timer cell for {repo_id_str}, skipping update: {e}", exc_info=True)
+                            log.warning(
+                                f"Failed to update timer cell for {repo_id_str}, skipping update: {e}",
+                                exc_info=True,
+                            )
                             # Continue to next repository instead of breaking/posting StateUpdate
                             continue
         except Exception as e:
