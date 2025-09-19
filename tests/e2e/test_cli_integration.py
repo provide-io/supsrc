@@ -9,12 +9,12 @@ real-world usage scenarios from the command line.
 
 from __future__ import annotations
 
-import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from provide.foundation.process import run_command
 
 from tests.helpers.config_testing import real_config_path, with_parent_cwd
 
@@ -26,11 +26,10 @@ class TestCLIConfigDiscovery:
         """Test that CLI finds config when run from parent directory."""
         with with_parent_cwd():
             # Run supsrc config show from parent directory
-            result = subprocess.run(
+            result = run_command(
                 [sys.executable, "-m", "supsrc.cli.main", "config", "show"],
-                capture_output=True,
-                text=True,
                 timeout=10,
+                check=False,
             )
 
             # Should succeed and show config
@@ -42,18 +41,17 @@ class TestCLIConfigDiscovery:
         with with_parent_cwd():
             config_path = real_config_path()
 
-            result = subprocess.run(
+            result = run_command(
                 [sys.executable, "-m", "supsrc.cli.main", "config", "show", "-c", str(config_path)],
-                capture_output=True,
-                text=True,
                 timeout=10,
+                check=False,
             )
 
             assert result.returncode == 0, f"Config validation failed: {result.stderr}"
 
     def test_cli_handles_missing_config_gracefully(self):
         """Test CLI error handling when config is missing."""
-        result = subprocess.run(
+        result = run_command(
             [
                 sys.executable,
                 "-m",
@@ -63,9 +61,8 @@ class TestCLIConfigDiscovery:
                 "-c",
                 "/nonexistent/config.conf",
             ],
-            capture_output=True,
-            text=True,
             timeout=10,
+            check=False,
         )
 
         # Should fail gracefully with helpful error
