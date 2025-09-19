@@ -32,9 +32,9 @@ class EventFeed(RichLog):
         """
         try:
             text = event.format()
-            log.warning("🎯 Adding event to feed",
-                       event_source=event.source,
-                       event_text=text[:100])  # Truncate for logging
+            log.debug("Adding event to feed",
+                     event_source=event.source,
+                     event_text=text[:100])  # Truncate for logging
 
             # Simple color mapping based on event source
             colors = {

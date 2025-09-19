@@ -66,8 +66,8 @@ class EventCollector:
             )
             return
 
-        log.warning(
-            "🚀 Emitting event",
+        log.debug(
+            "Emitting event",
             event_source=event.source,
             event_description=event.description,
             handler_count=len(self._handlers),

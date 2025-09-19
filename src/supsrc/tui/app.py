@@ -238,8 +238,8 @@ class SupsrcTuiApp(TuiAppBase):
             try:
                 self._event_feed = self.query_one("#event-feed", EventFeed)
                 self.event_collector.subscribe(self._event_feed.add_event)
-                log.warning("📺 Event feed widget found and subscribed to event collector",
-                           handler_count=len(self.event_collector._handlers))
+                log.info("Event feed widget found and subscribed to event collector",
+                        handler_count=len(self.event_collector._handlers))
 
                 # Create a welcome event
                 from supsrc.events.system import UserActionEvent
@@ -249,7 +249,7 @@ class SupsrcTuiApp(TuiAppBase):
                     action="start",
                 )
                 self.event_collector.emit(welcome_event)  # type: ignore[arg-type]
-                log.warning("🎉 Welcome event emitted to test event feed")
+                log.info("Welcome event emitted to test event feed")
             except Exception as e:
                 log.error("Failed to initialize event feed widget", error=str(e), exc_info=True)
 
