@@ -23,8 +23,8 @@ class UIHelperMixin:
     def _update_countdown_display(self) -> None:
         """Update countdown displays for all repositories."""
         try:
-            # Add diagnostic logging to verify this method is being called
-            log.debug("Periodic countdown update called")
+            # Make this VERY visible to see if it's being called
+            log.warning("PERIODIC COUNTDOWN UPDATE CALLED - THIS SHOULD APPEAR EVERY SECOND")
 
             if hasattr(self, "_orchestrator") and self._orchestrator:
                 # Update countdown for each repository state
@@ -33,17 +33,23 @@ class UIHelperMixin:
                     repo_state.update_timer_countdown()
                     if repo_state.timer_seconds_left is not None:
                         active_timers += 1
-                        log.debug(f"Active timer: {repo_state.repo_id} = {repo_state.timer_seconds_left}s")
+                        log.warning(f"ACTIVE TIMER: {repo_state.repo_id} = {repo_state.timer_seconds_left}s")
 
-                log.debug(f"Updated {len(self._orchestrator.repo_states)} repo states, {active_timers} active timers")
+                log.warning(f"UPDATED {len(self._orchestrator.repo_states)} repo states, {active_timers} active timers")
 
                 # Update only the timer column directly to avoid cursor jumping
                 self._update_timer_columns_only()
+
+                # Also try posting a full state update to see if that works
+                log.warning("POSTING STATE UPDATE AFTER TIMER REFRESH")
+                if hasattr(self, 'post_message'):
+                    from supsrc.tui.messages import StateUpdate
+                    self.post_message(StateUpdate(self._orchestrator.repo_states))
             else:
-                log.warning("No orchestrator available for countdown update")
+                log.warning("NO ORCHESTRATOR AVAILABLE FOR COUNTDOWN UPDATE")
         except Exception as e:
             # Use warning level to make errors more visible during debugging
-            log.warning(f"Error updating countdown display: {e}", exc_info=True)
+            log.warning(f"ERROR UPDATING COUNTDOWN DISPLAY: {e}", exc_info=True)
 
     def _update_timer_columns_only(self) -> None:
         """Update only the timer column for all repositories to avoid cursor jumping."""
