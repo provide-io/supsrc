@@ -145,7 +145,7 @@ class TestTuiPilotStateUpdates:
             # Simulate state update
             from supsrc.tui.messages import StateUpdate
 
-            await app.post_message(StateUpdate(sample_repo_states))
+            app.post_message(StateUpdate(sample_repo_states))
             await pilot.pause()
 
             # Should now have rows for each repository
@@ -171,7 +171,7 @@ class TestTuiPilotStateUpdates:
             from supsrc.tui.messages import LogMessageUpdate
 
             test_message = LogMessageUpdate("Test message", "INFO")
-            await app.post_message(test_message)
+            app.post_message(test_message)
             await pilot.pause()
 
             # Event feed should have received the message
@@ -216,7 +216,7 @@ class TestTuiPilotRepositorySelection:
             # Add some data to the table first
             from supsrc.tui.messages import StateUpdate
 
-            await app.post_message(StateUpdate(sample_repo_states))
+            app.post_message(StateUpdate(sample_repo_states))
             await pilot.pause()
 
             # Focus the repository table

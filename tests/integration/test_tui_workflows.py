@@ -187,7 +187,7 @@ class TestTuiUserWorkflows:
             # Add repository data
             from supsrc.tui.messages import StateUpdate
 
-            await app.post_message(StateUpdate(sample_repo_states))
+            app.post_message(StateUpdate(sample_repo_states))
             await pilot.pause()
 
             # 1. Pause all monitoring
@@ -236,7 +236,7 @@ class TestTuiUserWorkflows:
             # Add repository data
             from supsrc.tui.messages import StateUpdate
 
-            await app.post_message(StateUpdate(sample_repo_states))
+            app.post_message(StateUpdate(sample_repo_states))
             await pilot.pause()
 
             table = app.query_one("#repository_table", DataTable)
@@ -343,9 +343,9 @@ class TestTuiUserWorkflows:
             # 1. Add log messages to event feed
             from supsrc.tui.messages import LogMessageUpdate
 
-            await app.post_message(LogMessageUpdate("Repository monitoring started", "INFO"))
-            await app.post_message(LogMessageUpdate("File change detected", "DEBUG"))
-            await app.post_message(LogMessageUpdate("Git commit successful", "INFO"))
+            app.post_message(LogMessageUpdate("Repository monitoring started", "INFO"))
+            app.post_message(LogMessageUpdate("File change detected", "DEBUG"))
+            app.post_message(LogMessageUpdate("Git commit successful", "INFO"))
             await pilot.pause()
 
             # 2. Navigate to events tab (should be default)

@@ -90,7 +90,7 @@ class TestTuiSnapshots:
             # Add repository data to the app
             from supsrc.tui.messages import StateUpdate
 
-            await app.post_message(StateUpdate(sample_repo_states))
+            app.post_message(StateUpdate(sample_repo_states))
             # Give time for the update to process
             await pilot.pause()
 
@@ -108,10 +108,10 @@ class TestTuiSnapshots:
             from supsrc.tui.messages import LogMessageUpdate
 
             # Add a few different types of log messages
-            await app.post_message(LogMessageUpdate("Repository monitoring started", "INFO"))
-            await app.post_message(LogMessageUpdate("File change detected", "DEBUG"))
-            await app.post_message(LogMessageUpdate("Git commit successful", "INFO"))
-            await app.post_message(LogMessageUpdate("Timer started for repository", "DEBUG"))
+            app.post_message(LogMessageUpdate("Repository monitoring started", "INFO"))
+            app.post_message(LogMessageUpdate("File change detected", "DEBUG"))
+            app.post_message(LogMessageUpdate("Git commit successful", "INFO"))
+            app.post_message(LogMessageUpdate("Timer started for repository", "DEBUG"))
 
             # Give time for messages to be displayed
             await pilot.pause()
@@ -134,7 +134,7 @@ class TestTuiSnapshots:
             from supsrc.tui.messages import StateUpdate
 
             # Add repository data
-            await app.post_message(StateUpdate(sample_repo_states))
+            app.post_message(StateUpdate(sample_repo_states))
 
             # Select a repository (this would normally be done through UI interaction)
             app.selected_repo_id = "test-repo-1"
@@ -205,7 +205,7 @@ class TestTuiSnapshots:
 
             from supsrc.tui.messages import StateUpdate
 
-            await app.post_message(StateUpdate(states))
+            app.post_message(StateUpdate(states))
             await pilot.pause()
 
         # Snapshot with many repositories
@@ -231,7 +231,7 @@ class TestTuiSnapshots:
 
             from supsrc.tui.messages import StateUpdate
 
-            await app.post_message(StateUpdate({"sample-repo": state}))
+            app.post_message(StateUpdate({"sample-repo": state}))
             await pilot.pause()
 
         # Snapshot with dark mode toggled
