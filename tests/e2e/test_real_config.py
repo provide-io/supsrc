@@ -14,8 +14,8 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
-
 from supsrc.config.loader import load_config
+
 from supsrc.tui.app import SupsrcTuiApp
 from tests.helpers.config_testing import (
     real_config_path,
@@ -53,12 +53,16 @@ class TestRealConfigValidation:
             config_path = real_config_path()
             config = load_config(config_path)
 
-            with real_repo_context() as repos:
+            with real_repo_context():
                 # Check that config references actual repositories
                 for repo_id, repo_config in config.repositories.items():
                     repo_path = Path(repo_config.path)
-                    assert repo_path.exists(), f"Repository {repo_id} path {repo_path} does not exist"
-                    assert (repo_path / ".git").exists(), f"Repository {repo_id} is not a git repository"
+                    assert repo_path.exists(), (
+                        f"Repository {repo_id} path {repo_path} does not exist"
+                    )
+                    assert (repo_path / ".git").exists(), (
+                        f"Repository {repo_id} is not a git repository"
+                    )
 
 
 class TestRealConfigTUIIntegration:
@@ -167,7 +171,7 @@ class TestRealConfigDirectoryContext:
 
     def test_config_discovery_from_parent_dir(self):
         """Test that config is found when running from parent directory."""
-        with with_parent_cwd() as parent_dir:
+        with with_parent_cwd():
             # Should be able to find config from parent directory
             config_path = Path("supsrc.conf")
             assert config_path.exists(), "Config not found in parent directory context"
@@ -189,7 +193,9 @@ class TestRealConfigDirectoryContext:
                 if not repo_path.is_absolute():
                     repo_path = Path.cwd() / repo_path
 
-                assert repo_path.exists(), f"Repository {repo_id} not accessible from parent directory"
+                assert repo_path.exists(), (
+                    f"Repository {repo_id} not accessible from parent directory"
+                )
 
 
 class TestRealConfigErrorHandling:
@@ -211,7 +217,7 @@ class TestRealConfigErrorHandling:
 
             async with app.run_test() as pilot:
                 # Should initialize even if some repos are missing
-                is_ready = await wait_for_tui_ready(app, timeout=3.0)
+                await wait_for_tui_ready(app, timeout=3.0)
 
                 # Basic functionality should still work
                 await pilot.press("h")
@@ -235,7 +241,7 @@ class TestRealConfigErrorHandling:
             app.timer_manager = Mock()
             app.timer_manager.stop_all_timers = Mock()
 
-            async with app.run_test() as pilot:
+            async with app.run_test():
                 await wait_for_tui_ready(app)
 
                 # Test shutdown
@@ -264,7 +270,7 @@ class TestRealConfigPerformance:
             app.event_collector = Mock()
             app.event_collector._handlers = []
 
-            async with app.run_test() as pilot:
+            async with app.run_test():
                 is_ready = await wait_for_tui_ready(app, timeout=10.0)
 
                 end_time = asyncio.get_event_loop().time()

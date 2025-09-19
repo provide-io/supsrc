@@ -12,9 +12,9 @@ from __future__ import annotations
 import asyncio
 import os
 import tempfile
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
@@ -128,7 +128,8 @@ def real_repo_context() -> Generator[dict[str, Path], None, None]:
 
     # Filter to only existing repositories
     existing_repos = {
-        name: path for name, path in repo_paths.items()
+        name: path
+        for name, path in repo_paths.items()
         if path.exists() and (path / ".git").exists()
     }
 
@@ -150,11 +151,7 @@ def verify_config_structure(config_path: Path) -> bool:
 
         # Basic structure checks
         required_sections = ["[global]", "[repositories"]
-        for section in required_sections:
-            if section not in content:
-                return False
-
-        return True
+        return all(section in content for section in required_sections)
     except Exception:
         return False
 

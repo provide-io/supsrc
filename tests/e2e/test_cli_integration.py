@@ -54,7 +54,15 @@ class TestCLIConfigDiscovery:
     def test_cli_handles_missing_config_gracefully(self):
         """Test CLI error handling when config is missing."""
         result = subprocess.run(
-            [sys.executable, "-m", "supsrc.cli.main", "config", "show", "-c", "/nonexistent/config.conf"],
+            [
+                sys.executable,
+                "-m",
+                "supsrc.cli.main",
+                "config",
+                "show",
+                "-c",
+                "/nonexistent/config.conf",
+            ],
             capture_output=True,
             text=True,
             timeout=10,
@@ -74,10 +82,7 @@ class TestCLIWatchCommand:
         with with_parent_cwd():
             # Run watch command with short timeout and dry run
             result = subprocess.run(
-                [
-                    sys.executable, "-m", "supsrc.cli.main",
-                    "watch", "--dry-run", "--timeout", "2"
-                ],
+                [sys.executable, "-m", "supsrc.cli.main", "watch", "--dry-run", "--timeout", "2"],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -95,8 +100,15 @@ class TestCLIWatchCommand:
 
             result = subprocess.run(
                 [
-                    sys.executable, "-m", "supsrc.cli.main",
-                    "watch", "-c", str(config_path), "--dry-run", "--timeout", "2"
+                    sys.executable,
+                    "-m",
+                    "supsrc.cli.main",
+                    "watch",
+                    "-c",
+                    str(config_path),
+                    "--dry-run",
+                    "--timeout",
+                    "2",
                 ],
                 capture_output=True,
                 text=True,
@@ -130,15 +142,12 @@ class TestCLITUICommand:
             config_path = real_config_path()
 
             # Test config validation (should succeed quickly)
-            with patch('supsrc.cli.tui_cmds.run_tui') as mock_run_tui:
+            with patch("supsrc.cli.tui_cmds.run_tui") as mock_run_tui:
                 # Mock the TUI to avoid actual startup
                 mock_run_tui.return_value = 0
 
-                result = subprocess.run(
-                    [
-                        sys.executable, "-m", "supsrc.cli.main",
-                        "sui", "-c", str(config_path)
-                    ],
+                subprocess.run(
+                    [sys.executable, "-m", "supsrc.cli.main", "sui", "-c", str(config_path)],
                     capture_output=True,
                     text=True,
                     timeout=5,
@@ -258,7 +267,7 @@ class TestCLIEnvironmentIntegration:
 
             # Wait for graceful shutdown
             try:
-                stdout, stderr = proc.communicate(timeout=3)
+                _stdout, _stderr = proc.communicate(timeout=3)
                 # Should exit gracefully
                 assert proc.returncode != 0  # Interrupted, so non-zero exit expected
             except subprocess.TimeoutExpired:
@@ -283,7 +292,7 @@ class TestCLIConfigIntegration:
                 # Should be readable output
                 assert len(result.stdout) > 0
                 # Should contain config structure indicators
-                lines = result.stdout.split('\n')
+                lines = result.stdout.split("\n")
                 assert len(lines) > 1
 
     def test_config_validation_error_reporting(self):
@@ -291,7 +300,7 @@ class TestCLIConfigIntegration:
         # Create a temporary invalid config
         import tempfile
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.conf', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".conf", delete=False) as f:
             f.write("invalid toml content ][")
             invalid_config = f.name
 
