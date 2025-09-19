@@ -80,7 +80,7 @@ class EventHandlerMixin:
             # Save cursor position using row key (more stable than index)
             cursor_row_key = None
             try:
-                if table.cursor_row < len(table.rows):
+                if table.cursor_row < table.row_count:
                     cursor_coordinate = table.coordinate_to_cell_key((table.cursor_row, 0))
                     cursor_row_key = cursor_coordinate.row_key
                     log.debug(f"Saved cursor position for row key: {cursor_row_key}")
