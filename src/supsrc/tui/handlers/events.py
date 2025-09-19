@@ -120,9 +120,10 @@ class EventHandlerMixin:
                     threshold = getattr(
                         self._orchestrator.config.global_config, "last_change_threshold_hours", 3.0
                     )
-                # Use actual Git commit timestamp if available, fallback to last_change_time
-                timestamp = state.last_commit_timestamp or state.last_change_time
-                last_change_display = format_last_commit_time(timestamp, threshold)
+                # Use actual Git commit timestamp only (not file change time)
+                last_change_display = format_last_commit_time(
+                    state.last_commit_timestamp, threshold
+                )
 
                 rule_emoji = state.rule_emoji or ""
                 rule_indicator = state.rule_dynamic_indicator or "N/A"
@@ -220,7 +221,10 @@ class EventHandlerMixin:
 
                         # Only remove/re-add if cell updates failed
                         if cell_update_failed:
-                            log.debug("Removing and re-adding row due to cell update failure", repo_id=repo_id_str)
+                            log.debug(
+                                "Removing and re-adding row due to cell update failure",
+                                repo_id=repo_id_str,
+                            )
                             table.remove_row(repo_id_str)
                             table.add_row(*row_data, key=repo_id_str)
                             # Try to restore cursor position to minimize jumping
@@ -237,7 +241,7 @@ class EventHandlerMixin:
                             error=str(e),
                         )
                         # Fallback: remove and re-add with cursor preservation attempt
-                        original_cursor_row = getattr(table, 'cursor_row', 0)
+                        original_cursor_row = getattr(table, "cursor_row", 0)
                         with contextlib.suppress(Exception):
                             table.remove_row(repo_id_str)
                         table.add_row(*row_data, key=repo_id_str)

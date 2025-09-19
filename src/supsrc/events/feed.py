@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from textual.widgets import RichLog
 from provide.foundation.logger import get_logger
+from rich.text import Text
+from textual.widgets import RichLog
 
 if TYPE_CHECKING:
     from supsrc.events.protocol import Event
@@ -27,8 +28,12 @@ class EventFeed(RichLog):
     def on_mount(self) -> None:
         """Initialize the EventFeed widget when mounted."""
         # Add an initial message to show the widget is ready
-        self.write("[bold yellow]📋 EventFeed Ready - Events will appear here[/bold yellow]")
-        self.write("[dim]📅 Widget mounted at startup[/dim]")
+        self.write(
+            Text.from_markup(
+                "[bold yellow]📋 EventFeed Ready - Events will appear here[/bold yellow]"
+            )
+        )
+        self.write(Text.from_markup("[dim]📅 Widget mounted at startup[/dim]"))
 
         # Ensure the widget scrolls to show new content
         self.scroll_end()
@@ -52,12 +57,14 @@ class EventFeed(RichLog):
             color = colors.get(event.source, "white")
 
             formatted_text = f"[{color}]{text}[/{color}]"
-            self.write(formatted_text)
+            self.write(Text.from_markup(formatted_text))
 
             # Scroll to the end to show new events
             self.scroll_end()
         except Exception as e:
-            log.error("Failed to add event to feed",
-                     error=str(e),
-                     event_source=getattr(event, 'source', 'unknown'),
-                     exc_info=True)
+            log.error(
+                "Failed to add event to feed",
+                error=str(e),
+                event_source=getattr(event, "source", "unknown"),
+                exc_info=True,
+            )
