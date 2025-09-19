@@ -211,10 +211,25 @@ class RepositoryManager:
             return False
 
         repo_state.is_paused = not repo_state.is_paused
+
+        # Cancel timers when pausing
+        if repo_state.is_paused:
+            repo_state.cancel_inactivity_timer()
+            repo_state.cancel_debounce_timer()
+            self._log.debug(
+                "Cancelled timers for paused repository",
+                repo_id=repo_id,
+            )
+
         repo_state._update_display_emoji()
         self._log.info(
             "Toggled repository pause state", repo_id=repo_id, paused=repo_state.is_paused
         )
+
+        # Trigger TUI update to reflect the change
+        if self.tui_update_callback:
+            self.tui_update_callback()
+
         return True
 
     async def toggle_repository_stop(

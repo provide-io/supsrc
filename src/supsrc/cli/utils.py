@@ -1,7 +1,6 @@
 # src/supsrc/cli/utils.py
 
 import logging
-from typing import Any
 
 import click
 import structlog
@@ -40,45 +39,7 @@ def logging_options(f):
     return f
 
 
-def setup_logging_from_context(
-    ctx: click.Context,
-    local_log_level: str | None = None,
-    local_log_file: str | None = None,
-    local_json_logs: bool | None = None,
-    default_log_level: str = "INFO",
-    tui_app_instance: Any | None = None,
-    headless_mode: bool = False,
-) -> None:
-    """
-    Setup logging using context values, allowing local overrides.
-    """
-    log_level_str = local_log_level or ctx.obj.get("LOG_LEVEL") or default_log_level
-    log_file_path = local_log_file or ctx.obj.get("LOG_FILE")
-    use_json_logs = (
-        local_json_logs if local_json_logs is not None else ctx.obj.get("JSON_LOGS", False)
-    )
-
-    numeric_level = logging.getLevelName(log_level_str.upper())
-    if not isinstance(numeric_level, int):
-        numeric_level = logging.INFO
-        log_level_str = "INFO"
-
-    core_setup_logging(
-        level=numeric_level,
-        json_logs=use_json_logs,
-        log_file=log_file_path,
-        tui_app_instance=tui_app_instance,
-        headless_mode=headless_mode,
-    )
-
-    log.debug(
-        "CLI logging initialized via utils",
-        level=log_level_str,
-        file=log_file_path or "console",
-        json=use_json_logs,
-        tui_active=(tui_app_instance is not None),
-        headless=headless_mode,
-    )
+# Removed unused setup_logging_from_context function - Foundation handles logging setup
 
 
 # ⚙️🛠️

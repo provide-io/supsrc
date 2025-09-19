@@ -63,7 +63,7 @@ class ActionHandlerMixin:
     def action_suspend_monitoring(self) -> None:
         """Suspend/resume monitoring (stronger than pause)."""
         if self._orchestrator:
-            if self._orchestrator._is_paused:  # Using same flag for now
+            if self._orchestrator._is_suspended:
                 self._orchestrator.resume_monitoring()
                 event = UserActionEvent(
                     description="Monitoring resumed from suspension",

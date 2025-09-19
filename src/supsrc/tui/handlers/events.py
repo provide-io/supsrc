@@ -181,27 +181,58 @@ class EventHandlerMixin:
                 )
 
                 if repo_id_str in table.rows:
-                    # Update existing row in-place to prevent counter resets
+                    # Update existing row in-place to prevent counter resets and cursor jumps
                     try:
                         row_index = table.get_row_index(repo_id_str)
-                        if 0 <= row_index < table.row_count:
-                            for col_index, cell_value in enumerate(row_data):
-                                if col_index < len(table.columns):
+                        # Save current cursor position to restore if needed
+                        original_cursor_row = table.cursor_row
+
+                        # Try to update cells first, with improved error handling
+                        cell_update_failed = False
+                        for col_index, cell_value in enumerate(row_data):
+                            if col_index < len(table.columns):
+                                try:
                                     table.update_cell(row_index, col_index, cell_value)
-                        else:
-                            # Row index invalid, re-add the row
+                                except Exception as cell_err:
+                                    log.debug(
+                                        "Cell update failed, will need to remove/re-add row",
+                                        repo_id=repo_id_str,
+                                        row_index=row_index,
+                                        col_index=col_index,
+                                        error=str(cell_err),
+                                    )
+                                    cell_update_failed = True
+                                    break
+
+                        # Only remove/re-add if cell updates failed
+                        if cell_update_failed:
+                            log.debug("Removing and re-adding row due to cell update failure", repo_id=repo_id_str)
                             table.remove_row(repo_id_str)
                             table.add_row(*row_data, key=repo_id_str)
+                            # Try to restore cursor position to minimize jumping
+                            try:
+                                if original_cursor_row < len(table.rows):
+                                    table.cursor_row = original_cursor_row
+                            except Exception:
+                                pass  # Ignore cursor restoration errors
+
                     except Exception as e:
-                        log.warning(
+                        log.debug(
                             "Failed to update row in-place, re-adding",
                             repo_id=repo_id_str,
                             error=str(e),
                         )
-                        # Fallback: remove and re-add
+                        # Fallback: remove and re-add with cursor preservation attempt
+                        original_cursor_row = getattr(table, 'cursor_row', 0)
                         with contextlib.suppress(Exception):
                             table.remove_row(repo_id_str)
                         table.add_row(*row_data, key=repo_id_str)
+                        # Try to restore cursor position
+                        try:
+                            if original_cursor_row < len(table.rows):
+                                table.cursor_row = original_cursor_row
+                        except Exception:
+                            pass  # Ignore cursor restoration errors
                 else:
                     table.add_row(*row_data, key=repo_id_str)
 

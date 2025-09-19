@@ -69,8 +69,8 @@ class RepoActionHandlerMixin:
 
         success = self._orchestrator.toggle_repository_pause(repo_id)
         if success:
-            # Force an immediate state update to ensure UI reflects the change
-            self._orchestrator._post_tui_state_update()
+            # The UI will update naturally through regular state update cycles
+            # No need to force immediate update which causes cursor jumping
 
             repo_state = self._orchestrator.repo_states.get(repo_id)
             if repo_state and repo_state.is_paused:
