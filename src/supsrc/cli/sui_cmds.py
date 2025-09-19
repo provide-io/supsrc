@@ -9,6 +9,9 @@ import structlog
 from provide.foundation.cli.decorators import logging_options
 from structlog.typing import FilteringBoundLogger as StructLogger
 
+from supsrc.config import load_config
+from supsrc.utils.directories import SupsrcDirectories
+
 try:
     from supsrc.tui.app import SupsrcTuiApp
 
@@ -71,7 +74,22 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
     from supsrc.utils.streams import NoOpStream
 
     log.info("Initializing interactive dashboard...")
-    log.info("🐛 Debug logging available at /tmp/supsrc_tui_debug.log")
+
+    # Determine log file path using .supsrc structure if possible
+    log_file_path = Path("/tmp/supsrc_tui_debug.log")  # fallback
+    try:
+        config = load_config(config_path)
+        # Find first enabled repository for log directory
+        for _repo_id, repo_config in config.repositories.items():
+            if repo_config.enabled and repo_config._path_valid:
+                log_file_path = (
+                    SupsrcDirectories.get_log_dir(repo_config.path) / "supsrc_tui_debug.log"
+                )
+                break
+    except Exception as e:
+        log.warning("Failed to determine TUI log directory, using temp", error=str(e))
+
+    log.info("🐛 Debug logging available", log_file=str(log_file_path))
 
     # Suppress all console output from Foundation by setting NoOpStream
     # This must be done BEFORE Foundation initialization
@@ -85,7 +103,7 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
                 default_level="TRACE",
                 das_emoji_prefix_enabled=True,
                 logger_name_emoji_prefix_enabled=True,
-                log_file=Path("/tmp/supsrc_tui_debug.log"),  # Enable file logging
+                log_file=log_file_path,  # Enable file logging
             )
         )
 
