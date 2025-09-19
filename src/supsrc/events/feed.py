@@ -46,6 +46,11 @@ class EventFeed(RichLog):
             color = colors.get(event.source, "white")
 
             self.write(f"[{color}]{text}[/{color}]")
+
+            # Force a screen refresh to ensure the event is visible
+            if hasattr(self, 'refresh'):
+                self.refresh()
+
             log.debug("Event written to feed widget successfully")
         except Exception as e:
             log.error("Failed to add event to feed",

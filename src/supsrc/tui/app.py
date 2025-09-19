@@ -241,6 +241,10 @@ class SupsrcTuiApp(TuiAppBase):
                 log.info("Event feed widget found and subscribed to event collector",
                         handler_count=len(self.event_collector._handlers))
 
+                # Add a test message directly to the feed to verify it's working
+                self._event_feed.write("[cyan]🚀 TUI Event Feed Initialized[/cyan]")
+                self._event_feed.write("[yellow]📋 Events will appear below this line[/yellow]")
+
                 # Create a welcome event
                 from supsrc.events.system import UserActionEvent
 
@@ -397,6 +401,10 @@ class SupsrcTuiApp(TuiAppBase):
                 repo_id="test-repo",
             ),
         ]
+
+        # Add a direct test message to the feed
+        if self._event_feed:
+            self._event_feed.write(f"[magenta]🧪 Manual test triggered at {timestamp}[/magenta]")
 
         for event in test_events:
             self.event_collector.emit(event)  # type: ignore[arg-type]
