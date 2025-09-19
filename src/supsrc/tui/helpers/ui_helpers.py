@@ -30,10 +30,36 @@ class UIHelperMixin:
                 for repo_state in self._orchestrator.repo_states.values():
                     repo_state.update_timer_countdown()
 
-                # Trigger a state update to refresh the display with actual state objects
-                self.post_message(StateUpdate(self._orchestrator.repo_states))
+                # Update only the timer column directly to avoid cursor jumping
+                self._update_timer_columns_only()
         except Exception as e:
             log.debug(f"Error updating countdown: {e}")
+
+    def _update_timer_columns_only(self) -> None:
+        """Update only the timer column for all repositories to avoid cursor jumping."""
+        try:
+            from textual.widgets import DataTable
+
+            from supsrc.tui.utils import get_countdown_display
+
+            table = self.query_one("#repository_table", DataTable)
+
+            if hasattr(self, "_orchestrator") and self._orchestrator:
+                for repo_id_str, repo_state in self._orchestrator.repo_states.items():
+                    if str(repo_id_str) in table.rows:
+                        try:
+                            row_index = table.get_row_index(str(repo_id_str))
+                            timer_display = get_countdown_display(repo_state.timer_seconds_left)
+                            # Update only column 1 (timer column) to avoid full row refresh
+                            table.update_cell(row_index, 1, timer_display)
+                        except Exception as e:
+                            # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
+                            log.debug(f"Failed to update timer cell for {repo_id_str}, skipping update: {e}")
+                            # Continue to next repository instead of breaking/posting StateUpdate
+                            continue
+        except Exception as e:
+            # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
+            log.debug(f"Error in timer column update, skipping timer updates: {e}")
 
     def _update_sub_title(self, text: str) -> None:
         """Update subtitle safely."""

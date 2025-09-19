@@ -37,6 +37,7 @@ class JSONEventLogger:
             self.file_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Open file in append mode for continuous logging
+            # ruff: noqa: SIM115 - Long-lived logger needs to keep file open, closed in close() method
             self._file_handle = open(self.file_path, "a", encoding="utf-8")
             log.info("JSON event logger initialized", file_path=str(self.file_path))
         except Exception as e:
