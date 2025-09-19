@@ -57,9 +57,10 @@ class UIHelperMixin:
 
             table = self.query_one("#repository_table", DataTable)
 
-            # Save current cursor position before any updates
-            current_cursor_row = table.cursor_row
-            current_cursor_col = table.cursor_column
+            # Skip timer updates if cursor is on the last row to prevent jumping
+            if table.cursor_row == len(table.rows) - 1:
+                log.debug("Skipping timer update to prevent cursor jumping from last row")
+                return
 
             if hasattr(self, "_orchestrator") and self._orchestrator:
                 for repo_id_str, repo_state in self._orchestrator.repo_states.items():
@@ -84,14 +85,6 @@ class UIHelperMixin:
                             )
                             # Continue to next repository instead of breaking/posting StateUpdate
                             continue
-
-                # Restore cursor position after all updates
-                try:
-                    if current_cursor_row < len(table.rows):
-                        table.cursor_row = current_cursor_row
-                        table.cursor_column = current_cursor_col
-                except Exception:
-                    pass  # Ignore cursor restoration errors
 
         except Exception as e:
             # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
