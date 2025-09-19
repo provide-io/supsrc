@@ -121,7 +121,7 @@ class WatchOrchestrator:
 
             # Initialize helper managers
             self.repository_manager = RepositoryManager(
-                self.repo_states, self.repo_engines, self._post_tui_state_update
+                self.repo_states, self.repo_engines, self._post_tui_state_update, self.event_collector
             )
             self.monitoring_coordinator = MonitoringCoordinator(
                 self.event_queue, self.config_path, self.repo_states

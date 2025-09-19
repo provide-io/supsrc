@@ -40,10 +40,12 @@ class RepositoryManager:
         repo_states: dict[str, RepositoryState],
         repo_engines: dict[str, RepositoryEngine],
         tui_update_callback: Callable[[], None] | None = None,
+        event_collector: Any | None = None,
     ) -> None:
         self.repo_states = repo_states
         self.repo_engines = repo_engines
         self.tui_update_callback = tui_update_callback
+        self.event_collector = event_collector
         self._log = log.bind(manager_id=id(self))
         self._log.debug("RepositoryManager initialized")
 
@@ -172,19 +174,38 @@ class RepositoryManager:
                 enabled_repo_ids.append(repo_id)
 
                 # Emit monitoring start event
-                if hasattr(tui.app, "event_collector"):
+                if self.event_collector:
+                    init_log.debug("Emitting monitoring start event via repository manager event collector", repo_id=repo_id)
+                    start_event = MonitoringStartEvent(
+                        description=f"Started monitoring repository {repo_id}",
+                        repo_id=repo_id,
+                        path=repo_config.path,
+                    )
+                    self.event_collector.emit(start_event)  # type: ignore[arg-type]
+                elif hasattr(tui.app, "event_collector"):
+                    init_log.debug("Emitting monitoring start event via TUI app", repo_id=repo_id)
                     start_event = MonitoringStartEvent(
                         description=f"Started monitoring repository {repo_id}",
                         repo_id=repo_id,
                         path=repo_config.path,
                     )
                     tui.app.event_collector.emit(start_event)  # type: ignore[arg-type]
+                else:
+                    init_log.warning("No event collector available for monitoring start event", repo_id=repo_id)
             except Exception as e:
                 init_log.error("Failed to initialize repository", error=str(e), exc_info=True)
                 repo_state.update_status(RepositoryStatus.ERROR, f"Initialization failed: {e}")
 
                 # Emit error event for failed initialization
-                if hasattr(tui.app, "event_collector"):
+                if self.event_collector:
+                    error_event = ErrorEvent(
+                        description=f"Failed to initialize repository {repo_id}: {e}",
+                        source="repository_manager",
+                        error_type="InitializationError",
+                        repo_id=repo_id,
+                    )
+                    self.event_collector.emit(error_event)  # type: ignore[arg-type]
+                elif hasattr(tui.app, "event_collector"):
                     error_event = ErrorEvent(
                         description=f"Failed to initialize repository {repo_id}: {e}",
                         source="repository_manager",
