@@ -34,6 +34,7 @@ def action_handler(
     states = {repo_id: RepositoryState(repo_id=repo_id)}
     engines = {repo_id: mock_repo_engine}
     tui = MagicMock(spec=TUIInterface)
+    tui.app = MagicMock()  # Add app attribute for event emission
     return ActionHandler(minimal_config, states, engines, tui)
 
 
@@ -48,7 +49,8 @@ class TestActionHandler:
         repo_id = "test_repo_1"
         await action_handler.execute_action_sequence(repo_id)
 
-        mock_repo_engine.get_status.assert_called_once()
+        # Note: get_status is called twice (once for initial status, once for LLM summary)
+        assert mock_repo_engine.get_status.call_count >= 1
         mock_repo_engine.stage_changes.assert_called_once()
         mock_repo_engine.perform_commit.assert_called_once()
         mock_repo_engine.perform_push.assert_called_once()

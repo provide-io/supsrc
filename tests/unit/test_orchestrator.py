@@ -33,7 +33,7 @@ class TestOrchestratorLifecycle:
 
     @patch("supsrc.runtime.orchestrator.TUIInterface")
     @patch("supsrc.runtime.orchestrator.ActionHandler")
-    @patch("supsrc.runtime.orchestrator.EventProcessor")
+    @patch("supsrc.events.processor.EventProcessor")
     @patch("supsrc.runtime.orchestrator.MonitoringService")
     async def test_run_initializes_all_components(
         self,
