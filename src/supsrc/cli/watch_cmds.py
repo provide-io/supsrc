@@ -11,7 +11,9 @@ import structlog
 from provide.foundation.cli.decorators import logging_options
 from structlog.typing import FilteringBoundLogger as StructLogger
 
+from supsrc.config import load_config
 from supsrc.runtime.orchestrator import WatchOrchestrator
+from supsrc.utils.directories import SupsrcDirectories
 
 log: StructLogger = structlog.get_logger("cli.watch")
 
@@ -130,13 +132,14 @@ def _run_headless_orchestrator(orchestrator: WatchOrchestrator) -> int:
 @click.option(
     "--event-log",
     type=click.Path(path_type=Path),
-    default=Path("/tmp/supsrc_events.json"),
-    show_default=True,
-    help="Path to write structured event logs in JSON format.",
+    default=None,
+    help="Path to write structured event logs in JSON format. Defaults to .supsrc/local/logs/events.jsonl in the first repository.",
 )
 @logging_options
 @click.pass_context
-def watch_cli(ctx: click.Context, config_path: Path, app_log: Path, event_log: Path, **kwargs):
+def watch_cli(
+    ctx: click.Context, config_path: Path, app_log: Path, event_log: Path | None, **kwargs
+):
     """Watch repository changes and trigger actions (non-interactive mode)."""
     # The shutdown event is still necessary to signal between async components.
     # asyncio.run() will manage propagating the initial cancellation.
@@ -145,6 +148,26 @@ def watch_cli(ctx: click.Context, config_path: Path, app_log: Path, event_log: P
     # Foundation's CLI framework handles logging setup via decorators
 
     log.info("Initializing watch command...")
+
+    # Determine event log path if not provided
+    if event_log is None:
+        try:
+            config = load_config(config_path)
+            # Find first enabled repository
+            for repo_id, repo_config in config.repositories.items():
+                if repo_config.enabled and repo_config._path_valid:
+                    event_log = SupsrcDirectories.get_log_dir(repo_config.path) / "events.jsonl"
+                    log.info(
+                        "Using repository log directory", repo_id=repo_id, event_log=str(event_log)
+                    )
+                    break
+            else:
+                # No repositories found, use temp directory
+                event_log = Path("/tmp/supsrc_events.json")
+                log.warning("No enabled repositories found, using temp directory for logs")
+        except Exception as e:
+            log.warning("Failed to determine log directory", error=str(e))
+            event_log = Path("/tmp/supsrc_events.json")
 
     orchestrator = WatchOrchestrator(
         config_path=config_path,
