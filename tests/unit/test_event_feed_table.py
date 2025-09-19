@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -36,7 +34,7 @@ class TestEventFeedTable:
             await pilot.pause()
 
             # Should have columns set up - check via columns property
-            assert len(table.columns) == 5  # Time, Repo, Type, Count, Files
+            assert len(table.columns) == 6  # Time, Repo, Operation, Impact, File, Message
 
             # Should have initial messages
             assert table.row_count >= 2  # Ready message + mounted message
@@ -160,8 +158,44 @@ class TestEventFeedTable:
         mock_event.source = "git"
         assert table._get_event_emoji(mock_event) == "🔧"
 
+    def test_format_event_details_v2(self):
+        """Test new event details formatting."""
+        table = EventFeedTable()
+
+        # Test BufferedFileChangeEvent with single file
+        single_file_event = BufferedFileChangeEvent(
+            repo_id="test",
+            file_paths=[Path("src/test.py")],
+            operation_type="single_file",
+            event_count=1,
+        )
+        impact, file_str, message = table._format_event_details_v2(single_file_event)
+        assert impact == "1"
+        assert file_str == "test.py"
+        assert len(message) >= 0  # Message can be empty or have content
+
+        # Test BufferedFileChangeEvent with multiple files
+        multi_file_event = BufferedFileChangeEvent(
+            repo_id="test",
+            file_paths=[Path("src/test1.py"), Path("src/test2.py")],
+            operation_type="batch_operation",
+            event_count=3,
+        )
+        impact, file_str, message = table._format_event_details_v2(multi_file_event)
+        assert impact == "3"
+        assert "test1.py, test2.py" in file_str
+        assert "Batch" in message or message == ""
+
+        # Test other event types
+        mock_event = Mock(spec=[])  # Empty spec to prevent auto-attributes
+        mock_event.description = "[13:45:30] [git] test.py File committed successfully"
+        impact, file_str, message = table._format_event_details_v2(mock_event)
+        assert impact == "1"
+        assert file_str in ["test.py", "-"]  # Should extract file or use default
+        assert len(message) > 0  # Should have extracted message
+
     def test_format_event_details(self):
-        """Test event details formatting."""
+        """Test legacy event details formatting (kept for compatibility)."""
         table = EventFeedTable()
 
         # Test BufferedFileChangeEvent with single file
@@ -193,8 +227,31 @@ class TestEventFeedTable:
         assert count == "1"
         assert "File committed successfully" in files
 
+    def test_get_files_summary_short(self):
+        """Test short file summary generation for the File column."""
+        table = EventFeedTable()
+
+        # Test single file
+        single_file = [Path("test.py")]
+        summary = table._get_files_summary_short(single_file)
+        assert summary == "test.py"
+
+        # Test two files
+        two_files = [Path("src/test1.py"), Path("src/test2.py")]
+        summary = table._get_files_summary_short(two_files)
+        assert "test1.py, test2.py" in summary
+
+        # Test many files with common directory
+        many_files = [
+            Path("src/components/header.py"),
+            Path("src/components/footer.py"),
+            Path("src/components/sidebar.py"),
+        ]
+        summary = table._get_files_summary_short(many_files)
+        assert "components/" in summary or "3 files" in summary
+
     def test_get_files_summary(self):
-        """Test file summary generation."""
+        """Test original file summary generation (kept for compatibility)."""
         table = EventFeedTable()
 
         # Test single file
@@ -215,6 +272,40 @@ class TestEventFeedTable:
         many_files = [Path(f"src/file{i}.py") for i in range(10)]
         summary = table._get_files_summary(many_files)
         assert "10 files" in summary
+
+    def test_parse_description(self):
+        """Test description parsing for file and message extraction."""
+        table = EventFeedTable()
+
+        # Test description with file path
+        file_str, message = table._parse_description("[13:45:30] [git] test.py File modified")
+        assert file_str == "test.py"
+        assert "modified" in message
+
+        # Test description without file path
+        file_str, message = table._parse_description("[13:45:30] [git] Commit successful")
+        assert file_str == "-"
+        assert "Commit successful" in message
+
+    def test_extract_message(self):
+        """Test message extraction from events."""
+        table = EventFeedTable()
+
+        # Test BufferedFileChangeEvent with operation_type
+        event = BufferedFileChangeEvent(
+            repo_id="test",
+            file_paths=[Path("test.py")],
+            operation_type="atomic_rewrite",
+            event_count=1,
+        )
+        message = table._extract_message(event)
+        assert message == "Atomic save"
+
+        # Test event with description
+        mock_event = Mock(spec=[])
+        mock_event.description = "[13:45:30] [git] [test-repo] File committed"
+        message = table._extract_message(mock_event)
+        assert "File committed" in message
 
     @pytest.mark.asyncio
     async def test_clear_functionality(self):

@@ -42,12 +42,12 @@ class EventFeedTable(DataTable):
         """Initialize the EventFeedTable when mounted."""
         # Set up columns with emoji headers
         self.add_columns(
-            "⏰",     # Time - Event timestamp (HH:MM:SS)
-            "📦",     # Repo - Repository ID
-            "🎯",     # Operation - Operation type emoji
-            "#️⃣",     # Impact - Numerical impact (event count/size)
-            "📁",     # File - Primary file or directory
-            "💬",     # Message - Optional descriptive message
+            "⏰",  # Time - Event timestamp (HH:MM:SS)
+            "📦",  # Repo - Repository ID
+            "🎯",  # Operation - Operation type emoji
+            "#️⃣",  # Impact - Numerical impact (event count/size)
+            "📁",  # File - Primary file or directory
+            "💬",  # Message - Optional descriptive message
         )
 
         # Add initial message to show the widget is ready
@@ -110,9 +110,11 @@ class EventFeedTable(DataTable):
         """Extract repository ID from the event."""
         # Check if event has repo_id attribute (BufferedFileChangeEvent)
         # Also ensure it's not a Mock object
-        if (hasattr(event, "repo_id") and
-            hasattr(event, "file_paths") and
-            "Mock" not in str(type(event))):
+        if (
+            hasattr(event, "repo_id")
+            and hasattr(event, "file_paths")
+            and "Mock" not in str(type(event))
+        ):
             return str(event.repo_id)
 
         # Try to extract from description for other events
@@ -314,7 +316,7 @@ class EventFeedTable(DataTable):
                 remaining = parts[2]
                 if remaining.startswith("[") and "]" in remaining:
                     bracket_end = remaining.find("]")
-                    return remaining[bracket_end + 2:] if bracket_end != -1 else remaining
+                    return remaining[bracket_end + 2 :] if bracket_end != -1 else remaining
                 return remaining
             elif len(parts) == 2:
                 return parts[1]
@@ -341,14 +343,18 @@ class EventFeedTable(DataTable):
                 if clean_desc.startswith("[") and "]" in clean_desc:
                     bracket_end = clean_desc.find("]")
                     if bracket_end != -1:
-                        clean_desc = clean_desc[bracket_end + 2:]
+                        clean_desc = clean_desc[bracket_end + 2 :]
             elif len(parts) == 2:
                 clean_desc = parts[1]
 
         # Try to extract file path from description
         # Look for common file patterns
         import re
-        file_pattern = re.compile(r'([\w\-./]+\.(py|js|ts|tsx|jsx|json|toml|yaml|yml|md|txt|sh|rs|go|java|c|cpp|h|hpp))', re.IGNORECASE)
+
+        file_pattern = re.compile(
+            r"([\w\-./]+\.(py|js|ts|tsx|jsx|json|toml|yaml|yml|md|txt|sh|rs|go|java|c|cpp|h|hpp))",
+            re.IGNORECASE,
+        )
         match = file_pattern.search(clean_desc)
         if match:
             file_path = match.group(1)
