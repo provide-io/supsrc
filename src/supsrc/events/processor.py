@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from provide.foundation.logger import get_logger
 
 from supsrc.config import InactivityRuleConfig, RepositoryConfig, SupsrcConfig
-from supsrc.constants import DEFAULT_DEBOUNCE_DELAY
+from supsrc.config.defaults import DEFAULT_DEBOUNCE_DELAY
 from supsrc.monitor import MonitoredEvent
 from supsrc.rules import check_trigger_condition
 from supsrc.state import RepositoryState, RepositoryStatus

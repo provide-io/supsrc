@@ -9,7 +9,7 @@ All defaults are defined here instead of inline in field definitions.
 # Watch command defaults
 # =================================
 DEFAULT_WATCH_ACTIVE_INTERVAL = 1.0  # Check every second when timers are active
-DEFAULT_WATCH_IDLE_INTERVAL = 10.0   # Check every 10 seconds when idle
+DEFAULT_WATCH_IDLE_INTERVAL = 10.0  # Check every 10 seconds when idle
 
 # =================================
 # Event processor defaults

@@ -12,7 +12,7 @@ from provide.foundation.cli.decorators import logging_options
 from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.config import load_config
-from supsrc.constants import DEFAULT_WATCH_ACTIVE_INTERVAL, DEFAULT_WATCH_IDLE_INTERVAL
+from supsrc.config.defaults import DEFAULT_WATCH_ACTIVE_INTERVAL, DEFAULT_WATCH_IDLE_INTERVAL
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.utils.directories import SupsrcDirectories
 
