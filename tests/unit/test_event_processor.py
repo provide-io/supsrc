@@ -65,7 +65,7 @@ class TestEventProcessor:
         repo_id = "test_repo_1"
         event = MonitoredEvent(repo_id, "modified", temp_git_repo / "f.txt", False)
 
-        with patch("supsrc.runtime.event_processor.check_trigger_condition", return_value=True):
+        with patch("supsrc.events.processor.check_trigger_condition", return_value=True):
             run_task = asyncio.create_task(event_processor.run())
             await event_processor.event_queue.put(event)
             await asyncio.sleep(DEBOUNCE_DELAY + 0.1)
@@ -84,7 +84,7 @@ class TestEventProcessor:
         repo_id = "test_repo_1"
         event = MonitoredEvent(repo_id, "modified", temp_git_repo / "f.txt", False)
 
-        with patch("supsrc.runtime.event_processor.check_trigger_condition", return_value=False):
+        with patch("supsrc.events.processor.check_trigger_condition", return_value=False):
             run_task = asyncio.create_task(event_processor.run())
             await event_processor.event_queue.put(event)
 
@@ -111,7 +111,7 @@ class TestEventProcessor:
 
         event = MonitoredEvent(repo_id, "modified", temp_git_repo / "f.txt", False)
 
-        with patch("supsrc.runtime.event_processor.check_trigger_condition", return_value=False):
+        with patch("supsrc.events.processor.check_trigger_condition", return_value=False):
             await event_processor.event_queue.put(event)
             task = asyncio.create_task(event_processor.run())
             await asyncio.sleep(DEBOUNCE_DELAY + 0.1)

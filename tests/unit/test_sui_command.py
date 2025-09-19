@@ -63,7 +63,7 @@ class TestSuiCommand:
         assert "cli_shutdown_event" in kwargs
         mock_app_instance.run.assert_called_once()
 
-    @patch("supsrc.cli.watch_cmds.SupsrcTuiApp", None)
+    @patch("supsrc.cli.sui_cmds.SupsrcTuiApp", None)
     @patch("supsrc.cli.sui_cmds.TEXTUAL_AVAILABLE", False)
     def test_sui_without_textual(self, tmp_path: Path) -> None:
         """Test sui command when textual is not available."""

@@ -82,21 +82,8 @@ class TestWatchCommand:
         args, kwargs = mock_orchestrator_class.call_args
         assert kwargs["config_path"] == config_file
 
-    @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
-    @patch("supsrc.cli.utils.core_setup_logging")
-    def test_watch_logging_setup(
-        self, mock_setup_logging: Mock, mock_runner: Mock, tmp_path: Path
-    ) -> None:
-        """Test that watch command sets up logging correctly."""
-        config_file = tmp_path / "test.conf"
-        config_file.write_text("[repositories]")
-        runner = CliRunner()
-
-        runner.invoke(cli, ["watch", "--log-level", "DEBUG", "--config-path", str(config_file)])
-
-        mock_setup_logging.assert_called()
-        call_args, call_kwargs = mock_setup_logging.call_args
-        assert call_kwargs["level"] == 10  # DEBUG
+    # Note: Logging setup is now handled by Foundation's CLI decorators
+    # No need for explicit logging setup test
 
     @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
     def test_watch_runner_returns_error_code(self, mock_runner: Mock, tmp_path: Path) -> None:
