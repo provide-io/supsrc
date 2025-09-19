@@ -40,13 +40,14 @@ class EventFeedTable(DataTable):
 
     def on_mount(self) -> None:
         """Initialize the EventFeedTable when mounted."""
-        # Set up columns
+        # Set up columns with emoji headers
         self.add_columns(
-            "Time",  # Event timestamp (HH:MM:SS)
-            "Repo",  # Repository ID
-            "Type",  # Emoji indicator for event type
-            "Count",  # Number of events/files affected
-            "Files",  # File path, common prefix, or description
+            "⏰",     # Time - Event timestamp (HH:MM:SS)
+            "📦",     # Repo - Repository ID
+            "🎯",     # Operation - Operation type emoji
+            "#️⃣",     # Impact - Numerical impact (event count/size)
+            "📁",     # File - Primary file or directory
+            "💬",     # Message - Optional descriptive message
         )
 
         # Add initial message to show the widget is ready
@@ -55,16 +56,18 @@ class EventFeedTable(DataTable):
             "system",
             "📋",
             "1",
-            "EventFeed Ready - Events will appear here",
+            "Ready",
+            "EventFeed initialized",
             key="ready_message",
         )
 
         self.add_row(
             "--:--:--",
             "system",
-            "📅",
+            "🚀",
             "1",
-            "Widget mounted at startup",
+            "startup",
+            "Widget mounted",
             key="mounted_message",
         )
 
@@ -78,16 +81,17 @@ class EventFeedTable(DataTable):
             # Extract basic information
             time_str = event.timestamp.strftime("%H:%M:%S")
             repo_id = self._extract_repo_id(event)
-            emoji = self._get_event_emoji(event)
-            count_str, files_str = self._format_event_details(event)
+            operation_emoji = self._get_event_emoji(event)
+            impact_str, file_str, message_str = self._format_event_details_v2(event)
 
             # Add row to table
             self.add_row(
                 time_str,
                 repo_id,
-                emoji,
-                count_str,
-                files_str,
+                operation_emoji,
+                impact_str,
+                file_str,
+                message_str,
                 key=f"event_{event.timestamp.isoformat()}",
             )
 
@@ -160,6 +164,43 @@ class EventFeedTable(DataTable):
         source = getattr(event, "source", "unknown")
         return source_emojis.get(source, "📝")  # MEMO as default
 
+    def _format_event_details_v2(self, event: Event) -> tuple[str, str, str]:
+        """Format event impact, file, and message details.
+
+        Returns:
+            Tuple of (impact_str, file_str, message_str)
+        """
+        # Handle BufferedFileChangeEvent
+        if hasattr(event, "file_paths") and hasattr(event, "event_count"):
+            file_paths = getattr(event, "file_paths", [])
+            event_count = getattr(event, "event_count", 1)
+
+            impact_str = str(event_count)
+
+            if len(file_paths) == 0:
+                file_str = "-"
+            elif len(file_paths) == 1:
+                file_str = str(file_paths[0].name)
+            else:
+                # Find common prefix for multiple files
+                file_str = self._get_files_summary_short(file_paths)
+
+            # Extract message from description if available
+            message_str = self._extract_message(event)
+
+            return impact_str, file_str, message_str
+
+        # Handle other event types
+        description = getattr(event, "description", "")
+
+        # Default single event
+        impact_str = "1"
+
+        # Extract file and message from description
+        file_str, message_str = self._parse_description(description)
+
+        return impact_str, file_str, message_str
+
     def _format_event_details(self, event: Event) -> tuple[str, str]:
         """Format event count and file details.
 
@@ -205,6 +246,124 @@ class EventFeedTable(DataTable):
             files_str = files_str[:47] + "..."
 
         return count_str, files_str
+
+    def _get_files_summary_short(self, file_paths: list[Path]) -> str:
+        """Get a short summary of multiple file paths for the File column."""
+        if not file_paths:
+            return "-"
+
+        if len(file_paths) == 1:
+            return str(file_paths[0].name)
+
+        # Try to find common directory
+        str_paths = [str(p) for p in file_paths]
+
+        # Find common prefix
+        if len(str_paths) > 1:
+            common_prefix = ""
+            min_path = min(str_paths)
+            max_path = max(str_paths)
+
+            for i, char in enumerate(min_path):
+                if i < len(max_path) and char == max_path[i]:
+                    common_prefix += char
+                else:
+                    break
+
+            # Clean up to end at directory boundary
+            if "/" in common_prefix:
+                common_prefix = common_prefix.rsplit("/", 1)[0] + "/"
+
+        # Create short summary
+        if len(file_paths) <= 2:
+            # Show individual file names
+            names = [p.name for p in file_paths]
+            return ", ".join(names)
+        else:
+            # Show common directory or count
+            if common_prefix and len(common_prefix) > 1:
+                common_dir = Path(common_prefix).name or Path(common_prefix).parent.name
+                return f"{common_dir}/"
+            else:
+                return f"{len(file_paths)} files"
+
+    def _extract_message(self, event: Event) -> str:
+        """Extract a message from the event."""
+        # For BufferedFileChangeEvent, create a descriptive message
+        if hasattr(event, "operation_type"):
+            op_type = getattr(event, "operation_type", "")
+            if op_type == "atomic_rewrite":
+                return "Atomic save"
+            elif op_type == "batch_operation":
+                return "Batch changes"
+            else:
+                # Use primary_change_type if available
+                if hasattr(event, "primary_change_type"):
+                    change_type = getattr(event, "primary_change_type", "")
+                    return change_type.capitalize() if change_type else ""
+                return ""
+
+        # For other events, extract from description
+        description = getattr(event, "description", "")
+
+        # Remove timestamp and source prefixes
+        if "] " in description:
+            parts = description.split("] ", 2)
+            if len(parts) >= 3:
+                # Remove repo ID if present
+                remaining = parts[2]
+                if remaining.startswith("[") and "]" in remaining:
+                    bracket_end = remaining.find("]")
+                    return remaining[bracket_end + 2:] if bracket_end != -1 else remaining
+                return remaining
+            elif len(parts) == 2:
+                return parts[1]
+
+        return description[:30] if len(description) > 30 else description
+
+    def _parse_description(self, description: str) -> tuple[str, str]:
+        """Parse description to extract file and message.
+
+        Returns:
+            Tuple of (file_str, message_str)
+        """
+        # Default values
+        file_str = "-"
+        message_str = ""
+
+        # Remove timestamp and source prefixes
+        clean_desc = description
+        if "] " in clean_desc:
+            parts = clean_desc.split("] ", 2)
+            if len(parts) >= 3:
+                clean_desc = parts[2]
+                # Remove repo ID if present
+                if clean_desc.startswith("[") and "]" in clean_desc:
+                    bracket_end = clean_desc.find("]")
+                    if bracket_end != -1:
+                        clean_desc = clean_desc[bracket_end + 2:]
+            elif len(parts) == 2:
+                clean_desc = parts[1]
+
+        # Try to extract file path from description
+        # Look for common file patterns
+        import re
+        file_pattern = re.compile(r'([\w\-./]+\.(py|js|ts|tsx|jsx|json|toml|yaml|yml|md|txt|sh|rs|go|java|c|cpp|h|hpp))', re.IGNORECASE)
+        match = file_pattern.search(clean_desc)
+        if match:
+            file_path = match.group(1)
+            file_str = Path(file_path).name
+            # Use remaining text as message
+            message_str = clean_desc.replace(file_path, "").strip()
+        else:
+            # Use the whole description as message
+            message_str = clean_desc
+
+        # Truncate message if too long
+        if len(message_str) > 40:
+            message_str = message_str[:37] + "..."
+
+        return file_str, message_str
 
     def _get_files_summary(self, file_paths: list[Path]) -> str:
         """Get a summary of multiple file paths."""
@@ -258,6 +417,7 @@ class EventFeedTable(DataTable):
             "system",
             "🧹",
             "1",
+            "cleared",
             "Event feed cleared",
             key="cleared_message",
         )
