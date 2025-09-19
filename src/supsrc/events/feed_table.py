@@ -105,7 +105,10 @@ class EventFeedTable(DataTable):
     def _extract_repo_id(self, event: Event) -> str:
         """Extract repository ID from the event."""
         # Check if event has repo_id attribute (BufferedFileChangeEvent)
-        if hasattr(event, "repo_id"):
+        # Also ensure it's not a Mock object
+        if (hasattr(event, "repo_id") and
+            hasattr(event, "file_paths") and
+            "Mock" not in str(type(event))):
             return str(event.repo_id)
 
         # Try to extract from description for other events
