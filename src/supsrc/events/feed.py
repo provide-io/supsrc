@@ -24,6 +24,15 @@ class EventFeed(RichLog):
     It applies simple color coding based on the event source.
     """
 
+    def on_mount(self) -> None:
+        """Initialize the EventFeed widget when mounted."""
+        # Add an initial message to show the widget is ready
+        self.write("[bold yellow]📋 EventFeed Ready - Events will appear here[/bold yellow]")
+        self.write("[dim]📅 Widget mounted at startup[/dim]")
+
+        # Ensure the widget scrolls to show new content
+        self.scroll_end()
+
     def add_event(self, event: Event) -> None:
         """Add an event to the feed for display.
 
@@ -32,7 +41,6 @@ class EventFeed(RichLog):
         """
         try:
             text = event.format()
-            log.warning(f"📝 EventFeed.add_event called with: {event.source} - {text[:50]}...")
 
             # Simple color mapping based on event source
             colors = {
@@ -45,19 +53,9 @@ class EventFeed(RichLog):
 
             formatted_text = f"[{color}]{text}[/{color}]"
             self.write(formatted_text)
-            log.warning(f"✍️ Written to EventFeed: {formatted_text[:50]}...")
 
-            # Force a screen refresh to ensure the event is visible
-            if hasattr(self, 'refresh'):
-                self.refresh()
-                log.warning("🔄 EventFeed refreshed after write")
-
-            # Check widget state
-            log.warning(f"📊 EventFeed state - visible: {getattr(self, 'visible', 'unknown')}, "
-                       f"display: {getattr(self, 'display', 'unknown')}, "
-                       f"line_count: {getattr(self, 'line_count', 'unknown')}")
-
-            log.warning("✅ Event successfully processed by EventFeed")
+            # Scroll to the end to show new events
+            self.scroll_end()
         except Exception as e:
             log.error("Failed to add event to feed",
                      error=str(e),
