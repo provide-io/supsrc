@@ -22,7 +22,17 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
     """Periodically print repository status to stdout."""
     while True:
         try:
-            await asyncio.sleep(10)  # Report status every 10 seconds
+            # Update timer countdowns for all repositories
+            active_timers = False
+            if orchestrator.repo_states:
+                for state in orchestrator.repo_states.values():
+                    state.update_timer_countdown()
+                    if state.timer_seconds_left is not None:
+                        active_timers = True
+
+            # Sleep based on whether timers are active
+            sleep_interval = 1.0 if active_timers else 10.0
+            await asyncio.sleep(sleep_interval)
 
             if not orchestrator.repo_states:
                 continue
@@ -58,8 +68,8 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
                 )
                 status_lines.append(status_line)
 
-            # Print status summary
-            if status_lines:
+            # Print status summary (only when there are changes or active timers)
+            if status_lines and (active_timers or sleep_interval == 10.0):
                 print("\n".join(status_lines))
 
         except asyncio.CancelledError:
