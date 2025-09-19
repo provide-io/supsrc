@@ -315,3 +315,6 @@ $RECYCLE.BIN/
 
 # bfiles
 *.bf.txt
+
+# Supsrc local data (machine-specific, not shareable)
+.supsrc/local/

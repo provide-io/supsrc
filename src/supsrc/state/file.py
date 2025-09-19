@@ -5,80 +5,91 @@ File operations for .supsrc.state files.
 
 from __future__ import annotations
 
-import json
-import os
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import structlog
+from provide.foundation.file import read_json, write_json
+from provide.foundation.logger import get_logger
+
+from supsrc.utils.directories import SupsrcDirectories
 
 if TYPE_CHECKING:
     from supsrc.state.control import StateData
 
-log = structlog.get_logger("state.file")
+log = get_logger("state.file")
 
 
 class StateFile:
     """Handles reading and writing .supsrc.state files."""
 
-    STATE_FILENAME = ".supsrc.state"
+    STATE_FILENAME = ".supsrc/state.json"
+    LOCAL_STATE_FILENAME = ".supsrc/local/state.local.json"
 
     @classmethod
-    def find_state_file(cls, repo_path: Path | None = None) -> Path | None:
+    def find_state_file(cls, repo_path: Path | None = None, local: bool = False) -> Path | None:
         """Find the most relevant state file for a repository.
 
-        Priority order:
-        1. {repo_path}/.supsrc.state - Repository-specific
+        Local=False (shareable state):
+        1. {repo_path}/.supsrc/state.json
         2. ~/.config/supsrc/state.json - User-global
-        3. /tmp/supsrc-global.state - System-wide temporary
+
+        Local=True (machine-specific):
+        1. {repo_path}/.supsrc/local/state.local.json
+        2. /tmp/supsrc-global.state - System-wide temporary
         """
         candidates = []
 
         # Repository-specific state file
         if repo_path:
-            repo_state = repo_path / cls.STATE_FILENAME
+            if local:
+                repo_state = SupsrcDirectories.get_state_file(repo_path, local=True)
+            else:
+                repo_state = SupsrcDirectories.get_state_file(repo_path, local=False)
             candidates.append(repo_state)
 
-        # User-global state file
-        home_dir = Path.home()
-        user_config_dir = home_dir / ".config" / "supsrc"
-        user_state = user_config_dir / "state.json"
-        candidates.append(user_state)
-
-        # System-wide temporary state file
-        temp_state = Path("/tmp") / "supsrc-global.state"
-        candidates.append(temp_state)
+        if local:
+            # System-wide temporary state file for local data
+            temp_state = Path("/tmp") / "supsrc-global.state"
+            candidates.append(temp_state)
+        else:
+            # User-global state file for shared data
+            home_dir = Path.home()
+            user_config_dir = home_dir / ".config" / "supsrc"
+            user_state = user_config_dir / "state.json"
+            candidates.append(user_state)
 
         # Return first existing file
         for candidate in candidates:
             if candidate.exists() and candidate.is_file():
-                log.debug("Found state file", path=str(candidate))
+                log.debug("Found state file", path=str(candidate), local=local)
                 return candidate
 
-        log.debug("No state file found", candidates=[str(c) for c in candidates])
+        log.debug("No state file found", candidates=[str(c) for c in candidates], local=local)
         return None
 
     @classmethod
-    def get_state_file_path(cls, repo_path: Path | None = None, create_dirs: bool = False) -> Path:
+    def get_state_file_path(cls, repo_path: Path | None = None, local: bool = False) -> Path:
         """Get the path where a state file should be written.
 
         Prefers repository-specific location, falls back to user config.
         """
         if repo_path:
-            state_path = repo_path / cls.STATE_FILENAME
-            if create_dirs:
-                repo_path.mkdir(parents=True, exist_ok=True)
-            return state_path
+            return SupsrcDirectories.get_state_file(repo_path, local=local)
 
-        # Fall back to user config directory
-        user_config_dir = Path.home() / ".config" / "supsrc"
-        if create_dirs:
-            user_config_dir.mkdir(parents=True, exist_ok=True)
-        return user_config_dir / "state.json"
+        # Fall back to user config directory for shared data
+        # or temp directory for local data
+        if local:
+            return Path("/tmp") / "supsrc-global.state"
+        else:
+            from provide.foundation.file import ensure_dir
+
+            user_config_dir = ensure_dir(Path.home() / ".config" / "supsrc")
+            return user_config_dir / "state.json"
 
     @classmethod
-    def load(cls, file_path: Path | None = None, repo_path: Path | None = None) -> StateData | None:
+    def load(
+        cls, file_path: Path | None = None, repo_path: Path | None = None, local: bool = False
+    ) -> StateData | None:
         """Load state data from file.
 
         Args:
@@ -91,7 +102,7 @@ class StateFile:
         from supsrc.state.control import StateData, validate_state_file
 
         if file_path is None:
-            file_path = cls.find_state_file(repo_path)
+            file_path = cls.find_state_file(repo_path, local=local)
 
         if not file_path or not file_path.exists():
             log.debug("State file not found", path=str(file_path) if file_path else None)
@@ -103,20 +114,26 @@ class StateFile:
                 log.warning("Invalid state file structure", path=str(file_path))
                 return None
 
-            with file_path.open("r") as f:
-                data = json.load(f)
+            data = read_json(file_path)
+            if data is None:
+                log.debug("Empty or invalid state file", path=str(file_path))
+                return None
 
             state_data = StateData.from_dict(data)
             log.debug("Loaded state from file", path=str(file_path), paused=state_data.paused)
             return state_data
 
-        except (json.JSONDecodeError, OSError) as e:
+        except Exception as e:
             log.error("Failed to load state file", path=str(file_path), error=str(e))
             return None
 
     @classmethod
     def save(
-        cls, state_data: StateData, file_path: Path | None = None, repo_path: Path | None = None
+        cls,
+        state_data: StateData,
+        file_path: Path | None = None,
+        repo_path: Path | None = None,
+        local: bool = False,
     ) -> bool:
         """Save state data to file using atomic write.
 
@@ -129,36 +146,22 @@ class StateFile:
             True if save was successful, False otherwise
         """
         if file_path is None:
-            file_path = cls.get_state_file_path(repo_path, create_dirs=True)
+            file_path = cls.get_state_file_path(repo_path, local=local)
 
         try:
-            # Use atomic write: write to temp file then move
-            temp_fd, temp_path = tempfile.mkstemp(
-                suffix=".tmp", prefix=".supsrc.state", dir=file_path.parent
-            )
+            # Use foundation's atomic write_json
+            write_json(file_path, state_data.to_dict(), indent=2, sort_keys=True, atomic=True)
+            log.debug("Saved state to file", path=str(file_path), paused=state_data.paused)
+            return True
 
-            try:
-                with os.fdopen(temp_fd, "w") as f:
-                    json.dump(state_data.to_dict(), f, indent=2, sort_keys=True)
-
-                # Atomic move to final location
-                temp_path_obj = Path(temp_path)
-                temp_path_obj.replace(file_path)
-
-                log.debug("Saved state to file", path=str(file_path), paused=state_data.paused)
-                return True
-
-            except Exception:
-                # Clean up temp file on error
-                Path(temp_path).unlink(missing_ok=True)
-                raise
-
-        except (OSError, TypeError) as e:
+        except Exception as e:
             log.error("Failed to save state file", path=str(file_path), error=str(e))
             return False
 
     @classmethod
-    def delete(cls, file_path: Path | None = None, repo_path: Path | None = None) -> bool:
+    def delete(
+        cls, file_path: Path | None = None, repo_path: Path | None = None, local: bool = False
+    ) -> bool:
         """Delete a state file.
 
         Args:
@@ -169,7 +172,7 @@ class StateFile:
             True if deletion was successful or file didn't exist, False on error
         """
         if file_path is None:
-            file_path = cls.find_state_file(repo_path)
+            file_path = cls.find_state_file(repo_path, local=local)
 
         if not file_path or not file_path.exists():
             log.debug(

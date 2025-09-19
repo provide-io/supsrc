@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, Any
 import attrs
 from provide.foundation.logger import get_logger
 
+from supsrc.utils.directories import SupsrcDirectories
+
 if TYPE_CHECKING:
     from supsrc.events.protocol import Event
 
@@ -29,6 +31,12 @@ class JSONEventLogger:
 
     file_path: Path
     _file_handle: Any = attrs.field(init=False, default=None)
+
+    @classmethod
+    def for_repository(cls, repo_path: Path, file_name: str = "events.jsonl") -> JSONEventLogger:
+        """Create a JSONEventLogger for a repository using standard .supsrc/local/logs/ structure."""
+        log_dir = SupsrcDirectories.get_log_dir(repo_path)
+        return cls(file_path=log_dir / file_name)
 
     def __attrs_post_init__(self) -> None:
         """Initialize the file handle after creation."""
