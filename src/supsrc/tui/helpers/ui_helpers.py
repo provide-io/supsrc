@@ -23,10 +23,7 @@ class UIHelperMixin:
     def _update_countdown_display(self) -> None:
         """Update countdown displays for all repositories."""
         try:
-            # Make this VERY visible to see if it's being called
-            import sys
-            print("🔥 PERIODIC COUNTDOWN UPDATE CALLED - THIS SHOULD APPEAR EVERY SECOND 🔥", file=sys.stderr)
-            log.warning("PERIODIC COUNTDOWN UPDATE CALLED - THIS SHOULD APPEAR EVERY SECOND")
+            # Periodic countdown update
 
             if hasattr(self, "_orchestrator") and self._orchestrator:
                 # Update countdown for each repository state

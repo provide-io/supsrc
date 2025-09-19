@@ -212,9 +212,7 @@ class SupsrcTuiApp(TuiAppBase):
     def on_mount(self) -> None:
         """Initialize data table and start the orchestrator."""
         # Foundation/structlog logging is already set up by the CLI
-        import sys
-        print("🚀 TUI on_mount starting...", file=sys.stderr)
-        log.info("🐛 TUI on_mount starting - debug info will go to Foundation logger")
+        log.info("TUI on_mount starting")
 
         try:
             # Set up the data table
@@ -234,11 +232,9 @@ class SupsrcTuiApp(TuiAppBase):
             )
 
             # Initialize timer manager
-            print("🔧 Initializing timer manager...", file=sys.stderr)
             self.timer_manager = TimerManager(self)
 
             # Initialize the event feed widget
-            print("🔧 Initializing event feed...", file=sys.stderr)
             try:
                 self._event_feed = self.query_one("#event-feed", EventFeed)
                 self.event_collector.subscribe(self._event_feed.add_event)
@@ -259,7 +255,6 @@ class SupsrcTuiApp(TuiAppBase):
             self.set_interval(0.5, self._check_external_shutdown)
 
             # Set up a timer to update countdowns every second - use asyncio instead of Textual set_interval
-            print("🚀 Starting asyncio countdown timer task...", file=sys.stderr)
             try:
                 # Start an async task for periodic countdown updates
                 self._countdown_task = self.run_worker(
@@ -268,9 +263,8 @@ class SupsrcTuiApp(TuiAppBase):
                     group="countdown_updater",
                     name="countdown_timer",
                 )
-                print(f"✅ Countdown task created successfully: {self._countdown_task}", file=sys.stderr)
+                log.debug("Countdown timer task started successfully")
             except Exception as e:
-                print(f"❌ Failed to create countdown task: {e}", file=sys.stderr)
                 log.error("Failed to create countdown task", error=str(e))
 
             # Set the main worker
