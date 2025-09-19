@@ -201,6 +201,7 @@ class EventHandlerMixin:
                         row_index = table.get_row_index(repo_id_str)
                         # Save current cursor position to restore if needed
                         original_cursor_row = table.cursor_row
+                        original_cursor_col = table.cursor_column
 
                         # Try to update cells first, with improved error handling
                         cell_update_failed = False
@@ -219,6 +220,18 @@ class EventHandlerMixin:
                                     cell_update_failed = True
                                     break
 
+                        # Restore cursor position after successful cell updates
+                        if not cell_update_failed:
+                            try:
+                                if original_cursor_row < len(table.rows) and (
+                                    table.cursor_row != original_cursor_row
+                                    or table.cursor_column != original_cursor_col
+                                ):
+                                    table.cursor_row = original_cursor_row
+                                    table.cursor_column = original_cursor_col
+                            except Exception:
+                                pass
+
                         # Only remove/re-add if cell updates failed
                         if cell_update_failed:
                             log.debug(
@@ -231,6 +244,7 @@ class EventHandlerMixin:
                             try:
                                 if original_cursor_row < len(table.rows):
                                     table.cursor_row = original_cursor_row
+                                    table.cursor_column = original_cursor_col
                             except Exception:
                                 pass  # Ignore cursor restoration errors
 
@@ -242,6 +256,7 @@ class EventHandlerMixin:
                         )
                         # Fallback: remove and re-add with cursor preservation attempt
                         original_cursor_row = getattr(table, "cursor_row", 0)
+                        original_cursor_col = getattr(table, "cursor_column", 0)
                         with contextlib.suppress(Exception):
                             table.remove_row(repo_id_str)
                         table.add_row(*row_data, key=repo_id_str)
@@ -249,6 +264,7 @@ class EventHandlerMixin:
                         try:
                             if original_cursor_row < len(table.rows):
                                 table.cursor_row = original_cursor_row
+                                table.cursor_column = original_cursor_col
                         except Exception:
                             pass  # Ignore cursor restoration errors
                 else:
