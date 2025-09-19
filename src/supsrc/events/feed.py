@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 
 from provide.foundation.logger import get_logger
 from rich.text import Text
-from textual import events
 from textual.widgets import RichLog
 
 if TYPE_CHECKING:
@@ -25,6 +24,9 @@ class EventFeed(RichLog):
     This widget can display any event that implements the Event protocol.
     It applies simple color coding based on the event source.
     """
+
+    # Enable focus for keyboard navigation
+    can_focus = True
 
     def on_mount(self) -> None:
         """Initialize the EventFeed widget when mounted."""
@@ -70,12 +72,26 @@ class EventFeed(RichLog):
                 exc_info=True,
             )
 
-    def on_key(self, event: events.Key) -> None:
-        """Handle key events for navigation."""
-        # Allow normal RichLog scrolling behavior
-        if event.key in ("up", "down", "page_up", "page_down", "home", "end"):
-            # Let RichLog handle these keys
-            super().on_key(event)
-        else:
-            # For other keys, let the parent handle them
-            event.stop()
+    def key_up(self) -> None:
+        """Handle up arrow key for scrolling."""
+        self.scroll_up()
+
+    def key_down(self) -> None:
+        """Handle down arrow key for scrolling."""
+        self.scroll_down()
+
+    def key_page_up(self) -> None:
+        """Handle page up key for scrolling."""
+        self.scroll_page_up()
+
+    def key_page_down(self) -> None:
+        """Handle page down key for scrolling."""
+        self.scroll_page_down()
+
+    def key_home(self) -> None:
+        """Handle home key for scrolling."""
+        self.scroll_home()
+
+    def key_end(self) -> None:
+        """Handle end key for scrolling."""
+        self.scroll_end()

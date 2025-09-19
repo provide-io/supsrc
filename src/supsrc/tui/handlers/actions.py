@@ -147,11 +147,15 @@ class ActionHandlerMixin:
 
     def action_select_repo_for_detail(self) -> None:
         """Select a repository for detailed view."""
-        # Only work when the repository table is focused
-        table = self.query_one("#repository_table", DataTable)
-        if not table.has_focus:
-            return  # Let other widgets handle Enter key
+        # Check if we're in the Events tab - if so, don't handle Enter
+        try:
+            tabbed_content = self.query_one(TabbedContent)
+            if tabbed_content.active == "events-tab":
+                return  # Let EventFeed handle Enter key
+        except Exception:
+            pass  # If we can't find tabs, continue with normal behavior
 
+        table = self.query_one("#repository_table", DataTable)
         if table.cursor_coordinate.row < len(table.rows):
             selected_row = table.get_row_at(table.cursor_coordinate.row)
             repo_id = str(selected_row[2])  # Repository name is in column 2
