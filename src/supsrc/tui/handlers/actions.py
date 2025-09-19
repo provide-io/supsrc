@@ -31,9 +31,9 @@ class ActionHandlerMixin:
 
     def action_clear_log(self) -> None:
         """Clear the event feed."""
-        from supsrc.events.feed import EventFeed
+        from supsrc.events.feed_table import EventFeedTable
 
-        self.query_one("#event-feed", EventFeed).clear()
+        self.query_one("#event-feed", EventFeedTable).clear()
 
         # Emit event instead of log message
         event = UserActionEvent(
@@ -151,7 +151,7 @@ class ActionHandlerMixin:
         try:
             tabbed_content = self.query_one(TabbedContent)
             if tabbed_content.active == "events-tab":
-                return  # Let EventFeed handle Enter key
+                return  # Let EventFeedTable handle Enter key
         except Exception:
             pass  # If we can't find tabs, continue with normal behavior
 
@@ -218,10 +218,10 @@ class ActionHandlerMixin:
                 active_tab = tabbed_content.active
 
                 if active_tab == "events-tab":
-                    # Focus the EventFeed widget directly
+                    # Focus the EventFeedTable widget directly
                     event_feed = self.query_one("#event-feed")
                     event_feed.focus()
-                    log.debug("Focused EventFeed content from repo table")
+                    log.debug("Focused EventFeedTable content from repo table")
                 else:
                     # For other tabs, focus the tabs bar for tab switching
                     tabs = tabbed_content.query_one("Tabs")
