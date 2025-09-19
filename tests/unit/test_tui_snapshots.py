@@ -77,7 +77,7 @@ class TestTuiSnapshots:
 
     def test_app_with_repository_data(
         self,
-        snap: SVGSnapshot,
+        snap_compare,
         mock_config_path: Path,
         mock_shutdown_event: asyncio.Event,
         sample_repo_states: dict[str, RepositoryState],
@@ -85,25 +85,25 @@ class TestTuiSnapshots:
         """Test the visual layout with repository data displayed."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def setup_data():
+        async def setup_data(pilot):
             """Setup the app with test data."""
             # Add repository data to the app
             from supsrc.tui.messages import StateUpdate
 
             await app.post_message(StateUpdate(sample_repo_states))
             # Give time for the update to process
-            await asyncio.sleep(0.1)
+            await pilot.pause()
 
         # Run the app with data and take snapshot
-        assert snap(app, run_before=setup_data) == snapshot
+        assert snap_compare(app, run_before=setup_data)
 
     def test_app_with_events_tab_active(
-        self, snap: SVGSnapshot, mock_config_path: Path, mock_shutdown_event: asyncio.Event
+        self, snap_compare, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test the visual layout with events tab active."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def add_log_messages():
+        async def add_log_messages(pilot):
             """Add some log messages to the event feed."""
             from supsrc.tui.messages import LogMessageUpdate
 
@@ -114,14 +114,14 @@ class TestTuiSnapshots:
             await app.post_message(LogMessageUpdate("Timer started for repository", "DEBUG"))
 
             # Give time for messages to be displayed
-            await asyncio.sleep(0.1)
+            await pilot.pause()
 
         # Snapshot with event feed populated
-        assert snap(app, run_before=add_log_messages) == snapshot
+        assert snap_compare(app, run_before=add_log_messages)
 
     def test_app_with_details_tab_active(
         self,
-        snap: SVGSnapshot,
+        snap_compare,
         mock_config_path: Path,
         mock_shutdown_event: asyncio.Event,
         sample_repo_states: dict[str, RepositoryState],
@@ -129,7 +129,7 @@ class TestTuiSnapshots:
         """Test the visual layout with details tab active and a repository selected."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def select_repository():
+        async def select_repository(pilot):
             """Setup data and select a repository."""
             from supsrc.tui.messages import StateUpdate
 
@@ -144,51 +144,51 @@ class TestTuiSnapshots:
             tabbed_content.active = "details-tab"
 
             # Give time for the update to process
-            await asyncio.sleep(0.1)
+            await pilot.pause()
 
         # Snapshot with repository selected and details tab active
-        assert snap(app, run_before=select_repository) == snapshot
+        assert snap_compare(app, run_before=select_repository)
 
     def test_app_with_about_tab_active(
-        self, snap: SVGSnapshot, mock_config_path: Path, mock_shutdown_event: asyncio.Event
+        self, snap_compare, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test the visual layout with about tab active."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def switch_to_about():
+        async def switch_to_about(pilot):
             """Switch to the about tab."""
             tabbed_content = app.query_one("TabbedContent")
             tabbed_content.active = "about-tab"
-            await asyncio.sleep(0.1)
+            await pilot.pause()
 
         # Snapshot with about tab active
-        assert snap(app, run_before=switch_to_about) == snapshot
+        assert snap_compare(app, run_before=switch_to_about)
 
     def test_app_layout_responsiveness_small(
-        self, snap: SVGSnapshot, mock_config_path: Path, mock_shutdown_event: asyncio.Event
+        self, snap_compare, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test app layout at a smaller terminal size."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
         # Test at a smaller terminal size (80x24 is traditional small terminal)
-        assert snap(app, terminal_size=(80, 24)) == snapshot
+        assert snap_compare(app, terminal_size=(80, 24))
 
     def test_app_layout_responsiveness_large(
-        self, snap: SVGSnapshot, mock_config_path: Path, mock_shutdown_event: asyncio.Event
+        self, snap_compare, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test app layout at a larger terminal size."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
         # Test at a larger terminal size
-        assert snap(app, terminal_size=(120, 40)) == snapshot
+        assert snap_compare(app, terminal_size=(120, 40))
 
     def test_app_with_many_repositories(
-        self, snap: SVGSnapshot, mock_config_path: Path, mock_shutdown_event: asyncio.Event
+        self, snap_compare, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test the visual layout with many repositories to test scrolling."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def add_many_repositories():
+        async def add_many_repositories(pilot):
             """Add many repositories to test table scrolling."""
             states = {}
             for i in range(10):
@@ -206,18 +206,18 @@ class TestTuiSnapshots:
             from supsrc.tui.messages import StateUpdate
 
             await app.post_message(StateUpdate(states))
-            await asyncio.sleep(0.1)
+            await pilot.pause()
 
         # Snapshot with many repositories
-        assert snap(app, run_before=add_many_repositories) == snapshot
+        assert snap_compare(app, run_before=add_many_repositories)
 
     def test_app_dark_mode_toggle(
-        self, snap: SVGSnapshot, mock_config_path: Path, mock_shutdown_event: asyncio.Event
+        self, snap_compare, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test the visual appearance after toggling dark mode."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def toggle_dark_mode():
+        async def toggle_dark_mode(pilot):
             """Toggle dark mode and add some data."""
             # Toggle dark mode (this simulates pressing 'd')
             app.action_toggle_dark()
@@ -232,11 +232,7 @@ class TestTuiSnapshots:
             from supsrc.tui.messages import StateUpdate
 
             await app.post_message(StateUpdate({"sample-repo": state}))
-            await asyncio.sleep(0.1)
+            await pilot.pause()
 
         # Snapshot with dark mode toggled
-        assert snap(app, run_before=toggle_dark_mode) == snapshot
-
-
-# Placeholder for syrupy snapshots - these will be generated automatically
-snapshot = "placeholder"
+        assert snap_compare(app, run_before=toggle_dark_mode)
