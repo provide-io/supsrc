@@ -237,13 +237,20 @@ class SupsrcTuiApp(TuiAppBase):
             # Initialize the event feed widget
             try:
                 self._event_feed = self.query_one("#event-feed", EventFeed)
-                self.event_collector.subscribe(self._event_feed.add_event)
-                log.info("Event feed widget found and subscribed to event collector",
-                        handler_count=len(self.event_collector._handlers))
+                log.warning(f"🔍 Found EventFeed widget: {type(self._event_feed)}")
 
-                # Add a test message directly to the feed to verify it's working
-                self._event_feed.write("[cyan]🚀 TUI Event Feed Initialized[/cyan]")
+                self.event_collector.subscribe(self._event_feed.add_event)
+                log.warning("✅ EventFeed subscribed to event collector",
+                           handler_count=len(self.event_collector._handlers))
+
+                # Add test messages directly to verify the widget works
+                self._event_feed.write("[bold cyan]🚀 TUI Event Feed Initialized Successfully[/bold cyan]")
                 self._event_feed.write("[yellow]📋 Events will appear below this line[/yellow]")
+                self._event_feed.write("[green]✨ Test message - if you see this, the EventFeed is working![/green]")
+
+                # Force refresh the widget
+                self._event_feed.refresh()
+                log.warning("🔄 EventFeed refreshed after adding test messages")
 
                 # Create a welcome event
                 from supsrc.events.system import UserActionEvent
@@ -253,7 +260,7 @@ class SupsrcTuiApp(TuiAppBase):
                     action="start",
                 )
                 self.event_collector.emit(welcome_event)  # type: ignore[arg-type]
-                log.info("Welcome event emitted to test event feed")
+                log.warning("🎉 Welcome event emitted to test event feed")
             except Exception as e:
                 log.error("Failed to initialize event feed widget", error=str(e), exc_info=True)
 
@@ -370,6 +377,17 @@ class SupsrcTuiApp(TuiAppBase):
 
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
 
+        log.warning(f"🧪 TEST ACTION TRIGGERED at {timestamp}")
+
+        # Add direct test messages to the feed first
+        if self._event_feed:
+            self._event_feed.write(f"[bold magenta]🧪 Manual test triggered at {timestamp}[/bold magenta]")
+            self._event_feed.write(f"[cyan]📝 If you see this message, the 't' key binding works![/cyan]")
+            self._event_feed.refresh()
+            log.warning("📝 Direct test messages written to EventFeed widget")
+        else:
+            log.error("❌ EventFeed widget not available for direct writing")
+
         # Emit test events using the event system
         from pathlib import Path
 
@@ -402,12 +420,10 @@ class SupsrcTuiApp(TuiAppBase):
             ),
         ]
 
-        # Add a direct test message to the feed
-        if self._event_feed:
-            self._event_feed.write(f"[magenta]🧪 Manual test triggered at {timestamp}[/magenta]")
-
+        log.warning(f"🚀 Emitting {len(test_events)} test events through event system")
         for event in test_events:
             self.event_collector.emit(event)  # type: ignore[arg-type]
+        log.warning("✅ All test events emitted")
 
 
 # 🖥️✨

@@ -32,9 +32,7 @@ class EventFeed(RichLog):
         """
         try:
             text = event.format()
-            log.debug("Adding event to feed",
-                     event_source=event.source,
-                     event_text=text[:100])  # Truncate for logging
+            log.warning(f"📝 EventFeed.add_event called with: {event.source} - {text[:50]}...")
 
             # Simple color mapping based on event source
             colors = {
@@ -45,13 +43,21 @@ class EventFeed(RichLog):
             }
             color = colors.get(event.source, "white")
 
-            self.write(f"[{color}]{text}[/{color}]")
+            formatted_text = f"[{color}]{text}[/{color}]"
+            self.write(formatted_text)
+            log.warning(f"✍️ Written to EventFeed: {formatted_text[:50]}...")
 
             # Force a screen refresh to ensure the event is visible
             if hasattr(self, 'refresh'):
                 self.refresh()
+                log.warning("🔄 EventFeed refreshed after write")
 
-            log.debug("Event written to feed widget successfully")
+            # Check widget state
+            log.warning(f"📊 EventFeed state - visible: {getattr(self, 'visible', 'unknown')}, "
+                       f"display: {getattr(self, 'display', 'unknown')}, "
+                       f"line_count: {getattr(self, 'line_count', 'unknown')}")
+
+            log.warning("✅ Event successfully processed by EventFeed")
         except Exception as e:
             log.error("Failed to add event to feed",
                      error=str(e),
