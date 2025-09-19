@@ -11,6 +11,7 @@ from provide.foundation.logger import get_logger
 
 from supsrc.config import InactivityRuleConfig, RepositoryConfig, SupsrcConfig
 from supsrc.config.defaults import DEFAULT_DEBOUNCE_DELAY
+from supsrc.events.buffer import EventBuffer
 from supsrc.monitor import MonitoredEvent
 from supsrc.rules import check_trigger_condition
 from supsrc.state import RepositoryState, RepositoryStatus
@@ -47,7 +48,24 @@ class EventProcessor:
         self.config_reload_callback = config_reload_callback
         self._action_tasks: set[asyncio.Task] = set()
         self._recent_moves: set[Path] = set()
-        log.debug("EventProcessor initialized.")
+
+        # Initialize event buffer for TUI events
+        global_config = config.global_config
+        if global_config.event_buffering_enabled:
+            self._event_buffer = EventBuffer(
+                window_ms=global_config.event_buffer_window_ms,
+                grouping_mode=global_config.event_grouping_mode,
+                emit_callback=self._emit_buffered_event,
+            )
+        else:
+            self._event_buffer = None
+
+        log.debug(
+            "EventProcessor initialized.",
+            event_buffering_enabled=global_config.event_buffering_enabled,
+            buffer_window_ms=global_config.event_buffer_window_ms,
+            grouping_mode=global_config.event_grouping_mode,
+        )
 
     async def run(self) -> None:
         """Main event consumption loop."""
@@ -105,7 +123,9 @@ class EventProcessor:
                 repo_config = self.config.repositories.get(event.repo_id)
                 if repo_config and isinstance(repo_config.rule, InactivityRuleConfig):
                     # After any file change, check if repo is clean and handle timer accordingly
-                    task = asyncio.create_task(self._check_repo_status_and_handle_timer(event.repo_id))
+                    task = asyncio.create_task(
+                        self._check_repo_status_and_handle_timer(event.repo_id)
+                    )
                     task.add_done_callback(lambda _: None)
 
                 # Schedule async refresh of repository statistics for real-time UI updates
@@ -114,7 +134,7 @@ class EventProcessor:
 
                 self.tui.post_state_update(self.repo_states)
 
-                # Emit file change event for TUI event feed
+                # Emit file change event for TUI event feed (with optional buffering)
                 if self.tui and hasattr(self.tui, "app") and self.tui.app:
                     if hasattr(self.tui.app, "event_collector"):
                         try:
@@ -126,17 +146,32 @@ class EventProcessor:
                                 file_path=event.src_path,
                                 change_type=event.event_type,
                             )
-                            self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
-                            log.debug("File change event emitted successfully",
-                                     event_type=event.event_type,
-                                     file_name=event.src_path.name,
-                                     repo_id=event.repo_id)
+
+                            # Use buffering if enabled, otherwise emit directly
+                            if self._event_buffer:
+                                self._event_buffer.add_event(change_event)
+                                log.debug(
+                                    "File change event added to buffer",
+                                    event_type=event.event_type,
+                                    file_name=event.src_path.name,
+                                    repo_id=event.repo_id,
+                                )
+                            else:
+                                self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
+                                log.debug(
+                                    "File change event emitted directly",
+                                    event_type=event.event_type,
+                                    file_name=event.src_path.name,
+                                    repo_id=event.repo_id,
+                                )
                         except Exception as e:
-                            log.warning("Failed to emit TUI file change event",
-                                       error=str(e),
-                                       event_type=event.event_type,
-                                       repo_id=event.repo_id,
-                                       exc_info=True)
+                            log.warning(
+                                "Failed to emit TUI file change event",
+                                error=str(e),
+                                event_type=event.event_type,
+                                repo_id=event.repo_id,
+                                exc_info=True,
+                            )
                     else:
                         log.warning("TUI app exists but no event_collector found")
                 else:
@@ -310,8 +345,35 @@ class EventProcessor:
         except Exception as e:
             log.debug("Failed to check repository status", repo_id=repo_id, error=str(e))
 
+    def _emit_buffered_event(self, event: Any) -> None:
+        """Emit a buffered event to the TUI event collector."""
+        if (
+            self.tui
+            and hasattr(self.tui, "app")
+            and self.tui.app
+            and hasattr(self.tui.app, "event_collector")
+        ):
+            try:
+                self.tui.app.event_collector.emit(event)  # type: ignore[arg-type,union-attr]
+                log.debug(
+                    "Buffered event emitted successfully",
+                    event_type=getattr(event, "operation_type", "unknown"),
+                    repo_id=getattr(event, "repo_id", "unknown"),
+                )
+            except Exception as e:
+                log.warning(
+                    "Failed to emit buffered TUI event",
+                    error=str(e),
+                    event_type=getattr(event, "operation_type", "unknown"),
+                    exc_info=True,
+                )
+
     async def stop(self) -> None:
         """Gracefully stop all scheduled action tasks."""
+        # Flush any pending buffered events
+        if self._event_buffer:
+            self._event_buffer.flush_all()
+
         if not self._action_tasks:
             return
         log.debug("Stopping in-flight action tasks", count=len(self._action_tasks))

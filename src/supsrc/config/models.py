@@ -104,6 +104,11 @@ class GlobalConfig:
 
     log_level: str = field(default="INFO", validator=_validate_log_level)
 
+    # Event buffering configuration
+    event_buffering_enabled: bool = field(default=True)
+    event_buffer_window_ms: int = field(default=200, validator=_validate_positive_int)
+    event_grouping_mode: str = field(default="smart", validator=instance_of(str))
+
     @property
     def numeric_log_level(self) -> int:
         return logging.getLevelName(self.log_level.upper())
