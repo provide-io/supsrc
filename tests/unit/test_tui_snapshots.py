@@ -13,7 +13,6 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from pytest_textual_snapshot.run import SVGSnapshot
 
 from supsrc.state import RepositoryState
 from supsrc.tui.app import SupsrcTuiApp
@@ -68,13 +67,13 @@ class TestTuiSnapshots:
     """Visual regression tests using snapshot testing."""
 
     def test_empty_app_layout(
-        self, snap: SVGSnapshot, mock_config_path: Path, mock_shutdown_event: asyncio.Event
+        self, snap_compare, mock_config_path: Path, mock_shutdown_event: asyncio.Event
     ) -> None:
         """Test the visual layout of an empty application."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
         # Snapshot the empty app layout
-        assert snap(app) == snapshot
+        assert snap_compare(app)
 
     def test_app_with_repository_data(
         self,
