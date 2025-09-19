@@ -262,7 +262,12 @@ class RepositoryState:
 
     def update_timer_countdown(self) -> None:
         """Updates the timer_seconds_left based on elapsed time."""
-        if self.inactivity_timer_handle and self._timer_start_time and self._timer_total_seconds:
+        if (
+            self.inactivity_timer_handle
+            and not self.inactivity_timer_handle.cancelled()
+            and self._timer_start_time
+            and self._timer_total_seconds
+        ):
             elapsed = asyncio.get_event_loop().time() - self._timer_start_time
             seconds_left = max(0, int(self._timer_total_seconds - elapsed))
             self.timer_seconds_left = seconds_left
