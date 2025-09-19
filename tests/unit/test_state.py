@@ -5,7 +5,7 @@
 Comprehensive tests for repository state management.
 """
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from supsrc.state import RepositoryState, RepositoryStatus
 
@@ -96,14 +96,24 @@ class TestRepositoryState:
         mock_timer = Mock()
         mock_timer.cancel = Mock()
 
-        # Set timer
-        state.set_inactivity_timer(mock_timer, 60)
-        assert state.inactivity_timer_handle == mock_timer
+        # Mock asyncio.get_event_loop().time() to avoid event loop requirement
+        with patch("asyncio.get_event_loop") as mock_get_loop:
+            mock_loop = Mock()
+            mock_loop.time.return_value = 12345.0
+            mock_get_loop.return_value = mock_loop
+
+            # Set timer
+            state.set_inactivity_timer(mock_timer, 60)
+            assert state.inactivity_timer_handle == mock_timer
+            assert state._timer_total_seconds == 60
+            assert state._timer_start_time == 12345.0
 
         # Cancel timer
         state.cancel_inactivity_timer()
         mock_timer.cancel.assert_called_once()
         assert state.inactivity_timer_handle is None
+        assert state._timer_total_seconds is None
+        assert state._timer_start_time is None
 
         # Test canceling when no timer exists
         state.cancel_inactivity_timer()  # Should not raise

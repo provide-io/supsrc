@@ -137,7 +137,10 @@ class RepositoryManager:
                         # Load cached commit stats for TUI display
                         try:
                             commit_stats = await engine.get_last_commit_stats(
-                                repo_state, repo_config.repository, config.global_config, repo_config.path
+                                repo_state,
+                                repo_config.repository,
+                                config.global_config,
+                                repo_config.path,
                             )
                             if commit_stats.get("success", False):
                                 init_log.debug(
@@ -181,6 +184,18 @@ class RepositoryManager:
                     )
                     tui.app.event_collector.emit(error_event)  # type: ignore[arg-type]
                 continue
+
+        # Log detailed state before posting to TUI
+        for repo_id, state in self.repo_states.items():
+            self._log.info(
+                "Repository initialized",
+                repo_id=repo_id,
+                status=state.status.name,
+                total_files=state.total_files,
+                changed_files=state.changed_files,
+                rule_emoji=state.rule_emoji,
+                current_branch=state.current_branch,
+            )
 
         tui.post_state_update(self.repo_states)
         self._log.info(f"Initialized {len(enabled_repo_ids)} repositories.")
