@@ -103,9 +103,17 @@ class SupsrcTuiApp(TuiAppBase):
     }
 
     #event-feed {
-        height: 100%;
-        min-height: 10;
+        height: 1fr;
+        margin: 0;
+        padding: 0;
+        border: none;
         scrollbar-gutter: stable;
+    }
+
+    #repo-details-content, #about-content {
+        height: 1fr;
+        margin: 0;
+        padding: 1;
     }
 
     Footer {
@@ -121,13 +129,12 @@ class SupsrcTuiApp(TuiAppBase):
     /* Tab styling */
     TabbedContent {
         height: 100%;
-        overflow: auto;
+        layout: vertical;
     }
 
     TabPane {
         padding: 0;
-        height: 100%;
-        min-height: 10;
+        height: 1fr;
         overflow: auto;
     }
 
@@ -136,6 +143,8 @@ class SupsrcTuiApp(TuiAppBase):
         color: #ffffff;
         height: 1;
         dock: top;
+        margin: 0;
+        padding: 0;
     }
 
     Tab {
@@ -377,8 +386,11 @@ class SupsrcTuiApp(TuiAppBase):
         # Add direct test message to the feed first
         if self._event_feed:
             from rich.text import Text
+
             self._event_feed.write(
-                Text.from_markup(f"[bold magenta]🧪 Manual test triggered at {timestamp}[/bold magenta]")
+                Text.from_markup(
+                    f"[bold magenta]🧪 Manual test triggered at {timestamp}[/bold magenta]"
+                )
             )
 
         # Emit test events using the event system
