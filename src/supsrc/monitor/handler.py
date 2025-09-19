@@ -13,15 +13,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pathspec
-import structlog
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from provide.foundation.logger import get_logger
 
 from .events import MonitoredEvent
 
 if TYPE_CHECKING:
     from asyncio import AbstractEventLoop
 
-log = structlog.get_logger("monitor.handler")
+log = get_logger("monitor.handler")
 
 
 # --- NEW: Default ignore patterns to prevent feedback loops ---
