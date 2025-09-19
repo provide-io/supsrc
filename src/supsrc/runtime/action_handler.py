@@ -241,6 +241,16 @@ class ActionHandler:
                         RepositoryStatus.ERROR, f"Status check failed: {status_result.message}"
                     )
                     repo_state.action_description = "Status check failed."
+
+                    # Emit error event for status check failure
+                    from supsrc.events.system import ErrorEvent
+                    status_error_event = ErrorEvent(
+                        description=f"Git status check failed: {status_result.message}",
+                        source="git",
+                        error_type="StatusCheckFailed",
+                        repo_id=repo_id,
+                    )
+                    self._emit_event(status_error_event)
                 elif status_result.is_conflicted:
                     repo_state.update_status(RepositoryStatus.CONFLICT_DETECTED, "Repo has conflicts.")
                     repo_state.action_description = "Merge conflict detected."
@@ -307,6 +317,17 @@ class ActionHandler:
                     RepositoryStatus.ERROR, f"Staging failed: {stage_result.message}"
                 )
                 repo_state.action_description = "Staging failed."
+
+                # Emit error event for staging failure
+                from supsrc.events.system import ErrorEvent
+                staging_error_event = ErrorEvent(
+                    description=f"Git staging failed: {stage_result.message}",
+                    source="git",
+                    error_type="StagingFailed",
+                    repo_id=repo_id,
+                )
+                self._emit_event(staging_error_event)
+
                 self.tui.post_state_update(self.repo_states)
                 return
 
@@ -320,6 +341,17 @@ class ActionHandler:
                 if not llm_provider:
                     repo_state.update_status(RepositoryStatus.ERROR, "LLM provider failed to init.")
                     repo_state.action_description = "LLM provider failed."
+
+                    # Emit error event for LLM provider failure
+                    from supsrc.events.system import ErrorEvent
+                    llm_error_event = ErrorEvent(
+                        description="LLM provider failed to initialize",
+                        source="llm",
+                        error_type="ProviderInitFailed",
+                        repo_id=repo_id,
+                    )
+                    self._emit_event(llm_error_event)
+
                     self.tui.post_state_update(self.repo_states)
                     return
 
@@ -399,6 +431,16 @@ class ActionHandler:
                     RepositoryStatus.ERROR, f"Commit failed: {commit_result.message}"
                 )
                 repo_state.action_description = "Commit operation failed."
+
+                # Emit error event for commit failure
+                from supsrc.events.system import ErrorEvent
+                commit_error_event = ErrorEvent(
+                    description=f"Git commit failed: {commit_result.message}",
+                    source="git",
+                    error_type="CommitFailed",
+                    repo_id=repo_id,
+                )
+                self._emit_event(commit_error_event)
             elif commit_result.commit_hash is None:
                 repo_state.reset_after_action()
             else:
@@ -490,4 +532,15 @@ class ActionHandler:
             if repo_state:
                 repo_state.update_status(RepositoryStatus.ERROR, f"Action failure: {e}")
                 repo_state.action_description = "Unexpected action failure."
+
+                # Emit error event for unexpected action failure
+                from supsrc.events.system import ErrorEvent
+                action_error_event = ErrorEvent(
+                    description=f"Unexpected action failure: {e!s}",
+                    source="action_handler",
+                    error_type="UnexpectedFailure",
+                    repo_id=repo_id,
+                )
+                self._emit_event(action_error_event)
+
                 self.tui.post_state_update(self.repo_states)
