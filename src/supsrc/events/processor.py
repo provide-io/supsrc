@@ -101,6 +101,11 @@ class EventProcessor:
                 # Record the change and update UI
                 repo_state.record_change()
 
+                # Start inactivity timer immediately for inactivity rules (no debounce delay)
+                repo_config = self.config.repositories.get(event.repo_id)
+                if repo_config and isinstance(repo_config.rule, InactivityRuleConfig):
+                    self._start_inactivity_timer(repo_state, repo_config)
+
                 # Schedule async refresh of repository statistics for real-time UI updates
                 task = asyncio.create_task(self._refresh_repository_statistics(event.repo_id))
                 task.add_done_callback(lambda _: None)  # Ensure task is properly handled
@@ -127,7 +132,7 @@ class EventProcessor:
                     except Exception as e:
                         log.debug("Failed to emit TUI event", error=str(e))
 
-                # Instead of acting immediately, start a debounced check
+                # Start debounced check for save count rules and other trigger conditions
                 self._debounce_trigger_check(event.repo_id)
 
             except asyncio.CancelledError:
@@ -181,10 +186,8 @@ class EventProcessor:
         if trigger_met:
             log.debug("Scheduling immediate action", repo_id=repo_id)
             self._schedule_action(repo_id)
-        elif isinstance(repo_config.rule, InactivityRuleConfig):
-            # If the save count rule wasn't met, the inactivity rule might still apply
-            log.debug("Starting inactivity timer", repo_id=repo_id)
-            self._start_inactivity_timer(repo_state, repo_config)
+        # Note: Inactivity timer is already started immediately on file change,
+        # no need to start it again here during debounce check
 
     def _schedule_action(self, repo_id: str) -> None:
         """Schedules the action handler to execute for a repo."""
