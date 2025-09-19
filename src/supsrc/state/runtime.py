@@ -139,8 +139,9 @@ class RepositoryState:
             **({"error": self.error_message} if new_status == RepositoryStatus.ERROR else {}),
         )
 
-        if new_status in (RepositoryStatus.IDLE, RepositoryStatus.CHANGED):
+        if new_status == RepositoryStatus.IDLE:
             self.cancel_inactivity_timer()
+        # Don't cancel timer when changing to CHANGED status - let the debounce mechanism handle it
 
     def record_change(self) -> None:
         """Records a file change event, updating time and count, and sets status to CHANGED."""
@@ -155,7 +156,7 @@ class RepositoryState:
             new_save_count=self.save_count,
             current_status=self.status.name,
         )
-        self.cancel_inactivity_timer()
+        # Don't cancel timer here - let debounce mechanism handle timer lifecycle
 
     def reset_after_action(self) -> None:
         """Resets state fields typically after a successful commit/push sequence."""
@@ -262,12 +263,7 @@ class RepositoryState:
 
     def update_timer_countdown(self) -> None:
         """Updates the timer_seconds_left based on elapsed time."""
-        if (
-            self.inactivity_timer_handle
-            and not self.inactivity_timer_handle.cancelled()
-            and self._timer_start_time
-            and self._timer_total_seconds
-        ):
+        if self.inactivity_timer_handle and self._timer_start_time and self._timer_total_seconds:
             elapsed = asyncio.get_event_loop().time() - self._timer_start_time
             seconds_left = max(0, int(self._timer_total_seconds - elapsed))
             self.timer_seconds_left = seconds_left
