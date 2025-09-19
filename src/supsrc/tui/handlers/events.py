@@ -76,6 +76,10 @@ class EventHandlerMixin:
             # log.debug(f"DEBUG_TUI_APP: on_state_update received: {debug_message_content}")
 
             table = self.query_one("#repository_table", DataTable)
+
+            # Save cursor position before any updates
+            original_cursor_row = table.cursor_row
+
             current_keys = set(table.rows.keys())
             incoming_keys = set(message.repo_states.keys())
 
@@ -238,6 +242,13 @@ class EventHandlerMixin:
                         table.add_row(*row_data, key=repo_id_str)
                 else:
                     table.add_row(*row_data, key=repo_id_str)
+
+            # Restore cursor position after all updates
+            try:
+                if original_cursor_row < len(table.rows):
+                    table.cursor_row = original_cursor_row
+            except Exception:
+                pass  # Ignore cursor restoration errors
 
         except Exception as e:
             log.error("Failed to update TUI table", error=str(e))
