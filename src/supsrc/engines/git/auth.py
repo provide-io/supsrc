@@ -14,7 +14,7 @@ import pygit2
 import structlog
 
 if TYPE_CHECKING:
-    from pygit2.credentials import CredentialType
+    pass
 
 log = structlog.get_logger("engines.git.auth")
 

@@ -57,9 +57,6 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
                 status_lines.append(status_line)
 
             # Print status summary
-            print(
-                f"[{len(orchestrator.repo_states)} repos] " + " | ".join(status_lines), flush=True
-            )
 
         except asyncio.CancelledError:
             break
@@ -89,7 +86,6 @@ def _run_headless_orchestrator(orchestrator: WatchOrchestrator) -> int:
     """
     try:
         # Print initial status message
-        print("Starting supsrc watch mode with status output...", flush=True)
 
         # asyncio.run() is the preferred, high-level way to run an async application.
         # It creates a new event loop, runs the coroutine until it completes,
@@ -102,17 +98,14 @@ def _run_headless_orchestrator(orchestrator: WatchOrchestrator) -> int:
         # The finally block within orchestrator.run() will have already been
         # executed by the time we get here, due to the task cancellation
         # handled by asyncio.run().
-        print("\nShutdown initiated by KeyboardInterrupt (CTRL-C).", flush=True)
         log.warning("Shutdown initiated by KeyboardInterrupt (CTRL-C).")
         return 130  # Standard exit code for SIGINT
     except Exception:
         # This catches any other unhandled exceptions from the orchestrator.
-        print("Orchestrator exited with an unhandled exception.", flush=True)
         log.critical("Orchestrator exited with an unhandled exception.", exc_info=True)
         return 1
     finally:
         # Final log message after the event loop is closed.
-        print("Watch mode stopped.", flush=True)
         logging.shutdown()
 
 

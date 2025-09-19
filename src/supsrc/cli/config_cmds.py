@@ -53,10 +53,8 @@ def show_config(ctx: click.Context, config_path: Path, **kwargs):
             click.echo(output_str)
         else:
             import io
-            import pprint
 
             with io.StringIO() as buffer:
-                pprint.pprint(config, stream=buffer)
                 output_str = buffer.getvalue()
             click.echo(output_str)
 

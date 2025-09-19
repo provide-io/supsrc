@@ -171,7 +171,11 @@ class GitEngine(RepositoryEngine):
             return RepoStatusResult(success=False, message=f"Unexpected status error: {e}")
 
     async def get_last_commit_stats(
-        self, state: RepositoryState, repository_config: dict[str, Any], global_config: dict[str, Any], repo_path: Path
+        self,
+        state: RepositoryState,
+        repository_config: dict[str, Any],
+        global_config: dict[str, Any],
+        repo_path: Path,
     ) -> dict[str, Any]:
         """Get statistics from the last commit for caching in state.
 
@@ -197,7 +201,10 @@ class GitEngine(RepositoryEngine):
                 commit_hash = str(last_commit.id)
 
                 # Check if we need to update cached stats
-                if state.cached_last_commit_stats_loaded and state.cached_last_commit_hash == commit_hash:
+                if (
+                    state.cached_last_commit_stats_loaded
+                    and state.cached_last_commit_hash == commit_hash
+                ):
                     self._log.debug("Using cached commit stats", commit_hash=commit_hash)
                     return {
                         "success": True,

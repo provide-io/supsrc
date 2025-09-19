@@ -60,7 +60,7 @@ class EventProcessor:
                 # Gracefully wait for either an event or a shutdown signal
                 get_task = asyncio.create_task(self.event_queue.get())
                 shutdown_task = asyncio.create_task(self.shutdown_event.wait())
-                done, pending = await asyncio.wait(
+                done, _pending = await asyncio.wait(
                     {get_task, shutdown_task}, return_when=asyncio.FIRST_COMPLETED
                 )
 
