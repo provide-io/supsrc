@@ -23,13 +23,24 @@ class UIHelperMixin:
     def _update_countdown_display(self) -> None:
         """Update countdown displays for all repositories."""
         try:
+            # Add diagnostic logging to verify this method is being called
+            log.debug("Periodic countdown update called")
+
             if hasattr(self, "_orchestrator") and self._orchestrator:
                 # Update countdown for each repository state
+                active_timers = 0
                 for repo_state in self._orchestrator.repo_states.values():
                     repo_state.update_timer_countdown()
+                    if repo_state.timer_seconds_left is not None:
+                        active_timers += 1
+                        log.debug(f"Active timer: {repo_state.repo_id} = {repo_state.timer_seconds_left}s")
+
+                log.debug(f"Updated {len(self._orchestrator.repo_states)} repo states, {active_timers} active timers")
 
                 # Update only the timer column directly to avoid cursor jumping
                 self._update_timer_columns_only()
+            else:
+                log.warning("No orchestrator available for countdown update")
         except Exception as e:
             # Use warning level to make errors more visible during debugging
             log.warning(f"Error updating countdown display: {e}", exc_info=True)
