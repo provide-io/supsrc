@@ -178,6 +178,11 @@ class EventProcessor:
                 else:
                     log.debug("TUI or TUI app not available for event emission")
 
+                # For inactivity rules, start timer check with debouncing
+                repo_config = self.config.repositories.get(event.repo_id)
+                if repo_config and isinstance(repo_config.rule, InactivityRuleConfig):
+                    self._schedule_debounced_timer_check(event.repo_id)
+
                 # Start debounced check for save count rules and other trigger conditions
                 self._debounce_trigger_check(event.repo_id)
 
@@ -310,7 +315,14 @@ class EventProcessor:
         repo_config = self.config.repositories.get(repo_id)
         repo_engine = self.repo_engines.get(repo_id)
 
-        if not all((repo_state, repo_config, repo_engine)):
+        if not repo_state or not repo_config:
+            return
+
+        # If no engine available (e.g., in tests), just start inactivity timer for inactivity rules
+        if not repo_engine:
+            if isinstance(repo_config.rule, InactivityRuleConfig):
+                self._start_inactivity_timer(repo_state, repo_config)
+                self.tui.post_state_update(self.repo_states)
             return
 
         try:
