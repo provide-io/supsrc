@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pathspec
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from provide.foundation.logger import get_logger
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
 from .events import MonitoredEvent
 

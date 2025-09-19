@@ -12,7 +12,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from supsrc.events.buffer import BufferedFileChangeEvent, EventBuffer
+from supsrc.events.buffer import EventBuffer
 from supsrc.events.monitor import FileChangeEvent
 
 

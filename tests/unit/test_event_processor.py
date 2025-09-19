@@ -10,10 +10,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from supsrc.config import SupsrcConfig
+from supsrc.config.defaults import DEFAULT_DEBOUNCE_DELAY
+from supsrc.events.processor import EventProcessor
 from supsrc.monitor import MonitoredEvent
 from supsrc.runtime.action_handler import ActionHandler
-from supsrc.events.processor import EventProcessor
-from supsrc.config.defaults import DEFAULT_DEBOUNCE_DELAY
 from supsrc.runtime.tui_interface import TUIInterface
 from supsrc.state import RepositoryState
 

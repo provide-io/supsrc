@@ -303,14 +303,13 @@ class WatchOrchestrator:
         """Print events to console in headless mode."""
         try:
             # Format event for console output
-            timestamp = event.timestamp.strftime("%H:%M:%S")
-            description = event.description
+            event.timestamp.strftime("%H:%M:%S")
             repo_id = getattr(event, "repo_id", "")
 
             if repo_id:
-                print(f"[{timestamp}] {repo_id}: {description}")
+                pass
             else:
-                print(f"[{timestamp}] {description}")
+                pass
         except Exception as e:
             log.debug("Failed to print event to console", error=str(e))
 

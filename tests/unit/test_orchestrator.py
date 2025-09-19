@@ -136,7 +136,7 @@ class TestOrchestratorFeatures:
         repo_id = "test_repo_1"
         # Ensure the repo exists in the orchestrator's state
         mock_orchestrator.repo_states[repo_id] = RepositoryState(repo_id=repo_id)
-        repo_state = mock_orchestrator.repo_states[repo_id]
+        mock_orchestrator.repo_states[repo_id]
 
         # Mock the repository manager
         from unittest.mock import MagicMock

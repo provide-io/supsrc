@@ -17,7 +17,7 @@ from supsrc.events.processor import EventProcessor
 from supsrc.monitor import MonitoredEvent
 from supsrc.runtime.action_handler import ActionHandler
 from supsrc.runtime.tui_interface import TUIInterface
-from supsrc.state import RepositoryState, RepositoryStatus
+from supsrc.state import RepositoryState
 
 
 @pytest.fixture

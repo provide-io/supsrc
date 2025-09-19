@@ -66,9 +66,9 @@ class BufferedFileChangeEvent(Event):
 
         else:  # single_file
             emoji_map = {
-                "created": "➕",  # HEAVY PLUS SIGN
+                "created": "+",  # PLUS SIGN
                 "modified": "✏️",  # PENCIL
-                "deleted": "➖",  # HEAVY MINUS SIGN
+                "deleted": "-",  # MINUS SIGN
                 "moved": "🔄",  # COUNTERCLOCKWISE ARROWS BUTTON
             }
             emoji = emoji_map.get(self.primary_change_type, "📄")  # PAGE FACING UP

@@ -13,9 +13,9 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from supsrc.config.loader import load_config
 
 from supsrc.config import GlobalConfig, InactivityRuleConfig, RepositoryConfig, SupsrcConfig
-from supsrc.config.loader import load_config
 from supsrc.events.processor import EventProcessor
 from supsrc.monitor import MonitoredEvent
 from supsrc.runtime.action_handler import ActionHandler
@@ -116,7 +116,6 @@ class TestTimerDebounceIntegration:
 
         # Track timer check calls
         timer_check_calls = []
-        original_timer_check = processor._check_repo_status_and_handle_timer
 
         async def mock_timer_check(repo_id):
             timer_check_calls.append(repo_id)

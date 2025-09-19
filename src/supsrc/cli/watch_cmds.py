@@ -12,7 +12,7 @@ from provide.foundation.cli.decorators import logging_options
 from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.config import load_config
-from supsrc.config.defaults import DEFAULT_WATCH_ACTIVE_INTERVAL, DEFAULT_WATCH_IDLE_INTERVAL
+from supsrc.config.defaults import DEFAULT_WATCH_ACTIVE_INTERVAL
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.utils.directories import SupsrcDirectories
 
@@ -85,8 +85,7 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
                     _status_reporter.idle_counter = 0
 
             if status_lines and should_print:
-                print("\n".join(status_lines), flush=True)
-                print(flush=True)  # Add blank line for readability
+                pass  # Add blank line for readability
 
         except asyncio.CancelledError:
             break

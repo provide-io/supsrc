@@ -50,7 +50,7 @@ class TestWatchCommand:
         # Asserting the result's exit code is the correct way to test for success.
         assert result.exit_code == 0
         mock_orchestrator_class.assert_called_once()
-        args, kwargs = mock_orchestrator_class.call_args
+        _args, kwargs = mock_orchestrator_class.call_args
         assert kwargs["config_path"] == config_file
         assert kwargs["app"] is None
         assert kwargs["console"] is None
@@ -79,7 +79,7 @@ class TestWatchCommand:
 
         assert result.exit_code == 0
         mock_orchestrator_class.assert_called_once()
-        args, kwargs = mock_orchestrator_class.call_args
+        _args, kwargs = mock_orchestrator_class.call_args
         assert kwargs["config_path"] == config_file
 
     # Note: Logging setup is now handled by Foundation's CLI decorators

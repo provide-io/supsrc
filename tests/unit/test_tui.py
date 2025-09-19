@@ -9,7 +9,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 import pytest
-from textual.containers import Container
 from textual.widgets import DataTable
 from textual.worker import Worker, WorkerState
 

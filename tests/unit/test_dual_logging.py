@@ -73,7 +73,7 @@ class TestDualLogging:
         # Verify JSON file was created and contains event data
         assert temp_json_file.exists()
 
-        with open(temp_json_file, "r") as f:
+        with open(temp_json_file) as f:
             lines = f.readlines()
 
         assert len(lines) == 1
@@ -103,7 +103,7 @@ class TestDualLogging:
         json_logger.close()
 
         # Verify all events were logged
-        with open(temp_json_file, "r") as f:
+        with open(temp_json_file) as f:
             lines = f.readlines()
 
         assert len(lines) == 3
@@ -148,7 +148,7 @@ class TestDualLogging:
         json_logger.close()
 
         # Verify Path was converted to string
-        with open(temp_json_file, "r") as f:
+        with open(temp_json_file) as f:
             event_data = json.loads(f.read().strip())
 
         assert event_data["metadata"]["file_path"] == "/tmp/test.txt"
