@@ -32,7 +32,9 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
                         active_timers = True
 
             # Sleep based on whether timers are active
-            sleep_interval = DEFAULT_WATCH_ACTIVE_INTERVAL if active_timers else DEFAULT_WATCH_IDLE_INTERVAL
+            sleep_interval = (
+                DEFAULT_WATCH_ACTIVE_INTERVAL if active_timers else DEFAULT_WATCH_IDLE_INTERVAL
+            )
             await asyncio.sleep(sleep_interval)
 
             if not orchestrator.repo_states:
