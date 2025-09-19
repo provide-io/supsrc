@@ -69,7 +69,7 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
 
             # Print status summary when there are active timers or periodically when idle
             # Use a counter to print status every 10 seconds when no timers are active
-            if not hasattr(_status_reporter, 'idle_counter'):
+            if not hasattr(_status_reporter, "idle_counter"):
                 _status_reporter.idle_counter = 0
 
             should_print = False
