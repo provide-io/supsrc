@@ -6,6 +6,8 @@ Event handler methods for the TUI application.
 
 from __future__ import annotations
 
+import contextlib
+
 import structlog
 from textual.widgets import DataTable
 from textual.widgets import Log as TextualLog
@@ -48,11 +50,23 @@ class EventHandlerMixin:
 
     def on_state_update(self, message: StateUpdate) -> None:
         """Handle repository state updates."""
-        log.debug(
+        log.info(
             "TUI on_state_update received",
             num_states=len(message.repo_states),
             repo_ids=list(message.repo_states.keys()),
         )
+
+        # Log individual repository states for debugging
+        for repo_id, state in message.repo_states.items():
+            log.info(
+                "Repository state",
+                repo_id=repo_id,
+                status=state.status.name,
+                save_count=state.save_count,
+                changed_files=state.changed_files,
+                total_files=state.total_files,
+                has_uncommitted_changes=state.has_uncommitted_changes,
+            )
         try:
             # The original debug log has been replaced by the more structured one above.
             # If the repr(message.repo_states) is still desired for deep debugging,
@@ -163,9 +177,26 @@ class EventHandlerMixin:
 
                 if repo_id_str in table.rows:
                     # Update existing row in-place to prevent counter resets
-                    row_index = table.get_row_index(repo_id_str)
-                    for col_index, cell_value in enumerate(row_data):
-                        table.update_cell(row_index, col_index, cell_value)
+                    try:
+                        row_index = table.get_row_index(repo_id_str)
+                        if 0 <= row_index < table.row_count:
+                            for col_index, cell_value in enumerate(row_data):
+                                if col_index < len(table.columns):
+                                    table.update_cell(row_index, col_index, cell_value)
+                        else:
+                            # Row index invalid, re-add the row
+                            table.remove_row(repo_id_str)
+                            table.add_row(*row_data, key=repo_id_str)
+                    except Exception as e:
+                        log.warning(
+                            "Failed to update row in-place, re-adding",
+                            repo_id=repo_id_str,
+                            error=str(e),
+                        )
+                        # Fallback: remove and re-add
+                        with contextlib.suppress(Exception):
+                            table.remove_row(repo_id_str)
+                        table.add_row(*row_data, key=repo_id_str)
                 else:
                     table.add_row(*row_data, key=repo_id_str)
 
