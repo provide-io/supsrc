@@ -88,6 +88,17 @@ class MonitoringCoordinator:
                     )
                     tui.post_log_update(repo_id, "ERROR", f"Monitoring setup failed: {e}")
 
+                    # Emit error event for monitor setup failure
+                    if hasattr(tui.app, "event_collector"):
+                        from supsrc.events.system import ErrorEvent
+                        monitor_error_event = ErrorEvent(
+                            description=f"File monitoring setup failed: {e!s}",
+                            source="monitor",
+                            error_type="MonitorSetupFailed",
+                            repo_id=repo_id,
+                        )
+                        tui.app.event_collector.emit(monitor_error_event)
+
         self.monitor_service = service
         return service
 

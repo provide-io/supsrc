@@ -15,6 +15,13 @@ from provide.foundation.logger import get_logger
 
 from supsrc.config import LLMConfig, SupsrcConfig
 from supsrc.events.collector import EventCollector
+from supsrc.events.system import (
+    ConflictDetectedEvent,
+    ExternalCommitEvent,
+    LLMVetoEvent,
+    RepositoryFrozenEvent,
+    TestFailureEvent,
+)
 from supsrc.protocols import (
     CommitResult,
     PushResult,
@@ -77,6 +84,12 @@ class ActionHandler:
             log.warning(
                 "No event collector available to emit event", event_type=type(event).__name__
             )
+
+    async def _delayed_reset_after_external_commit(self, repo_state: RepositoryState) -> None:
+        """Reset repository state after a brief delay to show external commit status."""
+        await asyncio.sleep(2.0)  # Show the status for 2 seconds
+        repo_state.reset_after_action()
+        self.tui.post_state_update(self.repo_states)
 
     def _get_llm_provider(self, llm_config: LLMConfig) -> LLMProvider | None:
         """Instantiates and returns an LLM provider based on config."""
@@ -218,17 +231,74 @@ class ActionHandler:
 
             if not status_result.success or status_result.is_conflicted or status_result.is_clean:
                 if not status_result.success:
+                    # Log the failure for debugging
+                    action_log.warning(
+                        "Git status check failed during action",
+                        message=status_result.message,
+                        success=status_result.success
+                    )
                     repo_state.update_status(
                         RepositoryStatus.ERROR, f"Status check failed: {status_result.message}"
                     )
                     repo_state.action_description = "Status check failed."
+
+                    # Emit error event for status check failure
+                    from supsrc.events.system import ErrorEvent
+                    status_error_event = ErrorEvent(
+                        description=f"Git status check failed: {status_result.message}",
+                        source="git",
+                        error_type="StatusCheckFailed",
+                        repo_id=repo_id,
+                    )
+                    self._emit_event(status_error_event)
                 elif status_result.is_conflicted:
-                    repo_state.update_status(RepositoryStatus.ERROR, "Repo has conflicts.")
+                    repo_state.update_status(RepositoryStatus.CONFLICT_DETECTED, "Repo has conflicts.")
                     repo_state.action_description = "Merge conflict detected."
                     repo_state.is_frozen = True
                     repo_state.freeze_reason = "Merge conflicts detected"
-                else:  # is_clean
-                    repo_state.reset_after_action()
+
+                    # Emit conflict detected event
+                    conflict_event = ConflictDetectedEvent(
+                        description="Merge conflicts detected in repository",
+                        repo_id=repo_id,
+                        conflict_files=[],  # Could be enhanced to show specific files
+                    )
+                    self._emit_event(conflict_event)
+
+                    # Emit repository frozen event
+                    frozen_event = RepositoryFrozenEvent(
+                        description="Repository frozen due to merge conflicts",
+                        repo_id=repo_id,
+                        reason="Merge conflicts detected",
+                    )
+                    self._emit_event(frozen_event)
+                else:  # is_clean - likely external commit
+                    # Log the detection for debugging
+                    action_log.info(
+                        "Repository is clean during action - external commit detected",
+                        success=status_result.success,
+                        is_clean=status_result.is_clean,
+                        is_conflicted=status_result.is_conflicted
+                    )
+
+                    # Update status to indicate external commit was detected
+                    repo_state.update_status(
+                        RepositoryStatus.EXTERNAL_COMMIT_DETECTED,
+                        "Changes committed externally"
+                    )
+                    repo_state.action_description = "External commit detected"
+
+                    # Emit external commit event
+                    external_commit_event = ExternalCommitEvent(
+                        description="Changes were committed externally",
+                        repo_id=repo_id,
+                        commit_hash=None,  # Could be enhanced to get actual commit hash
+                    )
+                    self._emit_event(external_commit_event)
+
+                    # Reset after brief pause to show the status
+                    _reset_task = asyncio.create_task(self._delayed_reset_after_external_commit(repo_state))  # noqa: RUF006
+                    # Task will run independently and complete the reset
                 self.tui.post_state_update(self.repo_states)
                 return
 
@@ -247,6 +317,17 @@ class ActionHandler:
                     RepositoryStatus.ERROR, f"Staging failed: {stage_result.message}"
                 )
                 repo_state.action_description = "Staging failed."
+
+                # Emit error event for staging failure
+                from supsrc.events.system import ErrorEvent
+                staging_error_event = ErrorEvent(
+                    description=f"Git staging failed: {stage_result.message}",
+                    source="git",
+                    error_type="StagingFailed",
+                    repo_id=repo_id,
+                )
+                self._emit_event(staging_error_event)
+
                 self.tui.post_state_update(self.repo_states)
                 return
 
@@ -260,6 +341,17 @@ class ActionHandler:
                 if not llm_provider:
                     repo_state.update_status(RepositoryStatus.ERROR, "LLM provider failed to init.")
                     repo_state.action_description = "LLM provider failed."
+
+                    # Emit error event for LLM provider failure
+                    from supsrc.events.system import ErrorEvent
+                    llm_error_event = ErrorEvent(
+                        description="LLM provider failed to initialize",
+                        source="llm",
+                        error_type="ProviderInitFailed",
+                        repo_id=repo_id,
+                    )
+                    self._emit_event(llm_error_event)
+
                     self.tui.post_state_update(self.repo_states)
                     return
 
@@ -272,6 +364,15 @@ class ActionHandler:
                             RepositoryStatus.ERROR, f"LLM Review Veto: {reason}"
                         )
                         repo_state.action_description = f"LLM Review Veto: {reason}"
+
+                        # Emit LLM veto event
+                        veto_event = LLMVetoEvent(
+                            description=f"LLM review blocked commit: {reason}",
+                            repo_id=repo_id,
+                            reason=reason,
+                        )
+                        self._emit_event(veto_event)
+
                         self.tui.post_state_update(self.repo_states)
                         return
 
@@ -292,6 +393,15 @@ class ActionHandler:
                             RepositoryStatus.ERROR, f"Tests Failed: {analysis}"
                         )
                         repo_state.action_description = "Automated tests failed."
+
+                        # Emit test failure event
+                        test_failure_event = TestFailureEvent(
+                            description=f"Automated tests failed: {analysis}",
+                            repo_id=repo_id,
+                            test_output=failure_output,
+                        )
+                        self._emit_event(test_failure_event)
+
                         self.tui.post_state_update(self.repo_states)
                         return
 
@@ -321,6 +431,16 @@ class ActionHandler:
                     RepositoryStatus.ERROR, f"Commit failed: {commit_result.message}"
                 )
                 repo_state.action_description = "Commit operation failed."
+
+                # Emit error event for commit failure
+                from supsrc.events.system import ErrorEvent
+                commit_error_event = ErrorEvent(
+                    description=f"Git commit failed: {commit_result.message}",
+                    source="git",
+                    error_type="CommitFailed",
+                    repo_id=repo_id,
+                )
+                self._emit_event(commit_error_event)
             elif commit_result.commit_hash is None:
                 repo_state.reset_after_action()
             else:
@@ -412,4 +532,15 @@ class ActionHandler:
             if repo_state:
                 repo_state.update_status(RepositoryStatus.ERROR, f"Action failure: {e}")
                 repo_state.action_description = "Unexpected action failure."
+
+                # Emit error event for unexpected action failure
+                from supsrc.events.system import ErrorEvent
+                action_error_event = ErrorEvent(
+                    description=f"Unexpected action failure: {e!s}",
+                    source="action_handler",
+                    error_type="UnexpectedFailure",
+                    repo_id=repo_id,
+                )
+                self._emit_event(action_error_event)
+
                 self.tui.post_state_update(self.repo_states)
