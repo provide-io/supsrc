@@ -34,6 +34,13 @@ for i in $(seq 1 ${NUM_REPOS}); do (
     cd ${repo_dir}
     git init .
 
+    # Configure Git user for examples (disable GPG signing to avoid issues)
+    git config user.name "Example Bot ${i}"
+    git config user.email "example${i}@supsrc.example.com"
+    # Disable GPG signing to prevent examples from failing if user has global GPG config
+    git config commit.gpgsign false
+    git config gpg.program ""
+
     echo "--------------------------------------------------------------------------------"
     echo "📝 ${repo_dir}: create realistic test files"
     echo "--------------------------------------------------------------------------------"

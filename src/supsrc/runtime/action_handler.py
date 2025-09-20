@@ -65,14 +65,18 @@ class ActionHandler:
         """Emit event to available event collector (TUI or standalone)."""
         # Try standalone event collector first (headless mode)
         if self.event_collector:
-            log.debug("Emitting event via action handler event collector", event_type=type(event).__name__)
+            log.debug(
+                "Emitting event via action handler event collector", event_type=type(event).__name__
+            )
             self.event_collector.emit(event)
         # Fall back to TUI event collector if available
         elif hasattr(self.tui.app, "event_collector"):
             log.debug("Emitting event via TUI app event collector", event_type=type(event).__name__)
             self.tui.app.event_collector.emit(event)
         else:
-            log.warning("No event collector available to emit event", event_type=type(event).__name__)
+            log.warning(
+                "No event collector available to emit event", event_type=type(event).__name__
+            )
 
     def _get_llm_provider(self, llm_config: LLMConfig) -> LLMProvider | None:
         """Instantiates and returns an LLM provider based on config."""

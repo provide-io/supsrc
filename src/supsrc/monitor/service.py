@@ -2,8 +2,8 @@
 
 import asyncio
 
-from watchdog.observers import Observer
 from provide.foundation.logger import get_logger
+from watchdog.observers import Observer
 
 # Use absolute imports
 from supsrc.config import RepositoryConfig
@@ -46,7 +46,7 @@ class MonitoringService:
     def unschedule_repository(self, repo_id: str) -> None:
         """Unschedule a specific repository from being monitored."""
         watch = self._watches.pop(repo_id, None)
-        handler = self._handlers.pop(repo_id, None)
+        self._handlers.pop(repo_id, None)
         if watch:
             self._observer.unschedule(watch)
             self._logger.info("Unscheduled repository from monitoring", repo_id=repo_id)
