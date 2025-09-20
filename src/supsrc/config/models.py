@@ -13,6 +13,7 @@ from typing import Any, TypeAlias
 
 # Foundation includes attrs as a dependency
 from attrs import define, field, mutable
+from attrs.validators import instance_of
 from provide.foundation.errors.config import ConfigurationError
 from provide.foundation.file import read_toml
 
@@ -103,6 +104,11 @@ class GlobalConfig:
     """Global default settings for supsrc."""
 
     log_level: str = field(default="INFO", validator=_validate_log_level)
+
+    # Event buffering configuration
+    event_buffering_enabled: bool = field(default=True)
+    event_buffer_window_ms: int = field(default=200, validator=_validate_positive_int)
+    event_grouping_mode: str = field(default="smart", validator=instance_of(str))
 
     @property
     def numeric_log_level(self) -> int:

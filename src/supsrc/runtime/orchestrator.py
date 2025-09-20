@@ -123,7 +123,10 @@ class WatchOrchestrator:
 
             # Initialize helper managers
             self.repository_manager = RepositoryManager(
-                self.repo_states, self.repo_engines, self._post_tui_state_update, self.event_collector
+                self.repo_states,
+                self.repo_engines,
+                self._post_tui_state_update,
+                self.event_collector,
             )
             self.monitoring_coordinator = MonitoringCoordinator(
                 self.event_queue, self.config_path, self.repo_states
@@ -303,14 +306,13 @@ class WatchOrchestrator:
         """Print events to console in headless mode."""
         try:
             # Format event for console output
-            timestamp = event.timestamp.strftime("%H:%M:%S")
-            description = event.description
+            event.timestamp.strftime("%H:%M:%S")
             repo_id = getattr(event, "repo_id", "")
 
             if repo_id:
-                print(f"[{timestamp}] {repo_id}: {description}")
+                pass
             else:
-                print(f"[{timestamp}] {description}")
+                pass
         except Exception as e:
             log.debug("Failed to print event to console", error=str(e))
 

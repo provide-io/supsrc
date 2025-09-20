@@ -50,7 +50,7 @@ class TestWatchCommand:
         # Asserting the result's exit code is the correct way to test for success.
         assert result.exit_code == 0
         mock_orchestrator_class.assert_called_once()
-        args, kwargs = mock_orchestrator_class.call_args
+        _args, kwargs = mock_orchestrator_class.call_args
         assert kwargs["config_path"] == config_file
         assert kwargs["app"] is None
         assert kwargs["console"] is None
@@ -79,7 +79,7 @@ class TestWatchCommand:
 
         assert result.exit_code == 0
         mock_orchestrator_class.assert_called_once()
-        args, kwargs = mock_orchestrator_class.call_args
+        _args, kwargs = mock_orchestrator_class.call_args
         assert kwargs["config_path"] == config_file
 
     # Note: Logging setup is now handled by Foundation's CLI decorators
@@ -100,7 +100,9 @@ class TestWatchCommand:
         assert result.exit_code == 130
 
     @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
-    def test_watch_runner_raises_keyboard_interrupt(self, mock_runner: Mock, tmp_path: Path) -> None:
+    def test_watch_runner_raises_keyboard_interrupt(
+        self, mock_runner: Mock, tmp_path: Path
+    ) -> None:
         """Test that watch command handles KeyboardInterrupt from the runner."""
         mock_runner.side_effect = KeyboardInterrupt()
         config_file = tmp_path / "test.conf"

@@ -11,6 +11,7 @@ from provide.foundation.logger import get_logger
 
 from supsrc.config import InactivityRuleConfig, RepositoryConfig, SupsrcConfig
 from supsrc.config.defaults import DEFAULT_DEBOUNCE_DELAY
+from supsrc.events.buffer import EventBuffer
 from supsrc.monitor import MonitoredEvent
 from supsrc.rules import check_trigger_condition
 from supsrc.state import RepositoryState, RepositoryStatus
@@ -47,7 +48,28 @@ class EventProcessor:
         self.config_reload_callback = config_reload_callback
         self._action_tasks: set[asyncio.Task] = set()
         self._recent_moves: set[Path] = set()
-        log.debug("EventProcessor initialized.")
+
+        # Initialize timer check debouncing to prevent constant timer resets
+        self._pending_timer_checks: dict[str, asyncio.Task] = {}
+        self._timer_check_delay = 0.5  # 500ms debounce delay for timer checks
+
+        # Initialize event buffer for TUI events
+        global_config = config.global_config
+        if global_config.event_buffering_enabled:
+            self._event_buffer = EventBuffer(
+                window_ms=global_config.event_buffer_window_ms,
+                grouping_mode=global_config.event_grouping_mode,
+                emit_callback=self._emit_buffered_event,
+            )
+        else:
+            self._event_buffer = None
+
+        log.debug(
+            "EventProcessor initialized.",
+            event_buffering_enabled=global_config.event_buffering_enabled,
+            buffer_window_ms=global_config.event_buffer_window_ms,
+            grouping_mode=global_config.event_grouping_mode,
+        )
 
     async def run(self) -> None:
         """Main event consumption loop."""
@@ -101,12 +123,11 @@ class EventProcessor:
                 # Record the change and update UI
                 repo_state.record_change()
 
-                # Handle timer logic - check if repo is clean after any change
+                # Handle timer logic - check if repo is clean after any change (with debouncing)
                 repo_config = self.config.repositories.get(event.repo_id)
                 if repo_config and isinstance(repo_config.rule, InactivityRuleConfig):
-                    # After any file change, check if repo is clean and handle timer accordingly
-                    task = asyncio.create_task(self._check_repo_status_and_handle_timer(event.repo_id))
-                    task.add_done_callback(lambda _: None)
+                    # Use debounced timer check to prevent constant timer resets
+                    self._schedule_debounced_timer_check(event.repo_id)
 
                 # Schedule async refresh of repository statistics for real-time UI updates
                 task = asyncio.create_task(self._refresh_repository_statistics(event.repo_id))
@@ -114,7 +135,7 @@ class EventProcessor:
 
                 self.tui.post_state_update(self.repo_states)
 
-                # Emit file change event for TUI event feed
+                # Emit file change event for TUI event feed (with optional buffering)
                 if self.tui and hasattr(self.tui, "app") and self.tui.app:
                     if hasattr(self.tui.app, "event_collector"):
                         try:
@@ -126,21 +147,44 @@ class EventProcessor:
                                 file_path=event.src_path,
                                 change_type=event.event_type,
                             )
-                            self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
-                            log.debug("File change event emitted successfully",
-                                     event_type=event.event_type,
-                                     file_name=event.src_path.name,
-                                     repo_id=event.repo_id)
+
+                            # Use buffering if enabled, otherwise emit directly
+                            if self._event_buffer:
+                                self._event_buffer.add_event(change_event)
+                                log.debug(
+                                    "File change event added to buffer",
+                                    event_type=event.event_type,
+                                    file_name=event.src_path.name,
+                                    repo_id=event.repo_id,
+                                )
+                            else:
+                                self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
+                                log.debug(
+                                    "File change event emitted directly",
+                                    event_type=event.event_type,
+                                    file_name=event.src_path.name,
+                                    repo_id=event.repo_id,
+                                )
                         except Exception as e:
-                            log.warning("Failed to emit TUI file change event",
-                                       error=str(e),
-                                       event_type=event.event_type,
-                                       repo_id=event.repo_id,
-                                       exc_info=True)
+                            log.warning(
+                                "Failed to emit TUI file change event",
+                                error=str(e),
+                                event_type=event.event_type,
+                                repo_id=event.repo_id,
+                                exc_info=True,
+                            )
                     else:
                         log.warning("TUI app exists but no event_collector found")
                 else:
                     log.debug("TUI or TUI app not available for event emission")
+
+                # For inactivity rules, start timer immediately (as mentioned in comment above)
+                repo_config = self.config.repositories.get(event.repo_id)
+                if repo_config and isinstance(repo_config.rule, InactivityRuleConfig):
+                    # Start inactivity timer immediately
+                    self._start_inactivity_timer(repo_state, repo_config)
+                    # Also start debounced timer check to handle rapid changes
+                    self._schedule_debounced_timer_check(event.repo_id)
 
                 # Start debounced check for save count rules and other trigger conditions
                 self._debounce_trigger_check(event.repo_id)
@@ -274,7 +318,14 @@ class EventProcessor:
         repo_config = self.config.repositories.get(repo_id)
         repo_engine = self.repo_engines.get(repo_id)
 
-        if not all((repo_state, repo_config, repo_engine)):
+        if not repo_state or not repo_config:
+            return
+
+        # If no engine available (e.g., in tests), just start inactivity timer for inactivity rules
+        if not repo_engine:
+            if isinstance(repo_config.rule, InactivityRuleConfig):
+                self._start_inactivity_timer(repo_state, repo_config)
+                self.tui.post_state_update(self.repo_states)
             return
 
         try:
@@ -310,8 +361,69 @@ class EventProcessor:
         except Exception as e:
             log.debug("Failed to check repository status", repo_id=repo_id, error=str(e))
 
+    def _schedule_debounced_timer_check(self, repo_id: str) -> None:
+        """Schedule a debounced timer check to prevent constant timer resets with rapid changes."""
+        # Cancel any pending timer check for this repo
+        if repo_id in self._pending_timer_checks:
+            self._pending_timer_checks[repo_id].cancel()
+
+        # Schedule new timer check after debounce delay
+        async def debounced_timer_check():
+            try:
+                await asyncio.sleep(self._timer_check_delay)
+                # Remove from pending checks since we're about to execute
+                self._pending_timer_checks.pop(repo_id, None)
+                # Now actually check repo status and handle timer
+                await self._check_repo_status_and_handle_timer(repo_id)
+            except asyncio.CancelledError:
+                # Clean up if cancelled
+                self._pending_timer_checks.pop(repo_id, None)
+                raise
+
+        task = asyncio.create_task(debounced_timer_check())
+        self._pending_timer_checks[repo_id] = task
+
+        log.debug(
+            "Scheduled debounced timer check",
+            repo_id=repo_id,
+            delay_ms=self._timer_check_delay * 1000,
+        )
+
+    def _emit_buffered_event(self, event: Any) -> None:
+        """Emit a buffered event to the TUI event collector."""
+        if (
+            self.tui
+            and hasattr(self.tui, "app")
+            and self.tui.app
+            and hasattr(self.tui.app, "event_collector")
+        ):
+            try:
+                self.tui.app.event_collector.emit(event)  # type: ignore[arg-type,union-attr]
+                log.debug(
+                    "Buffered event emitted successfully",
+                    event_type=getattr(event, "operation_type", "unknown"),
+                    repo_id=getattr(event, "repo_id", "unknown"),
+                )
+            except Exception as e:
+                log.warning(
+                    "Failed to emit buffered TUI event",
+                    error=str(e),
+                    event_type=getattr(event, "operation_type", "unknown"),
+                    exc_info=True,
+                )
+
     async def stop(self) -> None:
         """Gracefully stop all scheduled action tasks."""
+        # Flush any pending buffered events
+        if self._event_buffer:
+            self._event_buffer.flush_all()
+
+        # Cancel any pending timer checks
+        for _repo_id, task in self._pending_timer_checks.items():
+            task.cancel()
+        self._pending_timer_checks.clear()
+        log.debug("Cancelled pending timer checks")
+
         if not self._action_tasks:
             return
         log.debug("Stopping in-flight action tasks", count=len(self._action_tasks))

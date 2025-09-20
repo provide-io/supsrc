@@ -182,7 +182,10 @@ class RepositoryManager:
 
                 # Emit monitoring start event
                 if self.event_collector:
-                    init_log.debug("Emitting monitoring start event via repository manager event collector", repo_id=repo_id)
+                    init_log.debug(
+                        "Emitting monitoring start event via repository manager event collector",
+                        repo_id=repo_id,
+                    )
                     start_event = MonitoringStartEvent(
                         description=f"Started monitoring repository {repo_id}",
                         repo_id=repo_id,
@@ -198,7 +201,9 @@ class RepositoryManager:
                     )
                     tui.app.event_collector.emit(start_event)  # type: ignore[arg-type]
                 else:
-                    init_log.warning("No event collector available for monitoring start event", repo_id=repo_id)
+                    init_log.warning(
+                        "No event collector available for monitoring start event", repo_id=repo_id
+                    )
             except Exception as e:
                 init_log.error("Failed to initialize repository", error=str(e), exc_info=True)
                 repo_state.update_status(RepositoryStatus.ERROR, f"Initialization failed: {e}")
