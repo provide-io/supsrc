@@ -10,9 +10,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from supsrc.config import SupsrcConfig
+from supsrc.config.defaults import DEFAULT_DEBOUNCE_DELAY
+from supsrc.events.processor import EventProcessor
 from supsrc.monitor import MonitoredEvent
 from supsrc.runtime.action_handler import ActionHandler
-from supsrc.events.processor import DEBOUNCE_DELAY, EventProcessor
 from supsrc.runtime.tui_interface import TUIInterface
 from supsrc.state import RepositoryState
 
@@ -68,7 +69,7 @@ class TestEventProcessor:
         with patch("supsrc.events.processor.check_trigger_condition", return_value=True):
             run_task = asyncio.create_task(event_processor.run())
             await event_processor.event_queue.put(event)
-            await asyncio.sleep(DEBOUNCE_DELAY + 0.1)
+            await asyncio.sleep(DEFAULT_DEBOUNCE_DELAY + 0.1)
 
             # Stop the processor
             run_task.cancel()
@@ -88,8 +89,8 @@ class TestEventProcessor:
             run_task = asyncio.create_task(event_processor.run())
             await event_processor.event_queue.put(event)
 
-            # Wait for the debounce timer to fire and the inactivity timer to be set
-            await asyncio.sleep(DEBOUNCE_DELAY + 0.1)
+            # Wait for the debounced timer check to fire and the inactivity timer to be set
+            await asyncio.sleep(0.6)  # Timer check debounce delay is 500ms
 
             state = event_processor.repo_states[repo_id]
             assert state.inactivity_timer_handle is not None
@@ -114,7 +115,7 @@ class TestEventProcessor:
         with patch("supsrc.events.processor.check_trigger_condition", return_value=False):
             await event_processor.event_queue.put(event)
             task = asyncio.create_task(event_processor.run())
-            await asyncio.sleep(DEBOUNCE_DELAY + 0.1)
+            await asyncio.sleep(DEFAULT_DEBOUNCE_DELAY + 0.1)
             event_processor.shutdown_event.set()
             await task
 
