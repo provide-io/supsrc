@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import structlog
 
-from supsrc.tui.messages import StateUpdate
-
 log = structlog.get_logger("tui.ui_helpers")
 
 
@@ -25,15 +23,32 @@ class UIHelperMixin:
     def _update_countdown_display(self) -> None:
         """Update countdown displays for all repositories."""
         try:
+            # Periodic countdown update
+
             if hasattr(self, "_orchestrator") and self._orchestrator:
                 # Update countdown for each repository state
+                active_timers = 0
                 for repo_state in self._orchestrator.repo_states.values():
                     repo_state.update_timer_countdown()
+                    if repo_state.timer_seconds_left is not None:
+                        active_timers += 1
+                        log.warning(f"ACTIVE TIMER: {repo_state.repo_id} = {repo_state.timer_seconds_left}s")
+
+                log.warning(f"UPDATED {len(self._orchestrator.repo_states)} repo states, {active_timers} active timers")
 
                 # Update only the timer column directly to avoid cursor jumping
                 self._update_timer_columns_only()
+
+                # Also try posting a full state update to see if that works
+                log.warning("POSTING STATE UPDATE AFTER TIMER REFRESH")
+                if hasattr(self, 'post_message'):
+                    from supsrc.tui.messages import StateUpdate
+                    self.post_message(StateUpdate(self._orchestrator.repo_states))
+            else:
+                log.warning("NO ORCHESTRATOR AVAILABLE FOR COUNTDOWN UPDATE")
         except Exception as e:
-            log.debug(f"Error updating countdown: {e}")
+            # Use warning level to make errors more visible during debugging
+            log.warning(f"ERROR UPDATING COUNTDOWN DISPLAY: {e}", exc_info=True)
 
     def _update_timer_columns_only(self) -> None:
         """Update only the timer column for all repositories to avoid cursor jumping."""
@@ -52,14 +67,21 @@ class UIHelperMixin:
                             timer_display = get_countdown_display(repo_state.timer_seconds_left)
                             # Update only column 1 (timer column) to avoid full row refresh
                             table.update_cell(row_index, 1, timer_display)
+                            log.debug(
+                                "Updated timer column",
+                                repo_id=str(repo_id_str),
+                                timer_seconds_left=repo_state.timer_seconds_left,
+                                timer_display=repr(timer_display),
+                                row_index=row_index,
+                            )
                         except Exception as e:
                             # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
-                            log.debug(f"Failed to update timer cell for {repo_id_str}, skipping update: {e}")
+                            log.warning(f"Failed to update timer cell for {repo_id_str}, skipping update: {e}", exc_info=True)
                             # Continue to next repository instead of breaking/posting StateUpdate
                             continue
         except Exception as e:
             # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
-            log.debug(f"Error in timer column update, skipping timer updates: {e}")
+            log.warning(f"Error in timer column update, skipping timer updates: {e}", exc_info=True)
 
     def _update_sub_title(self, text: str) -> None:
         """Update subtitle safely."""
