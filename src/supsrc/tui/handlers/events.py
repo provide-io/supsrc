@@ -56,6 +56,15 @@ class EventHandlerMixin:
             repo_ids=list(message.repo_states.keys()),
         )
 
+        # Skip StateUpdate if cursor is on last row to prevent jumping
+        try:
+            table = self.query_one("#repository_table", DataTable)
+            if table.cursor_row == len(table.rows) - 1:
+                log.debug("Skipping StateUpdate to prevent cursor jumping from last row")
+                return
+        except Exception:
+            pass  # Continue with normal processing if check fails
+
         # Log individual repository states for debugging
         for repo_id, state in message.repo_states.items():
             log.info(
@@ -120,9 +129,10 @@ class EventHandlerMixin:
                     threshold = getattr(
                         self._orchestrator.config.global_config, "last_change_threshold_hours", 3.0
                     )
-                # Use actual Git commit timestamp if available, fallback to last_change_time
-                timestamp = state.last_commit_timestamp or state.last_change_time
-                last_change_display = format_last_commit_time(timestamp, threshold)
+                # Use actual Git commit timestamp only (not file change time)
+                last_change_display = format_last_commit_time(
+                    state.last_commit_timestamp, threshold
+                )
 
                 rule_emoji = state.rule_emoji or ""
                 rule_indicator = state.rule_dynamic_indicator or "N/A"
@@ -198,8 +208,6 @@ class EventHandlerMixin:
                     # Update existing row in-place to prevent counter resets and cursor jumps
                     try:
                         row_index = table.get_row_index(repo_id_str)
-                        # Save current cursor position to restore if needed
-                        original_cursor_row = table.cursor_row
 
                         # Try to update cells first, with improved error handling
                         cell_update_failed = False
@@ -220,15 +228,12 @@ class EventHandlerMixin:
 
                         # Only remove/re-add if cell updates failed
                         if cell_update_failed:
-                            log.debug("Removing and re-adding row due to cell update failure", repo_id=repo_id_str)
+                            log.debug(
+                                "Removing and re-adding row due to cell update failure",
+                                repo_id=repo_id_str,
+                            )
                             table.remove_row(repo_id_str)
                             table.add_row(*row_data, key=repo_id_str)
-                            # Try to restore cursor position to minimize jumping
-                            try:
-                                if original_cursor_row < len(table.rows):
-                                    table.cursor_row = original_cursor_row
-                            except Exception:
-                                pass  # Ignore cursor restoration errors
 
                     except Exception as e:
                         log.debug(
@@ -236,17 +241,10 @@ class EventHandlerMixin:
                             repo_id=repo_id_str,
                             error=str(e),
                         )
-                        # Fallback: remove and re-add with cursor preservation attempt
-                        original_cursor_row = getattr(table, 'cursor_row', 0)
+                        # Fallback: remove and re-add
                         with contextlib.suppress(Exception):
                             table.remove_row(repo_id_str)
                         table.add_row(*row_data, key=repo_id_str)
-                        # Try to restore cursor position
-                        try:
-                            if original_cursor_row < len(table.rows):
-                                table.cursor_row = original_cursor_row
-                        except Exception:
-                            pass  # Ignore cursor restoration errors
                 else:
                     table.add_row(*row_data, key=repo_id_str)
 

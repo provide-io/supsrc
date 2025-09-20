@@ -103,9 +103,17 @@ class SupsrcTuiApp(TuiAppBase):
     }
 
     #event-feed {
-        height: 100%;
-        min-height: 10;
+        height: 1fr;
+        margin: 0;
+        padding: 0;
+        border: none;
         scrollbar-gutter: stable;
+    }
+
+    #repo-details-content, #about-content {
+        height: 1fr;
+        margin: 0;
+        padding: 1;
     }
 
     Footer {
@@ -121,12 +129,13 @@ class SupsrcTuiApp(TuiAppBase):
     /* Tab styling */
     TabbedContent {
         height: 100%;
+        layout: vertical;
     }
 
     TabPane {
         padding: 0;
-        height: 100%;
-        min-height: 10;
+        height: 1fr;
+        overflow: auto;
     }
 
     Tabs {
@@ -134,6 +143,8 @@ class SupsrcTuiApp(TuiAppBase):
         color: #ffffff;
         height: 1;
         dock: top;
+        margin: 0;
+        padding: 0;
     }
 
     Tab {
@@ -242,8 +253,10 @@ class SupsrcTuiApp(TuiAppBase):
             try:
                 self._event_feed = self.query_one("#event-feed", EventFeed)
                 self.event_collector.subscribe(self._event_feed.add_event)
-                log.info("Event feed widget found and subscribed to event collector",
-                        handler_count=len(self.event_collector._handlers))
+                log.info(
+                    "Event feed widget found and subscribed to event collector",
+                    handler_count=len(self.event_collector._handlers),
+                )
 
                 # Create a welcome event
                 from supsrc.events.system import UserActionEvent
@@ -327,8 +340,8 @@ class SupsrcTuiApp(TuiAppBase):
             details_label = self.query_one("#repo-details-content", Label)
 
             # Get repository information if orchestrator is available
-            if self._orchestrator and hasattr(self._orchestrator, "_repository_states"):
-                repo_state = self._orchestrator._repository_states.get(repo_id)
+            if self._orchestrator and hasattr(self._orchestrator, "repo_states"):
+                repo_state = self._orchestrator.repo_states.get(repo_id)
                 if repo_state:
                     details_text = f"""📍 Repository: {repo_id}
 🌿 Branch: {repo_state.current_branch or "unknown"}
@@ -372,7 +385,13 @@ class SupsrcTuiApp(TuiAppBase):
 
         # Add direct test message to the feed first
         if self._event_feed:
-            self._event_feed.write(f"[bold magenta]🧪 Manual test triggered at {timestamp}[/bold magenta]")
+            from rich.text import Text
+
+            self._event_feed.write(
+                Text.from_markup(
+                    f"[bold magenta]🧪 Manual test triggered at {timestamp}[/bold magenta]"
+                )
+            )
 
         # Emit test events using the event system
         from pathlib import Path
