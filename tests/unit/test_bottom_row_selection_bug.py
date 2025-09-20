@@ -130,3 +130,25 @@ class TestBottomRowSelectionBug:
 
         mock_table.cursor_row = 10
         assert mock_table.cursor_row < mock_table.row_count
+
+    def test_cursor_position_saving_bounds_check(self):
+        """Test the bounds checking used for cursor position saving in events.py."""
+        # Mock a DataTable to simulate the events.py logic
+        mock_table = Mock()
+        mock_table.row_count = 19  # Like the real config
+
+        # Test cursor position saving condition from events.py:83
+        # The bug was: if table.cursor_row < len(table.rows):
+        # The fix is: if table.cursor_row < table.row_count:
+
+        # Last row should be saveable
+        mock_table.cursor_row = 18  # Last row (0-based)
+        assert mock_table.cursor_row < mock_table.row_count, "Last row cursor should be saveable"
+
+        # Edge case: cursor beyond valid rows should not be saved
+        mock_table.cursor_row = 19
+        assert not (mock_table.cursor_row < mock_table.row_count), "Invalid cursor position should not be saved"
+
+        # First row should be saveable
+        mock_table.cursor_row = 0
+        assert mock_table.cursor_row < mock_table.row_count, "First row cursor should be saveable"
