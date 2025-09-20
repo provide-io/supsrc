@@ -156,8 +156,8 @@ class ActionHandlerMixin:
             pass  # If we can't find tabs, continue with normal behavior
 
         table = self.query_one("#repository_table", DataTable)
-        if table.cursor_coordinate.row < len(table.rows):
-            selected_row = table.get_row_at(table.cursor_coordinate.row)
+        if table.cursor_row < table.row_count:
+            selected_row = table.get_row_at(table.cursor_row)
             repo_id = str(selected_row[2])  # Repository name is in column 2
 
             if repo_id:
