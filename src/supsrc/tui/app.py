@@ -16,7 +16,7 @@ from textual.reactive import var
 from textual.widgets import DataTable, Footer, Header, Label, TabbedContent, TabPane
 
 from supsrc.events.collector import EventCollector
-from supsrc.events.feed import EventFeed
+from supsrc.events.feed_table import EventFeedTable
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.tui.base_app import TuiAppBase
 from supsrc.tui.managers import TimerManager
@@ -184,7 +184,7 @@ class SupsrcTuiApp(TuiAppBase):
         self._is_paused = False
         self._is_suspended = False
         self.event_collector = EventCollector()
-        self._event_feed: EventFeed | None = None
+        self._event_feed: EventFeedTable | None = None
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -211,7 +211,7 @@ class SupsrcTuiApp(TuiAppBase):
                 TabbedContent(initial="events-tab"),
             ):
                 with TabPane("Events", id="events-tab"):
-                    yield EventFeed(id="event-feed")
+                    yield EventFeedTable(id="event-feed")
                 with TabPane("Repo Details", id="details-tab"):
                     yield Label(
                         "Repository details will appear here when selected",
@@ -251,7 +251,7 @@ class SupsrcTuiApp(TuiAppBase):
 
             # Initialize the event feed widget
             try:
-                self._event_feed = self.query_one("#event-feed", EventFeed)
+                self._event_feed = self.query_one("#event-feed", EventFeedTable)
                 self.event_collector.subscribe(self._event_feed.add_event)
                 log.info(
                     "Event feed widget found and subscribed to event collector",
