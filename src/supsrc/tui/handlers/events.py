@@ -100,6 +100,13 @@ class EventHandlerMixin:
                     f"status: {state.status.name}"
                 )
                 timer_display = get_countdown_display(state.timer_seconds_left)
+                log.debug(
+                    "TUI timer display",
+                    repo_id=repo_id_str,
+                    timer_seconds_left=state.timer_seconds_left,
+                    timer_display=repr(timer_display),
+                    has_timer_handle=state.inactivity_timer_handle is not None,
+                )
                 repository_display = repo_id_str
 
                 # Use relative time for recent changes, full date for older ones
@@ -120,6 +127,13 @@ class EventHandlerMixin:
                 rule_emoji = state.rule_emoji or ""
                 rule_indicator = state.rule_dynamic_indicator or "N/A"
                 rule_display = f"{rule_emoji} {rule_indicator}".strip()
+                log.debug(
+                    "TUI rule display formatting",
+                    repo_id=repo_id_str,
+                    rule_emoji=repr(rule_emoji),
+                    rule_indicator=repr(rule_indicator),
+                    rule_display=repr(rule_display),
+                )
 
                 # Format file statistics with color based on commit status
                 # Show loading indicator for repos that haven't been initialized yet

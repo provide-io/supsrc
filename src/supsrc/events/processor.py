@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from provide.foundation.logger import get_logger
 
 from supsrc.config import InactivityRuleConfig, RepositoryConfig, SupsrcConfig
+from supsrc.config.defaults import DEFAULT_DEBOUNCE_DELAY
 from supsrc.monitor import MonitoredEvent
 from supsrc.rules import check_trigger_condition
 from supsrc.state import RepositoryState, RepositoryStatus
@@ -20,8 +21,6 @@ if TYPE_CHECKING:
     from supsrc.runtime.tui_interface import TUIInterface
 
 log = get_logger("runtime.event_processor")
-# Debounce delay to group rapid file system events (e.g., create + modify) into one action.
-DEBOUNCE_DELAY = 0.25  # 250 milliseconds
 
 
 class EventProcessor:
@@ -102,6 +101,13 @@ class EventProcessor:
                 # Record the change and update UI
                 repo_state.record_change()
 
+                # Handle timer logic - check if repo is clean after any change
+                repo_config = self.config.repositories.get(event.repo_id)
+                if repo_config and isinstance(repo_config.rule, InactivityRuleConfig):
+                    # After any file change, check if repo is clean and handle timer accordingly
+                    task = asyncio.create_task(self._check_repo_status_and_handle_timer(event.repo_id))
+                    task.add_done_callback(lambda _: None)
+
                 # Schedule async refresh of repository statistics for real-time UI updates
                 task = asyncio.create_task(self._refresh_repository_statistics(event.repo_id))
                 task.add_done_callback(lambda _: None)  # Ensure task is properly handled
@@ -109,26 +115,34 @@ class EventProcessor:
                 self.tui.post_state_update(self.repo_states)
 
                 # Emit file change event for TUI event feed
-                if (
-                    self.tui
-                    and hasattr(self.tui, "app")
-                    and self.tui.app
-                    and hasattr(self.tui.app, "event_collector")
-                ):
-                    try:
-                        from supsrc.events.monitor import FileChangeEvent
+                if self.tui and hasattr(self.tui, "app") and self.tui.app:
+                    if hasattr(self.tui.app, "event_collector"):
+                        try:
+                            from supsrc.events.monitor import FileChangeEvent
 
-                        change_event = FileChangeEvent(
-                            description=f"File {event.event_type}: {event.src_path.name}",
-                            repo_id=event.repo_id,
-                            file_path=event.src_path,
-                            change_type=event.event_type,
-                        )
-                        self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
-                    except Exception as e:
-                        log.debug("Failed to emit TUI event", error=str(e))
+                            change_event = FileChangeEvent(
+                                description=f"File {event.event_type}: {event.src_path.name}",
+                                repo_id=event.repo_id,
+                                file_path=event.src_path,
+                                change_type=event.event_type,
+                            )
+                            self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
+                            log.debug("File change event emitted successfully",
+                                     event_type=event.event_type,
+                                     file_name=event.src_path.name,
+                                     repo_id=event.repo_id)
+                        except Exception as e:
+                            log.warning("Failed to emit TUI file change event",
+                                       error=str(e),
+                                       event_type=event.event_type,
+                                       repo_id=event.repo_id,
+                                       exc_info=True)
+                    else:
+                        log.warning("TUI app exists but no event_collector found")
+                else:
+                    log.debug("TUI or TUI app not available for event emission")
 
-                # Instead of acting immediately, start a debounced check
+                # Start debounced check for save count rules and other trigger conditions
                 self._debounce_trigger_check(event.repo_id)
 
             except asyncio.CancelledError:
@@ -148,9 +162,9 @@ class EventProcessor:
 
         repo_state.cancel_debounce_timer()
         loop = asyncio.get_running_loop()
-        handle = loop.call_later(DEBOUNCE_DELAY, self._execute_trigger_check, repo_id)
+        handle = loop.call_later(DEFAULT_DEBOUNCE_DELAY, self._execute_trigger_check, repo_id)
         repo_state.set_debounce_timer(handle)
-        log.debug("Debounce timer set", repo_id=repo_id, delay=DEBOUNCE_DELAY)
+        log.debug("Debounce timer set", repo_id=repo_id, delay=DEFAULT_DEBOUNCE_DELAY)
 
     def _execute_trigger_check(self, repo_id: str):
         """Called by the debounce timer. Checks rules and triggers the appropriate action."""
@@ -170,11 +184,20 @@ class EventProcessor:
             )
             return
 
-        if check_trigger_condition(repo_state, repo_config):
+        trigger_met = check_trigger_condition(repo_state, repo_config)
+        log.debug(
+            "Trigger check result",
+            repo_id=repo_id,
+            trigger_met=trigger_met,
+            rule_type=type(repo_config.rule).__name__,
+            is_inactivity_rule=isinstance(repo_config.rule, InactivityRuleConfig),
+        )
+
+        if trigger_met:
+            log.debug("Scheduling immediate action", repo_id=repo_id)
             self._schedule_action(repo_id)
-        elif isinstance(repo_config.rule, InactivityRuleConfig):
-            # If the save count rule wasn't met, the inactivity rule might still apply
-            self._start_inactivity_timer(repo_state, repo_config)
+        # Note: Inactivity timer is already started immediately on file change,
+        # no need to start it again here during debounce check
 
     def _schedule_action(self, repo_id: str) -> None:
         """Schedules the action handler to execute for a repo."""
@@ -204,6 +227,9 @@ class EventProcessor:
         loop = asyncio.get_running_loop()
         handle = loop.call_later(delay, self._schedule_action, state.repo_id)
         state.set_inactivity_timer(handle, int(delay))
+
+        # Immediately notify TUI that timer has started so countdown is visible
+        self.tui.post_state_update(self.repo_states)
 
     async def _refresh_repository_statistics(self, repo_id: str) -> None:
         """Refresh repository file statistics after file changes for real-time UI updates."""
@@ -238,6 +264,51 @@ class EventProcessor:
                 self.tui.post_state_update(self.repo_states)
         except Exception as e:
             log.debug("Failed to refresh repository statistics", repo_id=repo_id, error=str(e))
+
+    async def _check_repo_status_and_handle_timer(self, repo_id: str) -> None:
+        """Check repository status after any change and start/stop timer accordingly."""
+        # Wait a moment for filesystem changes to settle
+        await asyncio.sleep(0.1)
+
+        repo_state = self.repo_states.get(repo_id)
+        repo_config = self.config.repositories.get(repo_id)
+        repo_engine = self.repo_engines.get(repo_id)
+
+        if not all((repo_state, repo_config, repo_engine)):
+            return
+
+        try:
+            # Check current repository status
+            status_result = await repo_engine.get_status(
+                repo_state, repo_config.repository, self.config.global_config, repo_config.path
+            )
+
+            if status_result.success:
+                if status_result.is_clean:
+                    # Repository is clean - stop timer and set to IDLE
+                    log.debug(f"Repository {repo_id} is clean, stopping timer")
+                    repo_state.cancel_inactivity_timer()
+                    repo_state.update_status(RepositoryStatus.IDLE)
+
+                    # Update repository statistics to reflect clean state
+                    repo_state.total_files = status_result.total_files or 0
+                    repo_state.changed_files = 0
+                    repo_state.added_files = 0
+                    repo_state.deleted_files = 0
+                    repo_state.modified_files = 0
+                    repo_state.has_uncommitted_changes = False
+                    repo_state.current_branch = status_result.current_branch
+                else:
+                    # Repository has changes - start inactivity timer
+                    log.debug(f"Repository {repo_id} has changes, starting timer")
+                    if isinstance(repo_config.rule, InactivityRuleConfig):
+                        self._start_inactivity_timer(repo_state, repo_config)
+
+                # Always update UI to reflect current state
+                self.tui.post_state_update(self.repo_states)
+
+        except Exception as e:
+            log.debug("Failed to check repository status", repo_id=repo_id, error=str(e))
 
     async def stop(self) -> None:
         """Gracefully stop all scheduled action tasks."""

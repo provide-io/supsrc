@@ -90,6 +90,13 @@ class RepositoryManager:
                 repo_state.rule_dynamic_indicator = (
                     rule_type_str.split(".")[-1].replace("_", " ").capitalize()
                 )
+                init_log.debug(
+                    "Rule configuration set",
+                    repo_id=repo_id,
+                    rule_type=rule_type_str,
+                    rule_emoji=repo_state.rule_emoji,
+                    rule_indicator=repo_state.rule_dynamic_indicator,
+                )
 
                 engine = self.repo_engines[repo_id]
                 if hasattr(engine, "get_summary"):

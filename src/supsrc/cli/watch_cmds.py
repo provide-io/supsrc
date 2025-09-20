@@ -12,6 +12,7 @@ from provide.foundation.cli.decorators import logging_options
 from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.config import load_config
+from supsrc.config.defaults import DEFAULT_WATCH_ACTIVE_INTERVAL, DEFAULT_WATCH_IDLE_INTERVAL
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.utils.directories import SupsrcDirectories
 
@@ -22,20 +23,18 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
     """Periodically print repository status to stdout."""
     while True:
         try:
-            # Update timer countdowns for all repositories
-            active_timers = False
-            if orchestrator.repo_states:
-                for state in orchestrator.repo_states.values():
-                    state.update_timer_countdown()
-                    if state.timer_seconds_left is not None:
-                        active_timers = True
-
-            # Sleep based on whether timers are active
-            sleep_interval = 1.0 if active_timers else 10.0
-            await asyncio.sleep(sleep_interval)
+            # Always sleep for the active interval to ensure responsive timer updates
+            await asyncio.sleep(DEFAULT_WATCH_ACTIVE_INTERVAL)
 
             if not orchestrator.repo_states:
                 continue
+
+            # Update timer countdowns for all repositories and check for active timers
+            active_timers = False
+            for state in orchestrator.repo_states.values():
+                state.update_timer_countdown()
+                if state.timer_seconds_left is not None:
+                    active_timers = True
 
             status_lines = []
             for repo_id, state in orchestrator.repo_states.items():
@@ -68,9 +67,26 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
                 )
                 status_lines.append(status_line)
 
-            # Print status summary (only when there are changes or active timers)
-            if status_lines and (active_timers or sleep_interval == 10.0):
-                print("\n".join(status_lines))
+            # Print status summary when there are active timers or periodically when idle
+            # Use a counter to print status every 10 seconds when no timers are active
+            if not hasattr(_status_reporter, "idle_counter"):
+                _status_reporter.idle_counter = 0
+
+            should_print = False
+            if active_timers:
+                # Always print when timers are active
+                should_print = True
+                _status_reporter.idle_counter = 0
+            else:
+                # Print every 10 seconds when idle (10 * 1s intervals)
+                _status_reporter.idle_counter += 1
+                if _status_reporter.idle_counter >= 10:
+                    should_print = True
+                    _status_reporter.idle_counter = 0
+
+            if status_lines and should_print:
+                print("\n".join(status_lines), flush=True)
+                print(flush=True)  # Add blank line for readability
 
         except asyncio.CancelledError:
             break

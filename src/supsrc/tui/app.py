@@ -73,6 +73,7 @@ class SupsrcTuiApp(TuiAppBase):
 
     #log_section {
         height: 35%;
+        min-height: 15;
         border: round #888888;
         margin: 0 1;
         padding: 0;
@@ -103,6 +104,7 @@ class SupsrcTuiApp(TuiAppBase):
 
     #event-feed {
         height: 100%;
+        min-height: 10;
         scrollbar-gutter: stable;
     }
 
@@ -123,6 +125,8 @@ class SupsrcTuiApp(TuiAppBase):
 
     TabPane {
         padding: 0;
+        height: 100%;
+        min-height: 10;
     }
 
     Tabs {
@@ -162,6 +166,7 @@ class SupsrcTuiApp(TuiAppBase):
         self._shutdown_event = asyncio.Event()
         self._orchestrator: WatchOrchestrator | None = None  # type: ignore[assignment]
         self._worker = None
+        self._countdown_task = None
         self._is_shutting_down = False
         self.timer_manager: TimerManager | None = None
         self._timer_manager = TimerManager(self)
@@ -211,7 +216,7 @@ class SupsrcTuiApp(TuiAppBase):
     def on_mount(self) -> None:
         """Initialize data table and start the orchestrator."""
         # Foundation/structlog logging is already set up by the CLI
-        log.info("🐛 TUI on_mount starting - debug info will go to Foundation logger")
+        log.info("TUI on_mount starting")
 
         try:
             # Set up the data table
@@ -237,6 +242,8 @@ class SupsrcTuiApp(TuiAppBase):
             try:
                 self._event_feed = self.query_one("#event-feed", EventFeed)
                 self.event_collector.subscribe(self._event_feed.add_event)
+                log.info("Event feed widget found and subscribed to event collector",
+                        handler_count=len(self.event_collector._handlers))
 
                 # Create a welcome event
                 from supsrc.events.system import UserActionEvent
@@ -246,15 +253,25 @@ class SupsrcTuiApp(TuiAppBase):
                     action="start",
                 )
                 self.event_collector.emit(welcome_event)  # type: ignore[arg-type]
-                log.debug("Event feed widget initialized successfully")
+                log.info("Welcome event emitted to test event feed")
             except Exception as e:
-                log.error("Failed to initialize event feed widget", error=str(e))
+                log.error("Failed to initialize event feed widget", error=str(e), exc_info=True)
 
             # Set up a timer to check for external shutdown every 500ms
             self.set_interval(0.5, self._check_external_shutdown)
 
-            # Set up a timer to update countdowns every second
-            self.set_interval(1.0, self._update_countdown_display)
+            # Set up a timer to update countdowns every second - use asyncio instead of Textual set_interval
+            try:
+                # Start an async task for periodic countdown updates
+                self._countdown_task = self.run_worker(
+                    self._periodic_countdown_updater(),
+                    thread=False,
+                    group="countdown_updater",
+                    name="countdown_timer",
+                )
+                log.debug("Countdown timer task started successfully")
+            except Exception as e:
+                log.error("Failed to create countdown task", error=str(e))
 
             # Set the main worker
             self._worker = self.run_worker(  # type: ignore[assignment]
@@ -270,6 +287,22 @@ class SupsrcTuiApp(TuiAppBase):
         except Exception as e:
             log.exception("Error during TUI mount")
             self._update_sub_title(f"Initialization Error: {e}")
+
+    async def _periodic_countdown_updater(self) -> None:
+        """Async task to update countdown displays every second."""
+        log.info("Countdown updater task started.")
+        try:
+            while not self._shutdown_event.is_set():
+                # Update countdown displays
+                self._update_countdown_display()
+                # Wait 1 second before next update
+                await asyncio.sleep(1.0)
+        except asyncio.CancelledError:
+            log.info("Countdown updater task was cancelled gracefully.")
+        except Exception:
+            log.exception("Countdown updater task failed.")
+        finally:
+            log.info("Countdown updater task finished.")
 
     async def _run_orchestrator(self) -> None:
         """Run the orchestrator with comprehensive error handling."""
@@ -336,6 +369,10 @@ class SupsrcTuiApp(TuiAppBase):
         import datetime
 
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+
+        # Add direct test message to the feed first
+        if self._event_feed:
+            self._event_feed.write(f"[bold magenta]🧪 Manual test triggered at {timestamp}[/bold magenta]")
 
         # Emit test events using the event system
         from pathlib import Path

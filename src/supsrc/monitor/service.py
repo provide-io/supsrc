@@ -2,8 +2,8 @@
 
 import asyncio
 
-import structlog
 from watchdog.observers import Observer
+from provide.foundation.logger import get_logger
 
 # Use absolute imports
 from supsrc.config import RepositoryConfig
@@ -11,7 +11,7 @@ from supsrc.exceptions import MonitoringError, MonitoringSetupError
 from supsrc.monitor.events import MonitoredEvent
 from supsrc.monitor.handler import SupsrcEventHandler
 
-log = structlog.get_logger("monitor.service")
+log = get_logger("monitor.service")
 
 
 class MonitoringService:

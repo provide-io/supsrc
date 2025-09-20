@@ -230,11 +230,14 @@ class RepositoryState:
         self.inactivity_timer_handle = handle
         self._timer_total_seconds = total_seconds
         self._timer_start_time = asyncio.get_event_loop().time()
+        # Immediately set the initial countdown value
+        self.update_timer_countdown()
         log.debug(
             "Inactivity timer set",
             repo_id=self.repo_id,
             timer_handle=repr(handle),
             total_seconds=total_seconds,
+            initial_countdown=self.timer_seconds_left,
         )
 
     def cancel_inactivity_timer(self) -> None:
