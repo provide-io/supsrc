@@ -23,7 +23,7 @@ class RuleTriggeredEvent(BaseEvent):
     def format(self) -> str:
         """Format rule trigger event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
-        return f"[{time_str}] \u26a1 [{self.repo_id}] Rule '{self.rule_name}' triggered {self.action}"  # LIGHTNING
+        return f"[{time_str}] ⚡ [{self.repo_id}] Rule '{self.rule_name}' triggered {self.action}"  # LIGHTNING
 
 
 @attrs.define(frozen=True)
@@ -38,7 +38,7 @@ class ConfigReloadEvent(BaseEvent):
         time_str = self.timestamp.strftime("%H:%M:%S")
         path_info = f" from {self.config_path}" if self.config_path else ""
         return (
-            f"[{time_str}] \U0001f504 Configuration reloaded{path_info}"  # COUNTERCLOCKWISE ARROWS
+            f"[{time_str}] 🔄 Configuration reloaded{path_info}"  # COUNTERCLOCKWISE ARROWS
         )
 
 
@@ -55,7 +55,7 @@ class UserActionEvent(BaseEvent):
         time_str = self.timestamp.strftime("%H:%M:%S")
         target_str = f" [{self.target}]" if self.target else ""
         return (
-            f"[{time_str}] \U0001f464{target_str} User action: {self.action}"  # BUST IN SILHOUETTE
+            f"[{time_str}] 👤{target_str} User action: {self.action}"  # BUST IN SILHOUETTE
         )
 
 
@@ -71,4 +71,77 @@ class ErrorEvent(BaseEvent):
         """Format error event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         repo_str = f" [{self.repo_id}]" if self.repo_id else ""
-        return f"[{time_str}] \u274c [{self.source}]{repo_str} {self.error_type}: {self.description}"  # CROSS MARK
+        return f"[{time_str}] ❌ [{self.source}]{repo_str} {self.error_type}: {self.description}"  # CROSS MARK
+
+
+@attrs.define(frozen=True)
+class ExternalCommitEvent(BaseEvent):
+    """Event emitted when changes were committed externally (outside supsrc)."""
+
+    source: str = attrs.field(default="git", init=False)
+    repo_id: str = attrs.field(kw_only=True)
+    commit_hash: str | None = attrs.field(default=None, kw_only=True)
+
+    def format(self) -> str:
+        """Format external commit event for display."""
+        time_str = self.timestamp.strftime("%H:%M:%S")
+        hash_str = f" ({self.commit_hash[:7]})" if self.commit_hash else ""
+        return f"[{time_str}] 🤔 [{self.repo_id}] Changes committed externally{hash_str}"
+
+
+@attrs.define(frozen=True)
+class ConflictDetectedEvent(BaseEvent):
+    """Event emitted when merge conflicts are detected."""
+
+    source: str = attrs.field(default="git", init=False)
+    repo_id: str = attrs.field(kw_only=True)
+    conflict_files: list[str] = attrs.field(factory=list, kw_only=True)
+
+    def format(self) -> str:
+        """Format conflict detected event for display."""
+        time_str = self.timestamp.strftime("%H:%M:%S")
+        file_count = len(self.conflict_files)
+        files_str = f" in {file_count} file{'s' if file_count != 1 else ''}" if file_count > 0 else ""
+        return f"[{time_str}] ⚠️ [{self.repo_id}] Merge conflicts detected{files_str}"
+
+
+@attrs.define(frozen=True)
+class RepositoryFrozenEvent(BaseEvent):
+    """Event emitted when repository is frozen due to issues."""
+
+    source: str = attrs.field(default="system", init=False)
+    repo_id: str = attrs.field(kw_only=True)
+    reason: str = attrs.field(kw_only=True)
+
+    def format(self) -> str:
+        """Format repository frozen event for display."""
+        time_str = self.timestamp.strftime("%H:%M:%S")
+        return f"[{time_str}] 🧊 [{self.repo_id}] Repository frozen: {self.reason}"
+
+
+@attrs.define(frozen=True)
+class TestFailureEvent(BaseEvent):
+    """Event emitted when tests fail during auto-commit."""
+
+    source: str = attrs.field(default="testing", init=False)
+    repo_id: str = attrs.field(kw_only=True)
+    test_output: str | None = attrs.field(default=None, kw_only=True)
+
+    def format(self) -> str:
+        """Format test failure event for display."""
+        time_str = self.timestamp.strftime("%H:%M:%S")
+        return f"[{time_str}] 🔬 [{self.repo_id}] Automated tests failed"
+
+
+@attrs.define(frozen=True)
+class LLMVetoEvent(BaseEvent):
+    """Event emitted when LLM review blocks a commit."""
+
+    source: str = attrs.field(default="llm", init=False)
+    repo_id: str = attrs.field(kw_only=True)
+    reason: str = attrs.field(kw_only=True)
+
+    def format(self) -> str:
+        """Format LLM veto event for display."""
+        time_str = self.timestamp.strftime("%H:%M:%S")
+        return f"[{time_str}] 🧠 [{self.repo_id}] LLM review blocked: {self.reason}"
