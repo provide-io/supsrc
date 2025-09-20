@@ -147,7 +147,15 @@ class ActionHandlerMixin:
 
     def action_select_repo_for_detail(self) -> None:
         """Select a repository for detailed view."""
-        table = self.query_one(DataTable)
+        # Check if we're in the Events tab - if so, don't handle Enter
+        try:
+            tabbed_content = self.query_one(TabbedContent)
+            if tabbed_content.active == "events-tab":
+                return  # Let EventFeed handle Enter key
+        except Exception:
+            pass  # If we can't find tabs, continue with normal behavior
+
+        table = self.query_one("#repository_table", DataTable)
         if table.cursor_coordinate.row < len(table.rows):
             selected_row = table.get_row_at(table.cursor_coordinate.row)
             repo_id = str(selected_row[2])  # Repository name is in column 2
@@ -200,20 +208,29 @@ class ActionHandlerMixin:
 
     def action_focus_next(self) -> None:
         """Focus the next panel in the interface."""
-        # Simple two-pane navigation: repo table <-> info pane tabs
+        # Simple two-pane navigation: repo table <-> info pane content
         try:
             # Check if repository table has focus
             repo_table = self.query_one("#repository_table", DataTable)
             if repo_table.has_focus:
-                # Move focus to the tabbed content area - focus the actual tabs bar
+                # Move focus to the content of the currently active tab
                 tabbed_content = self.query_one(TabbedContent)
-                tabs = tabbed_content.query_one("Tabs")
-                tabs.focus()
-                log.debug("Focused tabs from repo table")
+                active_tab = tabbed_content.active
+
+                if active_tab == "events-tab":
+                    # Focus the EventFeed widget directly
+                    event_feed = self.query_one("#event-feed")
+                    event_feed.focus()
+                    log.debug("Focused EventFeed content from repo table")
+                else:
+                    # For other tabs, focus the tabs bar for tab switching
+                    tabs = tabbed_content.query_one("Tabs")
+                    tabs.focus()
+                    log.debug(f"Focused tabs bar from repo table (active: {active_tab})")
             else:
                 # Move focus back to repository table
                 repo_table.focus()
-                log.debug("Focused repo table from tabs")
+                log.debug("Focused repo table from tab content")
         except Exception as e:
             log.error("Error in focus_next", error=str(e))
 
