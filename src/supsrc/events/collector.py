@@ -58,6 +58,14 @@ class EventCollector:
             If a handler raises an exception, it's logged but doesn't
             prevent other handlers from running.
         """
+        if len(self._handlers) == 0:
+            log.warning(
+                "No handlers subscribed to receive event",
+                event_source=event.source,
+                event_description=event.description,
+            )
+            return
+
         log.debug(
             "Emitting event",
             event_source=event.source,
@@ -68,10 +76,12 @@ class EventCollector:
         for handler in self._handlers:
             try:
                 handler(event)
+                log.debug("Event handler called successfully", handler=str(handler)[:50])
             except Exception as e:
                 log.error(
                     "Event handler failed",
                     handler=str(handler),
                     error=str(e),
                     event_source=event.source,
+                    exc_info=True,
                 )

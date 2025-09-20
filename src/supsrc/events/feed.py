@@ -9,9 +9,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from textual.widgets import RichLog
+from provide.foundation.logger import get_logger
 
 if TYPE_CHECKING:
     from supsrc.events.protocol import Event
+
+log = get_logger("events.feed")
 
 
 class EventFeed(RichLog):
@@ -21,21 +24,40 @@ class EventFeed(RichLog):
     It applies simple color coding based on the event source.
     """
 
+    def on_mount(self) -> None:
+        """Initialize the EventFeed widget when mounted."""
+        # Add an initial message to show the widget is ready
+        self.write("[bold yellow]📋 EventFeed Ready - Events will appear here[/bold yellow]")
+        self.write("[dim]📅 Widget mounted at startup[/dim]")
+
+        # Ensure the widget scrolls to show new content
+        self.scroll_end()
+
     def add_event(self, event: Event) -> None:
         """Add an event to the feed for display.
 
         Args:
             event: Event to display
         """
-        text = event.format()
+        try:
+            text = event.format()
 
-        # Simple color mapping based on event source
-        colors = {
-            "git": "green",
-            "monitor": "blue",
-            "rules": "yellow",
-            "tui": "cyan",
-        }
-        color = colors.get(event.source, "white")
+            # Simple color mapping based on event source
+            colors = {
+                "git": "green",
+                "monitor": "blue",
+                "rules": "yellow",
+                "tui": "cyan",
+            }
+            color = colors.get(event.source, "white")
 
-        self.write(f"[{color}]{text}[/{color}]")
+            formatted_text = f"[{color}]{text}[/{color}]"
+            self.write(formatted_text)
+
+            # Scroll to the end to show new events
+            self.scroll_end()
+        except Exception as e:
+            log.error("Failed to add event to feed",
+                     error=str(e),
+                     event_source=getattr(event, 'source', 'unknown'),
+                     exc_info=True)

@@ -107,7 +107,7 @@ class WatchOrchestrator:
                 log.info("Using TUI app event collector for event collection")
                 self.event_collector = self.app.event_collector
             elif self.event_log_path:
-                # Headless mode: create standalone event collector with JSON logging
+                # Headless mode: create standalone event collector with JSON logging and console output
                 log.info(
                     "Initializing headless event collection",
                     event_log_path=str(self.event_log_path),
@@ -115,6 +115,8 @@ class WatchOrchestrator:
                 self.event_collector = EventCollector()
                 self.json_logger = JSONEventLogger(self.event_log_path)
                 self.event_collector.subscribe(self.json_logger.log_event)
+                # Also print events to console in headless mode
+                self.event_collector.subscribe(self._print_event_to_console)
             else:
                 # No event collection configured
                 log.debug("No event collection configured")
@@ -296,6 +298,21 @@ class WatchOrchestrator:
         if self.repository_manager and self.config:
             return await self.repository_manager.get_repository_details(repo_id, self.config)
         return {"error": "Repository manager not available."}
+
+    def _print_event_to_console(self, event: Any) -> None:
+        """Print events to console in headless mode."""
+        try:
+            # Format event for console output
+            timestamp = event.timestamp.strftime("%H:%M:%S")
+            description = event.description
+            repo_id = getattr(event, "repo_id", "")
+
+            if repo_id:
+                print(f"[{timestamp}] {repo_id}: {description}")
+            else:
+                print(f"[{timestamp}] {description}")
+        except Exception as e:
+            log.debug("Failed to print event to console", error=str(e))
 
     def set_repo_refreshing_status(self, repo_id: str, is_refreshing: bool) -> None:
         """Set the refreshing status for a repository."""
