@@ -318,6 +318,18 @@ class RepositoryManager:
                         RepositoryStatus.ERROR, f"Failed to resume monitoring: {e}"
                     )
                     repo_state.is_stopped = True
+
+                    # Emit error event for resume monitoring failure
+                    if self.event_collector:
+                        from supsrc.events.system import ErrorEvent
+                        resume_error_event = ErrorEvent(
+                            description=f"Failed to resume monitoring: {e!s}",
+                            source="monitor",
+                            error_type="ResumeMonitoringFailed",
+                            repo_id=repo_id,
+                        )
+                        self.event_collector.emit(resume_error_event)
+
                     return False
 
         repo_state._update_display_emoji()
