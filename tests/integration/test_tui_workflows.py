@@ -35,6 +35,7 @@ def mock_shutdown_event() -> asyncio.Event:
 @pytest.fixture
 def mock_app_setup():
     """Setup proper mocks for the TUI app to avoid common issues."""
+
     def setup_app(app: SupsrcTuiApp) -> tuple[Mock, Mock]:
         # Better mocking for event collector
         mock_event_collector = Mock()

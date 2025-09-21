@@ -322,6 +322,7 @@ class RepositoryManager:
                     # Emit error event for resume monitoring failure
                     if self.event_collector:
                         from supsrc.events.system import ErrorEvent
+
                         resume_error_event = ErrorEvent(
                             description=f"Failed to resume monitoring: {e!s}",
                             source="monitor",
