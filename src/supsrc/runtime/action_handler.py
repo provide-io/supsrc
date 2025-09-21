@@ -468,7 +468,8 @@ class ActionHandler:
                 from supsrc.engines.git.events import GitCommitEvent
 
                 commit_event = GitCommitEvent(
-                    description=f"Committed {len(stage_result.files_staged or [])} files to {repo_id}",
+                    description=f"Committed {len(stage_result.files_staged or [])} files",
+                    repo_id=repo_id,
                     commit_hash=commit_result.commit_hash,
                     branch=repo_state.current_branch or "main",
                     files_changed=len(stage_result.files_staged or []),
@@ -494,7 +495,8 @@ class ActionHandler:
                     from supsrc.engines.git.events import GitPushEvent
 
                     push_event = GitPushEvent(
-                        description=f"Pushed {repo_id} to remote repository",
+                        description="Pushed to remote repository",
+                        repo_id=repo_id,
                         remote=repo_config.repository.get("remote", "origin"),
                         branch=repo_state.current_branch or "main",
                         commits_pushed=1,

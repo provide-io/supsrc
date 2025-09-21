@@ -108,13 +108,9 @@ class EventFeedTable(DataTable):
 
     def _extract_repo_id(self, event: Event) -> str:
         """Extract repository ID from the event."""
-        # Check if event has repo_id attribute (BufferedFileChangeEvent)
+        # Check if event has repo_id attribute (BufferedFileChangeEvent, Git events, etc.)
         # Also ensure it's not a Mock object
-        if (
-            hasattr(event, "repo_id")
-            and hasattr(event, "file_paths")
-            and "Mock" not in str(type(event))
-        ):
+        if hasattr(event, "repo_id") and "Mock" not in str(type(event)):
             return str(event.repo_id)
 
         # Try to extract from description for other events
@@ -136,7 +132,7 @@ class EventFeedTable(DataTable):
 
     def _get_event_emoji(self, event: Event) -> str:
         """Get appropriate emoji for the event type."""
-        # Check for specific event types first (new system events)
+        # Check for specific event types first (new system events and git events)
         event_type = type(event).__name__
         event_type_emojis = {
             "ExternalCommitEvent": "🤔",  # THINKING FACE
@@ -144,6 +140,10 @@ class EventFeedTable(DataTable):
             "RepositoryFrozenEvent": "🧊",  # ICE CUBE
             "TestFailureEvent": "🔬",  # MICROSCOPE
             "LLMVetoEvent": "🧠",  # BRAIN
+            "GitCommitEvent": "📝",  # MEMO
+            "GitPushEvent": "🚀",  # ROCKET
+            "GitStageEvent": "📋",  # CLIPBOARD
+            "GitBranchEvent": "🌿",  # HERB
         }
         if event_type in event_type_emojis:
             return event_type_emojis[event_type]
@@ -184,6 +184,32 @@ class EventFeedTable(DataTable):
         Returns:
             Tuple of (impact_str, file_str, message_str)
         """
+        # Handle Git events specially
+        event_type = type(event).__name__
+        if event_type == "GitCommitEvent":
+            files_changed = getattr(event, "files_changed", 1)
+            commit_hash = getattr(event, "commit_hash", "")
+            impact_str = str(files_changed)
+            file_str = self._format_git_files_display(files_changed)
+            message_str = f"Commit {commit_hash[:7]}" if commit_hash else "Commit"
+            return impact_str, file_str, message_str
+
+        elif event_type == "GitPushEvent":
+            commits_pushed = getattr(event, "commits_pushed", 1)
+            remote = getattr(event, "remote", "origin")
+            impact_str = str(commits_pushed)
+            file_str = "-"
+            message_str = f"Push to {remote}"
+            return impact_str, file_str, message_str
+
+        elif event_type == "GitStageEvent":
+            files_staged = getattr(event, "files_staged", [])
+            file_count = len(files_staged)
+            impact_str = str(file_count)
+            file_str = self._format_git_files_display(file_count)
+            message_str = "Staged changes"
+            return impact_str, file_str, message_str
+
         # Handle BufferedFileChangeEvent
         if hasattr(event, "file_paths") and hasattr(event, "event_count"):
             file_paths = getattr(event, "file_paths", [])
@@ -214,6 +240,27 @@ class EventFeedTable(DataTable):
         file_str, message_str = self._parse_description(description)
 
         return impact_str, file_str, message_str
+
+    def _format_git_files_display(self, file_count: int) -> str:
+        """Format git file display with Rich markup based on file count.
+
+        Args:
+            file_count: Number of files affected
+
+        Returns:
+            Formatted string with Rich markup for color/style
+        """
+        if file_count == 0:
+            return "-"
+        elif file_count == 1:
+            return "[dim]1 file[/]"
+        elif file_count <= 3:
+            return f"[bold cyan]{file_count} files[/]"
+        elif file_count <= 10:
+            return f"[bold yellow]{file_count} files[/]"
+        else:
+            # Large change set - use warning style
+            return f"[bold red]⚡[/] {file_count} files"
 
     def _format_event_details(self, event: Event) -> tuple[str, str]:
         """Format event count and file details.
@@ -262,19 +309,24 @@ class EventFeedTable(DataTable):
         return count_str, files_str
 
     def _get_files_summary_short(self, file_paths: list[Path]) -> str:
-        """Get a short summary of multiple file paths for the File column."""
+        """Get a short summary of multiple file paths for the File column with Rich markup."""
         if not file_paths:
             return "-"
 
         if len(file_paths) == 1:
-            return str(file_paths[0].name)
+            # Single file - show directory prefix dimmed
+            file_path = file_paths[0]
+            if file_path.parent.name and file_path.parent.name != ".":
+                return f"[dim]{file_path.parent}/[/]{file_path.name}"
+            else:
+                return f"[dim]./[/]{file_path.name}"
 
         # Try to find common directory
         str_paths = [str(p) for p in file_paths]
 
         # Find common prefix
+        common_prefix = ""
         if len(str_paths) > 1:
-            common_prefix = ""
             min_path = min(str_paths)
             max_path = max(str_paths)
 
@@ -288,18 +340,24 @@ class EventFeedTable(DataTable):
             if "/" in common_prefix:
                 common_prefix = common_prefix.rsplit("/", 1)[0] + "/"
 
-        # Create short summary
+        # Create short summary with color coding
         if len(file_paths) <= 2:
             # Show individual file names
             names = [p.name for p in file_paths]
             return ", ".join(names)
-        else:
-            # Show common directory or count
+        elif len(file_paths) <= 5:
+            # Single directory with multiple files
             if common_prefix and len(common_prefix) > 1:
                 common_dir = Path(common_prefix).name or Path(common_prefix).parent.name
-                return f"{common_dir}/"
+                return f"[bold cyan]{common_dir}/[/]"
             else:
-                return f"{len(file_paths)} files"
+                return f"[bold cyan]{len(file_paths)} files[/]"
+        elif len(file_paths) <= 15:
+            # Multiple directories - yellow warning
+            return f"[bold yellow]{len(file_paths)} files[/]"
+        else:
+            # Large change set - red warning
+            return f"[bold red]⚡[/] {len(file_paths)} files"
 
     def _extract_message(self, event: Event) -> str:
         """Extract a message from the event."""
@@ -311,7 +369,11 @@ class EventFeedTable(DataTable):
         elif event_type == "ConflictDetectedEvent":
             conflict_files = getattr(event, "conflict_files", [])
             file_count = len(conflict_files)
-            return f"Conflicts in {file_count} file{'s' if file_count != 1 else ''}" if file_count > 0 else "Merge conflicts"
+            return (
+                f"Conflicts in {file_count} file{'s' if file_count != 1 else ''}"
+                if file_count > 0
+                else "Merge conflicts"
+            )
         elif event_type == "RepositoryFrozenEvent":
             reason = getattr(event, "reason", "Unknown reason")
             return f"Frozen: {reason}"
