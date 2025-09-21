@@ -102,6 +102,11 @@ class SupsrcTuiApp(TuiAppBase):
         scrollbar-gutter: stable;
     }
 
+    /* Repository table column sizing */
+    #repository_table {
+        width: 100%;
+    }
+
     #event-feed {
         height: 1fr;
         margin: 0;
@@ -225,12 +230,25 @@ class SupsrcTuiApp(TuiAppBase):
         yield Footer()
 
     def _setup_table_columns(self, table: DataTable) -> None:
-        """Set up table columns with fixed, reasonable widths."""
-        # Use simple, fixed widths that work well across different terminal sizes
+        """Set up table columns with responsive branch column."""
+        # Calculate branch column width dynamically
+        try:
+            terminal_width = self.size.width
+        except Exception:
+            terminal_width = 120  # Fallback
+
+        # Fixed columns total: 3+4+15+4+4+4+4+4+20+8 = 70
+        fixed_width = 70
+        # Account for padding/borders/scrollbar
+        overhead = 15
+        # Calculate branch width (minimum 8, maximum 40)
+        available = max(0, terminal_width - fixed_width - overhead)
+        branch_width = max(8, min(40, available))
+
         table.add_column("📊", width=3)  # Status emoji
         table.add_column("⏱️", width=4)  # Timer/countdown - 4 characters as requested
         table.add_column("Repository", width=15)  # Repository name
-        table.add_column("Branch")  # Branch name - auto-size to content
+        table.add_column("Branch", width=branch_width)  # Branch name - responsive
         table.add_column("📁", width=4)  # Total files
         table.add_column("📝", width=4)  # Changed files
         table.add_column("\u2795", width=4)  # Added files
@@ -238,6 +256,28 @@ class SupsrcTuiApp(TuiAppBase):
         table.add_column("✏️", width=4)  # Modified files
         table.add_column("Last Commit", width=20)  # yyyy-mm-dd hh:mm:ss format
         table.add_column("Rule", width=8)  # Rule indicator
+
+    def on_resize(self) -> None:
+        """Handle terminal resize by updating branch column width."""
+        try:
+            table = self.query_one("#repository_table", DataTable)
+            if table.column_count > 3:  # Make sure branch column exists
+                # Recalculate branch column width
+                terminal_width = self.size.width
+                fixed_width = 70  # All columns except branch
+                overhead = 15
+                available = max(0, terminal_width - fixed_width - overhead)
+                branch_width = max(8, min(40, available))
+
+                # Find and update branch column (index 3)
+                branch_column = table.get_column_at(3)
+                if branch_column and hasattr(table.columns[branch_column.key], "width"):
+                    old_width = table.columns[branch_column.key].width
+                    if old_width != branch_width:
+                        table.columns[branch_column.key].width = branch_width
+                        table.refresh()
+        except Exception as e:
+            log.debug("Failed to update column widths on resize", error=str(e))
 
     def on_mount(self) -> None:
         """Initialize data table and start the orchestrator."""
