@@ -102,6 +102,11 @@ class SupsrcTuiApp(TuiAppBase):
         scrollbar-gutter: stable;
     }
 
+    /* Responsive column sizing for repository table */
+    #repository_table {
+        column-widths: 3 4 15 1fr 4 4 4 4 4 20 8;
+    }
+
     #event-feed {
         height: 1fr;
         margin: 0;
@@ -233,18 +238,18 @@ class SupsrcTuiApp(TuiAppBase):
             # Set up the data table with column configurations
             table = self.query_one("#repository_table", DataTable)
 
-            # Add columns with specific width settings
-            table.add_column("📊", width=3)  # Status emoji header
-            table.add_column("⏱️", width=4)  # Timer/countdown column - 4 character width
-            table.add_column("Repository", width=15)
-            table.add_column("Branch", width=None)  # Auto-expand to use available space
-            table.add_column("📁", width=4)  # Total files
-            table.add_column("📝", width=4)  # Changed files count
-            table.add_column("\u2795", width=4)  # HEAVY PLUS SIGN - Added files
-            table.add_column("\u2796", width=4)  # HEAVY MINUS SIGN - Deleted files
-            table.add_column("✏️", width=4)  # Modified files
-            table.add_column("Last Commit", width=20)  # yyyy-mm-dd hh:mm:ss format (20 chars)
-            table.add_column("Rule", width=8)
+            # Add columns - widths controlled by CSS column-widths property
+            table.add_column("📊")  # Status emoji header
+            table.add_column("⏱️")  # Timer/countdown column
+            table.add_column("Repository")
+            table.add_column("Branch")  # Will use 1fr in CSS to be responsive
+            table.add_column("📁")  # Total files
+            table.add_column("📝")  # Changed files count
+            table.add_column("\u2795")  # HEAVY PLUS SIGN - Added files
+            table.add_column("\u2796")  # HEAVY MINUS SIGN - Deleted files
+            table.add_column("✏️")  # Modified files
+            table.add_column("Last Commit")
+            table.add_column("Rule")
 
             # Initialize timer manager
             self.timer_manager = TimerManager(self)
