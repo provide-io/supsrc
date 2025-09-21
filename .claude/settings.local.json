@@ -14,7 +14,8 @@
       "Bash(provide-testkit:*)",
       "Bash(./.venv/bin/provide-testkit:*)",
       "Bash(PYTHONPATH:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": [],
