@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 from datetime import datetime
+from typing import cast
 from pathlib import Path
 from typing import Any
 
@@ -216,6 +217,19 @@ class EventBuffer:
             else:
                 # Multiple events on same file - consolidate
                 most_recent = file_events[-1]
+
+                # Build operation history for all events on this file
+                operation_history = []
+                for event in file_events:
+                    operation_history.append(
+                        {
+                            "path": event.file_path,
+                            "change_type": event.change_type,
+                            "timestamp": event.timestamp,
+                            "is_primary": True,
+                        }
+                    )
+
                 grouped_events.append(
                     BufferedFileChangeEvent(
                         repo_id=most_recent.repo_id,
@@ -223,6 +237,7 @@ class EventBuffer:
                         operation_type="single_file",
                         event_count=len(file_events),
                         primary_change_type=most_recent.change_type,
+                        operation_history=operation_history,
                     )
                 )
 
@@ -323,10 +338,8 @@ class EventBuffer:
 
         buffer_op_type = operation_type_map.get(operation.operation_type, "single_file")
 
-        # Get file paths involved in this operation
+        # Use primary_path (end-state file) as the main file path
         file_paths = [operation.primary_path]
-        if hasattr(operation, "files_affected") and operation.files_affected:
-            file_paths = operation.files_affected
 
         # Find the repo_id from original events
         repo_id = original_events[0].repo_id if original_events else "unknown"
@@ -341,22 +354,48 @@ class EventBuffer:
         else:
             primary_change_type = "modified"
 
+        # Build operation history from all events involved
+        operation_history = []
+        for event in operation.events:
+            history_entry = {
+                "path": event.path,
+                "change_type": event.event_type,
+                "timestamp": event.timestamp,
+                "is_primary": event.path == operation.primary_path
+                or (hasattr(event, "dest_path") and event.dest_path == operation.primary_path),
+            }
+            operation_history.append(history_entry)
+
+        # Sort by timestamp to maintain chronological order
+        operation_history.sort(key=lambda x: cast(datetime, x["timestamp"]))
+
         return BufferedFileChangeEvent(
             repo_id=repo_id,
             file_paths=file_paths,
             operation_type=buffer_op_type,
             event_count=operation.event_count,
             primary_change_type=primary_change_type,
+            operation_history=operation_history,
         )
 
     def _create_single_event_group(self, event: FileChangeEvent) -> BufferedFileChangeEvent:
         """Create a buffered event group for a single event."""
+        operation_history = [
+            {
+                "path": event.file_path,
+                "change_type": event.change_type,
+                "timestamp": event.timestamp,
+                "is_primary": True,
+            }
+        ]
+
         return BufferedFileChangeEvent(
             repo_id=event.repo_id,
             file_paths=[event.file_path],
             operation_type="single_file",
             event_count=1,
             primary_change_type=event.change_type,
+            operation_history=operation_history,
         )
 
     def _create_batch_operation_group(
@@ -366,12 +405,28 @@ class EventBuffer:
         file_paths = list({e.file_path for e in events})
         most_common_type = self._get_most_common_change_type(events)
 
+        # Build operation history for all events
+        operation_history = []
+        for event in events:
+            operation_history.append(
+                {
+                    "path": event.file_path,
+                    "change_type": event.change_type,
+                    "timestamp": event.timestamp,
+                    "is_primary": True,  # All files are primary in batch operations
+                }
+            )
+
+        # Sort by timestamp to maintain chronological order
+        operation_history.sort(key=lambda x: cast(datetime, x["timestamp"]))
+
         return BufferedFileChangeEvent(
             repo_id=events[0].repo_id,
             file_paths=file_paths,
             operation_type="batch_operation",
             event_count=len(events),
             primary_change_type=most_common_type,
+            operation_history=operation_history,
         )
 
     def _get_most_common_change_type(self, events: list[FileChangeEvent]) -> str:
