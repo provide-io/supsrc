@@ -1,4 +1,4 @@
-"""LLM provider utilities for CommitWorkflowExecutor."""
+"""LLM provider utilities for RuntimeWorkflow."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ except ImportError:
     GeminiProvider = None
     OllamaProvider = None
 
-log = get_logger("runtime.commit_workflow.llm_utils")
+log = get_logger("runtime.workflow.llm_utils")
 
 
 class LLMProviderManager:
@@ -34,7 +34,14 @@ class LLMProviderManager:
         self._llm_providers: dict[str, LLMProvider] = {}
 
     def get_llm_provider(self, llm_config: LLMConfig) -> LLMProvider | None:
-        """Instantiates and returns an LLM provider based on config."""
+        """Instantiates and returns an LLM provider based on config.
+
+        Args:
+            llm_config: LLM configuration object
+
+        Returns:
+            LLM provider instance or None if unavailable/failed
+        """
         if not LLM_AVAILABLE:
             return None
 
