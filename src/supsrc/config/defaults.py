@@ -20,3 +20,10 @@ DEFAULT_DEBOUNCE_DELAY = 0.25  # 250 milliseconds
 # Timer defaults
 # =================================
 DEFAULT_TIMER_UPDATE_INTERVAL = 1.0  # Update timer countdown every second
+
+# =================================
+# Event buffer defaults
+# =================================
+DEFAULT_EVENT_BUFFER_WINDOW_MS = 500  # Buffer events for 500ms
+DEFAULT_EVENT_BUFFER_ENABLED = True  # Enable event buffering by default
+DEFAULT_EVENT_BUFFER_GROUPING_MODE = "smart"  # Use smart operation detection

@@ -9,7 +9,11 @@
       "Bash(timeout:*)",
       "Bash(tee:*)",
       "Bash(PYTHONPATH=\"/Users/tim/code/gh/provide-io/provide-foundation/src:./src\" python3 scripts/test_interactive.py --auto-run)",
-      "Bash(printf '\\e[?1000l\\e[?1002l\\e[?1003l\\e[?1006l')"
+      "Bash(printf '\\e[?1000l\\e[?1002l\\e[?1003l\\e[?1006l')",
+      "Bash(PYTHONPATH=\"./src\" python3 examples/file_operations/02_streaming_detection.py)",
+      "Bash(provide-testkit:*)",
+      "Bash(./.venv/bin/provide-testkit:*)",
+      "Bash(PYTHONPATH:*)"
     ],
     "deny": [],
     "ask": [],
