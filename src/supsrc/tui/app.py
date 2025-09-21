@@ -102,11 +102,6 @@ class SupsrcTuiApp(TuiAppBase):
         scrollbar-gutter: stable;
     }
 
-    /* Responsive column sizing for repository table */
-    #repository_table {
-        column-widths: 3 4 15 1fr 4 4 4 4 4 20 8;
-    }
-
     #event-feed {
         height: 1fr;
         margin: 0;
@@ -229,6 +224,69 @@ class SupsrcTuiApp(TuiAppBase):
 
         yield Footer()
 
+    def _setup_table_columns(self, table: DataTable) -> None:
+        """Set up table columns with responsive sizing."""
+        # Calculate available width for branch column
+        # Terminal width minus fixed columns and padding/borders
+        try:
+            terminal_width = self.size.width
+        except Exception:
+            terminal_width = 120  # Fallback width
+
+        # Fixed column widths (sum = 63 chars without branch)
+        fixed_widths = {
+            "status": 3,  # 📊
+            "timer": 4,  # ⏱️ - 4 character width as requested
+            "repository": 15,  # Repository
+            "files": 4,  # 📁
+            "changed": 4,  # 📝
+            "added": 4,  # Added files
+            "deleted": 4,  # Deleted files
+            "modified": 4,  # ✏️
+            "last_commit": 20,  # yyyy-mm-dd hh:mm:ss format
+            "rule": 8,  # Rule
+        }
+
+        # Account for padding, borders, and spacing (estimate ~10 chars)
+        padding_estimate = 10
+        fixed_total = sum(fixed_widths.values()) + padding_estimate
+
+        # Calculate branch column width (minimum 10, expand to use available space)
+        branch_width = max(10, terminal_width - fixed_total)
+
+        # Add all columns with calculated widths
+        table.add_column("📊", width=fixed_widths["status"])
+        table.add_column("⏱️", width=fixed_widths["timer"])
+        table.add_column("Repository", width=fixed_widths["repository"])
+        table.add_column("Branch", width=branch_width)
+        table.add_column("📁", width=fixed_widths["files"])
+        table.add_column("📝", width=fixed_widths["changed"])
+        table.add_column("\u2795", width=fixed_widths["added"])
+        table.add_column("\u2796", width=fixed_widths["deleted"])
+        table.add_column("✏️", width=fixed_widths["modified"])
+        table.add_column("Last Commit", width=fixed_widths["last_commit"])
+        table.add_column("Rule", width=fixed_widths["rule"])
+
+    def on_resize(self) -> None:
+        """Handle terminal resize by updating column widths."""
+        try:
+            table = self.query_one("#repository_table", DataTable)
+            if table.column_count > 0:
+                # Recalculate branch column width
+                terminal_width = self.size.width
+                fixed_total = (
+                    3 + 4 + 15 + 4 + 4 + 4 + 4 + 4 + 20 + 8 + 10
+                )  # All except branch + padding
+                branch_width = max(10, terminal_width - fixed_total)
+
+                # Update branch column width (column index 3)
+                branch_column = table.get_column_at(3)
+                if branch_column:
+                    table.columns[branch_column.key].width = branch_width
+                    table.refresh()
+        except Exception as e:
+            log.debug("Failed to update column widths on resize", error=str(e))
+
     def on_mount(self) -> None:
         """Initialize data table and start the orchestrator."""
         # Foundation/structlog logging is already set up by the CLI
@@ -238,18 +296,8 @@ class SupsrcTuiApp(TuiAppBase):
             # Set up the data table with column configurations
             table = self.query_one("#repository_table", DataTable)
 
-            # Add columns - widths controlled by CSS column-widths property
-            table.add_column("📊")  # Status emoji header
-            table.add_column("⏱️")  # Timer/countdown column
-            table.add_column("Repository")
-            table.add_column("Branch")  # Will use 1fr in CSS to be responsive
-            table.add_column("📁")  # Total files
-            table.add_column("📝")  # Changed files count
-            table.add_column("\u2795")  # HEAVY PLUS SIGN - Added files
-            table.add_column("\u2796")  # HEAVY MINUS SIGN - Deleted files
-            table.add_column("✏️")  # Modified files
-            table.add_column("Last Commit")
-            table.add_column("Rule")
+            # Add columns with calculated widths
+            self._setup_table_columns(table)
 
             # Initialize timer manager
             self.timer_manager = TimerManager(self)
