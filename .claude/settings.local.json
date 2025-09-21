@@ -13,7 +13,8 @@
       "Bash(PYTHONPATH=\"./src\" python3 examples/file_operations/02_streaming_detection.py)",
       "Bash(provide-testkit:*)",
       "Bash(./.venv/bin/provide-testkit:*)",
-      "Bash(PYTHONPATH:*)"
+      "Bash(PYTHONPATH:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": [],
