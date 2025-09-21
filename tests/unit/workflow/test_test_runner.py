@@ -15,6 +15,9 @@ from supsrc.runtime.workflow.test_runner import TestRunner
 class TestTestRunner:
     """Test suite for TestRunner class."""
 
+class TestTestRunnerSync:
+    """Test suite for non-async TestRunner methods."""
+
     def test_infer_test_command_python_project(self, tmp_path):
         """Test test command inference for Python project."""
         workdir = tmp_path

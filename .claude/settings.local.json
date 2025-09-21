@@ -15,7 +15,10 @@
       "Bash(./.venv/bin/provide-testkit:*)",
       "Bash(PYTHONPATH:*)",
       "Bash(rm:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(.venv/bin/python -m pytest tests/unit/workflow/ -v)",
+      "Bash(.venv/bin/python -m pytest tests/unit/workflow/test_git_operations.py -v)",
+      "Bash(.venv/bin/python -m pytest tests/unit/test_action_handler.py -v)"
     ],
     "deny": [],
     "ask": [],

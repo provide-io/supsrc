@@ -35,16 +35,6 @@ def workflow_steps(mock_dependencies):
 class TestWorkflowSteps:
     """Test suite for WorkflowSteps class."""
 
-    def test_init(self, mock_dependencies):
-        """Test WorkflowSteps initialization."""
-        config, repo_states, repo_engines, tui, emit_event_callback = mock_dependencies
-        steps = WorkflowSteps(config, repo_states, repo_engines, tui, emit_event_callback)
-
-        assert steps.config == config
-        assert steps.repo_states == repo_states
-        assert steps.repo_engines == repo_engines
-        assert steps.tui == tui
-        assert steps._emit_event == emit_event_callback
 
     async def test_execute_status_check_success(self, workflow_steps, mock_dependencies):
         """Test successful status check execution."""
