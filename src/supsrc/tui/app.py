@@ -234,17 +234,17 @@ class SupsrcTuiApp(TuiAppBase):
         # Use simpler fixed widths that work well for most terminal sizes
         # Focus on making sure all columns fit and are readable
 
-        table.add_column("📊", width=3)  # Status emoji
+        table.add_column("📊", width=2)  # Status emoji (reduced from 3)
         table.add_column("⏱️", width=4)  # Timer/countdown - 4 characters as requested
-        table.add_column("Repository", width=12)  # Repository name (reduced from 15)
+        table.add_column("Repository", width=15)  # Repository name (increased back to 15)
         table.add_column("Branch")  # Branch name - auto-size with truncation handling
-        table.add_column("📁", width=4)  # Total files
-        table.add_column("📝", width=4)  # Changed files
-        table.add_column("\u2795", width=4)  # Added files
-        table.add_column("\u2796", width=4)  # Deleted files
-        table.add_column("✏️", width=4)  # Modified files
-        table.add_column("Last Commit", width=18)  # yyyy-mm-dd hh:mm:ss
-        table.add_column("Rule", width=12)  # Rule indicator (increased to 12)
+        table.add_column("📁", width=3)  # Total files (reduced from 4)
+        table.add_column("📝", width=3)  # Changed files (reduced from 4)
+        table.add_column("\u2795", width=2)  # Added files (reduced from 4)
+        table.add_column("\u2796", width=2)  # Deleted files (reduced from 4)
+        table.add_column("✏️", width=3)  # Modified files (reduced from 4)
+        table.add_column("Last Commit", width=19)  # yyyy-mm-dd hh:mm:ss (increased from 18)
+        table.add_column("Rule", width=10)  # Rule indicator (reduced from 12)
 
     def on_mount(self) -> None:
         """Initialize data table and start the orchestrator."""
