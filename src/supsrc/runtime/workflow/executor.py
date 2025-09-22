@@ -210,7 +210,11 @@ class RuntimeWorkflow:
         self, repo_id: str, repo_state, repo_config, repo_engine, commit_result, action_log
     ) -> None:
         """Handle successful commit and execute push."""
+        from datetime import UTC, datetime
+
         repo_state.last_commit_short_hash = commit_result.commit_hash[:7]
+        # Update last commit timestamp to current time
+        repo_state.last_commit_timestamp = datetime.now(UTC)
 
         # Generate change fragment if configured
         llm_config = repo_config.llm
