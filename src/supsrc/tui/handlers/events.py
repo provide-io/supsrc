@@ -188,9 +188,9 @@ class EventHandlerMixin:
                     state.has_uncommitted_changes,
                 )
 
-                # Get branch display - truncate from beginning if too long
+                # Get branch display - let auto-sizing handle width, minimal truncation for very long names
                 branch_name = state.current_branch or "main"
-                branch_display = "..." + branch_name[-17:] if len(branch_name) > 20 else branch_name
+                branch_display = "..." + branch_name[-37:] if len(branch_name) > 40 else branch_name
 
                 row_data = (
                     status_display,
