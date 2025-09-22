@@ -235,7 +235,7 @@ class ActionHandler:
                     action_log.warning(
                         "Git status check failed during action",
                         message=status_result.message,
-                        success=status_result.success
+                        success=status_result.success,
                     )
                     repo_state.update_status(
                         RepositoryStatus.ERROR, f"Status check failed: {status_result.message}"
@@ -244,6 +244,7 @@ class ActionHandler:
 
                     # Emit error event for status check failure
                     from supsrc.events.system import ErrorEvent
+
                     status_error_event = ErrorEvent(
                         description=f"Git status check failed: {status_result.message}",
                         source="git",
@@ -252,7 +253,9 @@ class ActionHandler:
                     )
                     self._emit_event(status_error_event)
                 elif status_result.is_conflicted:
-                    repo_state.update_status(RepositoryStatus.CONFLICT_DETECTED, "Repo has conflicts.")
+                    repo_state.update_status(
+                        RepositoryStatus.CONFLICT_DETECTED, "Repo has conflicts."
+                    )
                     repo_state.action_description = "Merge conflict detected."
                     repo_state.is_frozen = True
                     repo_state.freeze_reason = "Merge conflicts detected"
@@ -278,13 +281,12 @@ class ActionHandler:
                         "Repository is clean during action - external commit detected",
                         success=status_result.success,
                         is_clean=status_result.is_clean,
-                        is_conflicted=status_result.is_conflicted
+                        is_conflicted=status_result.is_conflicted,
                     )
 
                     # Update status to indicate external commit was detected
                     repo_state.update_status(
-                        RepositoryStatus.EXTERNAL_COMMIT_DETECTED,
-                        "Changes committed externally"
+                        RepositoryStatus.EXTERNAL_COMMIT_DETECTED, "Changes committed externally"
                     )
                     repo_state.action_description = "External commit detected"
 
@@ -297,7 +299,9 @@ class ActionHandler:
                     self._emit_event(external_commit_event)
 
                     # Reset after brief pause to show the status
-                    _reset_task = asyncio.create_task(self._delayed_reset_after_external_commit(repo_state))  # noqa: RUF006
+                    _reset_task = asyncio.create_task(
+                        self._delayed_reset_after_external_commit(repo_state)
+                    )  # noqa: RUF006
                     # Task will run independently and complete the reset
                 self.tui.post_state_update(self.repo_states)
                 return
@@ -320,6 +324,7 @@ class ActionHandler:
 
                 # Emit error event for staging failure
                 from supsrc.events.system import ErrorEvent
+
                 staging_error_event = ErrorEvent(
                     description=f"Git staging failed: {stage_result.message}",
                     source="git",
@@ -344,6 +349,7 @@ class ActionHandler:
 
                     # Emit error event for LLM provider failure
                     from supsrc.events.system import ErrorEvent
+
                     llm_error_event = ErrorEvent(
                         description="LLM provider failed to initialize",
                         source="llm",
@@ -434,6 +440,7 @@ class ActionHandler:
 
                 # Emit error event for commit failure
                 from supsrc.events.system import ErrorEvent
+
                 commit_error_event = ErrorEvent(
                     description=f"Git commit failed: {commit_result.message}",
                     source="git",
@@ -468,7 +475,8 @@ class ActionHandler:
                 from supsrc.engines.git.events import GitCommitEvent
 
                 commit_event = GitCommitEvent(
-                    description=f"Committed {len(stage_result.files_staged or [])} files to {repo_id}",
+                    description=f"Committed {len(stage_result.files_staged or [])} files",
+                    repo_id=repo_id,
                     commit_hash=commit_result.commit_hash,
                     branch=repo_state.current_branch or "main",
                     files_changed=len(stage_result.files_staged or []),
@@ -494,7 +502,8 @@ class ActionHandler:
                     from supsrc.engines.git.events import GitPushEvent
 
                     push_event = GitPushEvent(
-                        description=f"Pushed {repo_id} to remote repository",
+                        description="Pushed to remote repository",
+                        repo_id=repo_id,
                         remote=repo_config.repository.get("remote", "origin"),
                         branch=repo_state.current_branch or "main",
                         commits_pushed=1,
@@ -535,6 +544,7 @@ class ActionHandler:
 
                 # Emit error event for unexpected action failure
                 from supsrc.events.system import ErrorEvent
+
                 action_error_event = ErrorEvent(
                     description=f"Unexpected action failure: {e!s}",
                     source="action_handler",

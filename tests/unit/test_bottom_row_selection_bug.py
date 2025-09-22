@@ -147,7 +147,9 @@ class TestBottomRowSelectionBug:
 
         # Edge case: cursor beyond valid rows should not be saved
         mock_table.cursor_row = 19
-        assert not (mock_table.cursor_row < mock_table.row_count), "Invalid cursor position should not be saved"
+        assert not (mock_table.cursor_row < mock_table.row_count), (
+            "Invalid cursor position should not be saved"
+        )
 
         # First row should be saveable
         mock_table.cursor_row = 0

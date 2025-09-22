@@ -37,9 +37,7 @@ class ConfigReloadEvent(BaseEvent):
         """Format config reload event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         path_info = f" from {self.config_path}" if self.config_path else ""
-        return (
-            f"[{time_str}] 🔄 Configuration reloaded{path_info}"  # COUNTERCLOCKWISE ARROWS
-        )
+        return f"[{time_str}] 🔄 Configuration reloaded{path_info}"  # COUNTERCLOCKWISE ARROWS
 
 
 @attrs.define(frozen=True)
@@ -54,9 +52,7 @@ class UserActionEvent(BaseEvent):
         """Format user action event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         target_str = f" [{self.target}]" if self.target else ""
-        return (
-            f"[{time_str}] 👤{target_str} User action: {self.action}"  # BUST IN SILHOUETTE
-        )
+        return f"[{time_str}] 👤{target_str} User action: {self.action}"  # BUST IN SILHOUETTE
 
 
 @attrs.define(frozen=True)
@@ -101,7 +97,9 @@ class ConflictDetectedEvent(BaseEvent):
         """Format conflict detected event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         file_count = len(self.conflict_files)
-        files_str = f" in {file_count} file{'s' if file_count != 1 else ''}" if file_count > 0 else ""
+        files_str = (
+            f" in {file_count} file{'s' if file_count != 1 else ''}" if file_count > 0 else ""
+        )
         return f"[{time_str}] ⚠️ [{self.repo_id}] Merge conflicts detected{files_str}"
 
 
