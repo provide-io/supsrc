@@ -141,3 +141,4 @@ Rules determine when to trigger Git operations:
 - "import annotations" is okay so I can use the unquoted types.
 - After writing each Python file, run the code quality tools - ruff check --fix --unsafe-fixes, ty check, mypy, ruff format, then run each of the tools again. this way CQ is performed during the dev process.
 - never use structlog/logging directly unless I approve it. always use provide-foundation logger using the public API.
+- never use relative imports. only absolute imports always.

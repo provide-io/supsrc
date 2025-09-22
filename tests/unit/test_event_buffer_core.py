@@ -40,7 +40,7 @@ class TestEventBufferCore:
         """Test EventBuffer initialization with default parameters."""
         buffer = EventBuffer(emit_callback=mock_emit_callback)
 
-        assert buffer.window_ms == 200
+        assert buffer.window_ms == 500
         assert buffer.grouping_mode == "smart"
         assert buffer.emit_callback == mock_emit_callback
         assert buffer._buffers == {}
