@@ -91,7 +91,10 @@ class EventFormatter:
             commit_hash = getattr(event, "commit_hash", "")
             impact_str = str(files_changed)
             file_str = f"{files_changed} files" if files_changed != 1 else "1 file"
-            message_str = GitEventFormatter.format_git_files_display(files_changed) + f" - Commit {commit_hash[:7]}" if commit_hash else GitEventFormatter.format_git_files_display(files_changed) + " - Commit"
+            # Put colored text first, then commit info
+            colored_files = GitEventFormatter.format_git_files_display(files_changed)
+            commit_info = f"Commit {commit_hash[:7]}" if commit_hash else "Commit"
+            message_str = f"{colored_files} - {commit_info}"
             return impact_str, file_str, message_str
 
         elif event_type == "GitPushEvent":
