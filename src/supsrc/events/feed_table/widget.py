@@ -37,15 +37,13 @@ class EventFeedTable(DataTable):
 
     def on_mount(self) -> None:
         """Initialize the EventFeedTable when mounted."""
-        # Set up columns with emoji headers
-        self.add_columns(
-            "⏰",  # Time - Event timestamp (HH:MM:SS)
-            "📦",  # Repo - Repository ID
-            "🎯",  # Operation - Operation type emoji
-            "#️⃣",  # Impact - Numerical impact (event count/size)
-            "📁",  # File - Primary file or directory
-            "💬",  # Message - Optional descriptive message
-        )
+        # Set up columns with proper proportions
+        self.add_column("⏰", width=8)  # Time - HH:MM:SS format
+        self.add_column("📦", width=25)  # Repo - Repository ID (increased to 25)
+        self.add_column("🎯", width=3)  # Operation - Operation type emoji
+        self.add_column("#️⃣", width=5)  # Impact - Numerical impact
+        self.add_column("📁", width=30)  # File - Primary file (reduced to 30 to balance)
+        self.add_column("💬")  # Message - Auto-size remaining space
 
         # Add initial message to show the widget is ready
         self.add_row(

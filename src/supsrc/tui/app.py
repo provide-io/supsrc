@@ -102,6 +102,11 @@ class SupsrcTuiApp(TuiAppBase):
         scrollbar-gutter: stable;
     }
 
+    /* Repository table column sizing */
+    #repository_table {
+        width: 100%;
+    }
+
     #event-feed {
         height: 1fr;
         margin: 0;
@@ -224,27 +229,34 @@ class SupsrcTuiApp(TuiAppBase):
 
         yield Footer()
 
+    def _setup_table_columns(self, table: DataTable) -> None:
+        """Set up table columns with simpler, more predictable widths."""
+        # Use simpler fixed widths that work well for most terminal sizes
+        # Focus on making sure all columns fit and are readable
+
+        table.add_column("📊", width=2)  # Status emoji (reduced from 3)
+        table.add_column("⏱️", width=4)  # Timer/countdown - 4 characters as requested
+        table.add_column("Repository", width=15)  # Repository name (increased back to 15)
+        table.add_column("Branch")  # Branch name - auto-size with truncation handling
+        table.add_column("📁", width=3)  # Total files (reduced from 4)
+        table.add_column("📝", width=3)  # Changed files (reduced from 4)
+        table.add_column("\u2795", width=2)  # Added files (reduced from 4)
+        table.add_column("\u2796", width=2)  # Deleted files (reduced from 4)
+        table.add_column("✏️", width=3)  # Modified files (reduced from 4)
+        table.add_column("Last Commit", width=19)  # yyyy-mm-dd hh:mm:ss (increased from 18)
+        table.add_column("Rule", width=10)  # Rule indicator (reduced from 12)
+
     def on_mount(self) -> None:
         """Initialize data table and start the orchestrator."""
         # Foundation/structlog logging is already set up by the CLI
         log.info("TUI on_mount starting")
 
         try:
-            # Set up the data table
+            # Set up the data table with column configurations
             table = self.query_one("#repository_table", DataTable)
-            table.add_columns(
-                "📊",  # Status emoji header
-                "⏱️",  # Timer/countdown column
-                "Repository",
-                "Branch",
-                "📁",  # Total files
-                "📝",  # Changed files count
-                "\u2795",  # HEAVY PLUS SIGN - Added files
-                "\u2796",  # HEAVY MINUS SIGN - Deleted files
-                "✏️",  # Modified files
-                "Last Commit",
-                "Rule",
-            )
+
+            # Add columns with calculated widths
+            self._setup_table_columns(table)
 
             # Initialize timer manager
             self.timer_manager = TimerManager(self)
