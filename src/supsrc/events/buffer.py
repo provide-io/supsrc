@@ -18,6 +18,26 @@ from provide.foundation.logger import get_logger
 from supsrc.events.monitor import FileChangeEvent
 from supsrc.events.protocol import Event
 
+# Import foundation operations with fallback
+try:
+    from provide.foundation.file.operations import (
+        DetectorConfig,
+        FileEvent,
+        FileEventMetadata,
+        OperationDetector,
+        OperationType,
+    )
+
+    HAS_OPERATION_DETECTION = True
+except ImportError:
+    # Fallback for when foundation operations is not available
+    HAS_OPERATION_DETECTION = False
+    DetectorConfig = None
+    FileEvent = None
+    FileEventMetadata = None
+    OperationDetector = None
+    OperationType = None
+
 log = get_logger("events.buffer")
 
 
@@ -85,7 +105,7 @@ class EventBuffer:
 
     def __init__(
         self,
-        window_ms: int = 200,
+        window_ms: int = 500,
         grouping_mode: str = "smart",
         emit_callback: Any = None,
     ):
@@ -104,6 +124,13 @@ class EventBuffer:
         self._buffers: dict[str, list[FileChangeEvent]] = defaultdict(list)
         # Active timer handles for each repo
         self._timers: dict[str, asyncio.TimerHandle] = {}
+
+        # Initialize operation detector for smart grouping
+        if grouping_mode == "smart" and HAS_OPERATION_DETECTION:
+            detector_config = DetectorConfig(time_window_ms=window_ms, min_confidence=0.7)
+            self._operation_detector = OperationDetector(detector_config)
+        else:
+            self._operation_detector = None
 
         log.debug("EventBuffer initialized", window_ms=window_ms, grouping_mode=grouping_mode)
 
@@ -188,112 +215,125 @@ class EventBuffer:
         return grouped_events
 
     def _group_events_smart(self, events: list[FileChangeEvent]) -> list[BufferedFileChangeEvent]:
-        """Group events using smart pattern recognition."""
+        """Group events using smart pattern recognition via provide-foundation."""
         if len(events) == 1:
             return [self._create_single_event_group(events[0])]
 
-        # Try to detect atomic rewrite patterns
-        atomic_groups = self._detect_atomic_rewrites(events)
-        if atomic_groups:
-            return atomic_groups
+        if not self._operation_detector or not HAS_OPERATION_DETECTION:
+            # Fallback to simple grouping if detector not available
+            return self._group_events_simple(events)
 
-        # Check for batch operations (multiple files in quick succession)
-        if len({e.file_path for e in events}) >= 3:
-            return [self._create_batch_operation_group(events)]
+        # Convert FileChangeEvents to FileEvents for operation detection
+        file_events = self._convert_to_file_events(events)
 
-        # Fall back to simple grouping
+        # Detect operations using foundation's detector
+        operations = self._operation_detector.detect(file_events)
+
+        if operations:
+            # Convert detected operations back to BufferedFileChangeEvents
+            buffered_events = []
+            processed_paths = set()
+
+            for operation in operations:
+                # Track which file paths were part of operations
+                for event in operation.events:
+                    processed_paths.add(event.path)
+
+                # Create buffered event for this operation
+                buffered_events.append(self._create_operation_event(operation, events))
+
+            # Handle any events that weren't part of detected operations
+            remaining_events = [e for e in events if e.file_path not in processed_paths]
+
+            if remaining_events:
+                buffered_events.extend(self._group_events_simple(remaining_events))
+
+            return buffered_events
+
+        # Fall back to simple grouping if no operations detected
         return self._group_events_simple(events)
 
-    def _detect_atomic_rewrites(
-        self, events: list[FileChangeEvent]
-    ) -> list[BufferedFileChangeEvent] | None:
-        """Detect atomic file rewrite patterns (temp file -> rename)."""
-        # Look for patterns like:
-        # 1. Create temp file, modify original, delete original, rename temp -> original
-        # 2. Create temp file, delete original, rename temp -> original
+    def _convert_to_file_events(self, events: list[FileChangeEvent]) -> list:
+        """Convert FileChangeEvents to FileEvents for operation detection."""
+        if not HAS_OPERATION_DETECTION or not FileEvent or not FileEventMetadata:
+            return []
 
-        # Group events by directory
-        dir_events: dict[Path, list[FileChangeEvent]] = defaultdict(list)
-        for event in events:
-            dir_events[event.file_path.parent].append(event)
+        file_events = []
 
-        atomic_groups = []
-        processed_events = set()
+        for i, event in enumerate(events):
+            # Create metadata with timing and sequence info
+            metadata = FileEventMetadata(
+                timestamp=event.timestamp,
+                sequence_number=i + 1,
+                # Note: FileChangeEvent doesn't have size info, so we leave it None
+                size_before=None,
+                size_after=None,
+            )
 
-        for _directory, dir_event_list in dir_events.items():
-            if len(dir_event_list) < 2:
-                continue
+            # Map change types to event types expected by operation detector
+            event_type_map = {
+                "created": "created",
+                "modified": "modified",
+                "deleted": "deleted",
+                "moved": "moved",
+            }
+            event_type = event_type_map.get(event.change_type, "modified")
 
-            # Sort by timestamp
-            dir_event_list.sort(key=lambda e: e.timestamp)
+            file_event = FileEvent(
+                path=event.file_path,
+                event_type=event_type,
+                metadata=metadata,
+                # FileChangeEvent doesn't have dest_path, would need to be added if needed
+                dest_path=None,
+            )
+            file_events.append(file_event)
 
-            # Look for temp file patterns (files with common prefixes/suffixes)
-            temp_patterns = self._find_temp_file_patterns(dir_event_list)
+        return file_events
 
-            for original_file, temp_files in temp_patterns.items():
-                if not temp_files:
-                    continue
+    def _create_operation_event(
+        self, operation: Any, original_events: list[FileChangeEvent]
+    ) -> BufferedFileChangeEvent:
+        """Create a BufferedFileChangeEvent from a detected FileOperation."""
+        if not HAS_OPERATION_DETECTION or not OperationType:
+            # Fallback for when operation detection is not available
+            return self._create_single_event_group(original_events[0])
 
-                # Check if we have the pattern: create temp, modify/delete original, rename temp
-                pattern_events = []
-                for event in dir_event_list:
-                    if event.file_path == original_file or event.file_path in temp_files:
-                        pattern_events.append(event)
-                        processed_events.add(id(event))
+        # Map operation types to our buffer operation types
+        operation_type_map = {
+            OperationType.ATOMIC_SAVE: "atomic_rewrite",
+            OperationType.SAFE_WRITE: "atomic_rewrite",
+            OperationType.BATCH_UPDATE: "batch_operation",
+            OperationType.RENAME_SEQUENCE: "atomic_rewrite",
+            OperationType.BACKUP_CREATE: "single_file",
+        }
 
-                if len(pattern_events) >= 2:
-                    atomic_groups.append(
-                        BufferedFileChangeEvent(
-                            repo_id=pattern_events[0].repo_id,
-                            file_paths=[original_file],
-                            operation_type="atomic_rewrite",
-                            event_count=len(pattern_events),
-                            primary_change_type="modified",
-                        )
-                    )
+        buffer_op_type = operation_type_map.get(operation.operation_type, "single_file")
 
-        # If we found atomic patterns, also include any unprocessed events
-        if atomic_groups:
-            remaining_events = [e for e in events if id(e) not in processed_events]
-            if remaining_events:
-                atomic_groups.extend(self._group_events_simple(remaining_events))
-            return atomic_groups
+        # Get file paths involved in this operation
+        file_paths = [operation.primary_path]
+        if hasattr(operation, "files_affected") and operation.files_affected:
+            file_paths = operation.files_affected
 
-        return None
+        # Find the repo_id from original events
+        repo_id = original_events[0].repo_id if original_events else "unknown"
 
-    def _find_temp_file_patterns(self, events: list[FileChangeEvent]) -> dict[Path, list[Path]]:
-        """Find temporary file patterns that might indicate atomic operations."""
-        file_paths = [e.file_path for e in events]
-        temp_patterns: dict[Path, list[Path]] = defaultdict(list)
+        # Determine primary change type based on operation
+        if operation.operation_type in (OperationType.ATOMIC_SAVE, OperationType.SAFE_WRITE):
+            primary_change_type = "modified"
+        elif operation.operation_type == OperationType.RENAME_SEQUENCE:
+            primary_change_type = "moved"
+        elif operation.operation_type == OperationType.BACKUP_CREATE:
+            primary_change_type = "created"
+        else:
+            primary_change_type = "modified"
 
-        for file_path in file_paths:
-            # Check for common temp file patterns
-            name = file_path.name
-
-            # Pattern 1: .filename.tmp, filename.tmp, filename~
-            if name.endswith(".tmp") or name.endswith("~"):
-                original_name = name.replace(".tmp", "").replace("~", "")
-                if original_name:
-                    original_path = file_path.parent / original_name
-                    if original_path in file_paths:
-                        temp_patterns[original_path].append(file_path)
-
-            # Pattern 2: .filename.xxx (where xxx is random chars)
-            elif name.startswith(".") and len(name) > 8:
-                # Look for files without the leading dot and random suffix
-                # Handle cases like .file.py.abcd1234 -> file.py
-                name_parts = name[1:].split(".")
-                if len(name_parts) >= 2:
-                    # Try different combinations
-                    for i in range(1, len(name_parts)):
-                        potential_name = ".".join(name_parts[:i])
-                        if potential_name:
-                            potential_original = file_path.parent / potential_name
-                            if potential_original in file_paths:
-                                temp_patterns[potential_original].append(file_path)
-                                break
-
-        return temp_patterns
+        return BufferedFileChangeEvent(
+            repo_id=repo_id,
+            file_paths=file_paths,
+            operation_type=buffer_op_type,
+            event_count=operation.event_count,
+            primary_change_type=primary_change_type,
+        )
 
     def _create_single_event_group(self, event: FileChangeEvent) -> BufferedFileChangeEvent:
         """Create a buffered event group for a single event."""
