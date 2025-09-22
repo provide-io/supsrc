@@ -234,7 +234,7 @@ class TestEventFeedTable:
         # Test single file
         single_file = [Path("test.py")]
         summary = table._get_files_summary_short(single_file)
-        assert summary == "test.py"
+        assert summary == "[dim]./[/]test.py"
 
         # Test two files
         two_files = [Path("src/test1.py"), Path("src/test2.py")]

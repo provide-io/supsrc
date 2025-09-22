@@ -338,7 +338,21 @@ class TestTuiIntegration:
         mock_table = Mock()
         mock_table.cursor_coordinate.row = 0
         mock_table.rows = [{"id": "row1"}]  # Simulate one row
-        mock_table.get_row_at = Mock(return_value=("🟢", "5s", "test-repo", "main", "42", "2", "1", "0", "1", "abc123", "Auto"))
+        mock_table.get_row_at = Mock(
+            return_value=(
+                "🟢",
+                "5s",
+                "test-repo",
+                "main",
+                "42",
+                "2",
+                "1",
+                "0",
+                "1",
+                "abc123",
+                "Auto",
+            )
+        )
 
         tui_app.query_one = Mock(return_value=mock_table)
         tui_app._update_repo_details_tab = Mock()

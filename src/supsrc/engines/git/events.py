@@ -16,6 +16,7 @@ class GitCommitEvent(BaseEvent):
     """Event emitted when a git commit is performed."""
 
     source: str = attrs.field(default="git", init=False)
+    repo_id: str = attrs.field(kw_only=True)
     commit_hash: str = attrs.field(kw_only=True)
     branch: str = attrs.field(kw_only=True)
     files_changed: int = attrs.field(kw_only=True)
@@ -31,6 +32,7 @@ class GitPushEvent(BaseEvent):
     """Event emitted when a git push is performed."""
 
     source: str = attrs.field(default="git", init=False)
+    repo_id: str = attrs.field(kw_only=True)
     remote: str = attrs.field(kw_only=True)
     branch: str = attrs.field(kw_only=True)
     commits_pushed: int = attrs.field(kw_only=True)
@@ -48,6 +50,7 @@ class GitStageEvent(BaseEvent):
     """Event emitted when files are staged."""
 
     source: str = attrs.field(default="git", init=False)
+    repo_id: str = attrs.field(kw_only=True)
     files_staged: list[str] = attrs.field(factory=list, kw_only=True)
 
     def format(self) -> str:
@@ -62,6 +65,7 @@ class GitBranchEvent(BaseEvent):
     """Event emitted when branch changes."""
 
     source: str = attrs.field(default="git", init=False)
+    repo_id: str = attrs.field(kw_only=True)
     old_branch: str | None = attrs.field(kw_only=True)
     new_branch: str = attrs.field(kw_only=True)
 
