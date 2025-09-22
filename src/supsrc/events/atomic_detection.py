@@ -112,6 +112,4 @@ class AtomicSaveDetector:
         stem1, stem2 = path1.stem, path2.stem
         if name1.startswith(".") and name1.endswith(".swp") and stem1[1:-4] == stem2:
             return True
-        return bool(
-            name2.startswith(".") and name2.endswith(".swp") and stem2[1:-4] == stem1
-        )
+        return bool(name2.startswith(".") and name2.endswith(".swp") and stem2[1:-4] == stem1)

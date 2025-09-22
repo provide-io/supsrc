@@ -12,11 +12,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-import attrs
 from provide.foundation.logger import get_logger
 
+from supsrc.events.atomic_detection import AtomicSaveDetector
+from supsrc.events.buffer_events import BufferedFileChangeEvent
 from supsrc.events.monitor import FileChangeEvent
-from supsrc.events.protocol import Event
+
+# Re-export for backward compatibility
+__all__ = ["BufferedFileChangeEvent", "EventBuffer"]
 
 # Import foundation operations with fallback
 try:
@@ -39,79 +42,6 @@ except ImportError:
     OperationType = None
 
 log = get_logger("events.buffer")
-
-
-@attrs.define(frozen=True)
-class BufferedFileChangeEvent(Event):
-    """A buffered/grouped file change event for cleaner TUI display."""
-
-    source: str = attrs.field(default="buffer", init=False)
-    repo_id: str = attrs.field(kw_only=True)
-    file_paths: list[Path] = attrs.field(kw_only=True)
-    operation_type: str = attrs.field(
-        kw_only=True
-    )  # "single_file", "atomic_rewrite", "batch_operation"
-    event_count: int = attrs.field(kw_only=True)
-    primary_change_type: str = attrs.field(kw_only=True, default="modified")
-    operation_history: list[dict[str, Any]] = attrs.field(kw_only=True, factory=list)
-
-    # Required by Event protocol
-    description: str = attrs.field(init=False)
-    timestamp: datetime = attrs.field(factory=datetime.now, init=False)
-
-    def __attrs_post_init__(self):
-        """Set description after initialization."""
-        if self.operation_type == "atomic_rewrite":
-            desc = f"Atomic rewrite of {len(self.file_paths)} file(s)"
-        elif self.operation_type == "batch_operation":
-            desc = f"Batch operation on {len(self.file_paths)} files"
-        else:
-            desc = f"File {self.primary_change_type}: {self.file_paths[0].name if self.file_paths else 'unknown'}"
-
-        object.__setattr__(self, "description", desc)
-
-    def get_operation_history(self) -> list[dict[str, Any]]:
-        """Get the history of all operations that contributed to this event.
-
-        Returns:
-            List of operation dictionaries with keys:
-            - path: Path involved in the operation
-            - change_type: Type of change (created, modified, deleted, moved)
-            - timestamp: When the operation occurred
-            - is_primary: Whether this is the primary/end-state file
-        """
-        return self.operation_history.copy()
-
-    def format(self) -> str:
-        """Format buffered file change event for display."""
-        time_str = self.timestamp.strftime("%H:%M:%S")
-
-        if self.operation_type == "atomic_rewrite":
-            emoji = "✏️"  # PENCIL
-            if len(self.file_paths) == 1:
-                suffix = f" ({self.event_count} ops)" if self.event_count > 1 else ""
-                return f"[{time_str}] {emoji} [{self.repo_id}] {self.file_paths[0].name} Updated{suffix}"
-            else:
-                return f"[{time_str}] {emoji} [{self.repo_id}] Updated {len(self.file_paths)} files ({self.event_count} ops)"
-
-        elif self.operation_type == "batch_operation":
-            emoji = "📦"  # PACKAGE
-            return f"[{time_str}] {emoji} [{self.repo_id}] Batch operation on {len(self.file_paths)} files"
-
-        else:  # single_file
-            emoji_map = {
-                "created": "+",  # PLUS SIGN
-                "modified": "✏️",  # PENCIL
-                "deleted": "-",  # MINUS SIGN
-                "moved": "🔄",  # COUNTERCLOCKWISE ARROWS BUTTON
-            }
-            emoji = emoji_map.get(self.primary_change_type, "📄")  # PAGE FACING UP
-
-            if len(self.file_paths) == 1:
-                suffix = f" ({self.event_count} events)" if self.event_count > 1 else ""
-                return f"[{time_str}] {emoji} [{self.repo_id}] {self.file_paths[0].name}{suffix}"
-            else:
-                return f"[{time_str}] {emoji} [{self.repo_id}] {len(self.file_paths)} files {self.primary_change_type}"
 
 
 class EventBuffer:
@@ -210,7 +140,7 @@ class EventBuffer:
             file_groups[event.file_path].append(event)
 
         # Look for atomic save patterns within the time window
-        atomic_saves = self._detect_simple_atomic_saves(events)
+        atomic_saves = AtomicSaveDetector.detect_simple_atomic_saves(events)
         processed_files = set()
 
         grouped_events = []
@@ -412,134 +342,6 @@ class EventBuffer:
             primary_change_type=event.change_type,
             operation_history=operation_history,
         )
-
-    def _create_batch_operation_group(
-        self, events: list[FileChangeEvent]
-    ) -> BufferedFileChangeEvent:
-        """Create a buffered event group for a batch operation."""
-        file_paths = list({e.file_path for e in events})
-        most_common_type = self._get_most_common_change_type(events)
-
-        # Build operation history for all events
-        operation_history = []
-        for event in events:
-            operation_history.append(
-                {
-                    "path": event.file_path,
-                    "change_type": event.change_type,
-                    "timestamp": event.timestamp,
-                    "is_primary": True,  # All files are primary in batch operations
-                }
-            )
-
-        # Sort by timestamp to maintain chronological order
-        operation_history.sort(key=lambda x: cast(datetime, x["timestamp"]))
-
-        return BufferedFileChangeEvent(
-            repo_id=events[0].repo_id,
-            file_paths=file_paths,
-            operation_type="batch_operation",
-            event_count=len(events),
-            primary_change_type=most_common_type,
-            operation_history=operation_history,
-        )
-
-    def _detect_simple_atomic_saves(
-        self, events: list[FileChangeEvent]
-    ) -> list[BufferedFileChangeEvent]:
-        """Detect atomic save patterns using simple heuristics."""
-        atomic_saves = []
-
-        # Look for delete + create patterns with related filenames
-        deletes = [e for e in events if e.change_type == "deleted"]
-        creates = [e for e in events if e.change_type == "created"]
-
-        for delete_event in deletes:
-            for create_event in creates:
-                # Check if files are related (same base name)
-                if self._files_are_related_simple(delete_event.file_path, create_event.file_path):
-                    # This looks like an atomic save operation
-                    operation_history = [
-                        {
-                            "path": delete_event.file_path,
-                            "change_type": "deleted",
-                            "timestamp": delete_event.timestamp,
-                            "is_primary": False,
-                        },
-                        {
-                            "path": create_event.file_path,
-                            "change_type": "created",
-                            "timestamp": create_event.timestamp,
-                            "is_primary": True,
-                        },
-                    ]
-
-                    # Sort by timestamp
-                    operation_history.sort(key=lambda x: cast(datetime, x["timestamp"]))
-
-                    atomic_save = BufferedFileChangeEvent(
-                        repo_id=create_event.repo_id,
-                        file_paths=[create_event.file_path],  # End-state file
-                        operation_type="atomic_rewrite",
-                        event_count=2,
-                        primary_change_type="modified",  # Atomic save is essentially a modification
-                        operation_history=operation_history,
-                    )
-                    atomic_saves.append(atomic_save)
-
-        return atomic_saves
-
-    def _files_are_related_simple(self, path1: Path, path2: Path) -> bool:
-        """Check if two paths are related for atomic save detection."""
-        # Same file name -> likely atomic save
-        if path1.name == path2.name:
-            return True
-
-        # Check for temp file patterns
-        name1, name2 = path1.name, path2.name
-
-        # Common temp file patterns:
-        # file.txt -> .file.txt.tmp
-        # file.txt -> file.txt.tmp
-        # file.txt -> file.tmp123
-
-        # Pattern 1: One is a temp version of the other
-        if name1.startswith(".") and name1.endswith(".tmp") and name1[1:-4] == name2:
-            return True
-        if name2.startswith(".") and name2.endswith(".tmp") and name2[1:-4] == name1:
-            return True
-
-        # Pattern 2: One has .tmp suffix
-        if name1.endswith(".tmp") and name1[:-4] == name2:
-            return True
-        if name2.endswith(".tmp") and name2[:-4] == name1:
-            return True
-
-        # Pattern 3: One has random suffix (like .tmp123)
-        if name1.rsplit(".", 1)[0] == name2 and len(name1.rsplit(".", 1)) == 2:
-            suffix = name1.rsplit(".", 1)[1]
-            if suffix.startswith("tmp") or suffix.startswith("bak"):
-                return True
-        if name2.rsplit(".", 1)[0] == name1 and len(name2.rsplit(".", 1)) == 2:
-            suffix = name2.rsplit(".", 1)[1]
-            if suffix.startswith("tmp") or suffix.startswith("bak"):
-                return True
-
-        # Pattern 4: Common editor temp patterns
-        # vim: .file.swp
-        # emacs: #file#, .#file
-        stem1, stem2 = path1.stem, path2.stem
-        if name1.startswith(".") and name1.endswith(".swp") and stem1[1:-4] == stem2:
-            return True
-        return bool(name2.startswith(".") and name2.endswith(".swp") and stem2[1:-4] == stem1)
-
-    def _get_most_common_change_type(self, events: list[FileChangeEvent]) -> str:
-        """Get the most common change type from a list of events."""
-        type_counts: dict[str, int] = defaultdict(int)
-        for event in events:
-            type_counts[event.change_type] += 1
-
-        return max(type_counts.items(), key=lambda x: x[1])[0] if type_counts else "modified"
 
     def flush_all(self) -> None:
         """Flush all pending buffers immediately."""
