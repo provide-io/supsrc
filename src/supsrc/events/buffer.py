@@ -204,14 +204,30 @@ class EventBuffer:
                 self.emit_callback(grouped_event)
 
     def _group_events_simple(self, events: list[FileChangeEvent]) -> list[BufferedFileChangeEvent]:
-        """Group events using simple file-based grouping."""
+        """Group events using simple file-based grouping with atomic save detection."""
         # Group by file path
         file_groups: dict[Path, list[FileChangeEvent]] = defaultdict(list)
         for event in events:
             file_groups[event.file_path].append(event)
 
+        # Look for atomic save patterns within the time window
+        atomic_saves = self._detect_simple_atomic_saves(events)
+        processed_files = set()
+
         grouped_events = []
+
+        # Process atomic saves first
+        for atomic_save in atomic_saves:
+            grouped_events.append(atomic_save)
+            # Mark files as processed
+            for file_path in atomic_save.file_paths:
+                processed_files.add(file_path)
+
+        # Process remaining files
         for file_path, file_events in file_groups.items():
+            if file_path in processed_files:
+                continue
+
             if len(file_events) == 1:
                 grouped_events.append(self._create_single_event_group(file_events[0]))
             else:
