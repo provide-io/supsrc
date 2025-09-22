@@ -81,6 +81,7 @@ def minimal_config(temp_git_repo: Path) -> SupsrcConfig:
 
 # Real Config Testing Fixtures
 
+
 @pytest.fixture
 def parent_cwd():
     """Pytest fixture for testing from parent directory context."""
@@ -143,6 +144,7 @@ def subprocess_runner():
     def run_command(args: list[str], cwd: Path | None = None, timeout: float = 10.0):
         """Run a supsrc CLI command and return the result."""
         import sys
+
         full_args = [sys.executable, "-m", "supsrc.cli.main"] + args
 
         return foundation_run_command(
@@ -158,6 +160,7 @@ def subprocess_runner():
 @pytest.fixture
 def mock_tui_app_setup():
     """Pytest fixture for setting up TUI app with proper mocks."""
+
     def setup_app(app: SupsrcTuiApp) -> tuple[Mock, Mock]:
         # Setup event collector mock
         mock_event_collector = Mock()
@@ -178,6 +181,7 @@ def mock_tui_app_setup():
 
 
 # Performance Testing Fixtures
+
 
 @pytest.fixture
 def performance_config(temp_git_repo):
@@ -201,6 +205,7 @@ def performance_config(temp_git_repo):
 
 
 # Integration Testing Fixtures
+
 
 @pytest.fixture
 def integration_test_context(parent_cwd, real_config, real_repos):

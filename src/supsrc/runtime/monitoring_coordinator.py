@@ -91,6 +91,7 @@ class MonitoringCoordinator:
                     # Emit error event for monitor setup failure
                     if hasattr(tui.app, "event_collector"):
                         from supsrc.events.system import ErrorEvent
+
                         monitor_error_event = ErrorEvent(
                             description=f"File monitoring setup failed: {e!s}",
                             source="monitor",

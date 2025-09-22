@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from supsrc.state.runtime import RepositoryStatus, STATUS_EMOJI_MAP
 
+
 def monitor_status_changes():
     """Print all possible status transitions to help debug."""
     print("🔍 Debugging Status Emojis:")
@@ -27,6 +28,7 @@ def monitor_status_changes():
     print("- 'Repository is clean during action - external commit detected'")
     print("- Any ERROR status transitions")
     print("- The specific RepositoryStatus that triggered the ❌")
+
 
 if __name__ == "__main__":
     monitor_status_changes()
