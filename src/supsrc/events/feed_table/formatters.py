@@ -9,6 +9,21 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from supsrc.events.protocol import Event
 
+# Import FilePathFormatter for multi-file display
+try:
+    from supsrc.events.feed_table.file_utils import FilePathFormatter
+except ImportError:
+    # Fallback if not available
+    class FilePathFormatter:
+        @staticmethod
+        def get_files_summary_short(file_paths: list[Path]) -> str:
+            if len(file_paths) <= 1:
+                return file_paths[0].name if file_paths else "-"
+            elif len(file_paths) <= 3:
+                return f"{len(file_paths)} files"
+            else:
+                return f"{len(file_paths)} files"
+
 
 class EventFormatter:
     """Handles formatting of events for display in the feed table."""
