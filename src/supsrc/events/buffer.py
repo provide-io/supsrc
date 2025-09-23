@@ -9,15 +9,17 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 from datetime import datetime
-from typing import cast
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-import attrs
 from provide.foundation.logger import get_logger
 
+from supsrc.events.atomic_detection import AtomicSaveDetector
+from supsrc.events.buffer_events import BufferedFileChangeEvent
 from supsrc.events.monitor import FileChangeEvent
-from supsrc.events.protocol import Event
+
+# Re-export for backward compatibility
+__all__ = ["BufferedFileChangeEvent", "EventBuffer"]
 
 # Import foundation operations with fallback
 try:
@@ -40,79 +42,6 @@ except ImportError:
     OperationType = None
 
 log = get_logger("events.buffer")
-
-
-@attrs.define(frozen=True)
-class BufferedFileChangeEvent(Event):
-    """A buffered/grouped file change event for cleaner TUI display."""
-
-    source: str = attrs.field(default="buffer", init=False)
-    repo_id: str = attrs.field(kw_only=True)
-    file_paths: list[Path] = attrs.field(kw_only=True)
-    operation_type: str = attrs.field(
-        kw_only=True
-    )  # "single_file", "atomic_rewrite", "batch_operation"
-    event_count: int = attrs.field(kw_only=True)
-    primary_change_type: str = attrs.field(kw_only=True, default="modified")
-    operation_history: list[dict[str, Any]] = attrs.field(kw_only=True, factory=list)
-
-    # Required by Event protocol
-    description: str = attrs.field(init=False)
-    timestamp: datetime = attrs.field(factory=datetime.now, init=False)
-
-    def __attrs_post_init__(self):
-        """Set description after initialization."""
-        if self.operation_type == "atomic_rewrite":
-            desc = f"Atomic rewrite of {len(self.file_paths)} file(s)"
-        elif self.operation_type == "batch_operation":
-            desc = f"Batch operation on {len(self.file_paths)} files"
-        else:
-            desc = f"File {self.primary_change_type}: {self.file_paths[0].name if self.file_paths else 'unknown'}"
-
-        object.__setattr__(self, "description", desc)
-
-    def get_operation_history(self) -> list[dict[str, Any]]:
-        """Get the history of all operations that contributed to this event.
-
-        Returns:
-            List of operation dictionaries with keys:
-            - path: Path involved in the operation
-            - change_type: Type of change (created, modified, deleted, moved)
-            - timestamp: When the operation occurred
-            - is_primary: Whether this is the primary/end-state file
-        """
-        return self.operation_history.copy()
-
-    def format(self) -> str:
-        """Format buffered file change event for display."""
-        time_str = self.timestamp.strftime("%H:%M:%S")
-
-        if self.operation_type == "atomic_rewrite":
-            emoji = "✏️"  # PENCIL
-            if len(self.file_paths) == 1:
-                suffix = f" ({self.event_count} ops)" if self.event_count > 1 else ""
-                return f"[{time_str}] {emoji} [{self.repo_id}] {self.file_paths[0].name} Updated{suffix}"
-            else:
-                return f"[{time_str}] {emoji} [{self.repo_id}] Updated {len(self.file_paths)} files ({self.event_count} ops)"
-
-        elif self.operation_type == "batch_operation":
-            emoji = "📦"  # PACKAGE
-            return f"[{time_str}] {emoji} [{self.repo_id}] Batch operation on {len(self.file_paths)} files"
-
-        else:  # single_file
-            emoji_map = {
-                "created": "+",  # PLUS SIGN
-                "modified": "✏️",  # PENCIL
-                "deleted": "-",  # MINUS SIGN
-                "moved": "🔄",  # COUNTERCLOCKWISE ARROWS BUTTON
-            }
-            emoji = emoji_map.get(self.primary_change_type, "📄")  # PAGE FACING UP
-
-            if len(self.file_paths) == 1:
-                suffix = f" ({self.event_count} events)" if self.event_count > 1 else ""
-                return f"[{time_str}] {emoji} [{self.repo_id}] {self.file_paths[0].name}{suffix}"
-            else:
-                return f"[{time_str}] {emoji} [{self.repo_id}] {len(self.file_paths)} files {self.primary_change_type}"
 
 
 class EventBuffer:
@@ -204,14 +133,30 @@ class EventBuffer:
                 self.emit_callback(grouped_event)
 
     def _group_events_simple(self, events: list[FileChangeEvent]) -> list[BufferedFileChangeEvent]:
-        """Group events using simple file-based grouping."""
+        """Group events using simple file-based grouping with atomic save detection."""
         # Group by file path
         file_groups: dict[Path, list[FileChangeEvent]] = defaultdict(list)
         for event in events:
             file_groups[event.file_path].append(event)
 
+        # Look for atomic save patterns within the time window
+        atomic_saves = AtomicSaveDetector.detect_simple_atomic_saves(events)
+        processed_files = set()
+
         grouped_events = []
+
+        # Process atomic saves first
+        for atomic_save in atomic_saves:
+            grouped_events.append(atomic_save)
+            # Mark files as processed
+            for file_path in atomic_save.file_paths:
+                processed_files.add(file_path)
+
+        # Process remaining files
         for file_path, file_events in file_groups.items():
+            if file_path in processed_files:
+                continue
+
             if len(file_events) == 1:
                 grouped_events.append(self._create_single_event_group(file_events[0]))
             else:
@@ -397,45 +342,6 @@ class EventBuffer:
             primary_change_type=event.change_type,
             operation_history=operation_history,
         )
-
-    def _create_batch_operation_group(
-        self, events: list[FileChangeEvent]
-    ) -> BufferedFileChangeEvent:
-        """Create a buffered event group for a batch operation."""
-        file_paths = list({e.file_path for e in events})
-        most_common_type = self._get_most_common_change_type(events)
-
-        # Build operation history for all events
-        operation_history = []
-        for event in events:
-            operation_history.append(
-                {
-                    "path": event.file_path,
-                    "change_type": event.change_type,
-                    "timestamp": event.timestamp,
-                    "is_primary": True,  # All files are primary in batch operations
-                }
-            )
-
-        # Sort by timestamp to maintain chronological order
-        operation_history.sort(key=lambda x: cast(datetime, x["timestamp"]))
-
-        return BufferedFileChangeEvent(
-            repo_id=events[0].repo_id,
-            file_paths=file_paths,
-            operation_type="batch_operation",
-            event_count=len(events),
-            primary_change_type=most_common_type,
-            operation_history=operation_history,
-        )
-
-    def _get_most_common_change_type(self, events: list[FileChangeEvent]) -> str:
-        """Get the most common change type from a list of events."""
-        type_counts: dict[str, int] = defaultdict(int)
-        for event in events:
-            type_counts[event.change_type] += 1
-
-        return max(type_counts.items(), key=lambda x: x[1])[0] if type_counts else "modified"
 
     def flush_all(self) -> None:
         """Flush all pending buffers immediately."""
