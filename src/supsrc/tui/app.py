@@ -236,7 +236,7 @@ class SupsrcTuiApp(TuiAppBase):
 
         table.add_column("📊", width=2)  # Status emoji (reduced from 3)
         table.add_column("⏱️", width=4)  # Timer/countdown - 4 characters as requested
-        table.add_column("Repository", width=15)  # Repository name (increased back to 15)
+        table.add_column("Repository", width=20)  # Repository name (increased to 20)
         table.add_column("Branch")  # Branch name - auto-size with truncation handling
         table.add_column("📁", width=3)  # Total files (reduced from 4)
         table.add_column("📝", width=3)  # Changed files (reduced from 4)
