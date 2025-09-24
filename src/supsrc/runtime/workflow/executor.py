@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from provide.foundation.errors import resilient
 from provide.foundation.logger import get_logger
+
 from supsrc.runtime.workflow.git_operations import GitOperationsHelper
 from supsrc.runtime.workflow.llm_utils import LLM_AVAILABLE, LLMProviderManager
 from supsrc.runtime.workflow.steps import WorkflowSteps
@@ -113,11 +114,12 @@ class RuntimeWorkflow:
                     # Reset after brief pause to show the status
                     _reset_task = asyncio.create_task(
                         self._delayed_reset_after_external_commit(repo_state)
-                    )  # noqa: RUF006
+                    )
                 return
 
             # 2. Staging
-            if not await self._workflow_steps.execute_staging(repo_id):
+            should_continue, staged_files = await self._workflow_steps.execute_staging(repo_id)
+            if not should_continue:
                 return
 
             # Get staged diff for LLM processing
@@ -139,7 +141,9 @@ class RuntimeWorkflow:
                     return
 
             # 4. Commit
-            await self._execute_commit_step(repo_id, repo_state, repo_config, repo_engine, commit_message)
+            await self._execute_commit_step(
+                repo_id, repo_state, repo_config, repo_engine, commit_message, staged_files
+            )
 
         except Exception as e:
             await self._handle_unexpected_error(repo_id, repo_state, action_log, e)
@@ -163,7 +167,13 @@ class RuntimeWorkflow:
         self.tui.post_state_update(self.repo_states)
 
     async def _execute_commit_step(
-        self, repo_id: str, repo_state, repo_config, repo_engine, commit_message: str
+        self,
+        repo_id: str,
+        repo_state,
+        repo_config,
+        repo_engine,
+        commit_message: str,
+        staged_files: list[str] | None,
     ) -> None:
         """Execute the commit and push workflow steps."""
         action_log = log.bind(repo_id=repo_id)
@@ -185,7 +195,13 @@ class RuntimeWorkflow:
             repo_state.reset_after_action()
         else:
             await self._handle_commit_success(
-                repo_id, repo_state, repo_config, repo_engine, commit_result, action_log
+                repo_id,
+                repo_state,
+                repo_config,
+                repo_engine,
+                commit_result,
+                action_log,
+                staged_files,
             )
 
         self.tui.post_state_update(self.repo_states)
@@ -207,7 +223,14 @@ class RuntimeWorkflow:
         self._emit_event(commit_error_event)
 
     async def _handle_commit_success(
-        self, repo_id: str, repo_state, repo_config, repo_engine, commit_result, action_log
+        self,
+        repo_id: str,
+        repo_state,
+        repo_config,
+        repo_engine,
+        commit_result,
+        action_log,
+        staged_files: list[str] | None,
     ) -> None:
         """Handle successful commit and execute push."""
         from datetime import UTC, datetime
@@ -231,17 +254,15 @@ class RuntimeWorkflow:
         # Emit git commit event
         from supsrc.engines.git.events import GitCommitEvent
 
-        # Get stage result for file count (approximation)
-        stage_result = await repo_engine.stage_changes(
-            None, repo_state, repo_config.repository, self.config.global_config, repo_config.path
-        )
+        # Use the staged files count from before the commit
+        files_count = len(staged_files) if staged_files else 0
 
         commit_event = GitCommitEvent(
-            description=f"Committed {len(stage_result.files_staged or [])} files",
+            description=f"Committed {files_count} files",
             repo_id=repo_id,
             commit_hash=commit_result.commit_hash,
             branch=repo_state.current_branch or "main",
-            files_changed=len(stage_result.files_staged or []),
+            files_changed=files_count,
         )
         self._emit_event(commit_event)
 
@@ -252,7 +273,9 @@ class RuntimeWorkflow:
         repo_state.reset_after_action()
 
         # Refresh repository statistics
-        await self._refresh_repository_statistics(repo_id, repo_state, repo_config, repo_engine, action_log)
+        await self._refresh_repository_statistics(
+            repo_id, repo_state, repo_config, repo_engine, action_log
+        )
 
     async def _execute_push_step(
         self, repo_id: str, repo_state, repo_config, repo_engine, action_log
