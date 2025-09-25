@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from provide.foundation.logger import get_logger
+
 from supsrc.events.system import (
     ConflictDetectedEvent,
     ExternalCommitEvent,
@@ -12,12 +13,11 @@ from supsrc.events.system import (
     RepositoryFrozenEvent,
     TestFailureEvent,
 )
-from supsrc.runtime.workflow.git_operations import GitOperationsHelper
 from supsrc.runtime.workflow.test_runner import TestRunner
 from supsrc.state import RepositoryStatus
 
 if TYPE_CHECKING:
-    from supsrc.config import LLMConfig, RepositoryConfig, SupsrcConfig
+    from supsrc.config import LLMConfig, SupsrcConfig
     from supsrc.llm.providers.base import LLMProvider
     from supsrc.protocols import RepositoryEngine
     from supsrc.runtime.tui_interface import TUIInterface
@@ -89,7 +89,9 @@ class WorkflowSteps:
         # Handle various failure/edge cases
         if not status_result.success or status_result.is_conflicted or status_result.is_clean:
             if not status_result.success:
-                await self._handle_status_check_failure(repo_id, repo_state, status_result, action_log)
+                await self._handle_status_check_failure(
+                    repo_id, repo_state, status_result, action_log
+                )
             elif status_result.is_conflicted:
                 await self._handle_conflict_detected(repo_id, repo_state)
             else:  # is_clean - likely external commit
@@ -100,14 +102,14 @@ class WorkflowSteps:
 
         return True
 
-    async def execute_staging(self, repo_id: str) -> bool:
+    async def execute_staging(self, repo_id: str) -> tuple[bool, list[str] | None]:
         """Execute the staging workflow step.
 
         Args:
             repo_id: Repository identifier
 
         Returns:
-            True if should continue workflow, False if should abort
+            Tuple of (should_continue, staged_files_list)
         """
         repo_state = self.repo_states[repo_id]
         repo_config = self.config.repositories[repo_id]
@@ -123,7 +125,9 @@ class WorkflowSteps:
         )
 
         if not stage_result.success:
-            repo_state.update_status(RepositoryStatus.ERROR, f"Staging failed: {stage_result.message}")
+            repo_state.update_status(
+                RepositoryStatus.ERROR, f"Staging failed: {stage_result.message}"
+            )
             repo_state.action_description = "Staging failed."
 
             # Emit error event for staging failure
@@ -138,9 +142,9 @@ class WorkflowSteps:
             self._emit_event(staging_error_event)
 
             self.tui.post_state_update(self.repo_states)
-            return False
+            return False, None
 
-        return True
+        return True, stage_result.files_staged
 
     async def execute_llm_pipeline(
         self, repo_id: str, llm_config: LLMConfig, llm_provider: LLMProvider, staged_diff: str
@@ -221,14 +225,18 @@ class WorkflowSteps:
 
         return True, commit_message
 
-    async def _handle_status_check_failure(self, repo_id: str, repo_state, status_result, action_log):
+    async def _handle_status_check_failure(
+        self, repo_id: str, repo_state, status_result, action_log
+    ):
         """Handle status check failure."""
         action_log.warning(
             "Git status check failed during action",
             message=status_result.message,
             success=status_result.success,
         )
-        repo_state.update_status(RepositoryStatus.ERROR, f"Status check failed: {status_result.message}")
+        repo_state.update_status(
+            RepositoryStatus.ERROR, f"Status check failed: {status_result.message}"
+        )
         repo_state.action_description = "Status check failed."
 
         # Emit error event for status check failure
@@ -271,7 +279,9 @@ class WorkflowSteps:
         action_log.info("Repository is clean during action - external commit detected")
 
         # Update status to indicate external commit was detected
-        repo_state.update_status(RepositoryStatus.EXTERNAL_COMMIT_DETECTED, "Changes committed externally")
+        repo_state.update_status(
+            RepositoryStatus.EXTERNAL_COMMIT_DETECTED, "Changes committed externally"
+        )
         repo_state.action_description = "External commit detected"
 
         # Emit external commit event
