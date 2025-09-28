@@ -19,41 +19,37 @@ DEFAULT_ATOMIC_SAVE_CONFIDENCE = 0.9
 DEFAULT_TEMP_FILE_PATTERNS = [
     # VSCode, Sublime Text patterns
     r"\..*\.tmp\.\w+$",  # .file.tmp.xxxxx
-    r".*\.tmp\.\d+$",    # file.tmp.12345
-
+    r".*\.tmp\.\d+$",  # file.tmp.12345
     # Vim patterns
-    r".*~$",             # file~
-    r"\..*\.sw[po]$",    # .file.swp, .file.swo
-
+    r".*~$",  # file~
+    r"\..*\.sw[po]$",  # .file.swp, .file.swo
     # Emacs patterns
-    r"^#.*#$",           # #file#
-    r"^\.#.*",           # .#file...
-
+    r"^#.*#$",  # #file#
+    r"^\.#.*",  # .#file...
     # Generic backup and temp patterns
-    r".*\.bak$",         # file.bak
-    r".*\.backup$",      # file.backup
-    r".*\.orig$",        # file.orig
-    r".*\.tmp$",         # file.tmp
-
+    r".*\.bak$",  # file.bak
+    r".*\.backup$",  # file.backup
+    r".*\.orig$",  # file.orig
+    r".*\.tmp$",  # file.tmp
     # Editor-specific patterns
-    r".*\.tmpNSURD.*",   # Some macOS editors
-    r".*\.temp$",        # file.temp
+    r".*\.tmpNSURD.*",  # Some macOS editors
+    r".*\.temp$",  # file.temp
 ]
 
 # Base name extraction patterns for relating temp files to originals
 # Format: (pattern, capture_group_or_function)
 DEFAULT_BASE_NAME_PATTERNS = [
-    (r"^\.(.*)\.tmp\.\w+$", 1),          # .file.tmp.xxxxx -> file
-    (r"^(.*)\.tmp\.\d+$", 1),            # file.tmp.12345 -> file
-    (r"^(.*)~$", 1),                     # file~ -> file
-    (r"^\.(.*)\.sw[po]$", 1),            # .file.swp -> file (but keep the leading dot)
-    (r"^#(.*)#$", 1),                    # #file# -> file
-    (r"^\.#(.*)$", 1),                   # .#file... -> file
-    (r"^(.*)\.bak$", 1),                 # file.bak -> file
-    (r"^(.*)\.backup$", 1),              # file.backup -> file
-    (r"^(.*)\.orig$", 1),                # file.orig -> file
-    (r"^(.*)\.tmp$", 1),                 # file.tmp -> file
-    (r"^(.*)\.temp$", 1),                # file.temp -> file
+    (r"^\.(.*)\.tmp\.\w+$", 1),  # .file.tmp.xxxxx -> file
+    (r"^(.*)\.tmp\.\d+$", 1),  # file.tmp.12345 -> file
+    (r"^(.*)~$", 1),  # file~ -> file
+    (r"^\.(.*)\.sw[po]$", 1),  # .file.swp -> file (but keep the leading dot)
+    (r"^#(.*)#$", 1),  # #file# -> file
+    (r"^\.#(.*)$", 1),  # .#file... -> file
+    (r"^(.*)\.bak$", 1),  # file.bak -> file
+    (r"^(.*)\.backup$", 1),  # file.backup -> file
+    (r"^(.*)\.orig$", 1),  # file.orig -> file
+    (r"^(.*)\.tmp$", 1),  # file.tmp -> file
+    (r"^(.*)\.temp$", 1),  # file.temp -> file
 ]
 
 # Operation types for display in event feed
