@@ -14,8 +14,16 @@ from typing import Any, cast
 
 from provide.foundation.logger import get_logger
 
-from supsrc.events.atomic_detection import AtomicSaveDetector
 from supsrc.events.buffer_events import BufferedFileChangeEvent
+from supsrc.events.defaults import (
+    DEFAULT_BUFFER_WINDOW_MS,
+    DEFAULT_GROUPING_MODE,
+    DEFAULT_MIN_CONFIDENCE,
+    DEFAULT_TEMP_FILE_PATTERNS,
+    GROUPING_MODE_OFF,
+    GROUPING_MODE_SIMPLE,
+    GROUPING_MODE_SMART,
+)
 from supsrc.events.monitor import FileChangeEvent
 
 # Re-export for backward compatibility
@@ -49,8 +57,8 @@ class EventBuffer:
 
     def __init__(
         self,
-        window_ms: int = 500,
-        grouping_mode: str = "smart",
+        window_ms: int = DEFAULT_BUFFER_WINDOW_MS,
+        grouping_mode: str = DEFAULT_GROUPING_MODE,
         emit_callback: Any = None,
     ):
         """Initialize the event buffer.
@@ -70,18 +78,42 @@ class EventBuffer:
         self._timers: dict[str, asyncio.TimerHandle] = {}
 
         # Initialize operation detector for smart grouping
-        if grouping_mode == "smart" and HAS_OPERATION_DETECTION:
-            detector_config = DetectorConfig(time_window_ms=window_ms, min_confidence=0.7)
+        if grouping_mode == GROUPING_MODE_SMART and HAS_OPERATION_DETECTION:
+            detector_config = DetectorConfig(
+                time_window_ms=window_ms,
+                min_confidence=DEFAULT_MIN_CONFIDENCE,
+                temp_patterns=DEFAULT_TEMP_FILE_PATTERNS,
+            )
             self._operation_detector = OperationDetector(detector_config)
+            log.debug(
+                "OperationDetector initialized",
+                time_window_ms=window_ms,
+                min_confidence=DEFAULT_MIN_CONFIDENCE,
+                temp_patterns_count=len(DEFAULT_TEMP_FILE_PATTERNS),
+            )
         else:
             self._operation_detector = None
+            log.debug(
+                "OperationDetector disabled",
+                grouping_mode=grouping_mode,
+                has_foundation=HAS_OPERATION_DETECTION,
+            )
 
         log.debug("EventBuffer initialized", window_ms=window_ms, grouping_mode=grouping_mode)
 
     def add_event(self, event: FileChangeEvent) -> None:
         """Add a file change event to the buffer."""
-        if self.grouping_mode == "off":
+        log.trace(
+            "Event received",
+            repo_id=event.repo_id,
+            file_path=str(event.file_path),
+            change_type=event.change_type,
+            grouping_mode=self.grouping_mode,
+        )
+
+        if self.grouping_mode == GROUPING_MODE_OFF:
             # Pass through immediately without buffering
+            log.trace("Passing through unbuffered event", file_path=str(event.file_path))
             if self.emit_callback:
                 self.emit_callback(event)
             return
@@ -119,49 +151,68 @@ class EventBuffer:
         log.debug("Flushing event buffer", repo_id=repo_id, event_count=len(events))
 
         # Group events based on the configured mode
-        if self.grouping_mode == "simple":
+        if self.grouping_mode == GROUPING_MODE_SIMPLE:
+            log.debug("Using simple event grouping")
             grouped_events = self._group_events_simple(events)
-        elif self.grouping_mode == "smart":
+        elif self.grouping_mode == GROUPING_MODE_SMART:
+            log.debug("Using smart event grouping")
             grouped_events = self._group_events_smart(events)
         else:
             # Fallback - treat as individual events
+            log.debug("Using individual event mode")
             grouped_events = [self._create_single_event_group(e) for e in events]
+
+        log.debug(
+            "Event grouping complete",
+            input_events=len(events),
+            output_groups=len(grouped_events),
+            grouping_mode=self.grouping_mode,
+        )
 
         # Emit grouped events
         if self.emit_callback:
-            for grouped_event in grouped_events:
+            for i, grouped_event in enumerate(grouped_events):
+                log.trace(
+                    "Emitting grouped event",
+                    index=i,
+                    operation_type=grouped_event.operation_type,
+                    file_paths=[str(p) for p in grouped_event.file_paths],
+                    event_count=grouped_event.event_count,
+                )
                 self.emit_callback(grouped_event)
+        else:
+            log.warning("No emit callback available, grouped events not emitted")
 
     def _group_events_simple(self, events: list[FileChangeEvent]) -> list[BufferedFileChangeEvent]:
-        """Group events using simple file-based grouping with atomic save detection."""
+        """Group events using simple file-based grouping."""
+        log.debug("Starting simple event grouping", event_count=len(events))
+
         # Group by file path
         file_groups: dict[Path, list[FileChangeEvent]] = defaultdict(list)
         for event in events:
             file_groups[event.file_path].append(event)
 
-        # Look for atomic save patterns within the time window
-        atomic_saves = AtomicSaveDetector.detect_simple_atomic_saves(events)
-        processed_files = set()
+        log.trace("File groups created", group_count=len(file_groups))
 
         grouped_events = []
 
-        # Process atomic saves first
-        for atomic_save in atomic_saves:
-            grouped_events.append(atomic_save)
-            # Mark files as processed
-            for file_path in atomic_save.file_paths:
-                processed_files.add(file_path)
-
-        # Process remaining files
+        # Process each file group
         for file_path, file_events in file_groups.items():
-            if file_path in processed_files:
-                continue
+            log.trace(
+                "Processing file group", file_path=str(file_path), event_count=len(file_events)
+            )
 
             if len(file_events) == 1:
                 grouped_events.append(self._create_single_event_group(file_events[0]))
             else:
                 # Multiple events on same file - consolidate
                 most_recent = file_events[-1]
+                log.debug(
+                    "Consolidating multiple events on same file",
+                    file_path=str(file_path),
+                    event_count=len(file_events),
+                    final_change_type=most_recent.change_type,
+                )
 
                 # Build operation history for all events on this file
                 operation_history = []
@@ -186,22 +237,46 @@ class EventBuffer:
                     )
                 )
 
+        log.debug(
+            "Simple grouping complete", input_events=len(events), output_groups=len(grouped_events)
+        )
         return grouped_events
 
     def _group_events_smart(self, events: list[FileChangeEvent]) -> list[BufferedFileChangeEvent]:
         """Group events using smart pattern recognition via provide-foundation."""
+        log.debug("Starting smart event grouping", event_count=len(events))
+
         if len(events) == 1:
+            log.trace("Single event, skipping smart detection")
             return [self._create_single_event_group(events[0])]
 
         if not self._operation_detector or not HAS_OPERATION_DETECTION:
             # Fallback to simple grouping if detector not available
+            log.debug(
+                "OperationDetector not available, falling back to simple grouping",
+                has_detector=bool(self._operation_detector),
+                has_foundation=HAS_OPERATION_DETECTION,
+            )
             return self._group_events_simple(events)
 
         # Convert FileChangeEvents to FileEvents for operation detection
         file_events = self._convert_to_file_events(events)
+        log.trace("Converted to foundation FileEvents", file_event_count=len(file_events))
 
         # Detect operations using foundation's detector
         operations = self._operation_detector.detect(file_events)
+        log.debug("Operations detected", operation_count=len(operations))
+
+        for i, operation in enumerate(operations):
+            log.trace(
+                "Detected operation",
+                index=i,
+                operation_type=operation.operation_type.value,
+                primary_path=str(operation.primary_path),
+                confidence=operation.confidence,
+                event_count=operation.event_count,
+                is_atomic=operation.is_atomic,
+            )
 
         if operations:
             # Convert detected operations back to BufferedFileChangeEvents
@@ -212,19 +287,45 @@ class EventBuffer:
                 # Track which file paths were part of operations
                 for event in operation.events:
                     processed_paths.add(event.path)
+                    log.trace("Marking path as processed", path=str(event.path))
 
                 # Create buffered event for this operation
-                buffered_events.append(self._create_operation_event(operation, events))
+                buffered_event = self._create_operation_event(operation, events)
+                buffered_events.append(buffered_event)
+                log.debug(
+                    "Created buffered event for operation",
+                    operation_type=buffered_event.operation_type,
+                    primary_path=str(buffered_event.file_paths[0])
+                    if buffered_event.file_paths
+                    else "none",
+                )
 
             # Handle any events that weren't part of detected operations
             remaining_events = [e for e in events if e.file_path not in processed_paths]
+            log.debug(
+                "Processing remaining events",
+                remaining_count=len(remaining_events),
+                total_events=len(events),
+                processed_paths=len(processed_paths),
+            )
 
             if remaining_events:
-                buffered_events.extend(self._group_events_simple(remaining_events))
+                remaining_buffered = self._group_events_simple(remaining_events)
+                buffered_events.extend(remaining_buffered)
+                log.debug(
+                    "Added remaining events", remaining_buffered_count=len(remaining_buffered)
+                )
 
+            log.debug(
+                "Smart grouping complete",
+                input_events=len(events),
+                operations_detected=len(operations),
+                output_groups=len(buffered_events),
+            )
             return buffered_events
 
         # Fall back to simple grouping if no operations detected
+        log.debug("No operations detected, falling back to simple grouping")
         return self._group_events_simple(events)
 
     def _convert_to_file_events(self, events: list[FileChangeEvent]) -> list:
