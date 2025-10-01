@@ -21,7 +21,9 @@
       "Bash(.venv/bin/python -m pytest tests/unit/test_action_handler.py -v)",
       "Bash(.venv/bin/python:*)",
       "WebFetch(domain:textual.textualize.io)",
-      "Bash(xargs rm:*)"
+      "Bash(xargs rm:*)",
+      "Bash(python3:*)",
+      "Bash(PYTHONPATH=\"./src\" python3:*)"
     ],
     "deny": [],
     "ask": [],
