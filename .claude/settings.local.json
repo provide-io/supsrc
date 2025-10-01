@@ -23,7 +23,11 @@
       "WebFetch(domain:textual.textualize.io)",
       "Bash(xargs rm:*)",
       "Bash(python3:*)",
-      "Bash(PYTHONPATH=\"./src\" python3:*)"
+      "Bash(PYTHONPATH=\"./src\" python3:*)",
+      "Bash(for f in src/provide/foundation/file/operations/detectors/*.py)",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": [],
