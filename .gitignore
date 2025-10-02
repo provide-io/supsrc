@@ -318,3 +318,4 @@ $RECYCLE.BIN/
 
 # Supsrc local data (machine-specific, not shareable)
 .supsrc/local/
+.claude
