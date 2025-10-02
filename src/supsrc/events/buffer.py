@@ -384,8 +384,11 @@ class EventBuffer:
 
         buffer_op_type = operation_type_map.get(operation.operation_type, "single_file")
 
-        # Use primary_path (end-state file) as the main file path
-        file_paths = [operation.primary_path]
+        # Use files_affected if available (for batch operations), otherwise use primary_path
+        if operation.files_affected:
+            file_paths = operation.files_affected
+        else:
+            file_paths = [operation.primary_path]
 
         # Find the repo_id from original events
         repo_id = original_events[0].repo_id if original_events else "unknown"
