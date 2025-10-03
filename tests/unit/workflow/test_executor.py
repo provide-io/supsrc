@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from provide.testkit import patch
 
 from supsrc.config import SupsrcConfig
 from supsrc.protocols import CommitResult, PushResult, RepoStatusResult, StageResult
@@ -39,7 +40,6 @@ def runtime_workflow(
     return RuntimeWorkflow(minimal_config, states, engines, tui)
 
 
-@pytest.mark.asyncio
 class TestRuntimeWorkflow:
     """Comprehensive tests for the RuntimeWorkflow."""
 
@@ -230,7 +230,7 @@ class TestRuntimeWorkflow:
         repo_state = runtime_workflow.repo_states["test_repo_1"]
 
         # Mock the sleep to avoid actual delay in tests
-        with pytest.mock.patch("asyncio.sleep") as mock_sleep:
+        with patch("asyncio.sleep") as mock_sleep:
             await runtime_workflow._delayed_reset_after_external_commit(repo_state)
 
         mock_sleep.assert_called_once_with(2.0)

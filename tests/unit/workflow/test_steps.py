@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from provide.testkit import patch
 
 from supsrc.config import LLMConfig, RepositoryConfig, SupsrcConfig
 from supsrc.protocols import RepoStatusResult
@@ -272,7 +273,7 @@ class TestWorkflowSteps:
         staged_diff = "diff content"
 
         # Mock test failure
-        with pytest.mock.patch(
+        with patch(
             "supsrc.runtime.workflow.steps.TestRunner.run_tests"
         ) as mock_run_tests:
             mock_run_tests.return_value = (1, "Tests failed", "Error output")
