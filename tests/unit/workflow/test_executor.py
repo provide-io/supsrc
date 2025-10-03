@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from provide.testkit import patch
+from provide.testkit.mocking import patch
 
 from supsrc.config import SupsrcConfig
 from supsrc.protocols import CommitResult, PushResult, RepoStatusResult, StageResult
@@ -43,6 +43,7 @@ def runtime_workflow(
 class TestRuntimeWorkflow:
     """Comprehensive tests for the RuntimeWorkflow."""
 
+    @pytest.mark.asyncio
     async def test_execute_full_sequence_success(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
     ):
@@ -92,6 +93,7 @@ class TestRuntimeWorkflow:
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
 
+    @pytest.mark.asyncio
     async def test_execute_sequence_external_commit_detected(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
     ):
@@ -134,6 +136,7 @@ class TestRuntimeWorkflow:
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
 
+    @pytest.mark.asyncio
     async def test_execute_sequence_commit_failure(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
     ):
@@ -155,6 +158,7 @@ class TestRuntimeWorkflow:
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
 
+    @pytest.mark.asyncio
     async def test_execute_sequence_push_failure(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
     ):
@@ -225,6 +229,7 @@ class TestRuntimeWorkflow:
         # Should not raise an error
         runtime_workflow._emit_event(test_event)
 
+    @pytest.mark.asyncio
     async def test_delayed_reset_after_external_commit(self, runtime_workflow: RuntimeWorkflow):
         """Test delayed reset after external commit detection."""
         repo_state = runtime_workflow.repo_states["test_repo_1"]
@@ -236,6 +241,7 @@ class TestRuntimeWorkflow:
         mock_sleep.assert_called_once_with(2.0)
         runtime_workflow.tui.post_state_update.assert_called()
 
+    @pytest.mark.asyncio
     async def test_execute_sequence_with_exception(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
     ):

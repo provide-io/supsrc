@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from provide.testkit import patch
+from provide.testkit.mocking import patch
 
 from supsrc.config import LLMConfig, RepositoryConfig, SupsrcConfig
 from supsrc.protocols import RepoStatusResult
