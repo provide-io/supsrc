@@ -81,8 +81,47 @@ class BufferedFileChangeEvent(Event):
             }
             emoji = emoji_map.get(self.primary_change_type, "📄")  # PAGE FACING UP
 
+            # Special handling for move events - reconstruct the move chain
+            if self.primary_change_type == "moved" and self.operation_history:
+                move_chain = self._reconstruct_move_chain()
+                if move_chain:
+                    if len(move_chain) > 2:
+                        # Multiple moves: show chain with count
+                        return f"[{time_str}] {emoji} [{self.repo_id}] {' → '.join(move_chain)} ({len(move_chain)-1} moves)"
+                    else:
+                        # Simple move: just show source → dest
+                        return f"[{time_str}] {emoji} [{self.repo_id}] {' → '.join(move_chain)}"
+
             if len(self.file_paths) == 1:
                 suffix = f" ({self.event_count} events)" if self.event_count > 1 else ""
                 return f"[{time_str}] {emoji} [{self.repo_id}] {self.file_paths[0].name}{suffix}"
             else:
                 return f"[{time_str}] {emoji} [{self.repo_id}] {len(self.file_paths)} files {self.primary_change_type}"
+
+    def _reconstruct_move_chain(self) -> list[str]:
+        """Reconstruct move chain from operation history.
+
+        Returns:
+            List of filenames in order: [source, intermediate1, ..., final_dest]
+        """
+        if not self.operation_history:
+            return []
+
+        # Extract move events with destinations
+        moves = []
+        for entry in self.operation_history:
+            if entry.get("change_type") == "moved" and entry.get("dest_path"):
+                src_name = entry["path"].name if hasattr(entry["path"], "name") else str(entry["path"])
+                dest_name = entry["dest_path"].name if hasattr(entry["dest_path"], "name") else str(entry["dest_path"])
+                moves.append((src_name, dest_name))
+
+        if not moves:
+            return []
+
+        # Build chain: source → dest1 → dest2 → ...
+        # Assumes moves are in chronological order (sorted by timestamp)
+        chain = [moves[0][0]]  # Start with first source
+        for src, dest in moves:
+            chain.append(dest)
+
+        return chain
