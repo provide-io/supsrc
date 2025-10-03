@@ -69,7 +69,8 @@ class TestActionHandler:
         mock_repo_engine.stage_changes.assert_not_called()
         mock_repo_engine.perform_commit.assert_not_called()
         mock_repo_engine.perform_push.assert_not_called()
-        assert action_handler.repo_states[repo_id].status == RepositoryStatus.IDLE
+        # When repo is clean, status is EXTERNAL_COMMIT_DETECTED (not IDLE)
+        assert action_handler.repo_states[repo_id].status == RepositoryStatus.EXTERNAL_COMMIT_DETECTED
 
     async def test_aborts_on_status_failure(
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
@@ -96,7 +97,8 @@ class TestActionHandler:
 
         await action_handler.execute_action_sequence(repo_id)
 
-        assert state.status == RepositoryStatus.ERROR
+        # Should set CONFLICT_DETECTED status (not generic ERROR)
+        assert state.status == RepositoryStatus.CONFLICT_DETECTED
         assert state.is_frozen is True
         assert state.freeze_reason == "Merge conflicts detected"
         assert "conflicts" in (state.error_message or "").lower()
