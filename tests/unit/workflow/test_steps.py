@@ -219,7 +219,10 @@ class TestWorkflowSteps:
 
         result = await workflow_steps.execute_staging(repo_id)
 
-        assert result is False
+        # execute_staging now returns tuple of (success, files_list)
+        success, files = result
+        assert success is False
+        assert files is None
         repo_state.update_status.assert_called_with(
             RepositoryStatus.ERROR, "Staging failed: Staging failed"
         )
