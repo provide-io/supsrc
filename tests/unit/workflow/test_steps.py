@@ -191,7 +191,10 @@ class TestWorkflowSteps:
 
         result = await workflow_steps.execute_staging(repo_id)
 
-        assert result is True
+        # execute_staging now returns tuple of (success, files_list)
+        success, files = result
+        assert success is True
+        assert files == ["file1.txt", "file2.txt"]
         repo_state.update_status.assert_called_with(RepositoryStatus.STAGING)
         repo_engine.stage_changes.assert_called_once()
 

@@ -256,7 +256,7 @@ class TestRuntimeWorkflow:
         # Should handle exception and set error state
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
-        assert "Unexpected action failure" in repo_state.status_message
+        assert "Unexpected action failure" in repo_state.error_message
 
     async def test_llm_provider_failure_handling(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
@@ -277,4 +277,4 @@ class TestRuntimeWorkflow:
         # Should handle LLM failure and set error state
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
-        assert "LLM provider failed" in repo_state.status_message
+        assert "LLM provider failed" in repo_state.error_message
