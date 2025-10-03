@@ -27,6 +27,7 @@ class TestFileChangeEventDisplay:
     def test_created_event_format(self):
         """Created events should not show destination."""
         event = FileChangeEvent(
+            description="File created",
             repo_id="test_repo",
             file_path=Path("/repo/new_file.py"),
             change_type="created",
@@ -40,6 +41,7 @@ class TestFileChangeEventDisplay:
     def test_modified_event_format(self):
         """Modified events should not show destination."""
         event = FileChangeEvent(
+            description="File modified",
             repo_id="test_repo",
             file_path=Path("/repo/file.py"),
             change_type="modified",
@@ -53,6 +55,7 @@ class TestFileChangeEventDisplay:
     def test_deleted_event_format(self):
         """Deleted events should not show destination."""
         event = FileChangeEvent(
+            description="File deleted",
             repo_id="test_repo",
             file_path=Path("/repo/old_file.py"),
             change_type="deleted",
@@ -66,6 +69,7 @@ class TestFileChangeEventDisplay:
     def test_simple_move_event_format(self):
         """Move events should show source → destination."""
         event = FileChangeEvent(
+            description="File moved",
             repo_id="test_repo",
             file_path=Path("/repo/bar.py"),
             change_type="moved",
@@ -79,6 +83,7 @@ class TestFileChangeEventDisplay:
     def test_move_without_dest_path(self):
         """Move events without dest_path should fall back to simple format."""
         event = FileChangeEvent(
+            description="File moved",
             repo_id="test_repo",
             file_path=Path("/repo/bar.py"),
             change_type="moved",
