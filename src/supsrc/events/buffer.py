@@ -211,6 +211,7 @@ class EventBuffer:
                             "change_type": event.change_type,
                             "timestamp": event.timestamp,
                             "is_primary": True,
+                            "dest_path": event.dest_path,  # Include destination for move events
                         }
                     )
 
@@ -408,6 +409,7 @@ class EventBuffer:
                 "timestamp": event.timestamp,
                 "is_primary": event.path == operation.primary_path
                 or (hasattr(event, "dest_path") and event.dest_path == operation.primary_path),
+                "dest_path": getattr(event, "dest_path", None),  # Include destination for move events
             }
             operation_history.append(history_entry)
 
@@ -431,6 +433,7 @@ class EventBuffer:
                 "change_type": event.change_type,
                 "timestamp": event.timestamp,
                 "is_primary": True,
+                "dest_path": event.dest_path,  # Include destination for move events
             }
         ]
 

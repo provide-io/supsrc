@@ -146,6 +146,7 @@ class EventProcessor:
                                 repo_id=event.repo_id,
                                 file_path=event.src_path,
                                 change_type=event.event_type,
+                                dest_path=event.dest_path,  # Preserve destination for move events
                             )
 
                             # Use buffering if enabled, otherwise emit directly
