@@ -29,25 +29,14 @@ from supsrc.events.monitor import FileChangeEvent
 # Re-export for backward compatibility
 __all__ = ["BufferedFileChangeEvent", "EventBuffer"]
 
-# Import foundation operations with fallback
-try:
-    from provide.foundation.file.operations import (
-        DetectorConfig,
-        FileEvent,
-        FileEventMetadata,
-        OperationDetector,
-        OperationType,
-    )
-
-    HAS_OPERATION_DETECTION = True
-except ImportError:
-    # Fallback for when foundation operations is not available
-    HAS_OPERATION_DETECTION = False
-    DetectorConfig = None
-    FileEvent = None
-    FileEventMetadata = None
-    OperationDetector = None
-    OperationType = None
+# Import foundation operations - required dependency
+from provide.foundation.file.operations import (
+    DetectorConfig,
+    FileEvent,
+    FileEventMetadata,
+    OperationDetector,
+    OperationType,
+)
 
 log = get_logger("events.buffer")
 
@@ -78,7 +67,7 @@ class EventBuffer:
         self._timers: dict[str, asyncio.TimerHandle] = {}
 
         # Initialize operation detector for smart grouping
-        if grouping_mode == GROUPING_MODE_SMART and HAS_OPERATION_DETECTION:
+        if grouping_mode == GROUPING_MODE_SMART:
             detector_config = DetectorConfig(
                 time_window_ms=window_ms,
                 min_confidence=DEFAULT_MIN_CONFIDENCE,
@@ -96,7 +85,6 @@ class EventBuffer:
             log.debug(
                 "OperationDetector disabled",
                 grouping_mode=grouping_mode,
-                has_foundation=HAS_OPERATION_DETECTION,
             )
 
         log.debug("EventBuffer initialized", window_ms=window_ms, grouping_mode=grouping_mode)
@@ -250,14 +238,13 @@ class EventBuffer:
             log.trace("Single event, skipping smart detection")
             return [self._create_single_event_group(events[0])]
 
-        if not self._operation_detector or not HAS_OPERATION_DETECTION:
-            # Fallback to simple grouping if detector not available
+        if not self._operation_detector:
+            # Fallback to simple grouping if detector not initialized
             log.warning(
-                "OperationDetector not available, falling back to simple grouping",
+                "OperationDetector not initialized, falling back to simple grouping",
                 has_detector=bool(self._operation_detector),
-                has_foundation=HAS_OPERATION_DETECTION,
                 event_count=len(events),
-                reason="Operation detector not initialized or foundation not available",
+                reason="Operation detector not initialized (grouping mode may not be 'smart')",
             )
             return self._group_events_simple(events)
 
@@ -346,9 +333,6 @@ class EventBuffer:
 
     def _convert_to_file_events(self, events: list[FileChangeEvent]) -> list:
         """Convert FileChangeEvents to FileEvents for operation detection."""
-        if not HAS_OPERATION_DETECTION or not FileEvent or not FileEventMetadata:
-            return []
-
         file_events = []
 
         for i, event in enumerate(events):
@@ -385,10 +369,6 @@ class EventBuffer:
         self, operation: Any, original_events: list[FileChangeEvent]
     ) -> BufferedFileChangeEvent:
         """Create a BufferedFileChangeEvent from a detected FileOperation."""
-        if not HAS_OPERATION_DETECTION or not OperationType:
-            # Fallback for when operation detection is not available
-            return self._create_single_event_group(original_events[0])
-
         # Map operation types to our buffer operation types
         operation_type_map = {
             OperationType.ATOMIC_SAVE: "atomic_rewrite",
