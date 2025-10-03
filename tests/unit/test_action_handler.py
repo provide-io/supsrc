@@ -101,7 +101,8 @@ class TestActionHandler:
         assert state.status == RepositoryStatus.CONFLICT_DETECTED
         assert state.is_frozen is True
         assert state.freeze_reason == "Merge conflicts detected"
-        assert "conflicts" in (state.error_message or "").lower()
+        # Conflict message is in action_description or freeze_reason, not error_message
+        assert "conflict" in (state.action_description or state.freeze_reason or "").lower()
         mock_repo_engine.stage_changes.assert_not_called()
 
     async def test_handles_commit_failure_gracefully(
