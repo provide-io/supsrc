@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from provide.testkit.mocking import patch
 
 from supsrc.config import LLMConfig, RepositoryConfig, SupsrcConfig
 from supsrc.protocols import RepoStatusResult
@@ -190,7 +191,10 @@ class TestWorkflowSteps:
 
         result = await workflow_steps.execute_staging(repo_id)
 
-        assert result is True
+        # execute_staging now returns tuple of (success, files_list)
+        success, files = result
+        assert success is True
+        assert files == ["file1.txt", "file2.txt"]
         repo_state.update_status.assert_called_with(RepositoryStatus.STAGING)
         repo_engine.stage_changes.assert_called_once()
 
@@ -215,7 +219,10 @@ class TestWorkflowSteps:
 
         result = await workflow_steps.execute_staging(repo_id)
 
-        assert result is False
+        # execute_staging now returns tuple of (success, files_list)
+        success, files = result
+        assert success is False
+        assert files is None
         repo_state.update_status.assert_called_with(
             RepositoryStatus.ERROR, "Staging failed: Staging failed"
         )
@@ -272,7 +279,7 @@ class TestWorkflowSteps:
         staged_diff = "diff content"
 
         # Mock test failure
-        with pytest.mock.patch(
+        with patch(
             "supsrc.runtime.workflow.steps.TestRunner.run_tests"
         ) as mock_run_tests:
             mock_run_tests.return_value = (1, "Tests failed", "Error output")
