@@ -120,13 +120,19 @@ class EventFormatter:
 
             impact_str = str(event_count)
 
+            # Format file list - show actual files, not generic counts
             if len(file_paths) == 0:
                 file_str = "-"
             elif len(file_paths) == 1:
                 file_str = str(file_paths[0].name)
+            elif len(file_paths) <= 3:
+                # Show actual file names (comma-separated)
+                file_str = ", ".join(str(p.name) for p in file_paths)
             else:
-                # Find common prefix for multiple files
-                file_str = FilePathFormatter.get_files_summary_short(file_paths)
+                # Truncate with count for many files
+                first_three = ", ".join(str(p.name) for p in file_paths[:3])
+                remaining = len(file_paths) - 3
+                file_str = f"{first_three} (+{remaining})"
 
             # Extract message from description if available
             message_str = MessageExtractor.extract_message(event)
@@ -224,19 +230,25 @@ class MessageExtractor:
             reason = getattr(event, "reason", "Review failed")
             return f"Blocked: {reason[:20]}..." if len(reason) > 20 else f"Blocked: {reason}"
 
-        # For BufferedFileChangeEvent, create a descriptive message
+        # For BufferedFileChangeEvent, show actual operation (not "Batch changes")
         if hasattr(event, "operation_type"):
-            op_type = getattr(event, "operation_type", "")
-            if op_type == "atomic_rewrite":
-                return "Atomic save"
-            elif op_type == "batch_operation":
-                return "Batch changes"
-            else:
-                # Use primary_change_type if available
-                if hasattr(event, "primary_change_type"):
-                    change_type = getattr(event, "primary_change_type", "")
-                    return change_type.capitalize() if change_type else ""
-                return ""
+            # Get the actual change type (modified, created, deleted, moved)
+            if hasattr(event, "primary_change_type"):
+                change_type = getattr(event, "primary_change_type", "")
+
+                # For move events, try to show destination if available
+                if change_type == "moved" and hasattr(event, "operation_history"):
+                    history = getattr(event, "operation_history", [])
+                    if history and len(history) > 0:
+                        # Try to find move chain
+                        last_entry = history[-1]
+                        if last_entry.get("dest_path"):
+                            dest_name = last_entry["dest_path"].name if hasattr(last_entry["dest_path"], "name") else str(last_entry["dest_path"])
+                            return f"→ {dest_name}"
+
+                # For other operations, just show the type
+                return change_type.capitalize() if change_type else "Changed"
+            return "Changed"
 
         # For other events, extract from description
         description = getattr(event, "description", "")

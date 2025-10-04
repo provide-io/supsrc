@@ -60,43 +60,62 @@ class BufferedFileChangeEvent(Event):
         """Format buffered file change event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
 
-        if self.operation_type == "atomic_rewrite":
-            emoji = "✏️"  # PENCIL
-            if len(self.file_paths) == 1:
-                suffix = f" ({self.event_count} ops)" if self.event_count > 1 else ""
-                return f"[{time_str}] {emoji} [{self.repo_id}] {self.file_paths[0].name} Updated{suffix}"
+        # Get emoji for change type
+        emoji_map = {
+            "created": "+",  # PLUS SIGN
+            "modified": "✏️",  # PENCIL
+            "deleted": "-",  # MINUS SIGN
+            "moved": "🔄",  # COUNTERCLOCKWISE ARROWS BUTTON
+        }
+        emoji = emoji_map.get(self.primary_change_type, "📄")  # PAGE FACING UP
+
+        # Special handling for move events - reconstruct the move chain
+        if self.primary_change_type == "moved" and self.operation_history:
+            move_chain = self._reconstruct_move_chain()
+            if move_chain:
+                if len(move_chain) > 2:
+                    # Multiple moves: show chain with count
+                    return f"[{time_str}] {emoji} [{self.repo_id}] {' → '.join(move_chain)} ({len(move_chain)-1} moves)"
+                else:
+                    # Simple move: just show source → dest
+                    return f"[{time_str}] {emoji} [{self.repo_id}] {' → '.join(move_chain)}"
+
+        # Format file list for display
+        file_list = self._format_file_list()
+
+        # Show actual files that changed with the operation type
+        return f"[{time_str}] {emoji} [{self.repo_id}] {file_list} {self.primary_change_type}"
+
+    def _format_file_list(self, max_files: int = 3) -> str:
+        """Format file paths for display.
+
+        Args:
+            max_files: Maximum number of files to show before truncating
+
+        Returns:
+            Formatted file list string
+        """
+        if not self.file_paths:
+            return "unknown"
+
+        # Get relative names, handling both Path objects and strings
+        names = []
+        for path in self.file_paths:
+            if hasattr(path, "name"):
+                names.append(str(path.name))
             else:
-                return f"[{time_str}] {emoji} [{self.repo_id}] Updated {len(self.file_paths)} files ({self.event_count} ops)"
+                names.append(str(path))
 
-        elif self.operation_type == "batch_operation":
-            emoji = "📦"  # PACKAGE
-            return f"[{time_str}] {emoji} [{self.repo_id}] Batch operation on {len(self.file_paths)} files"
+        if len(names) == 1:
+            return names[0]
 
-        else:  # single_file
-            emoji_map = {
-                "created": "+",  # PLUS SIGN
-                "modified": "✏️",  # PENCIL
-                "deleted": "-",  # MINUS SIGN
-                "moved": "🔄",  # COUNTERCLOCKWISE ARROWS BUTTON
-            }
-            emoji = emoji_map.get(self.primary_change_type, "📄")  # PAGE FACING UP
-
-            # Special handling for move events - reconstruct the move chain
-            if self.primary_change_type == "moved" and self.operation_history:
-                move_chain = self._reconstruct_move_chain()
-                if move_chain:
-                    if len(move_chain) > 2:
-                        # Multiple moves: show chain with count
-                        return f"[{time_str}] {emoji} [{self.repo_id}] {' → '.join(move_chain)} ({len(move_chain)-1} moves)"
-                    else:
-                        # Simple move: just show source → dest
-                        return f"[{time_str}] {emoji} [{self.repo_id}] {' → '.join(move_chain)}"
-
-            if len(self.file_paths) == 1:
-                suffix = f" ({self.event_count} events)" if self.event_count > 1 else ""
-                return f"[{time_str}] {emoji} [{self.repo_id}] {self.file_paths[0].name}{suffix}"
-            else:
-                return f"[{time_str}] {emoji} [{self.repo_id}] {len(self.file_paths)} files {self.primary_change_type}"
+        # For multiple files, show list (truncate if too many)
+        if len(names) <= max_files:
+            return ", ".join(names)
+        else:
+            shown = ", ".join(names[:max_files])
+            remaining = len(names) - max_files
+            return f"{shown} (+{remaining} more)"
 
     def _reconstruct_move_chain(self) -> list[str]:
         """Reconstruct move chain from operation history.

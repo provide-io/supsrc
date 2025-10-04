@@ -229,9 +229,10 @@ class TestEventBufferGrouping:
         )
 
         formatted = atomic_event.format()
-        # The format uses "Updated" for atomic_rewrite operations
-        assert "Updated" in formatted
-        # Uses the primary_change_type emoji (✏️ for modified), not a special atomic emoji
+        # Atomic rewrite now shows the actual operation (modified) not "Updated"
+        assert "modified" in formatted
+        assert "file.py" in formatted
+        assert "✏️" in formatted  # Uses the primary_change_type emoji
 
         # Test batch operation event
         batch_event = BufferedFileChangeEvent(
@@ -243,6 +244,8 @@ class TestEventBufferGrouping:
         )
 
         formatted = batch_event.format()
-        assert "Batch operation" in formatted
-        assert "2 files" in formatted
-        assert "📦" in formatted  # Batch operation emoji
+        # Batch operations now show actual file list, not "Batch operation"
+        assert "file1.py" in formatted
+        assert "file2.py" in formatted
+        assert "modified" in formatted
+        assert "✏️" in formatted  # Uses operation emoji, not batch emoji

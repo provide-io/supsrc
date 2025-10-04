@@ -323,8 +323,8 @@ class TestMoveOperationHistoryStorage:
 class TestEdgeCases:
     """Test edge cases and error handling."""
 
-    def test_atomic_rewrite_not_affected(self):
-        """Atomic rewrite events should still work normally."""
+    def test_atomic_rewrite_shows_files(self):
+        """Atomic rewrite should show which files were updated."""
         event = BufferedFileChangeEvent(
             repo_id="test_repo",
             file_paths=[Path("/repo/file.py")],
@@ -335,11 +335,12 @@ class TestEdgeCases:
         )
 
         formatted = event.format()
-        assert "Updated" in formatted
+        assert "file.py" in formatted
+        assert "modified" in formatted
         assert "→" not in formatted  # Should not show move arrow
 
-    def test_batch_operation_not_affected(self):
-        """Batch operations should still work normally."""
+    def test_batch_operation_shows_file_list(self):
+        """Batch operations should show which files changed, not just 'Batch operation'."""
         event = BufferedFileChangeEvent(
             repo_id="test_repo",
             file_paths=[Path("/repo/file1.py"), Path("/repo/file2.py")],
@@ -350,8 +351,58 @@ class TestEdgeCases:
         )
 
         formatted = event.format()
-        assert "Batch operation" in formatted
+        # Should show file names
+        assert "file1.py" in formatted
+        assert "file2.py" in formatted
+        assert "modified" in formatted
+        # Should NOT say "Batch operation" (event count column shows that)
+        assert "Batch" not in formatted
         assert "→" not in formatted
+
+    def test_multiple_files_display(self):
+        """Multiple files should be shown as comma-separated list."""
+        event = BufferedFileChangeEvent(
+            repo_id="test_repo",
+            file_paths=[
+                Path("/repo/a.py"),
+                Path("/repo/b.py"),
+                Path("/repo/c.py"),
+            ],
+            operation_type="single_file",
+            event_count=3,
+            primary_change_type="modified",
+            operation_history=[],
+        )
+
+        formatted = event.format()
+        assert "a.py, b.py, c.py" in formatted
+        assert "modified" in formatted
+
+    def test_many_files_truncated(self):
+        """When too many files, should truncate with '+N more'."""
+        event = BufferedFileChangeEvent(
+            repo_id="test_repo",
+            file_paths=[
+                Path("/repo/file1.py"),
+                Path("/repo/file2.py"),
+                Path("/repo/file3.py"),
+                Path("/repo/file4.py"),
+                Path("/repo/file5.py"),
+            ],
+            operation_type="single_file",
+            event_count=5,
+            primary_change_type="modified",
+            operation_history=[],
+        )
+
+        formatted = event.format()
+        # Should show first 3 files
+        assert "file1.py" in formatted
+        assert "file2.py" in formatted
+        assert "file3.py" in formatted
+        # Should indicate there are more
+        assert "+2 more" in formatted
+        assert "modified" in formatted
 
     def test_path_as_string_in_history(self):
         """Handle paths stored as strings instead of Path objects."""
