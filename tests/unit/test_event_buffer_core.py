@@ -203,16 +203,14 @@ class TestEventBufferCore:
             emit_callback=mock_emit_callback,
         )
 
-        # Test with empty list
+        # Test with empty list - these methods still exist
         grouped = buffer._group_events_simple([])
         assert grouped == []
 
         grouped = buffer._group_events_smart([])
         assert grouped == []
 
-        # Test _get_most_common_change_type with empty list
-        most_common = buffer._get_most_common_change_type([])
-        assert most_common == "modified"  # Default fallback
+        # _get_most_common_change_type was removed - no longer testing it
 
     def test_no_callback_handling(self):
         """Test EventBuffer behavior when no callback is provided."""

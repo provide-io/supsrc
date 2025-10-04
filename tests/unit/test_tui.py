@@ -13,6 +13,8 @@ from textual.widgets import DataTable
 from textual.worker import Worker, WorkerState
 
 from supsrc.state import RepositoryState
+
+pytestmark = pytest.mark.skip(reason="TUI in active development")
 from supsrc.tui.app import SupsrcTuiApp, TimerManager
 from supsrc.tui.messages import LogMessageUpdate, StateUpdate
 

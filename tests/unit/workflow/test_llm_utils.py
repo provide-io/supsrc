@@ -6,6 +6,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from attrs import evolve
 
 from supsrc.config import LLMConfig
 from supsrc.runtime.workflow.llm_utils import LLMProviderManager
@@ -81,7 +82,8 @@ class TestLLMProviderManager:
     @patch("supsrc.runtime.workflow.llm_utils.LLM_AVAILABLE", True)
     def test_get_llm_provider_unsupported_provider(self, llm_config):
         """Test LLM provider with unsupported provider."""
-        llm_config.provider = "unsupported_provider"
+        # Use evolve() to modify frozen dataclass
+        llm_config = evolve(llm_config, provider="unsupported_provider")
         manager = LLMProviderManager()
 
         provider = manager.get_llm_provider(llm_config)
@@ -92,9 +94,8 @@ class TestLLMProviderManager:
     @patch("supsrc.runtime.workflow.llm_utils.OllamaProvider")
     def test_get_llm_provider_ollama(self, mock_ollama_provider, llm_config):
         """Test LLM provider creation for Ollama."""
-        llm_config.provider = "ollama"
-        llm_config.model = "llama2"
-        llm_config.api_key_env_var = None  # Ollama typically doesn't need API key
+        # Use evolve() to modify frozen dataclass
+        llm_config = evolve(llm_config, provider="ollama", model="llama2", api_key_env_var=None)
 
         mock_provider_instance = MagicMock()
         mock_ollama_provider.return_value = mock_provider_instance
@@ -109,7 +110,8 @@ class TestLLMProviderManager:
     @patch("supsrc.runtime.workflow.llm_utils.GeminiProvider")
     def test_get_llm_provider_no_api_key_env(self, mock_gemini_provider, llm_config):
         """Test LLM provider creation without API key environment variable."""
-        llm_config.api_key_env_var = None
+        # Use evolve() to modify frozen dataclass
+        llm_config = evolve(llm_config, api_key_env_var=None)
         mock_provider_instance = MagicMock()
         mock_gemini_provider.return_value = mock_provider_instance
 

@@ -325,14 +325,9 @@ class TestAtomicFileOperations:
 
         assert emitted_repo_ids == {"repo1", "repo2"}
 
-    def test_temp_file_pattern_recognition_real_world(self, temp_directory):
+    @pytest.mark.asyncio
+    async def test_temp_file_pattern_recognition_real_world(self, temp_directory):
         """Test recognition of real-world temporary file patterns."""
-        buffer = EventBuffer(
-            window_ms=100,
-            grouping_mode="smart",
-            emit_callback=Mock(),
-        )
-
         # Test various real-world temp file patterns
         test_cases = [
             # Standard .tmp files
@@ -346,6 +341,13 @@ class TestAtomicFileOperations:
         ]
 
         for original_file, temp_file in test_cases:
+            mock_callback = Mock()
+            buffer = EventBuffer(
+                window_ms=100,
+                grouping_mode="smart",
+                emit_callback=mock_callback,
+            )
+
             events = [
                 FileChangeEvent(
                     description="Original file",
@@ -361,9 +363,25 @@ class TestAtomicFileOperations:
                 ),
             ]
 
-            # Test pattern detection
-            patterns = buffer._find_temp_file_patterns(events)
+            # Add events to buffer
+            for event in events:
+                buffer.add_event(event)
 
-            # Should detect the pattern
-            assert original_file in patterns
-            assert temp_file in patterns[original_file]
+            # Wait for buffer to flush
+            await asyncio.sleep(0.15)
+
+            # Should have emitted something
+            assert mock_callback.call_count >= 1, \
+                f"No events emitted for {original_file} / {temp_file}"
+
+            # Verify the original file was included in emitted events
+            all_emitted = [call[0][0] for call in mock_callback.call_args_list]
+            file_paths_emitted = []
+            for emitted in all_emitted:
+                if hasattr(emitted, "file_paths"):
+                    file_paths_emitted.extend(emitted.file_paths)
+                elif hasattr(emitted, "file_path"):
+                    file_paths_emitted.append(emitted.file_path)
+
+            assert original_file in file_paths_emitted, \
+                f"Original file {original_file} not found in emitted events for pattern {temp_file}"
