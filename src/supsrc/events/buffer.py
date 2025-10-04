@@ -120,13 +120,18 @@ class EventBuffer:
             # Convert to FileEvent for operation detection
             file_event = self._convert_to_file_event(event)
 
-            # Check if this is a temp file
-            is_temp = is_temp_file(file_event.path)
+            # Check if this involves a temp file (source or destination)
+            is_temp_source = is_temp_file(file_event.path)
+            is_temp_dest = file_event.dest_path and is_temp_file(file_event.dest_path)
+            is_temp = is_temp_source or is_temp_dest
 
             log.trace(
                 "Streaming detection",
                 file_path=str(event.file_path),
+                dest_path=str(event.dest_path) if event.dest_path else None,
                 is_temp=is_temp,
+                is_temp_source=is_temp_source,
+                is_temp_dest=is_temp_dest,
                 change_type=event.change_type,
             )
 
@@ -147,19 +152,15 @@ class EventBuffer:
                 buffered_event = self._create_operation_event(operation, [event])
                 if self.emit_callback:
                     self.emit_callback(buffered_event)
-            elif not is_temp:
-                # Non-temp file without operation -> emit as single event
-                log.trace(
-                    "Non-temp file, no operation detected, emitting single event",
-                    file_path=str(event.file_path),
-                )
-                if self.emit_callback:
-                    self.emit_callback(event)
             else:
-                # Temp file, no operation yet -> buffer silently
+                # No operation detected yet
+                # In smart mode, we buffer ALL events (temp and non-temp) to allow
+                # the detector's time window to group them properly.
+                # The detector will flush them when the time window expires.
                 log.trace(
-                    "Temp file buffered, waiting for operation completion",
+                    "Event buffered for streaming detection",
                     file_path=str(event.file_path),
+                    is_temp=is_temp,
                 )
 
             return
