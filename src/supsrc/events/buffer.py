@@ -37,6 +37,7 @@ from provide.foundation.file.operations import (
     OperationDetector,
     OperationType,
 )
+from provide.foundation.file.operations.detectors.helpers import is_temp_file
 
 log = get_logger("events.buffer")
 
@@ -65,6 +66,8 @@ class EventBuffer:
         self._buffers: dict[str, list[FileChangeEvent]] = defaultdict(list)
         # Active timer handles for each repo
         self._timers: dict[str, asyncio.TimerHandle] = {}
+        # Sequence counter for streaming detection
+        self._sequence_counter: dict[str, int] = defaultdict(int)
 
         # Initialize operation detector for smart grouping
         if grouping_mode == GROUPING_MODE_SMART:
@@ -90,7 +93,11 @@ class EventBuffer:
         log.debug("EventBuffer initialized", window_ms=window_ms, grouping_mode=grouping_mode)
 
     def add_event(self, event: FileChangeEvent) -> None:
-        """Add a file change event to the buffer."""
+        """Add a file change event to the buffer.
+
+        For smart grouping mode, uses streaming detection to hide temp files
+        until atomic operations complete.
+        """
         log.trace(
             "Event received",
             repo_id=event.repo_id,
@@ -107,6 +114,57 @@ class EventBuffer:
             return
 
         repo_id = event.repo_id
+
+        # SMART MODE: Streaming detection with temp file hiding
+        if self.grouping_mode == GROUPING_MODE_SMART and self._operation_detector:
+            # Convert to FileEvent for operation detection
+            file_event = self._convert_to_file_event(event)
+
+            # Check if this is a temp file
+            is_temp = is_temp_file(file_event.path)
+
+            log.trace(
+                "Streaming detection",
+                file_path=str(event.file_path),
+                is_temp=is_temp,
+                change_type=event.change_type,
+            )
+
+            # Try streaming detection
+            operation = self._operation_detector.detect_streaming(file_event)
+
+            if operation:
+                # Operation completed! Emit the final result
+                log.debug(
+                    "Operation completed",
+                    operation_type=operation.operation_type.value,
+                    primary_path=str(operation.primary_path),
+                    event_count=operation.event_count,
+                    is_atomic=operation.is_atomic,
+                )
+
+                # Create buffered event and emit
+                buffered_event = self._create_operation_event(operation, [event])
+                if self.emit_callback:
+                    self.emit_callback(buffered_event)
+            elif not is_temp:
+                # Non-temp file without operation -> emit as single event
+                log.trace(
+                    "Non-temp file, no operation detected, emitting single event",
+                    file_path=str(event.file_path),
+                )
+                if self.emit_callback:
+                    self.emit_callback(event)
+            else:
+                # Temp file, no operation yet -> buffer silently
+                log.trace(
+                    "Temp file buffered, waiting for operation completion",
+                    file_path=str(event.file_path),
+                )
+
+            return
+
+        # SIMPLE MODE or fallback: Use time-window buffering
         self._buffers[repo_id].append(event)
 
         # Cancel any existing timer for this repo
@@ -332,6 +390,38 @@ class EventBuffer:
         )
         return self._group_events_simple(events)
 
+    def _convert_to_file_event(self, event: FileChangeEvent) -> FileEvent:
+        """Convert a single FileChangeEvent to FileEvent for operation detection."""
+        repo_id = event.repo_id
+        self._sequence_counter[repo_id] += 1
+
+        # Create metadata with timing and sequence info
+        metadata = FileEventMetadata(
+            timestamp=event.timestamp,
+            sequence_number=self._sequence_counter[repo_id],
+            size_before=None,
+            size_after=None,
+        )
+
+        # Map change types to event types expected by operation detector
+        event_type_map = {
+            "created": "created",
+            "modified": "modified",
+            "deleted": "deleted",
+            "moved": "moved",
+        }
+        event_type = event_type_map.get(event.change_type, "modified")
+
+        # Handle dest_path if available
+        dest_path = getattr(event, "dest_path", None)
+
+        return FileEvent(
+            path=event.file_path,
+            event_type=event_type,
+            metadata=metadata,
+            dest_path=dest_path,
+        )
+
     def _convert_to_file_events(self, events: list[FileChangeEvent]) -> list:
         """Convert FileChangeEvents to FileEvents for operation detection."""
         file_events = []
@@ -447,7 +537,30 @@ class EventBuffer:
         )
 
     def flush_all(self) -> None:
-        """Flush all pending buffers immediately."""
+        """Flush all pending buffers immediately.
+
+        For smart grouping, also flushes any incomplete operations from the
+        streaming detector, showing temp files if they never completed.
+        """
+        # Flush streaming detector if in smart mode
+        if self.grouping_mode == GROUPING_MODE_SMART and self._operation_detector:
+            pending_operations = self._operation_detector.flush()
+
+            for operation in pending_operations:
+                log.debug(
+                    "Flushing incomplete operation on shutdown",
+                    operation_type=operation.operation_type.value,
+                    primary_path=str(operation.primary_path),
+                    event_count=operation.event_count,
+                )
+
+                # Emit the incomplete operation
+                # Note: original_events is empty since we don't track them in streaming mode
+                buffered_event = self._create_operation_event(operation, [])
+                if self.emit_callback:
+                    self.emit_callback(buffered_event)
+
+        # Flush time-window buffers (for simple mode or fallback)
         repo_ids = list(self._buffers.keys())
         for repo_id in repo_ids:
             if repo_id in self._timers:
