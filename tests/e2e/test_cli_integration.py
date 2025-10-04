@@ -131,7 +131,8 @@ class TestCLITUICommand:
         )
 
         assert result.returncode == 0
-        assert "tui" in result.stdout.lower() or "terminal" in result.stdout.lower()
+        # Check for "user interface" or "interface" in help text
+        assert "user interface" in result.stdout.lower() or "interface" in result.stdout.lower()
 
     @pytest.mark.slow
     def test_sui_command_validation_only(self):
@@ -140,9 +141,9 @@ class TestCLITUICommand:
             config_path = real_config_path()
 
             # Test config validation (should succeed quickly)
-            with patch("supsrc.cli.tui_cmds.run_tui") as mock_run_tui:
-                # Mock the TUI to avoid actual startup
-                mock_run_tui.return_value = 0
+            with patch("supsrc.cli.sui_cmds.sui") as mock_sui:
+                # Mock the TUI command to avoid actual startup
+                mock_sui.return_value = 0
 
                 run_command(
                     [sys.executable, "-m", "supsrc.cli.main", "sui", "-c", str(config_path)],

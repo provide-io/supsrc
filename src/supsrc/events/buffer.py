@@ -252,10 +252,12 @@ class EventBuffer:
 
         if not self._operation_detector or not HAS_OPERATION_DETECTION:
             # Fallback to simple grouping if detector not available
-            log.debug(
+            log.warning(
                 "OperationDetector not available, falling back to simple grouping",
                 has_detector=bool(self._operation_detector),
                 has_foundation=HAS_OPERATION_DETECTION,
+                event_count=len(events),
+                reason="Operation detector not initialized or foundation not available",
             )
             return self._group_events_simple(events)
 
@@ -302,12 +304,21 @@ class EventBuffer:
 
             # Handle any events that weren't part of detected operations
             remaining_events = [e for e in events if e.file_path not in processed_paths]
-            log.debug(
-                "Processing remaining events",
-                remaining_count=len(remaining_events),
-                total_events=len(events),
-                processed_paths=len(processed_paths),
-            )
+
+            if remaining_events:
+                log.info(
+                    "Some events not matched by operation detector",
+                    remaining_count=len(remaining_events),
+                    total_events=len(events),
+                    processed_paths=len(processed_paths),
+                    remaining_files=[str(e.file_path) for e in remaining_events[:3]],  # First 3
+                )
+            else:
+                log.debug(
+                    "All events matched by operation detector",
+                    total_events=len(events),
+                    operations_detected=len(operations),
+                )
 
             if remaining_events:
                 remaining_buffered = self._group_events_simple(remaining_events)
@@ -325,7 +336,12 @@ class EventBuffer:
             return buffered_events
 
         # Fall back to simple grouping if no operations detected
-        log.debug("No operations detected, falling back to simple grouping")
+        log.info(
+            "No operations detected by foundation detector, using simple grouping",
+            event_count=len(events),
+            event_types=[e.change_type for e in events[:5]],  # First 5
+            file_paths=[str(e.file_path) for e in events[:5]],  # First 5
+        )
         return self._group_events_simple(events)
 
     def _convert_to_file_events(self, events: list[FileChangeEvent]) -> list:

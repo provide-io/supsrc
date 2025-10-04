@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from provide.testkit.mocking import patch
 
 from supsrc.config import SupsrcConfig
 from supsrc.protocols import CommitResult, PushResult, RepoStatusResult, StageResult
@@ -39,10 +40,10 @@ def runtime_workflow(
     return RuntimeWorkflow(minimal_config, states, engines, tui)
 
 
-@pytest.mark.asyncio
 class TestRuntimeWorkflow:
     """Comprehensive tests for the RuntimeWorkflow."""
 
+    @pytest.mark.asyncio
     async def test_execute_full_sequence_success(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
     ):
@@ -92,6 +93,7 @@ class TestRuntimeWorkflow:
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
 
+    @pytest.mark.asyncio
     async def test_execute_sequence_external_commit_detected(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
     ):
@@ -134,6 +136,7 @@ class TestRuntimeWorkflow:
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
 
+    @pytest.mark.asyncio
     async def test_execute_sequence_commit_failure(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
     ):
@@ -155,6 +158,7 @@ class TestRuntimeWorkflow:
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
 
+    @pytest.mark.asyncio
     async def test_execute_sequence_push_failure(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
     ):
@@ -225,17 +229,19 @@ class TestRuntimeWorkflow:
         # Should not raise an error
         runtime_workflow._emit_event(test_event)
 
+    @pytest.mark.asyncio
     async def test_delayed_reset_after_external_commit(self, runtime_workflow: RuntimeWorkflow):
         """Test delayed reset after external commit detection."""
         repo_state = runtime_workflow.repo_states["test_repo_1"]
 
         # Mock the sleep to avoid actual delay in tests
-        with pytest.mock.patch("asyncio.sleep") as mock_sleep:
+        with patch("asyncio.sleep") as mock_sleep:
             await runtime_workflow._delayed_reset_after_external_commit(repo_state)
 
         mock_sleep.assert_called_once_with(2.0)
         runtime_workflow.tui.post_state_update.assert_called()
 
+    @pytest.mark.asyncio
     async def test_execute_sequence_with_exception(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
     ):
@@ -250,7 +256,7 @@ class TestRuntimeWorkflow:
         # Should handle exception and set error state
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
-        assert "Unexpected action failure" in repo_state.status_message
+        assert "Action failure" in repo_state.error_message
 
     async def test_llm_provider_failure_handling(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
@@ -271,4 +277,4 @@ class TestRuntimeWorkflow:
         # Should handle LLM failure and set error state
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
-        assert "LLM provider failed" in repo_state.status_message
+        assert "LLM provider failed" in repo_state.error_message
