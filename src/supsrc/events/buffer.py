@@ -68,23 +68,24 @@ class EventBuffer:
         self._timers: dict[str, asyncio.TimerHandle] = {}
         # Sequence counter for streaming detection
         self._sequence_counter: dict[str, int] = defaultdict(int)
+        # Per-repo operation detectors for smart mode
+        self._operation_detectors: dict[str, OperationDetector] = {}
 
-        # Initialize operation detector for smart grouping
+        # Store detector config for creating per-repo detectors
         if grouping_mode == GROUPING_MODE_SMART:
-            detector_config = DetectorConfig(
+            self._detector_config = DetectorConfig(
                 time_window_ms=window_ms,
                 min_confidence=DEFAULT_MIN_CONFIDENCE,
                 temp_patterns=DEFAULT_TEMP_FILE_PATTERNS,
             )
-            self._operation_detector = OperationDetector(detector_config)
             log.debug(
-                "OperationDetector initialized",
+                "Smart mode enabled, using per-repo operation detectors",
                 time_window_ms=window_ms,
                 min_confidence=DEFAULT_MIN_CONFIDENCE,
                 temp_patterns_count=len(DEFAULT_TEMP_FILE_PATTERNS),
             )
         else:
-            self._operation_detector = None
+            self._detector_config = None
             log.debug(
                 "OperationDetector disabled",
                 grouping_mode=grouping_mode,
