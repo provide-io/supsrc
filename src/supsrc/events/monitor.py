@@ -20,7 +20,8 @@ class FileChangeEvent(BaseEvent):
     source: str = attrs.field(default="monitor", init=False)
     repo_id: str = attrs.field(kw_only=True)
     file_path: Path = attrs.field(kw_only=True)
-    change_type: str = attrs.field(kw_only=True)  # 'created', 'modified', 'deleted'
+    change_type: str = attrs.field(kw_only=True)  # 'created', 'modified', 'deleted', 'moved'
+    dest_path: Path | None = attrs.field(kw_only=True, default=None)  # Destination for 'moved' events
 
     def format(self) -> str:
         """Format file change event for display."""
@@ -32,6 +33,11 @@ class FileChangeEvent(BaseEvent):
             "moved": "\U0001f504",  # COUNTERCLOCKWISE ARROWS BUTTON
         }
         emoji = emoji_map.get(self.change_type, "\U0001f4c4")  # PAGE FACING UP
+
+        # For move events, show source → destination
+        if self.change_type == "moved" and self.dest_path:
+            return f"[{time_str}] {emoji} [{self.repo_id}] {self.file_path.name} → {self.dest_path.name}"
+
         return f"[{time_str}] {emoji} [{self.repo_id}] {self.file_path.name} {self.change_type}"
 
 
