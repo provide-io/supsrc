@@ -356,26 +356,31 @@ class EventBuffer:
     def _get_or_create_detector(self, repo_id: str) -> OperationDetector:
         """Get or create operation detector for a repository."""
         if repo_id not in self._operation_detectors:
+            # Create repo-specific callback that captures repo_id
+            def on_operation_complete(operation: Any) -> None:
+                self._on_operation_complete(operation, repo_id)
+
             # Create new detector with callback
             detector = OperationDetector(
-                config=self._detector_config, on_operation_complete=self._on_operation_complete
+                config=self._detector_config, on_operation_complete=on_operation_complete
             )
             self._operation_detectors[repo_id] = detector
             log.debug("Created operation detector for repo", repo_id=repo_id)
 
         return self._operation_detectors[repo_id]
 
-    def _on_operation_complete(self, operation: Any) -> None:
+    def _on_operation_complete(self, operation: Any, repo_id: str) -> None:
         """Callback when foundation detects a completed operation."""
         log.debug(
             "Operation completed callback",
             operation_type=operation.operation_type.value,
             primary_path=str(operation.primary_path),
             event_count=operation.event_count,
+            repo_id=repo_id,
         )
 
         # Convert foundation operation to buffered event
-        buffered_event = self._create_operation_event(operation, [])
+        buffered_event = self._create_operation_event(operation, repo_id)
 
         # Emit via callback
         if self.emit_callback:
@@ -448,7 +453,7 @@ class EventBuffer:
         return file_events
 
     def _create_operation_event(
-        self, operation: Any, original_events: list[FileChangeEvent]
+        self, operation: Any, repo_id: str
     ) -> BufferedFileChangeEvent:
         """Create a BufferedFileChangeEvent from a detected FileOperation."""
         # Map operation types to our buffer operation types
@@ -467,9 +472,6 @@ class EventBuffer:
             file_paths = operation.files_affected
         else:
             file_paths = [operation.primary_path]
-
-        # Find the repo_id from original events
-        repo_id = original_events[0].repo_id if original_events else "unknown"
 
         # Determine primary change type based on operation
         if operation.operation_type in (OperationType.ATOMIC_SAVE, OperationType.SAFE_WRITE):
