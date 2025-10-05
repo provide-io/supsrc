@@ -37,7 +37,6 @@ from provide.foundation.file.operations import (
     OperationDetector,
     OperationType,
 )
-from provide.foundation.file.operations.detectors.helpers import is_temp_file
 
 log = get_logger("events.buffer")
 
@@ -116,53 +115,15 @@ class EventBuffer:
 
         repo_id = event.repo_id
 
-        # SMART MODE: Streaming detection with temp file hiding
-        if self.grouping_mode == GROUPING_MODE_SMART and self._operation_detector:
-            # Convert to FileEvent for operation detection
+        # SMART MODE: Use foundation's callback-based streaming detection
+        if self.grouping_mode == GROUPING_MODE_SMART and self._detector_config:
+            # Get or create detector for this repo
+            detector = self._get_or_create_detector(repo_id)
+
+            # Convert to FileEvent and pass to detector
+            # Foundation handles everything: temp file hiding, auto-flush, callbacks
             file_event = self._convert_to_file_event(event)
-
-            # Check if this involves a temp file (source or destination)
-            is_temp_source = is_temp_file(file_event.path)
-            is_temp_dest = file_event.dest_path and is_temp_file(file_event.dest_path)
-            is_temp = is_temp_source or is_temp_dest
-
-            log.trace(
-                "Streaming detection",
-                file_path=str(event.file_path),
-                dest_path=str(event.dest_path) if event.dest_path else None,
-                is_temp=is_temp,
-                is_temp_source=is_temp_source,
-                is_temp_dest=is_temp_dest,
-                change_type=event.change_type,
-            )
-
-            # Try streaming detection
-            operation = self._operation_detector.detect_streaming(file_event)
-
-            if operation:
-                # Operation completed! Emit the final result
-                log.debug(
-                    "Operation completed",
-                    operation_type=operation.operation_type.value,
-                    primary_path=str(operation.primary_path),
-                    event_count=operation.event_count,
-                    is_atomic=operation.is_atomic,
-                )
-
-                # Create buffered event and emit
-                buffered_event = self._create_operation_event(operation, [event])
-                if self.emit_callback:
-                    self.emit_callback(buffered_event)
-            else:
-                # No operation detected yet
-                # In smart mode, we buffer ALL events (temp and non-temp) to allow
-                # the detector's time window to group them properly.
-                # The detector will flush them when the time window expires.
-                log.trace(
-                    "Event buffered for streaming detection",
-                    file_path=str(event.file_path),
-                    is_temp=is_temp,
-                )
+            detector.add_event(file_event)
 
             return
 
@@ -392,6 +353,34 @@ class EventBuffer:
         )
         return self._group_events_simple(events)
 
+    def _get_or_create_detector(self, repo_id: str) -> OperationDetector:
+        """Get or create operation detector for a repository."""
+        if repo_id not in self._operation_detectors:
+            # Create new detector with callback
+            detector = OperationDetector(
+                config=self._detector_config, on_operation_complete=self._on_operation_complete
+            )
+            self._operation_detectors[repo_id] = detector
+            log.debug("Created operation detector for repo", repo_id=repo_id)
+
+        return self._operation_detectors[repo_id]
+
+    def _on_operation_complete(self, operation: Any) -> None:
+        """Callback when foundation detects a completed operation."""
+        log.debug(
+            "Operation completed callback",
+            operation_type=operation.operation_type.value,
+            primary_path=str(operation.primary_path),
+            event_count=operation.event_count,
+        )
+
+        # Convert foundation operation to buffered event
+        buffered_event = self._create_operation_event(operation, [])
+
+        # Emit via callback
+        if self.emit_callback:
+            self.emit_callback(buffered_event)
+
     def _convert_to_file_event(self, event: FileChangeEvent) -> FileEvent:
         """Convert a single FileChangeEvent to FileEvent for operation detection."""
         repo_id = event.repo_id
@@ -542,25 +531,26 @@ class EventBuffer:
         """Flush all pending buffers immediately.
 
         For smart grouping, also flushes any incomplete operations from the
-        streaming detector, showing temp files if they never completed.
+        streaming detectors, showing temp files if they never completed.
         """
-        # Flush streaming detector if in smart mode
-        if self.grouping_mode == GROUPING_MODE_SMART and self._operation_detector:
-            pending_operations = self._operation_detector.flush()
+        # Flush streaming detectors if in smart mode
+        if self.grouping_mode == GROUPING_MODE_SMART:
+            for repo_id, detector in self._operation_detectors.items():
+                pending_operations = detector.flush()
 
-            for operation in pending_operations:
-                log.debug(
-                    "Flushing incomplete operation on shutdown",
-                    operation_type=operation.operation_type.value,
-                    primary_path=str(operation.primary_path),
-                    event_count=operation.event_count,
-                )
+                for operation in pending_operations:
+                    log.debug(
+                        "Flushing incomplete operation on shutdown",
+                        repo_id=repo_id,
+                        operation_type=operation.operation_type.value,
+                        primary_path=str(operation.primary_path),
+                        event_count=operation.event_count,
+                    )
 
-                # Emit the incomplete operation
-                # Note: original_events is empty since we don't track them in streaming mode
-                buffered_event = self._create_operation_event(operation, [])
-                if self.emit_callback:
-                    self.emit_callback(buffered_event)
+                    # Emit the incomplete operation
+                    buffered_event = self._create_operation_event(operation, [])
+                    if self.emit_callback:
+                        self.emit_callback(buffered_event)
 
         # Flush time-window buffers (for simple mode or fallback)
         repo_ids = list(self._buffers.keys())
