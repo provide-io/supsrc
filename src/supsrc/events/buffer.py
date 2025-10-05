@@ -65,23 +65,26 @@ class EventBuffer:
         self._buffers: dict[str, list[FileChangeEvent]] = defaultdict(list)
         # Active timer handles for each repo
         self._timers: dict[str, asyncio.TimerHandle] = {}
+        # Sequence counter for streaming detection
+        self._sequence_counter: dict[str, int] = defaultdict(int)
+        # Per-repo operation detectors for smart mode
+        self._operation_detectors: dict[str, OperationDetector] = {}
 
-        # Initialize operation detector for smart grouping
+        # Store detector config for creating per-repo detectors
         if grouping_mode == GROUPING_MODE_SMART:
-            detector_config = DetectorConfig(
+            self._detector_config = DetectorConfig(
                 time_window_ms=window_ms,
                 min_confidence=DEFAULT_MIN_CONFIDENCE,
                 temp_patterns=DEFAULT_TEMP_FILE_PATTERNS,
             )
-            self._operation_detector = OperationDetector(detector_config)
             log.debug(
-                "OperationDetector initialized",
+                "Smart mode enabled, using per-repo operation detectors",
                 time_window_ms=window_ms,
                 min_confidence=DEFAULT_MIN_CONFIDENCE,
                 temp_patterns_count=len(DEFAULT_TEMP_FILE_PATTERNS),
             )
         else:
-            self._operation_detector = None
+            self._detector_config = None
             log.debug(
                 "OperationDetector disabled",
                 grouping_mode=grouping_mode,
@@ -90,7 +93,11 @@ class EventBuffer:
         log.debug("EventBuffer initialized", window_ms=window_ms, grouping_mode=grouping_mode)
 
     def add_event(self, event: FileChangeEvent) -> None:
-        """Add a file change event to the buffer."""
+        """Add a file change event to the buffer.
+
+        For smart grouping mode, uses streaming detection to hide temp files
+        until atomic operations complete.
+        """
         log.trace(
             "Event received",
             repo_id=event.repo_id,
@@ -107,6 +114,20 @@ class EventBuffer:
             return
 
         repo_id = event.repo_id
+
+        # SMART MODE: Use foundation's callback-based streaming detection
+        if self.grouping_mode == GROUPING_MODE_SMART and self._detector_config:
+            # Get or create detector for this repo
+            detector = self._get_or_create_detector(repo_id)
+
+            # Convert to FileEvent and pass to detector
+            # Foundation handles everything: temp file hiding, auto-flush, callbacks
+            file_event = self._convert_to_file_event(event)
+            detector.add_event(file_event)
+
+            return
+
+        # SIMPLE MODE or fallback: Use time-window buffering
         self._buffers[repo_id].append(event)
 
         # Cancel any existing timer for this repo
@@ -231,143 +252,75 @@ class EventBuffer:
         )
         return grouped_events
 
-    def _group_events_smart(self, events: list[FileChangeEvent]) -> list[BufferedFileChangeEvent]:
-        """Group events using smart pattern recognition via provide-foundation."""
-        log.debug("Starting smart event grouping", event_count=len(events))
 
-        if len(events) == 1:
-            log.trace("Single event, skipping smart detection")
-            return [self._create_single_event_group(events[0])]
+    def _get_or_create_detector(self, repo_id: str) -> OperationDetector:
+        """Get or create operation detector for a repository."""
+        if repo_id not in self._operation_detectors:
+            # Create repo-specific callback that captures repo_id
+            def on_operation_complete(operation: Any) -> None:
+                self._on_operation_complete(operation, repo_id)
 
-        if not self._operation_detector:
-            # Fallback to simple grouping if detector not initialized
-            log.warning(
-                "OperationDetector not initialized, falling back to simple grouping",
-                has_detector=bool(self._operation_detector),
-                event_count=len(events),
-                reason="Operation detector not initialized (grouping mode may not be 'smart')",
+            # Create new detector with callback
+            detector = OperationDetector(
+                config=self._detector_config, on_operation_complete=on_operation_complete
             )
-            return self._group_events_simple(events)
+            self._operation_detectors[repo_id] = detector
+            log.debug("Created operation detector for repo", repo_id=repo_id)
 
-        # Convert FileChangeEvents to FileEvents for operation detection
-        file_events = self._convert_to_file_events(events)
-        log.trace("Converted to foundation FileEvents", file_event_count=len(file_events))
+        return self._operation_detectors[repo_id]
 
-        # Detect operations using foundation's detector
-        operations = self._operation_detector.detect(file_events)
-        log.debug("Operations detected", operation_count=len(operations))
-
-        for i, operation in enumerate(operations):
-            log.trace(
-                "Detected operation",
-                index=i,
-                operation_type=operation.operation_type.value,
-                primary_path=str(operation.primary_path),
-                confidence=operation.confidence,
-                event_count=operation.event_count,
-                is_atomic=operation.is_atomic,
-            )
-
-        if operations:
-            # Convert detected operations back to BufferedFileChangeEvents
-            buffered_events = []
-            processed_paths = set()
-
-            for operation in operations:
-                # Track which file paths were part of operations
-                for event in operation.events:
-                    processed_paths.add(event.path)
-                    log.trace("Marking path as processed", path=str(event.path))
-
-                # Create buffered event for this operation
-                buffered_event = self._create_operation_event(operation, events)
-                buffered_events.append(buffered_event)
-                log.debug(
-                    "Created buffered event for operation",
-                    operation_type=buffered_event.operation_type,
-                    primary_path=str(buffered_event.file_paths[0])
-                    if buffered_event.file_paths
-                    else "none",
-                )
-
-            # Handle any events that weren't part of detected operations
-            remaining_events = [e for e in events if e.file_path not in processed_paths]
-
-            if remaining_events:
-                log.info(
-                    "Some events not matched by operation detector",
-                    remaining_count=len(remaining_events),
-                    total_events=len(events),
-                    processed_paths=len(processed_paths),
-                    remaining_files=[str(e.file_path) for e in remaining_events[:3]],  # First 3
-                )
-            else:
-                log.debug(
-                    "All events matched by operation detector",
-                    total_events=len(events),
-                    operations_detected=len(operations),
-                )
-
-            if remaining_events:
-                remaining_buffered = self._group_events_simple(remaining_events)
-                buffered_events.extend(remaining_buffered)
-                log.debug(
-                    "Added remaining events", remaining_buffered_count=len(remaining_buffered)
-                )
-
-            log.debug(
-                "Smart grouping complete",
-                input_events=len(events),
-                operations_detected=len(operations),
-                output_groups=len(buffered_events),
-            )
-            return buffered_events
-
-        # Fall back to simple grouping if no operations detected
-        log.info(
-            "No operations detected by foundation detector, using simple grouping",
-            event_count=len(events),
-            event_types=[e.change_type for e in events[:5]],  # First 5
-            file_paths=[str(e.file_path) for e in events[:5]],  # First 5
+    def _on_operation_complete(self, operation: Any, repo_id: str) -> None:
+        """Callback when foundation detects a completed operation."""
+        log.debug(
+            "Operation completed callback",
+            operation_type=operation.operation_type.value,
+            primary_path=str(operation.primary_path),
+            event_count=operation.event_count,
+            repo_id=repo_id,
         )
-        return self._group_events_simple(events)
 
-    def _convert_to_file_events(self, events: list[FileChangeEvent]) -> list:
-        """Convert FileChangeEvents to FileEvents for operation detection."""
-        file_events = []
+        # Convert foundation operation to buffered event
+        buffered_event = self._create_operation_event(operation, repo_id)
 
-        for i, event in enumerate(events):
-            # Create metadata with timing and sequence info
-            metadata = FileEventMetadata(
-                timestamp=event.timestamp,
-                sequence_number=i + 1,
-                # Note: FileChangeEvent doesn't have size info, so we leave it None
-                size_before=None,
-                size_after=None,
-            )
+        # Emit via callback
+        if self.emit_callback:
+            self.emit_callback(buffered_event)
 
-            # Map change types to event types expected by operation detector
-            event_type_map = {
-                "created": "created",
-                "modified": "modified",
-                "deleted": "deleted",
-                "moved": "moved",
-            }
-            event_type = event_type_map.get(event.change_type, "modified")
+    def _convert_to_file_event(self, event: FileChangeEvent) -> FileEvent:
+        """Convert a single FileChangeEvent to FileEvent for operation detection."""
+        repo_id = event.repo_id
+        self._sequence_counter[repo_id] += 1
 
-            file_event = FileEvent(
-                path=event.file_path,
-                event_type=event_type,
-                metadata=metadata,
-                # FileChangeEvent doesn't have dest_path, would need to be added if needed
-                dest_path=None,
-            )
-            file_events.append(file_event)
+        # Create metadata with timing and sequence info
+        metadata = FileEventMetadata(
+            timestamp=event.timestamp,
+            sequence_number=self._sequence_counter[repo_id],
+            size_before=None,
+            size_after=None,
+        )
 
-        return file_events
+        # Map change types to event types expected by operation detector
+        event_type_map = {
+            "created": "created",
+            "modified": "modified",
+            "deleted": "deleted",
+            "moved": "moved",
+        }
+        event_type = event_type_map.get(event.change_type, "modified")
+
+        # Handle dest_path if available
+        dest_path = getattr(event, "dest_path", None)
+
+        return FileEvent(
+            path=event.file_path,
+            event_type=event_type,
+            metadata=metadata,
+            dest_path=dest_path,
+        )
+
 
     def _create_operation_event(
-        self, operation: Any, original_events: list[FileChangeEvent]
+        self, operation: Any, repo_id: str
     ) -> BufferedFileChangeEvent:
         """Create a BufferedFileChangeEvent from a detected FileOperation."""
         # Map operation types to our buffer operation types
@@ -386,9 +339,6 @@ class EventBuffer:
             file_paths = operation.files_affected
         else:
             file_paths = [operation.primary_path]
-
-        # Find the repo_id from original events
-        repo_id = original_events[0].repo_id if original_events else "unknown"
 
         # Determine primary change type based on operation
         if operation.operation_type in (OperationType.ATOMIC_SAVE, OperationType.SAFE_WRITE):
@@ -447,7 +397,31 @@ class EventBuffer:
         )
 
     def flush_all(self) -> None:
-        """Flush all pending buffers immediately."""
+        """Flush all pending buffers immediately.
+
+        For smart grouping, also flushes any incomplete operations from the
+        streaming detectors, showing temp files if they never completed.
+        """
+        # Flush streaming detectors if in smart mode
+        if self.grouping_mode == GROUPING_MODE_SMART:
+            for repo_id, detector in self._operation_detectors.items():
+                pending_operations = detector.flush()
+
+                for operation in pending_operations:
+                    log.debug(
+                        "Flushing incomplete operation on shutdown",
+                        repo_id=repo_id,
+                        operation_type=operation.operation_type.value,
+                        primary_path=str(operation.primary_path),
+                        event_count=operation.event_count,
+                    )
+
+                    # Emit the incomplete operation
+                    buffered_event = self._create_operation_event(operation, [])
+                    if self.emit_callback:
+                        self.emit_callback(buffered_event)
+
+        # Flush time-window buffers (for simple mode or fallback)
         repo_ids = list(self._buffers.keys())
         for repo_id in repo_ids:
             if repo_id in self._timers:

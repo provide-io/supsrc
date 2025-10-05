@@ -151,13 +151,15 @@ class EventProcessor:
 
                             # Use buffering if enabled, otherwise emit directly
                             if self._event_buffer:
-                                self._event_buffer.add_event(change_event)
-                                log.debug(
-                                    "File change event added to buffer",
+                                log.info(
+                                    "📥 RAW EVENT RECEIVED",
                                     event_type=event.event_type,
                                     file_name=event.src_path.name,
+                                    dest_name=event.dest_path.name if event.dest_path else None,
                                     repo_id=event.repo_id,
+                                    timestamp=change_event.timestamp.strftime("%H:%M:%S.%f"),
                                 )
+                                self._event_buffer.add_event(change_event)
                             else:
                                 self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
                                 log.debug(
@@ -399,12 +401,19 @@ class EventProcessor:
             and hasattr(self.tui.app, "event_collector")
         ):
             try:
-                self.tui.app.event_collector.emit(event)  # type: ignore[arg-type,union-attr]
-                log.debug(
-                    "Buffered event emitted successfully",
-                    event_type=getattr(event, "operation_type", "unknown"),
+                file_paths = getattr(event, "file_paths", [])
+                file_names = [p.name for p in file_paths] if file_paths else []
+
+                log.info(
+                    "📤 EMITTING BUFFERED EVENT",
+                    operation_type=getattr(event, "operation_type", "unknown"),
+                    file_names=file_names,
+                    event_count=getattr(event, "event_count", 1),
                     repo_id=getattr(event, "repo_id", "unknown"),
+                    timestamp=event.timestamp.strftime("%H:%M:%S.%f"),
                 )
+
+                self.tui.app.event_collector.emit(event)  # type: ignore[arg-type,union-attr]
             except Exception as e:
                 log.warning(
                     "Failed to emit buffered TUI event",
