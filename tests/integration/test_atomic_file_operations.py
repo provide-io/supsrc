@@ -67,8 +67,9 @@ class TestAtomicFileOperations:
             FileChangeEvent(
                 description="Rename temp to original",
                 repo_id=repo_id,
-                file_path=file_path,
+                file_path=temp_file,  # Source of the move
                 change_type="moved",
+                dest_path=file_path,  # Destination of the move
             ),
         ]
 
