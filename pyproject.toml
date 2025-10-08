@@ -36,7 +36,7 @@ classifiers = [
 
 # --- Core Dependencies ---
 dependencies = [
-    "provide-foundation[all]>=0.0.0.dev3",
+    "provide-foundation[all]>=0.0.31",
     "cattrs>=24.1.3",
     "pygit2>=1.18.0",
     "watchdog>=6.0.0",
