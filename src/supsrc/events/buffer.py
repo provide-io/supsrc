@@ -256,14 +256,8 @@ class EventBuffer:
     def _get_or_create_detector(self, repo_id: str) -> OperationDetector:
         """Get or create operation detector for a repository."""
         if repo_id not in self._operation_detectors:
-            # Create repo-specific callback that captures repo_id
-            def on_operation_complete(operation: Any) -> None:
-                self._on_operation_complete(operation, repo_id)
-
-            # Create new detector with callback
-            detector = OperationDetector(
-                config=self._detector_config, on_operation_complete=on_operation_complete
-            )
+            # Create new detector (no callback support in old API)
+            detector = OperationDetector(config=self._detector_config)
             self._operation_detectors[repo_id] = detector
             log.debug("Created operation detector for repo", repo_id=repo_id)
 
