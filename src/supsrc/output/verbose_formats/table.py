@@ -312,7 +312,7 @@ class TableVerboseFormatter:
                 return f"{left}{c['horizontal']} {title} {c['horizontal'] * remaining_width}{right}"
             else:
                 # Title too long, truncate
-                truncated = title[:width - 5] + "..."
+                truncated = title[: width - 5] + "..."
                 return f"{left}{c['horizontal']} {truncated} {c['horizontal']}{right}"
         else:
             # Simple border: └────────────────────┘
