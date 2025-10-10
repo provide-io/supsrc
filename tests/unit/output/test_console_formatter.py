@@ -139,10 +139,7 @@ class TestConsoleEventFormatter:
         formatter = ConsoleEventFormatter()
 
         event = FileChangeEvent(
-            timestamp=datetime.now(),
-            source="monitor",
             description="Test event",
-            metadata={},
             repo_id="test-repo",
             file_path=Path("test.py"),
             change_type="modified",
@@ -157,10 +154,7 @@ class TestConsoleEventFormatter:
         formatter = ConsoleEventFormatter()
 
         event = GitCommitEvent(
-            timestamp=datetime.now(),
-            source="git",
             description="Committed files",
-            metadata={},
             repo_id="test-repo",
             commit_hash="abc123",
             branch="main",
@@ -230,10 +224,7 @@ class TestConsoleEventFormatter:
         formatter = ConsoleEventFormatter(console=console, use_color=False)
 
         event = FileChangeEvent(
-            timestamp=datetime.now(),
-            source="monitor",
             description="File modified",
-            metadata={},
             repo_id="test-repo",
             file_path=Path("test.py"),
             change_type="modified",
@@ -252,10 +243,6 @@ class TestConsoleEventFormatter:
         formatter = ConsoleEventFormatter(console=console, use_color=False)
 
         event = BufferedFileChangeEvent(
-            timestamp=datetime.now(),
-            source="buffer",
-            description="Atomic save",
-            metadata={},
             repo_id="test-repo",
             file_paths=[Path("config.py")],
             operation_type="atomic_rewrite",
@@ -277,10 +264,7 @@ class TestConsoleEventFormatter:
         formatter = ConsoleEventFormatter(console=console, use_color=False)
 
         event = GitCommitEvent(
-            timestamp=datetime.now(),
-            source="git",
             description="Committed 2 files",
-            metadata={},
             repo_id="test-repo",
             commit_hash="abc123def",
             branch="main",
@@ -304,10 +288,6 @@ class TestConsoleEventFormatter:
         )
 
         event = BufferedFileChangeEvent(
-            timestamp=datetime.now(),
-            source="buffer",
-            description="Atomic save",
-            metadata={},
             repo_id="test-repo",
             file_paths=[Path("config.py")],
             operation_type="atomic_rewrite",
@@ -338,10 +318,6 @@ class TestConsoleEventFormatter:
         )
 
         event = BufferedFileChangeEvent(
-            timestamp=datetime.now(),
-            source="buffer",
-            description="Atomic save",
-            metadata={},
             repo_id="test-repo",
             file_paths=[Path("config.py")],
             operation_type="atomic_rewrite",
@@ -451,10 +427,7 @@ class TestConsoleEventFormatter:
         )
 
         event = GitPushEvent(
-            timestamp=datetime.now(),
-            source="git",
             description="Pushed to origin",
-            metadata={},
             repo_id="test-repo",
             remote="origin",
             branch="develop",
@@ -488,10 +461,6 @@ class TestConsoleEventFormatter:
         )
 
         event = BufferedFileChangeEvent(
-            timestamp=datetime.now(),
-            source="buffer",
-            description="Complex operation",
-            metadata={},
             repo_id="test-repo",
             file_paths=[Path("document.txt")],
             operation_type="atomic_rewrite",
@@ -533,10 +502,6 @@ class TestConsoleEventFormatter:
         files = [Path(f"file{i}.py") for i in range(7)]
 
         event = BufferedFileChangeEvent(
-            timestamp=datetime.now(),
-            source="buffer",
-            description="Batch operation",
-            metadata={},
             repo_id="test-repo",
             file_paths=files,
             operation_type="batch_operation",
@@ -570,10 +535,7 @@ class TestConsoleEventFormatter:
         )
 
         event = FileChangeEvent(
-            timestamp=datetime.now(),
-            source="monitor",
             description="File created",
-            metadata={},
             repo_id="test-repo",
             file_path=Path("new.py"),
             change_type="created",

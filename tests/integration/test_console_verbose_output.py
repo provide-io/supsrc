@@ -191,10 +191,7 @@ class TestConsoleVerboseOutput:
 
         # Create a git commit event
         commit_event = GitCommitEvent(
-            timestamp=datetime.now(),
-            source="git",
             description="Committed 3 files",
-            metadata={},
             repo_id="test_repo",
             commit_hash="abc123def456789",
             branch="feature/test",
@@ -231,10 +228,7 @@ class TestConsoleVerboseOutput:
 
         # Create a git push event
         push_event = GitPushEvent(
-            timestamp=datetime.now(),
-            source="git",
             description="Pushed to origin",
-            metadata={},
             repo_id="test_repo",
             remote="origin",
             branch="main",
@@ -348,10 +342,6 @@ class TestConsoleVerboseOutput:
 
         # Create a buffered event with operation history
         buffered_event = BufferedFileChangeEvent(
-            timestamp=datetime.now(),
-            source="buffer",
-            description="Atomic save detected",
-            metadata={},
             repo_id="test_repo",
             file_paths=[Path("test.py")],
             operation_type="atomic_rewrite",
