@@ -262,102 +262,13 @@ class ConsoleEventFormatter:
             timestamp: Formatted timestamp
             repo_id: Repository ID
         """
+        # Use the configured verbose formatter
+        detail_lines = self.verbose_formatter.format_verbose_details(event)
 
-        details = []
-        event_type = type(event).__name__
-
-        # Event type and source
-        details.append(f"  [dim]Type:[/dim] {event_type}")
-        details.append(f"  [dim]Source:[/dim] {getattr(event, 'source', 'unknown')}")
-
-        # TimerUpdateEvent details
-        if event_type == "TimerUpdateEvent":
-            if hasattr(event, "seconds_remaining"):
-                details.append(f"  [dim]Time Remaining:[/dim] [yellow]{event.seconds_remaining}s[/yellow]")
-            if hasattr(event, "total_seconds"):
-                details.append(f"  [dim]Total Time:[/dim] {event.total_seconds}s")
-            if hasattr(event, "rule_name") and event.rule_name:
-                details.append(f"  [dim]Rule:[/dim] {event.rule_name}")
-
-        # BufferedFileChangeEvent - show atomic operation details
-        if hasattr(event, "operation_type"):
-            details.append(f"  [dim]Operation:[/dim] [cyan]{event.operation_type}[/cyan]")
-
-            if hasattr(event, "primary_change_type"):
-                details.append(
-                    f"  [dim]Change Type:[/dim] [yellow]{event.primary_change_type}[/yellow]"
-                )
-
-            # Show file paths involved
-            if hasattr(event, "file_paths"):
-                file_paths = event.file_paths
-                if len(file_paths) == 1:
-                    details.append(f"  [dim]File:[/dim] {file_paths[0]}")
-                elif len(file_paths) > 1:
-                    details.append(f"  [dim]Files ({len(file_paths)}):[/dim]")
-                    for fp in file_paths[:5]:  # Show first 5
-                        details.append(f"    • {fp.name}")
-                    if len(file_paths) > 5:
-                        details.append(f"    ... and {len(file_paths) - 5} more")
-
-            # Show operation sequence from operation_history
-            if hasattr(event, "operation_history") and event.operation_history:
-                details.append(f"  [dim]Sequence ({len(event.operation_history)} events):[/dim]")
-                for i, op in enumerate(event.operation_history[:10], 1):  # Show first 10
-                    change_type = op.get("change_type", "unknown")
-                    src_path = op.get("src_path")
-                    dest_path = op.get("dest_path")
-
-                    if dest_path:
-                        details.append(
-                            f"    {i}. [{change_type}] {src_path.name if hasattr(src_path, 'name') else src_path} → {dest_path.name if hasattr(dest_path, 'name') else dest_path}"
-                        )
-                    else:
-                        details.append(
-                            f"    {i}. [{change_type}] {src_path.name if hasattr(src_path, 'name') else src_path}"
-                        )
-
-                if len(event.operation_history) > 10:
-                    details.append(f"    ... and {len(event.operation_history) - 10} more operations")
-
-            # Show event count (raw events → buffered event)
-            if hasattr(event, "event_count"):
-                details.append(
-                    f"  [dim]Aggregation:[/dim] {event.event_count} raw events → 1 buffered event"
-                )
-
-        # GitCommitEvent details
-        elif event_type == "GitCommitEvent":
-            if hasattr(event, "commit_hash"):
-                details.append(f"  [dim]Commit:[/dim] {event.commit_hash[:12]}")
-            if hasattr(event, "branch"):
-                details.append(f"  [dim]Branch:[/dim] {event.branch}")
-            if hasattr(event, "files_changed"):
-                details.append(f"  [dim]Files Changed:[/dim] {event.files_changed}")
-
-        # GitPushEvent details
-        elif event_type == "GitPushEvent":
-            if hasattr(event, "remote"):
-                details.append(f"  [dim]Remote:[/dim] {event.remote}")
-            if hasattr(event, "branch"):
-                details.append(f"  [dim]Branch:[/dim] {event.branch}")
-            if hasattr(event, "commits_pushed"):
-                details.append(f"  [dim]Commits:[/dim] {event.commits_pushed}")
-
-        # FileChangeEvent (single, unbuffered)
-        elif event_type == "FileChangeEvent":
-            if hasattr(event, "file_path"):
-                details.append(f"  [dim]File:[/dim] {event.file_path}")
-            if hasattr(event, "change_type"):
-                details.append(f"  [dim]Change:[/dim] {event.change_type}")
-
-        # Show all metadata
-        if hasattr(event, "metadata") and event.metadata:
-            details.append("  [dim]Metadata:[/dim]")
-            for key, value in event.metadata.items():
-                details.append(f"    {key}: {value}")
-
-        # Print details with subtle styling
-        if details:
-            detail_text = "\n".join(details)
-            self.console.print(detail_text, style="dim")
+        # Print each line
+        for line in detail_lines:
+            if self.use_color:
+                self.console.print(line)
+            else:
+                # Strip Rich markup for no-color mode
+                self.console.print(line, highlight=False, markup=False)
