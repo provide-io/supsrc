@@ -116,8 +116,8 @@ class TestAtomicFileOperations:
         for event in events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.15)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
 
         # Foundation doesn't recognize delete+move as atomic operation
         # So events are emitted individually after auto-flush
@@ -151,8 +151,8 @@ class TestAtomicFileOperations:
         for event in events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.15)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
 
         # Should detect atomic pattern or fall back to simple grouping
         assert mock_emit_callback.call_count >= 1
@@ -198,8 +198,8 @@ class TestAtomicFileOperations:
         for event in all_events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.15)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
 
         # Should have emitted some grouped events
         assert mock_emit_callback.call_count >= 1
@@ -274,8 +274,8 @@ class TestAtomicFileOperations:
         for event in events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.15)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
 
         # Should have emitted one grouped event
         assert mock_emit_callback.call_count == 1
@@ -319,8 +319,8 @@ class TestAtomicFileOperations:
         for event in repo1_events + repo2_events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.15)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
 
         # Should have emitted separate events for each repo
         assert mock_emit_callback.call_count == 2
