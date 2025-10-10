@@ -38,18 +38,29 @@ class TestEventBufferPatterns:
         )
 
         base_path = Path("/test")
+        temp_file = base_path / "file.py.tmp"
+        original_file = base_path / "file.py"
+
+        # Complete atomic save sequence
         events = [
             FileChangeEvent(
                 description="Create temp",
                 repo_id="test_repo",
-                file_path=base_path / "file.py.tmp",
+                file_path=temp_file,
                 change_type="created",
             ),
             FileChangeEvent(
-                description="Delete original",
+                description="Write to temp",
                 repo_id="test_repo",
-                file_path=base_path / "file.py",
-                change_type="deleted",
+                file_path=temp_file,
+                change_type="modified",
+            ),
+            FileChangeEvent(
+                description="Move temp to original",
+                repo_id="test_repo",
+                file_path=temp_file,
+                change_type="moved",
+                dest_path=original_file,
             ),
         ]
 
@@ -141,18 +152,29 @@ class TestEventBufferPatterns:
         )
 
         base_path = Path("/test")
+        temp_file = base_path / ".file.py.abcd1234"
+        original_file = base_path / "file.py"
+
+        # Complete atomic save with hidden temp file
         events = [
             FileChangeEvent(
                 description="Create hidden temp",
                 repo_id="test_repo",
-                file_path=base_path / ".file.py.abcd1234",
+                file_path=temp_file,
                 change_type="created",
             ),
             FileChangeEvent(
-                description="Modify original",
+                description="Write to temp",
                 repo_id="test_repo",
-                file_path=base_path / "file.py",
+                file_path=temp_file,
                 change_type="modified",
+            ),
+            FileChangeEvent(
+                description="Move temp to original",
+                repo_id="test_repo",
+                file_path=temp_file,
+                change_type="moved",
+                dest_path=original_file,
             ),
         ]
 
@@ -192,24 +214,29 @@ class TestEventBufferPatterns:
         )
 
         base_path = Path("/test")
+        temp_file = base_path / "document.txt.tmp"
+        original_file = base_path / "document.txt"
+
+        # Complete atomic save sequence
         events = [
             FileChangeEvent(
                 description="Create temp file",
                 repo_id="test_repo",
-                file_path=base_path / "document.txt.tmp",
+                file_path=temp_file,
                 change_type="created",
             ),
             FileChangeEvent(
-                description="Delete original",
+                description="Write to temp",
                 repo_id="test_repo",
-                file_path=base_path / "document.txt",
-                change_type="deleted",
+                file_path=temp_file,
+                change_type="modified",
             ),
             FileChangeEvent(
                 description="Move temp to original",
                 repo_id="test_repo",
-                file_path=base_path / "document.txt",
+                file_path=temp_file,
                 change_type="moved",
+                dest_path=original_file,
             ),
         ]
 
@@ -269,18 +296,26 @@ class TestEventBufferPatterns:
             # Reset mock
             mock_emit_callback.reset_mock()
 
+            # Complete atomic save sequence for each pattern
             events = [
                 FileChangeEvent(
-                    description="Original file",
-                    repo_id="test_repo",
-                    file_path=original_file,
-                    change_type="modified",
-                ),
-                FileChangeEvent(
-                    description="Temp file",
+                    description="Create temp file",
                     repo_id="test_repo",
                     file_path=temp_file,
                     change_type="created",
+                ),
+                FileChangeEvent(
+                    description="Write to temp",
+                    repo_id="test_repo",
+                    file_path=temp_file,
+                    change_type="modified",
+                ),
+                FileChangeEvent(
+                    description="Move temp to original",
+                    repo_id="test_repo",
+                    file_path=temp_file,
+                    change_type="moved",
+                    dest_path=original_file,
                 ),
             ]
 
@@ -311,23 +346,35 @@ class TestEventBufferPatterns:
 
     @pytest.mark.asyncio
     async def test_atomic_rewrite_fallback_to_simple(self, mock_emit_callback):
-        """Test that atomic rewrite detection falls back to simple grouping when no patterns found."""
+        """Test that streaming detector emits regular file modifications."""
         buffer = EventBuffer(
             window_ms=10,
             grouping_mode="smart",
             emit_callback=mock_emit_callback,
         )
 
-        # Events that don't form atomic patterns
+        # Regular file modifications (no atomic patterns)
         events = [
             FileChangeEvent(
                 description="Regular file 1",
+                repo_id="test_repo",
+                file_path=Path("/test/file1.py"),
+                change_type="created",
+            ),
+            FileChangeEvent(
+                description="Regular file 1 modified",
                 repo_id="test_repo",
                 file_path=Path("/test/file1.py"),
                 change_type="modified",
             ),
             FileChangeEvent(
                 description="Regular file 2",
+                repo_id="test_repo",
+                file_path=Path("/test/file2.py"),
+                change_type="created",
+            ),
+            FileChangeEvent(
+                description="Regular file 2 modified",
                 repo_id="test_repo",
                 file_path=Path("/test/file2.py"),
                 change_type="modified",

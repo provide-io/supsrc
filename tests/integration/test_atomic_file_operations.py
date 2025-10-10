@@ -59,10 +59,10 @@ class TestAtomicFileOperations:
                 change_type="created",
             ),
             FileChangeEvent(
-                description="Delete original",
+                description="Write to temp file",
                 repo_id=repo_id,
-                file_path=file_path,
-                change_type="deleted",
+                file_path=temp_file,
+                change_type="modified",
             ),
             FileChangeEvent(
                 description="Rename temp to original",
