@@ -337,6 +337,23 @@ class GitEngine(RepositoryEngine):
         try:
             result_dict = await asyncio.to_thread(_blocking_stage_changes)
             return StageResult(**result_dict)  # type: ignore[misc]
+        except OSError as e:
+            # Handle git lock collisions specifically
+            error_msg = str(e)
+            if "failed to lock file" in error_msg and ".lock" in error_msg:
+                self._log.warning(
+                    "Git lock collision during staging - another process is accessing the repository. "
+                    "The retry mechanism will handle this automatically.",
+                    error=error_msg,
+                    repo_id=state.repo_id,
+                    working_dir=str(working_dir),
+                )
+                # Re-raise to trigger retry mechanism
+                raise
+            else:
+                # Other OSError - log and return failure
+                self._log.error("OS error during staging", error=error_msg, repo_id=state.repo_id)
+                return StageResult(success=False, message=f"OS error: {e}")
         except pygit2.GitError as e:
             self._log.error("Failed to stage changes", error=str(e), repo_id=state.repo_id)
             return StageResult(success=False, message=f"Git staging error: {e}")
@@ -348,7 +365,7 @@ class GitEngine(RepositoryEngine):
         pygit2.GitError,
         OSError,
         policy=RetryPolicy(
-            max_attempts=3, backoff=BackoffStrategy.EXPONENTIAL, base_delay=1.0, max_delay=10.0
+            max_attempts=5, backoff=BackoffStrategy.EXPONENTIAL, base_delay=0.5, max_delay=10.0
         ),
     )
     async def perform_commit(
@@ -414,6 +431,24 @@ class GitEngine(RepositoryEngine):
         try:
             result_dict = await asyncio.to_thread(_blocking_perform_commit)
             return CommitResult(**result_dict)  # type: ignore[misc]
+        except OSError as e:
+            # Handle git lock collisions specifically
+            error_msg = str(e)
+            if "failed to lock file" in error_msg and ".lock" in error_msg:
+                self._log.warning(
+                    "Git lock collision - another process is accessing the repository. "
+                    "This is typically caused by concurrent git operations. "
+                    "The retry mechanism will handle this automatically.",
+                    error=error_msg,
+                    repo_id=state.repo_id,
+                    working_dir=str(working_dir),
+                )
+                # Re-raise to trigger retry mechanism
+                raise
+            else:
+                # Other OSError - log and return failure
+                self._log.error("OS error during commit", error=error_msg, repo_id=state.repo_id)
+                return CommitResult(success=False, message=f"OS error: {e}")
         except pygit2.GitError as e:
             self._log.error("Failed to perform commit", error=str(e), repo_id=state.repo_id)
             return CommitResult(success=False, message=f"Git commit error: {e}")
