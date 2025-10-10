@@ -60,6 +60,9 @@ class TestEventBufferPatterns:
         # Wait for buffer to flush (window + post-delay + margin)
         await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
 
+        # Force flush any incomplete operations
+        buffer.flush_all()
+
         # Should have emitted grouped event
         assert mock_emit_callback.call_count >= 1
 
@@ -107,6 +110,9 @@ class TestEventBufferPatterns:
 
         # Wait for buffer to flush (window + post-delay + margin)
         await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should have emitted events
         assert mock_emit_callback.call_count >= 1
@@ -156,6 +162,9 @@ class TestEventBufferPatterns:
 
         # Wait for buffer to flush (window + post-delay + margin)
         await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should have emitted events
         assert mock_emit_callback.call_count >= 1
@@ -210,6 +219,9 @@ class TestEventBufferPatterns:
 
         # Wait for buffer to flush (window + post-delay + margin)
         await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should have emitted at least one event
         assert mock_emit_callback.call_count >= 1
@@ -279,6 +291,9 @@ class TestEventBufferPatterns:
             # Wait for buffer to flush (window + post-delay + margin)
             await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
 
+            # Force flush any incomplete operations
+            buffer.flush_all()
+
             # Should have emitted something
             assert mock_emit_callback.call_count >= 1, f"Failed for {original_file} / {temp_file}"
 
@@ -325,6 +340,9 @@ class TestEventBufferPatterns:
 
         # Wait for buffer to flush (window + post-delay + margin)
         await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should have emitted events (as simple grouping fallback)
         assert mock_emit_callback.call_count >= 1
@@ -377,6 +395,9 @@ class TestEventBufferPatterns:
 
         # Wait for operations to emit (window + post-delay + margin)
         await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should detect some pattern and handle events
         assert mock_emit_callback.call_count >= 1

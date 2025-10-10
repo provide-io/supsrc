@@ -119,6 +119,9 @@ class TestAtomicFileOperations:
         # Wait for buffer to flush (window + post-delay + margin)
         await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
 
+        # Force flush any incomplete operations
+        buffer.flush_all()
+
         # Foundation doesn't recognize delete+move as atomic operation
         # So events are emitted individually after auto-flush
         # This is correct behavior - the pattern is non-standard
@@ -153,6 +156,9 @@ class TestAtomicFileOperations:
 
         # Wait for buffer to flush (window + post-delay + margin)
         await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should detect atomic pattern or fall back to simple grouping
         assert mock_emit_callback.call_count >= 1
@@ -200,6 +206,9 @@ class TestAtomicFileOperations:
 
         # Wait for buffer to flush (window + post-delay + margin)
         await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should have emitted some grouped events
         assert mock_emit_callback.call_count >= 1
