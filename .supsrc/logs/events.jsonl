@@ -3,3 +3,6 @@
 {"timestamp": "2025-10-10T13:05:20.343650", "source": "buffer", "description": "Atomic rewrite of 1 file(s)", "metadata": {}, "repo_id": "supsrc"}
 {"timestamp": "2025-10-10T13:05:30.000591", "source": "timer", "description": "Timer: 20s remaining", "metadata": {}, "repo_id": "supsrc"}
 {"timestamp": "2025-10-10T13:05:35.005923", "source": "timer", "description": "Timer: 15s remaining", "metadata": {}, "repo_id": "supsrc"}
+{"timestamp": "2025-10-10T13:22:57.907530", "source": "monitor", "description": "Started monitoring repository supsrc", "metadata": {}, "repo_id": "supsrc"}
+{"timestamp": "2025-10-10T13:23:44.821536", "source": "buffer", "description": "Batch operation on 3 files", "metadata": {}, "repo_id": "supsrc", "file_paths": ["/Users/tim/code/gh/provide-io/supsrc/src/supsrc/demo_file.py", "/Users/tim/code/gh/provide-io/supsrc/src/supsrc/demo_file.py", "/Users/tim/code/gh/provide-io/supsrc/src/supsrc/demo_file.py"], "operation_type": "batch_operation", "event_count": 3, "primary_change_type": "modified"}
+{"timestamp": "2025-10-10T13:23:46.838670", "source": "buffer", "description": "Atomic rewrite of 1 file(s)", "metadata": {}, "repo_id": "supsrc", "file_paths": ["/Users/tim/code/gh/provide-io/supsrc/src/supsrc/demo_file.py"], "operation_type": "atomic_rewrite", "event_count": 1, "primary_change_type": "modified"}
