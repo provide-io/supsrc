@@ -42,6 +42,7 @@ cat > supsrc.conf <<EOF
 [repositories.test-repo]
 path = "${TEST_DIR}"
 enabled = true
+rule = "inactivity"
 
 [repositories.test-repo.rules.inactivity]
 enabled = true
