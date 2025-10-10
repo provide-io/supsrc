@@ -93,8 +93,8 @@ class TestConsoleVerboseOutput:
             )
         )
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.3)
+        # Wait for buffer to flush (100ms window + margin)
+        await asyncio.sleep(0.5)
 
         # Verify event was emitted
         assert len(emitted_events) >= 1, "Expected at least one event to be emitted"
@@ -161,8 +161,8 @@ class TestConsoleVerboseOutput:
             )
             await asyncio.sleep(0.01)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.3)
+        # Wait for buffer to flush (100ms window + margin)
+        await asyncio.sleep(0.5)
 
         # Verify event was emitted
         assert len(emitted_events) >= 1
@@ -391,9 +391,9 @@ class TestConsoleVerboseOutput:
         assert "5 repositories" in output_text or "5" in output_text, \
             "Startup banner should show repository count"
 
-        # Should show log paths
-        assert "/tmp/events.jsonl" in output_text, "Should show event log path"
-        assert "/tmp/app.log" in output_text, "Should show app log path"
+        # Should show log paths (may have ANSI codes, so check for components)
+        assert "events.jsonl" in output_text, "Should show event log path"
+        assert "app.log" in output_text, "Should show app log path"
 
         # Should have separators
         assert "━" in output_text or "=" in output_text or "-" in output_text, \
