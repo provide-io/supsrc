@@ -15,10 +15,10 @@ from unittest.mock import Mock
 import pytest
 from rich.console import Console
 
+from supsrc.engines.git.events import GitCommitEvent, GitPushEvent
 from supsrc.events.buffer import EventBuffer
 from supsrc.events.buffer_events import BufferedFileChangeEvent
 from supsrc.events.monitor import FileChangeEvent
-from supsrc.events.protocol import GitCommitEvent, GitPushEvent
 from supsrc.output.console_formatter import ConsoleEventFormatter
 
 
