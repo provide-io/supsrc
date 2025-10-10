@@ -275,12 +275,20 @@ class EventBuffer:
             "Operation completed callback",
             operation_type=operation.operation_type.value,
             primary_path=str(operation.primary_path),
+            files_affected=str(operation.files_affected) if operation.files_affected else None,
             event_count=operation.event_count,
             repo_id=repo_id,
         )
 
         # Convert foundation operation to buffered event
         buffered_event = self._create_operation_event(operation, repo_id)
+
+        log.debug(
+            "Created buffered event from operation",
+            file_paths=[str(p) for p in buffered_event.file_paths],
+            operation_type=buffered_event.operation_type,
+            primary_change_type=buffered_event.primary_change_type,
+        )
 
         # Emit via callback
         if self.emit_callback:
@@ -335,10 +343,24 @@ class EventBuffer:
         buffer_op_type = operation_type_map.get(operation.operation_type, "single_file")
 
         # Use files_affected if available (for batch operations), otherwise use primary_path
-        if operation.files_affected:
-            file_paths = operation.files_affected
-        else:
+        # Ensure we always have a valid list of Path objects
+        if operation.files_affected and len(operation.files_affected) > 0:
+            file_paths = list(operation.files_affected)
+            log.trace("Using files_affected for operation", count=len(file_paths))
+        elif operation.primary_path:
             file_paths = [operation.primary_path]
+            log.trace("Using primary_path for operation", path=str(operation.primary_path))
+        else:
+            # Fallback: extract from events if available
+            log.warning("Operation has no primary_path or files_affected, extracting from events")
+            file_paths = []
+            for event in operation.events:
+                if hasattr(event, 'path') and event.path not in file_paths:
+                    file_paths.append(event.path)
+            if not file_paths:
+                log.error("Could not determine file paths from operation")
+                # Use a placeholder to avoid empty list
+                file_paths = [Path("unknown")]
 
         # Determine primary change type based on operation
         if operation.operation_type in (OperationType.ATOMIC_SAVE, OperationType.SAFE_WRITE):
@@ -365,6 +387,21 @@ class EventBuffer:
 
         # Sort by timestamp to maintain chronological order
         operation_history.sort(key=lambda x: cast(datetime, x["timestamp"]))
+
+        # Final validation: ensure file_paths is not empty
+        if not file_paths:
+            log.error("file_paths is empty after extraction, using placeholder")
+            file_paths = [Path("unknown")]
+
+        # Final validation: ensure all paths are Path objects
+        file_paths = [Path(p) if not isinstance(p, Path) else p for p in file_paths]
+
+        log.trace(
+            "Creating BufferedFileChangeEvent",
+            file_paths=[str(p) for p in file_paths],
+            buffer_op_type=buffer_op_type,
+            primary_change_type=primary_change_type,
+        )
 
         return BufferedFileChangeEvent(
             repo_id=repo_id,
