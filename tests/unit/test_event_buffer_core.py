@@ -40,7 +40,7 @@ class TestEventBufferCore:
         """Test EventBuffer initialization with default parameters."""
         buffer = EventBuffer(emit_callback=mock_emit_callback)
 
-        assert buffer.window_ms == 500
+        assert buffer.window_ms == 100  # Updated to match DEFAULT_BUFFER_WINDOW_MS
         assert buffer.grouping_mode == "smart"
         assert buffer.emit_callback == mock_emit_callback
         assert buffer._buffers == {}
@@ -196,21 +196,18 @@ class TestEventBufferCore:
         mock_emit_callback.assert_called_once()
 
     def test_empty_events_list(self, mock_emit_callback):
-        """Test handling of empty events list."""
+        """Test handling of empty events list - now tested via grouping module."""
+        from supsrc.events.buffer.grouping import group_events_simple
+
         buffer = EventBuffer(
             window_ms=10,
             grouping_mode="smart",
             emit_callback=mock_emit_callback,
         )
 
-        # Test with empty list - these methods still exist
-        grouped = buffer._group_events_simple([])
+        # Test grouping function directly
+        grouped = group_events_simple([])
         assert grouped == []
-
-        grouped = buffer._group_events_smart([])
-        assert grouped == []
-
-        # _get_most_common_change_type was removed - no longer testing it
 
     def test_no_callback_handling(self):
         """Test EventBuffer behavior when no callback is provided."""
