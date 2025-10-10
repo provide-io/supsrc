@@ -345,6 +345,13 @@ class TestAtomicFileOperations:
     @pytest.mark.asyncio
     async def test_temp_file_pattern_recognition_real_world(self, temp_directory):
         """Test recognition of real-world temporary file patterns."""
+        mock_callback = Mock()
+        buffer = EventBuffer(
+            window_ms=100,
+            grouping_mode="smart",
+            emit_callback=mock_callback,
+        )
+
         # Test various real-world temp file patterns
         test_cases = [
             # Standard .tmp files
@@ -353,30 +360,34 @@ class TestAtomicFileOperations:
             (temp_directory / "document.py", temp_directory / "document.py~"),
             # Hidden temp files (vim style)
             (temp_directory / "script.js", temp_directory / ".script.js.swp"),
-            # Mac-style hidden files
-            (temp_directory / "data.json", temp_directory / ".data.json.abc123"),
+            # VSCode-style hidden temp files
+            (temp_directory / "data.json", temp_directory / ".data.json.tmp.abc123"),
         ]
 
         for original_file, temp_file in test_cases:
-            mock_callback = Mock()
-            buffer = EventBuffer(
-                window_ms=100,
-                grouping_mode="smart",
-                emit_callback=mock_callback,
-            )
+            # Reset mock for each test case
+            mock_callback.reset_mock()
 
+            # Complete atomic save sequence for each pattern
             events = [
                 FileChangeEvent(
-                    description="Original file",
-                    repo_id="test_repo",
-                    file_path=original_file,
-                    change_type="modified",
-                ),
-                FileChangeEvent(
-                    description="Temp file",
+                    description="Create temp file",
                     repo_id="test_repo",
                     file_path=temp_file,
                     change_type="created",
+                ),
+                FileChangeEvent(
+                    description="Write to temp",
+                    repo_id="test_repo",
+                    file_path=temp_file,
+                    change_type="modified",
+                ),
+                FileChangeEvent(
+                    description="Move temp to original",
+                    repo_id="test_repo",
+                    file_path=temp_file,
+                    change_type="moved",
+                    dest_path=original_file,
                 ),
             ]
 
@@ -384,8 +395,8 @@ class TestAtomicFileOperations:
             for event in events:
                 buffer.add_event(event)
 
-            # Wait for buffer to flush
-            await asyncio.sleep(0.15)
+            # Wait for buffer to flush (window + post-delay + margin)
+            await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
 
             # Force flush any incomplete operations
             buffer.flush_all()
