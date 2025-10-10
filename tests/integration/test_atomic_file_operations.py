@@ -387,6 +387,9 @@ class TestAtomicFileOperations:
             # Wait for buffer to flush
             await asyncio.sleep(0.15)
 
+            # Force flush any incomplete operations
+            buffer.flush_all()
+
             # Should have emitted something
             assert mock_callback.call_count >= 1, \
                 f"No events emitted for {original_file} / {temp_file}"
