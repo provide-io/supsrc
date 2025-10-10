@@ -199,8 +199,8 @@ class ConsoleEventFormatter:
             # [impact]
             text.append(f"[{impact_display:^{impact_width}}] ", style="bold")
 
-            # [files]
-            text.append(f"[{file_display:<{file_width}}] ", style="blue")
+        # [files] - Always show files, even in narrow mode
+        text.append(f"[{file_display:<{file_width}}] ", style="blue")
 
         # [message]
         text.append(f"[{message_display}]", style="default")
