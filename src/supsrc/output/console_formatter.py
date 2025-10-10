@@ -13,6 +13,8 @@ from rich.text import Text
 
 from supsrc.events.feed_table.formatters import EventFormatter
 from supsrc.output.emoji_map import EmojiMapper
+from supsrc.output.verbose_formats import CompactVerboseFormatter, TableVerboseFormatter
+from supsrc.output.verbose_formats.base import VerboseFormatter
 
 if TYPE_CHECKING:
     from supsrc.events.protocol import Event
@@ -29,6 +31,7 @@ class ConsoleEventFormatter:
         use_color: bool = True,
         use_ascii: bool = False,
         verbose: bool = False,
+        verbose_format: str = "table",
     ):
         """Initialize console formatter.
 
@@ -37,12 +40,23 @@ class ConsoleEventFormatter:
             use_color: Enable color output
             use_ascii: Use ASCII instead of emojis
             verbose: Show verbose event details
+            verbose_format: Verbose output format ("table" or "compact")
         """
         self.console = console or Console()
         self.use_color = use_color
         self.use_ascii = use_ascii
         self.verbose = verbose
+        self.verbose_format = verbose_format
         self.terminal_width = self._get_terminal_width()
+
+        # Initialize verbose formatter based on format choice
+        self.verbose_formatter: VerboseFormatter
+        if verbose_format == "compact":
+            self.verbose_formatter = CompactVerboseFormatter(indent="  ")
+        else:  # default to table
+            self.verbose_formatter = TableVerboseFormatter(
+                use_ascii=use_ascii, max_width=self.terminal_width
+            )
 
     def _get_terminal_width(self) -> int:
         """Get current terminal width."""
