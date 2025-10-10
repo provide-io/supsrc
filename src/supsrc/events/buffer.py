@@ -122,15 +122,20 @@ class EventBuffer:
 
         repo_id = event.repo_id
 
-        # SMART MODE: Use foundation's callback-based streaming detection
+        # SMART MODE: Use foundation's streaming detection
         if self.grouping_mode == GROUPING_MODE_SMART and self._detector_config:
             # Get or create detector for this repo
             detector = self._get_or_create_detector(repo_id)
 
             # Convert to FileEvent and pass to detector
-            # Foundation handles everything: temp file hiding, auto-flush, callbacks
             file_event = self._convert_to_file_event(event)
-            detector.add_event(file_event)
+
+            # Use detect_streaming which returns a completed operation or None
+            completed_operation = detector.detect_streaming(file_event)
+
+            # If an operation completed, handle it via our callback
+            if completed_operation:
+                self._on_operation_complete(completed_operation, repo_id)
 
             return
 
@@ -259,18 +264,11 @@ class EventBuffer:
         )
         return grouped_events
 
-
     def _get_or_create_detector(self, repo_id: str) -> OperationDetector:
         """Get or create operation detector for a repository."""
         if repo_id not in self._operation_detectors:
-            # Create repo-specific callback that captures repo_id
-            def on_operation_complete(operation: Any) -> None:
-                self._on_operation_complete(operation, repo_id)
-
-            # Create new detector with callback
-            detector = OperationDetector(
-                config=self._detector_config, on_operation_complete=on_operation_complete
-            )
+            # Create new detector with config (no callback parameter exists)
+            detector = OperationDetector(config=self._detector_config)
             self._operation_detectors[repo_id] = detector
             log.debug("Created operation detector for repo", repo_id=repo_id)
 
@@ -303,7 +301,9 @@ class EventBuffer:
 
         # Create unique key for per-file debouncing
         # Use first file path as key (most operations have one file)
-        primary_file = buffered_event.file_paths[0] if buffered_event.file_paths else Path("unknown")
+        primary_file = (
+            buffered_event.file_paths[0] if buffered_event.file_paths else Path("unknown")
+        )
         operation_key = f"{repo_id}:{primary_file}"
 
         # Store in pending operations (replaces any existing operation for this file)
@@ -395,10 +395,7 @@ class EventBuffer:
             dest_path=dest_path,
         )
 
-
-    def _create_operation_event(
-        self, operation: Any, repo_id: str
-    ) -> BufferedFileChangeEvent:
+    def _create_operation_event(self, operation: Any, repo_id: str) -> BufferedFileChangeEvent:
         """Create a BufferedFileChangeEvent from a detected FileOperation."""
         # Map operation types to our buffer operation types
         operation_type_map = {
@@ -424,7 +421,7 @@ class EventBuffer:
             log.warning("Operation has no primary_path or files_affected, extracting from events")
             file_paths = []
             for event in operation.events:
-                if hasattr(event, 'path') and event.path not in file_paths:
+                if hasattr(event, "path") and event.path not in file_paths:
                     file_paths.append(event.path)
             if not file_paths:
                 log.error("Could not determine file paths from operation")
@@ -450,7 +447,9 @@ class EventBuffer:
                 "timestamp": event.timestamp,
                 "is_primary": event.path == operation.primary_path
                 or (hasattr(event, "dest_path") and event.dest_path == operation.primary_path),
-                "dest_path": getattr(event, "dest_path", None),  # Include destination for move events
+                "dest_path": getattr(
+                    event, "dest_path", None
+                ),  # Include destination for move events
             }
             operation_history.append(history_entry)
 
@@ -510,7 +509,9 @@ class EventBuffer:
         """
         # First, flush any pending post-operation delays (smart mode)
         if self._pending_operations:
-            log.debug("Flushing pending operations on shutdown", count=len(self._pending_operations))
+            log.debug(
+                "Flushing pending operations on shutdown", count=len(self._pending_operations)
+            )
             for operation_key in list(self._pending_operations.keys()):
                 # Cancel timer and emit immediately
                 if operation_key in self._operation_timers:
