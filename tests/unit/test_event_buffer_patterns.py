@@ -152,7 +152,7 @@ class TestEventBufferPatterns:
         )
 
         base_path = Path("/test")
-        temp_file = base_path / ".file.py.abcd1234"
+        temp_file = base_path / ".file.py.tmp.abcd1234"  # Matches pattern: \..*\.tmp\.\w+$
         original_file = base_path / "file.py"
 
         # Complete atomic save with hidden temp file
@@ -288,8 +288,8 @@ class TestEventBufferPatterns:
             (base_path / "document.py", base_path / "document.py~"),
             # Hidden temp files (vim style)
             (base_path / "script.js", base_path / ".script.js.swp"),
-            # Mac-style hidden files
-            (base_path / "data.json", base_path / ".data.json.abc123"),
+            # VSCode-style hidden temp files
+            (base_path / "data.json", base_path / ".data.json.tmp.abc123"),
         ]
 
         for original_file, temp_file in test_cases:
