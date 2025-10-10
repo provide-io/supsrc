@@ -62,12 +62,20 @@ class WatchOrchestrator:
         app: SupsrcTuiApp | None = None,
         console: Console | None = None,
         event_log_path: Path | None = None,
+        use_color: bool = True,
+        use_ascii: bool = False,
+        verbose: bool = False,
+        app_log_path: Path | None = None,
     ):
         self.config_path = config_path
         self.shutdown_event = shutdown_event
         self.app = app
         self.console = console
         self.event_log_path = event_log_path
+        self.use_color = use_color
+        self.use_ascii = use_ascii
+        self.verbose = verbose
+        self.app_log_path = app_log_path or Path("/tmp/supsrc_app.log")
         self.event_queue: asyncio.Queue[MonitoredEvent] = asyncio.Queue()
         self.repo_states: RepositoryStatesMap = {}
         self.repo_engines: dict[str, RepositoryEngine] = {}
@@ -121,13 +129,16 @@ class WatchOrchestrator:
                 # Initialize console formatter for headless mode
                 self.console_formatter = ConsoleEventFormatter(
                     console=self.console,
-                    use_color=True,  # TODO: Add CLI flag
-                    use_ascii=False,  # TODO: Add CLI flag
-                    verbose=False,  # TODO: Add CLI flag
+                    use_color=self.use_color,
+                    use_ascii=self.use_ascii,
+                    verbose=self.verbose,
                 )
 
                 # Subscribe console formatter to events
                 self.event_collector.subscribe(self._print_event_to_console)
+
+                # Print startup banner showing monitoring info
+                # We'll print this after repositories are initialized
             else:
                 # No event collection configured
                 log.debug("No event collection configured")
@@ -145,6 +156,14 @@ class WatchOrchestrator:
 
             enabled_repos = await self.repository_manager.initialize_repositories(self.config, tui)
             active_repositories.set(len(enabled_repos))
+
+            # Print startup banner in headless mode
+            if self.console_formatter:
+                self.console_formatter.print_startup_banner(
+                    repo_count=len(enabled_repos),
+                    event_log_path=self.event_log_path,
+                    app_log_path=self.app_log_path,
+                )
 
             # Initialize status manager for repository status updates
             self.status_manager = StatusManager(
@@ -319,7 +338,11 @@ class WatchOrchestrator:
             try:
                 self.console_formatter.format_and_print(event)
             except Exception as e:
-                log.debug("Failed to print event to console", error=str(e), event_type=type(event).__name__)
+                log.debug(
+                    "Failed to print event to console",
+                    error=str(e),
+                    event_type=type(event).__name__,
+                )
 
     def set_repo_refreshing_status(self, repo_id: str, is_refreshing: bool) -> None:
         """Set the refreshing status for a repository."""
