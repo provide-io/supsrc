@@ -44,18 +44,17 @@ path = "${TEST_DIR}"
 enabled = true
 
 [repositories.test-repo.rule]
-type = "inactivity"
+type = "supsrc.rules.inactivity"
+period = "5s"
 
-[repositories.test-repo.rule.inactivity]
+[repositories.test-repo.repository]
+type = "supsrc.engines.git"
+
+[repositories.test-repo.actions.commit]
 enabled = true
-seconds = 5
 
-[repositories.test-repo.actions]
-commit = true
-push = false
-
-[repositories.test-repo.commit]
-message_template = "🔼⚙️ Auto-commit: {file_count} files changed"
+[repositories.test-repo.actions.push]
+enabled = false
 EOF
 
 echo ""
