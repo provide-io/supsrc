@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from supsrc.events.protocol import Event
@@ -12,7 +12,7 @@ class EmojiMapper:
     """Provides emoji and ASCII representations for events."""
 
     # Event type to emoji mapping
-    EVENT_TYPE_EMOJIS = {
+    EVENT_TYPE_EMOJIS: ClassVar[dict[str, str]] = {
         "ExternalCommitEvent": "🤔",  # THINKING FACE
         "ConflictDetectedEvent": "⚠️",  # WARNING SIGN
         "RepositoryFrozenEvent": "🧊",  # ICE CUBE
@@ -31,7 +31,7 @@ class EmojiMapper:
     }
 
     # Change type emojis (for file events)
-    CHANGE_TYPE_EMOJIS = {
+    CHANGE_TYPE_EMOJIS: ClassVar[dict[str, str]] = {
         "created": "➕",  # HEAVY PLUS SIGN  # noqa: RUF001
         "modified": "✏️",  # PENCIL
         "deleted": "➖",  # HEAVY MINUS SIGN  # noqa: RUF001
@@ -39,7 +39,7 @@ class EmojiMapper:
     }
 
     # Source emojis (fallback)
-    SOURCE_EMOJIS = {
+    SOURCE_EMOJIS: ClassVar[dict[str, str]] = {
         "git": "🔧",  # WRENCH
         "monitor": "👁️",  # EYE
         "rules": "⚡",  # HIGH VOLTAGE SIGN
@@ -49,7 +49,7 @@ class EmojiMapper:
     }
 
     # ASCII fallback mappings
-    ASCII_FALLBACKS = {
+    ASCII_FALLBACKS: ClassVar[dict[str, str]] = {
         "🤔": "[?]",
         "⚠️": "[!]",
         "🧊": "[F]",  # Frozen
@@ -65,9 +65,9 @@ class EmojiMapper:
         "❌": "[X]",  # Error
         "🔄": "[R]",  # Reload
         "👤": "[U]",  # User
-        "➕": "[+]",
+        "➕": "[+]",  # noqa: RUF001
         "✏️": "[M]",  # Modified
-        "➖": "[-]",
+        "➖": "[-]",  # noqa: RUF001
         "🔧": "[G]",  # Git
         "👁️": "[W]",  # Watch
         "⚡": "[!]",

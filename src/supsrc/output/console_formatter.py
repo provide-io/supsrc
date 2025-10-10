@@ -76,7 +76,9 @@ class ConsoleEventFormatter:
                 self.console.print(line, highlight=False, markup=False)
 
         except Exception as e:
-            log.debug("Failed to format event for console", error=str(e), event_type=type(event).__name__)
+            log.debug(
+                "Failed to format event for console", error=str(e), event_type=type(event).__name__
+            )
 
     def _format_timestamp(self, timestamp: datetime) -> str:
         """Format timestamp as HH:MM:SS."""
@@ -129,7 +131,9 @@ class ConsoleEventFormatter:
         if width >= 80:
             # Standard layout
             file_width = 20
-            message_width = max(20, width - time_width - repo_width - emoji_width - impact_width - file_width - 15)
+            message_width = max(
+                20, width - time_width - repo_width - emoji_width - impact_width - file_width - 15
+            )
         else:
             # Narrow layout - hide some columns
             file_width = 15
@@ -183,7 +187,9 @@ class ConsoleEventFormatter:
 
         return text[: max_width - 3] + "..."
 
-    def print_startup_banner(self, repo_count: int, event_log_path: Path | None, app_log_path: Path | None) -> None:
+    def print_startup_banner(
+        self, repo_count: int, event_log_path: Path | None, app_log_path: Path | None
+    ) -> None:
         """Print startup banner with monitoring information.
 
         Args:

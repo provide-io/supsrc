@@ -23,6 +23,7 @@ from supsrc.events.json_logger import JSONEventLogger
 from supsrc.events.processor import EventProcessor
 from supsrc.exceptions import ConfigurationError
 from supsrc.monitor import MonitoredEvent
+from supsrc.output.console_formatter import ConsoleEventFormatter
 from supsrc.protocols import RepositoryEngine
 from supsrc.runtime.action_handler import ActionHandler
 from supsrc.runtime.monitoring_coordinator import MonitoringCoordinator
@@ -77,6 +78,7 @@ class WatchOrchestrator:
         # Event system for headless mode
         self.event_collector: EventCollector | None = None
         self.json_logger: JSONEventLogger | None = None
+        self.console_formatter: ConsoleEventFormatter | None = None
 
         # Initialize helper managers
         self.repository_manager: RepositoryManager | None = None
@@ -115,7 +117,16 @@ class WatchOrchestrator:
                 self.event_collector = EventCollector()
                 self.json_logger = JSONEventLogger(self.event_log_path)
                 self.event_collector.subscribe(self.json_logger.log_event)
-                # Also print events to console in headless mode
+
+                # Initialize console formatter for headless mode
+                self.console_formatter = ConsoleEventFormatter(
+                    console=self.console,
+                    use_color=True,  # TODO: Add CLI flag
+                    use_ascii=False,  # TODO: Add CLI flag
+                    verbose=False,  # TODO: Add CLI flag
+                )
+
+                # Subscribe console formatter to events
                 self.event_collector.subscribe(self._print_event_to_console)
             else:
                 # No event collection configured
@@ -304,17 +315,11 @@ class WatchOrchestrator:
 
     def _print_event_to_console(self, event: Any) -> None:
         """Print events to console in headless mode."""
-        try:
-            # Format event for console output
-            event.timestamp.strftime("%H:%M:%S")
-            repo_id = getattr(event, "repo_id", "")
-
-            if repo_id:
-                pass
-            else:
-                pass
-        except Exception as e:
-            log.debug("Failed to print event to console", error=str(e))
+        if self.console_formatter:
+            try:
+                self.console_formatter.format_and_print(event)
+            except Exception as e:
+                log.debug("Failed to print event to console", error=str(e), event_type=type(event).__name__)
 
     def set_repo_refreshing_status(self, repo_id: str, is_refreshing: bool) -> None:
         """Set the refreshing status for a repository."""
