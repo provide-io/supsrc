@@ -173,13 +173,13 @@ class ConsoleEventFormatter:
                 20, width - time_width - repo_width - emoji_width - impact_width - file_width - 15
             )
         else:
-            # Narrow layout - hide some columns
-            file_width = 15
-            message_width = max(15, width - time_width - repo_width - emoji_width - 10)
+            # Narrow layout - reduce file width but still show it
+            file_width = 12
+            message_width = max(10, width - time_width - repo_width - emoji_width - file_width - 10)
 
         # Truncate fields to fit
         repo_id_display = self._truncate(repo_id, repo_width)
-        file_display = self._truncate(file_str, file_width) if width >= 80 else ""
+        file_display = self._truncate(file_str, file_width)  # Always show files
         impact_display = self._truncate(impact, impact_width) if width >= 80 else ""
         message_display = self._truncate(message, message_width)
 
