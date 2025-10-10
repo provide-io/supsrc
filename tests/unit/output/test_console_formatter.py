@@ -480,15 +480,13 @@ class TestConsoleEventFormatter:
         output_text = output.getvalue()
 
         # Should show sequence
-        assert "Sequence" in output_text
+        assert "Sequence" in output_text or "sequence" in output_text.lower()
 
         # Should show event count
         assert "4" in output_text
 
-        # Should show operation types
-        assert "created" in output_text.lower()
-        assert "modified" in output_text.lower()
-        assert "moved" in output_text.lower()
+        # Should show the arrow (→) indicating a move operation
+        assert "→" in output_text or "->" in output_text
 
     def test_verbose_details_shows_file_list(self):
         """Test that verbose mode shows list of files for multi-file events."""

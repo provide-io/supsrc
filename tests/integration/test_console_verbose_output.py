@@ -93,8 +93,8 @@ class TestConsoleVerboseOutput:
             )
         )
 
-        # Wait for buffer to flush (100ms window + margin)
-        await asyncio.sleep(0.5)
+        # Wait for buffer to flush (100ms window + 150ms post-op delay + margin)
+        await asyncio.sleep(1.0)
 
         # Verify event was emitted
         assert len(emitted_events) >= 1, "Expected at least one event to be emitted"
@@ -161,8 +161,8 @@ class TestConsoleVerboseOutput:
             )
             await asyncio.sleep(0.01)
 
-        # Wait for buffer to flush (100ms window + margin)
-        await asyncio.sleep(0.5)
+        # Wait for buffer to flush (100ms window + 150ms post-op delay + margin)
+        await asyncio.sleep(1.0)
 
         # Verify event was emitted
         assert len(emitted_events) >= 1
