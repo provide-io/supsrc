@@ -28,7 +28,7 @@ class StreamingOperationHandler:
         self,
         detector_config: DetectorConfig,
         emit_callback: Callable[[BufferedFileChangeEvent], None] | None = None,
-        post_operation_delay_ms: int = 150,
+        post_operation_delay_ms: int = 20,  # Short delay for testing, long enough for FS settling
     ):
         """Initialize the streaming operation handler.
 

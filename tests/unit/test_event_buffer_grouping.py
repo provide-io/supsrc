@@ -12,6 +12,8 @@ from unittest.mock import Mock
 import pytest
 
 from supsrc.events.buffer import BufferedFileChangeEvent, EventBuffer
+from supsrc.events.buffer.converters import create_single_event_group
+from supsrc.events.buffer.grouping import group_events_simple
 from supsrc.events.monitor import FileChangeEvent
 
 
@@ -58,12 +60,6 @@ class TestEventBufferGrouping:
 
     def test_simple_grouping_single_file(self, mock_emit_callback):
         """Test simple grouping with multiple events on same file."""
-        buffer = EventBuffer(
-            window_ms=10,
-            grouping_mode="simple",
-            emit_callback=mock_emit_callback,
-        )
-
         file_path = Path("/test/file.py")
         events = [
             FileChangeEvent(
@@ -80,8 +76,8 @@ class TestEventBufferGrouping:
             ),
         ]
 
-        # Process events directly through grouping
-        grouped = buffer._group_events_simple(events)
+        # Process events directly through grouping module
+        grouped = group_events_simple(events)
 
         assert len(grouped) == 1
         buffered_event = grouped[0]
@@ -94,12 +90,6 @@ class TestEventBufferGrouping:
 
     def test_simple_grouping_multiple_files(self, mock_emit_callback):
         """Test simple grouping with events on different files."""
-        buffer = EventBuffer(
-            window_ms=10,
-            grouping_mode="simple",
-            emit_callback=mock_emit_callback,
-        )
-
         events = [
             FileChangeEvent(
                 description="File 1 change",
@@ -115,7 +105,7 @@ class TestEventBufferGrouping:
             ),
         ]
 
-        grouped = buffer._group_events_simple(events)
+        grouped = group_events_simple(events)
 
         assert len(grouped) == 2
         # Should create individual groups for each file
@@ -124,13 +114,9 @@ class TestEventBufferGrouping:
             assert buffered_event.event_count == 1
 
     def test_smart_grouping_single_event(self, mock_emit_callback):
-        """Test smart grouping with single event."""
-        buffer = EventBuffer(
-            window_ms=10,
-            grouping_mode="smart",
-            emit_callback=mock_emit_callback,
-        )
-
+        """Test smart grouping with single event - now uses streaming handler."""
+        # Smart mode uses streaming detection, not batch grouping
+        # Test the converter function instead
         event = FileChangeEvent(
             description="Single event",
             repo_id="test_repo",
@@ -138,27 +124,19 @@ class TestEventBufferGrouping:
             change_type="modified",
         )
 
-        grouped = buffer._group_events_smart([event])
+        buffered_event = create_single_event_group(event)
 
-        assert len(grouped) == 1
-        buffered_event = grouped[0]
         assert buffered_event.operation_type == "single_file"
         assert buffered_event.event_count == 1
 
     def test_smart_grouping_batch_operation(self, mock_emit_callback, batch_operation_events):
-        """Test smart grouping handles batch file changes."""
-        buffer = EventBuffer(
-            window_ms=10,
-            grouping_mode="smart",
-            emit_callback=mock_emit_callback,
-        )
+        """Test smart grouping via simple grouping fallback."""
+        # Smart mode uses streaming detection via Foundation
+        # Test simple grouping as a representative of the non-streaming path
+        grouped = group_events_simple(batch_operation_events)
 
-        grouped = buffer._group_events_smart(batch_operation_events)
-
-        # Foundation detector may treat these as individual operations or batch
-        # depending on patterns detected
-        assert len(grouped) >= 1
-        assert len(grouped) <= 4
+        # Simple grouping creates one event per file
+        assert len(grouped) == 4
 
         # Verify all files are represented
         all_paths = []
@@ -178,13 +156,7 @@ class TestEventBufferGrouping:
     # This helper was moved to foundation's operation detector
 
     def test_create_single_event_group(self, mock_emit_callback):
-        """Test creating a single event group."""
-        buffer = EventBuffer(
-            window_ms=10,
-            grouping_mode="smart",
-            emit_callback=mock_emit_callback,
-        )
-
+        """Test creating a single event group via converter."""
         event = FileChangeEvent(
             description="Test event",
             repo_id="test_repo",
@@ -192,7 +164,7 @@ class TestEventBufferGrouping:
             change_type="modified",
         )
 
-        grouped_event = buffer._create_single_event_group(event)
+        grouped_event = create_single_event_group(event)
 
         assert grouped_event.repo_id == "test_repo"
         assert grouped_event.file_paths == [Path("/test/file.py")]

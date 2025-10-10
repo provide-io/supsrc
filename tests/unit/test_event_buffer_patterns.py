@@ -337,7 +337,8 @@ class TestEventBufferPatterns:
             if hasattr(emitted, "operation_type"):
                 assert emitted.operation_type in ["single_file", "batch_operation", "atomic_rewrite"]
 
-    def test_smart_grouping_with_mixed_patterns(self, mock_emit_callback):
+    @pytest.mark.asyncio
+    async def test_smart_grouping_with_mixed_patterns(self, mock_emit_callback):
         """Test smart grouping with a mix of atomic and regular events."""
         buffer = EventBuffer(
             window_ms=10,
@@ -370,15 +371,20 @@ class TestEventBufferPatterns:
             ),
         ]
 
-        # Call _group_events_smart directly (this is still a valid internal method)
-        grouped = buffer._group_events_smart(events)
+        # Add events to buffer (smart mode uses streaming detection)
+        for event in events:
+            buffer.add_event(event)
+
+        # Wait for operations to emit
+        await asyncio.sleep(0.05)
 
         # Should detect some pattern and handle events
-        assert len(grouped) >= 1
+        assert mock_emit_callback.call_count >= 1
 
         # Verify all files are represented
         all_file_paths = []
-        for event in grouped:
+        all_emitted = [call[0][0] for call in mock_emit_callback.call_args_list]
+        for event in all_emitted:
             if hasattr(event, "file_paths"):
                 all_file_paths.extend(event.file_paths)
             elif hasattr(event, "file_path"):
