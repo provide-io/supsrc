@@ -150,10 +150,12 @@ class TableVerboseFormatter:
         # Files section
         if hasattr(event, "file_paths") and event.file_paths:
             file_list = []
-            for fp in event.file_paths[:10]:  # Show first 10
+            # Show up to 5 files for consistency with old behavior
+            display_count = min(5, len(event.file_paths))
+            for fp in event.file_paths[:display_count]:
                 file_list.append(("", f"• {fp.name if hasattr(fp, 'name') else fp}"))
-            if len(event.file_paths) > 10:
-                file_list.append(("", f"... and {len(event.file_paths) - 10} more"))
+            if len(event.file_paths) > display_count:
+                file_list.append(("", f"... and {len(event.file_paths) - display_count} more"))
             sections.append(("Files", file_list))
 
         # Operation sequence
