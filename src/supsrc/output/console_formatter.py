@@ -248,8 +248,6 @@ class ConsoleEventFormatter:
             timestamp: Formatted timestamp
             repo_id: Repository ID
         """
-        from rich.panel import Panel
-        from rich.text import Text
 
         details = []
         event_type = type(event).__name__
@@ -257,6 +255,15 @@ class ConsoleEventFormatter:
         # Event type and source
         details.append(f"  [dim]Type:[/dim] {event_type}")
         details.append(f"  [dim]Source:[/dim] {getattr(event, 'source', 'unknown')}")
+
+        # TimerUpdateEvent details
+        if event_type == "TimerUpdateEvent":
+            if hasattr(event, "seconds_remaining"):
+                details.append(f"  [dim]Time Remaining:[/dim] [yellow]{event.seconds_remaining}s[/yellow]")
+            if hasattr(event, "total_seconds"):
+                details.append(f"  [dim]Total Time:[/dim] {event.total_seconds}s")
+            if hasattr(event, "rule_name") and event.rule_name:
+                details.append(f"  [dim]Rule:[/dim] {event.rule_name}")
 
         # BufferedFileChangeEvent - show atomic operation details
         if hasattr(event, "operation_type"):
@@ -332,7 +339,7 @@ class ConsoleEventFormatter:
 
         # Show all metadata
         if hasattr(event, "metadata") and event.metadata:
-            details.append(f"  [dim]Metadata:[/dim]")
+            details.append("  [dim]Metadata:[/dim]")
             for key, value in event.metadata.items():
                 details.append(f"    {key}: {value}")
 
