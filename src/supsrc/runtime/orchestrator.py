@@ -65,6 +65,7 @@ class WatchOrchestrator:
         use_color: bool = True,
         use_ascii: bool = False,
         verbose: bool = False,
+        verbose_format: str = "table",
         app_log_path: Path | None = None,
     ):
         self.config_path = config_path
@@ -75,6 +76,7 @@ class WatchOrchestrator:
         self.use_color = use_color
         self.use_ascii = use_ascii
         self.verbose = verbose
+        self.verbose_format = verbose_format
         self.app_log_path = app_log_path or Path("/tmp/supsrc_app.log")
         self.event_queue: asyncio.Queue[MonitoredEvent] = asyncio.Queue()
         self.repo_states: RepositoryStatesMap = {}
@@ -136,6 +138,7 @@ class WatchOrchestrator:
                     use_color=self.use_color,
                     use_ascii=self.use_ascii,
                     verbose=self.verbose,
+                    verbose_format=self.verbose_format,
                 )
 
                 # Subscribe console formatter to events

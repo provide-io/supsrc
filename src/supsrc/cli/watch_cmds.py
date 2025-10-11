@@ -182,6 +182,13 @@ def _run_headless_orchestrator(orchestrator: WatchOrchestrator) -> int:
     default=False,
     help="Show verbose event details including event IDs and full metadata.",
 )
+@click.option(
+    "--verbose-format",
+    type=click.Choice(["table", "compact"], case_sensitive=False),
+    default="table",
+    show_default=True,
+    help="Format for verbose output: 'table' (structured with box drawing) or 'compact' (key=value style).",
+)
 @logging_options
 @click.pass_context
 def watch_cli(
@@ -192,6 +199,7 @@ def watch_cli(
     no_color: bool,
     use_ascii: bool,
     verbose: bool,
+    verbose_format: str,
     **kwargs,
 ):
     """Watch repository changes and trigger actions (non-interactive mode)."""
@@ -237,6 +245,7 @@ def watch_cli(
         use_color=not no_color,
         use_ascii=use_ascii,
         verbose=verbose,
+        verbose_format=verbose_format,
         app_log_path=app_log,
     )
 
