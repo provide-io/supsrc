@@ -94,7 +94,27 @@ class ConsoleEventFormatter:
         Returns:
             Tuple of (impact_str, file_str, message_str)
         """
-        return EventFormatter.format_event_details(event)
+        impact, file_str, message = EventFormatter.format_event_details(event)
+
+        # Strip Rich markup from message for console output
+        # The TUI formatter returns markup like "[bold cyan]2 files[/]" which needs to be cleaned
+        message = self._strip_rich_markup(message)
+
+        return impact, file_str, message
+
+    def _strip_rich_markup(self, text: str) -> str:
+        """Remove Rich markup tags from text.
+
+        Args:
+            text: Text potentially containing Rich markup like [bold]text[/]
+
+        Returns:
+            Text with markup removed
+        """
+        import re
+
+        # Remove all [tag] and [/] style markup
+        return re.sub(r"\[/?[^\]]+\]", "", text)
 
     def _build_output_line(
         self,
