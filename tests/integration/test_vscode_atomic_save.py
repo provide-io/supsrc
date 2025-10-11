@@ -74,8 +74,8 @@ class TestVSCodeAtomicSaveIntegration:
             )
         )
 
-        # Wait for auto-flush
-        await asyncio.sleep(0.6)
+        # Wait for auto-flush (500ms) + post-operation delay (150ms) + margin
+        await asyncio.sleep(0.8)
 
         # Verify callback was called
         assert mock_callback.call_count >= 1, \
@@ -145,7 +145,8 @@ class TestVSCodeAtomicSaveIntegration:
             )
         )
 
-        await asyncio.sleep(0.6)
+        # Wait for auto-flush (500ms) + post-operation delay (150ms) + margin
+        await asyncio.sleep(0.8)
 
         # Verify the final file with all dots preserved
         assert mock_callback.call_count >= 1
@@ -215,8 +216,8 @@ class TestVSCodeAtomicSaveIntegration:
             )
         )
 
-        # Wait for auto-flush
-        await asyncio.sleep(0.6)
+        # Wait for auto-flush (500ms) + post-operation delay (150ms) + margin
+        await asyncio.sleep(0.8)
 
         # NOW callback should fire with the complete operation
         assert mock_callback.call_count >= 1, \
@@ -263,7 +264,8 @@ class TestVSCodeAtomicSaveIntegration:
             )
         )
 
-        await asyncio.sleep(0.6)  # Let first operation complete
+        # Wait for first operation: auto-flush (500ms) + post-operation delay (150ms) + margin
+        await asyncio.sleep(0.8)
 
         # Second file save (space operations apart to avoid bundling)
         await asyncio.sleep(1.0)
@@ -286,7 +288,8 @@ class TestVSCodeAtomicSaveIntegration:
             )
         )
 
-        await asyncio.sleep(0.6)  # Let second operation complete
+        # Wait for second operation: auto-flush (500ms) + post-operation delay (150ms) + margin
+        await asyncio.sleep(0.8)
 
         # Should have at least 2 callbacks
         assert mock_callback.call_count >= 2, \
@@ -347,7 +350,8 @@ class TestVSCodeAtomicSaveIntegration:
             )
         )
 
-        await asyncio.sleep(0.6)
+        # Wait for auto-flush (500ms) + post-operation delay (150ms) + margin
+        await asyncio.sleep(0.8)
 
         # Critical assertion: final file should be "orchestrator.py" NOT ".orchestrator.py"
         assert mock_callback.call_count >= 1
