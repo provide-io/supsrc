@@ -162,10 +162,37 @@ def _run_headless_orchestrator(orchestrator: WatchOrchestrator) -> int:
     default=None,
     help="Path to write structured event logs in JSON format. Defaults to .supsrc/local/logs/events.jsonl in the first repository.",
 )
+@click.option(
+    "--no-color",
+    is_flag=True,
+    default=False,
+    help="Disable color output in event stream.",
+)
+@click.option(
+    "--ascii",
+    "use_ascii",
+    is_flag=True,
+    default=False,
+    help="Use ASCII characters instead of emojis in event stream.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Show verbose event details including event IDs and full metadata.",
+)
 @logging_options
 @click.pass_context
 def watch_cli(
-    ctx: click.Context, config_path: Path, app_log: Path, event_log: Path | None, **kwargs
+    ctx: click.Context,
+    config_path: Path,
+    app_log: Path,
+    event_log: Path | None,
+    no_color: bool,
+    use_ascii: bool,
+    verbose: bool,
+    **kwargs,
 ):
     """Watch repository changes and trigger actions (non-interactive mode)."""
     # The shutdown event is still necessary to signal between async components.
@@ -196,12 +223,21 @@ def watch_cli(
             log.warning("Failed to determine log directory", error=str(e))
             event_log = Path("/tmp/supsrc_events.json")
 
+    # Create Rich console for headless output
+    from rich.console import Console
+
+    console = Console(no_color=no_color, force_terminal=not no_color)
+
     orchestrator = WatchOrchestrator(
         config_path=config_path,
         shutdown_event=shutdown_event,
         app=None,  # No TUI
-        console=None,
+        console=console,
         event_log_path=event_log,
+        use_color=not no_color,
+        use_ascii=use_ascii,
+        verbose=verbose,
+        app_log_path=app_log,
     )
 
     exit_code = _run_headless_orchestrator(orchestrator)
