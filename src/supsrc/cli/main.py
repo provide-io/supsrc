@@ -61,9 +61,10 @@ def _initialize_logging(cli_context: CLIContext) -> None:
             )
         )
 
-        # Initialize Foundation (force=True to override auto-initialized config)
+        # Initialize Foundation
+        # Note: Foundation automatically detects explicit config and overrides auto-init
         hub = get_hub()
-        hub.initialize_foundation(config, force=True)
+        hub.initialize_foundation(config)
 
         # Register custom supsrc eventset for log enrichment
         try:
