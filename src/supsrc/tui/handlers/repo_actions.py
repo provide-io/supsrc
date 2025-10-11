@@ -7,11 +7,12 @@ Repository action handler methods for the TUI application.
 from __future__ import annotations
 
 import structlog
+from provide.foundation.logger import get_logger
 from textual.widgets import DataTable
 
 from supsrc.tui.messages import LogMessageUpdate
 
-log = structlog.get_logger("tui.repo_actions")
+log = get_logger(__name__)
 
 
 class RepoActionHandlerMixin:

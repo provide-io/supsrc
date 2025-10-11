@@ -5,6 +5,7 @@ from pathlib import Path
 import click
 import structlog
 from provide.foundation.cli.decorators import logging_options
+from provide.foundation.logger import get_logger
 from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.config import load_config
@@ -17,7 +18,7 @@ try:
 except ImportError:
     RICH_AVAILABLE = False
 
-log: StructLogger = structlog.get_logger("cli.config")
+log: StructLogger = get_logger(__name__)
 
 
 @click.group(name="config")
