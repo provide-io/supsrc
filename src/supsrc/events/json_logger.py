@@ -102,12 +102,20 @@ class JSONEventLogger:
                 "files_changed",
                 "action",
                 "rule_type",
+                # BufferedFileChangeEvent fields
+                "file_paths",
+                "operation_type",
+                "event_count",
+                "primary_change_type",
             ]:
                 if hasattr(event, field_name):
                     value = getattr(event, field_name)
                     # Convert Path objects to strings for JSON serialization
                     if isinstance(value, Path):
                         value = str(value)
+                    # Convert list of Path objects to list of strings
+                    elif isinstance(value, (list, tuple)) and value and isinstance(value[0], Path):
+                        value = [str(p) for p in value]
                     event_data[field_name] = value
 
             # Write as single JSON line
