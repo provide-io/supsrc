@@ -1,7 +1,7 @@
 # src/supsrc/events/buffer/core.py
 
 """
-Core EventBuffer class for buffering and grouping filesystem events.
+Core event buffer orchestration for reducing TUI event log spam.
 """
 
 from __future__ import annotations
@@ -15,7 +15,8 @@ from provide.foundation.logger import get_logger
 
 from supsrc.events.buffer.converters import create_single_event_group
 from supsrc.events.buffer.grouping import group_events_simple
-from supsrc.events.buffer.smart_detector import SmartDetectorManager
+from supsrc.events.buffer.streaming import StreamingOperationHandler
+from supsrc.events.buffer_events import BufferedFileChangeEvent
 from supsrc.events.defaults import (
     DEFAULT_BUFFER_WINDOW_MS,
     DEFAULT_GROUPING_MODE,
@@ -27,16 +28,16 @@ from supsrc.events.defaults import (
 )
 from supsrc.events.monitor import FileChangeEvent
 
-log = get_logger("events.buffer")
+log = get_logger("events.buffer.core")
 
 
 class EventBuffer:
     """Buffers and groups filesystem events to reduce TUI log spam.
 
-    Supports three modes:
-    - OFF: Pass events through immediately without buffering
-    - SIMPLE: Time-window buffering with basic file grouping
-    - SMART: Advanced grouping using OperationDetector from provide-foundation
+    Supports three grouping modes:
+    - "off": Pass-through, no buffering
+    - "simple": Time-window buffering with file-based grouping
+    - "smart": Streaming operation detection with atomic save hiding
     """
 
     def __init__(
@@ -58,26 +59,25 @@ class EventBuffer:
 
         # Buffered events by repo_id (for simple mode)
         self._buffers: dict[str, list[FileChangeEvent]] = defaultdict(list)
-        # Active timer handles for each repo
+        # Active timer handles for each repo (for simple mode)
         self._timers: dict[str, asyncio.TimerHandle] = {}
 
-        # Smart mode detector manager
-        self._smart_detector: SmartDetectorManager | None = None
+        # Streaming handler for smart mode
+        self._streaming_handler: StreamingOperationHandler | None = None
 
-        # Initialize smart mode if configured
+        # Initialize smart mode if enabled
         if grouping_mode == GROUPING_MODE_SMART:
             detector_config = DetectorConfig(
                 time_window_ms=window_ms,
                 min_confidence=DEFAULT_MIN_CONFIDENCE,
                 temp_patterns=DEFAULT_TEMP_FILE_PATTERNS,
             )
-            self._smart_detector = SmartDetectorManager(
+            self._streaming_handler = StreamingOperationHandler(
                 detector_config=detector_config,
                 emit_callback=emit_callback,
-                post_operation_delay_ms=150,  # 150ms delay for filesystem settling
             )
             log.debug(
-                "Smart mode enabled with detector manager",
+                "Smart mode enabled with streaming detection",
                 time_window_ms=window_ms,
                 min_confidence=DEFAULT_MIN_CONFIDENCE,
                 temp_patterns_count=len(DEFAULT_TEMP_FILE_PATTERNS),
@@ -94,7 +94,7 @@ class EventBuffer:
         """Add a file change event to the buffer.
 
         Args:
-            event: The file change event to add
+            event: File change event to buffer
         """
         log.trace(
             "Event received",
@@ -104,19 +104,19 @@ class EventBuffer:
             grouping_mode=self.grouping_mode,
         )
 
-        # Mode 1: OFF - Pass through immediately
+        # OFF MODE: Pass through immediately without buffering
         if self.grouping_mode == GROUPING_MODE_OFF:
             log.trace("Passing through unbuffered event", file_path=str(event.file_path))
             if self.emit_callback:
                 self.emit_callback(event)
             return
 
-        # Mode 2: SMART - Use smart detector
-        if self.grouping_mode == GROUPING_MODE_SMART and self._smart_detector:
-            self._smart_detector.add_event(event)
+        # SMART MODE: Use streaming detection
+        if self.grouping_mode == GROUPING_MODE_SMART and self._streaming_handler:
+            self._streaming_handler.handle_event(event)
             return
 
-        # Mode 3: SIMPLE - Use time-window buffering
+        # SIMPLE MODE: Use time-window buffering
         repo_id = event.repo_id
         self._buffers[repo_id].append(event)
 
@@ -189,9 +189,9 @@ class EventBuffer:
         For smart grouping, also flushes any incomplete operations from the
         streaming detectors, showing temp files if they never completed.
         """
-        # Flush smart detector if enabled
-        if self._smart_detector:
-            self._smart_detector.flush_all()
+        # Flush smart mode handler
+        if self._streaming_handler:
+            self._streaming_handler.flush_all()
 
         # Flush time-window buffers (for simple mode)
         repo_ids = list(self._buffers.keys())

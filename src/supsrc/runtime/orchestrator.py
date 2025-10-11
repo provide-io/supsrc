@@ -88,6 +88,10 @@ class WatchOrchestrator:
         self.json_logger: JSONEventLogger | None = None
         self.console_formatter: ConsoleEventFormatter | None = None
 
+        # Timer update task for headless mode
+        self.timer_update_task: asyncio.Task | None = None
+        self._last_emitted_timers: dict[str, int] = {}  # Track last emitted timer value per repo
+
         # Initialize helper managers
         self.repository_manager: RepositoryManager | None = None
         self.monitoring_coordinator: MonitoringCoordinator | None = None
@@ -165,6 +169,10 @@ class WatchOrchestrator:
                     app_log_path=self.app_log_path,
                 )
 
+                # Start timer update task for headless mode
+                self.timer_update_task = asyncio.create_task(self._timer_update_loop())
+                log.info("Started timer update task for headless mode")
+
             # Initialize status manager for repository status updates
             self.status_manager = StatusManager(
                 self.repo_states, self.repo_engines, self.config, self._post_tui_state_update
@@ -205,6 +213,14 @@ class WatchOrchestrator:
             log.critical("Orchestrator run failed with an unhandled exception.", exc_info=True)
         finally:
             log.info("Orchestrator entering cleanup phase.")
+
+            # Cancel timer update task
+            if self.timer_update_task and not self.timer_update_task.done():
+                self.timer_update_task.cancel()
+                try:
+                    await asyncio.wait_for(self.timer_update_task, timeout=2.0)
+                except (TimeoutError, asyncio.CancelledError):
+                    log.debug("Timer update task cleanup completed")
 
             # Cancel processor task first
             if processor_task and not processor_task.done():
@@ -358,3 +374,68 @@ class WatchOrchestrator:
                 repo_id, self.status_manager
             )
         return False
+
+    async def _timer_update_loop(self) -> None:
+        """Background task to emit timer update events for headless mode display."""
+        from supsrc.events.timer import TimerUpdateEvent
+
+        log.info("Timer update loop starting")
+        try:
+            while True:
+                await asyncio.sleep(1.0)  # Update every second
+
+                if not self.event_collector:
+                    continue
+
+                # Update and emit timer events for each repository
+                for repo_id, repo_state in self.repo_states.items():
+                    # Update the timer countdown
+                    repo_state.update_timer_countdown()
+
+                    # Only emit if there's an active timer
+                    if repo_state.timer_seconds_left is not None:
+                        seconds_left = repo_state.timer_seconds_left
+                        last_emitted = self._last_emitted_timers.get(repo_id, -1)
+
+                        # Emit based on smart intervals:
+                        # - Every 10s when > 10s remaining
+                        # - Every 5s when between 10-20s
+                        # - Every second when ≤ 10s
+                        should_emit = False
+
+                        if seconds_left <= 10:
+                            # Final countdown: emit every second
+                            should_emit = seconds_left != last_emitted
+                        elif seconds_left <= 20:
+                            # Mid countdown: emit every 5 seconds
+                            should_emit = seconds_left % 5 == 0 and seconds_left != last_emitted
+                        else:
+                            # Early countdown: emit every 10 seconds
+                            should_emit = seconds_left % 10 == 0 and seconds_left != last_emitted
+
+                        if should_emit:
+                            self._last_emitted_timers[repo_id] = seconds_left
+
+                            timer_event = TimerUpdateEvent(
+                                description=f"Timer: {seconds_left}s remaining",
+                                repo_id=repo_id,
+                                seconds_remaining=seconds_left,
+                                total_seconds=repo_state._timer_total_seconds or seconds_left,
+                                rule_name=repo_state.active_rule_description,
+                            )
+
+                            self.event_collector.emit(timer_event)
+                            log.debug(
+                                "Emitted timer update event",
+                                repo_id=repo_id,
+                                seconds_left=seconds_left,
+                            )
+                    elif repo_id in self._last_emitted_timers:
+                        # Timer finished or cancelled, clear tracking
+                        del self._last_emitted_timers[repo_id]
+
+        except asyncio.CancelledError:
+            log.info("Timer update loop cancelled")
+            raise
+        except Exception as e:
+            log.error("Timer update loop error", error=str(e), exc_info=True)

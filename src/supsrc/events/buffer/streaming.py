@@ -1,16 +1,15 @@
-# src/supsrc/events/buffer/smart_detector.py
+# src/supsrc/events/buffer/streaming.py
 
 """
-Smart mode event detection using OperationDetector from provide-foundation.
-Handles streaming detection, post-operation delays, and operation completion callbacks.
+Streaming operation detection handler for smart event buffering.
 """
 
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from provide.foundation.file.operations import DetectorConfig, OperationDetector
 from provide.foundation.logger import get_logger
@@ -19,24 +18,24 @@ from supsrc.events.buffer.converters import convert_to_file_event, create_operat
 from supsrc.events.buffer_events import BufferedFileChangeEvent
 from supsrc.events.monitor import FileChangeEvent
 
-log = get_logger("events.buffer.smart_detector")
+log = get_logger("events.buffer.streaming")
 
 
-class SmartDetectorManager:
-    """Manages operation detection using foundation's OperationDetector for smart mode."""
+class StreamingOperationHandler:
+    """Handles streaming operation detection using Foundation's OperationDetector."""
 
     def __init__(
         self,
         detector_config: DetectorConfig,
-        emit_callback: Callable[[BufferedFileChangeEvent], None] | None,
-        post_operation_delay_ms: int = 150,
+        emit_callback: Callable[[BufferedFileChangeEvent], None] | None = None,
+        post_operation_delay_ms: int = 20,  # Short delay for testing, long enough for FS settling
     ):
-        """Initialize smart detector manager.
+        """Initialize the streaming operation handler.
 
         Args:
             detector_config: Configuration for operation detection
-            emit_callback: Callback to emit completed operations
-            post_operation_delay_ms: Delay before emitting operations (allows filesystem to settle)
+            emit_callback: Callback to emit buffered events
+            post_operation_delay_ms: Delay in ms before emitting operations (debouncing)
         """
         self.detector_config = detector_config
         self.emit_callback = emit_callback
@@ -46,21 +45,23 @@ class SmartDetectorManager:
         self._operation_detectors: dict[str, OperationDetector] = {}
 
         # Sequence counter for streaming detection
-        self._sequence_counter: dict[str, int] = {}
+        self._sequence_counter: dict[str, int] = defaultdict(int)
 
-        # Post-operation delay buffer
+        # Post-operation delay buffer (for debouncing)
         # Key: f"{repo_id}:{primary_path}" for per-file debouncing
         self._pending_operations: dict[str, BufferedFileChangeEvent] = {}
         self._operation_timers: dict[str, asyncio.TimerHandle] = {}
 
         log.debug(
-            "SmartDetectorManager initialized",
-            post_operation_delay_ms=post_operation_delay_ms,
+            "StreamingOperationHandler initialized",
+            time_window_ms=detector_config.time_window_ms,
             min_confidence=detector_config.min_confidence,
+            temp_patterns_count=len(detector_config.temp_patterns),
+            post_operation_delay_ms=post_operation_delay_ms,
         )
 
-    def add_event(self, event: FileChangeEvent) -> None:
-        """Process a file change event through smart detection.
+    def handle_event(self, event: FileChangeEvent) -> None:
+        """Handle a file change event through streaming detection.
 
         Args:
             event: The file change event to process
@@ -87,23 +88,18 @@ class SmartDetectorManager:
             repo_id: Repository identifier
 
         Returns:
-            OperationDetector instance for this repository
+            OperationDetector instance for this repo
         """
         if repo_id not in self._operation_detectors:
             # Create new detector with config
             detector = OperationDetector(config=self.detector_config)
             self._operation_detectors[repo_id] = detector
-
-            # Initialize sequence counter for this repo
-            if repo_id not in self._sequence_counter:
-                self._sequence_counter[repo_id] = 0
-
             log.debug("Created operation detector for repo", repo_id=repo_id)
 
         return self._operation_detectors[repo_id]
 
     def _on_operation_complete(self, operation: Any, repo_id: str) -> None:
-        """Handle completed operation from detector.
+        """Callback when foundation detects a completed operation.
 
         Buffers the operation with a delay before emitting to TUI, allowing
         filesystem/editor to settle and avoiding showing partial state.
@@ -113,7 +109,7 @@ class SmartDetectorManager:
             repo_id: Repository identifier
         """
         log.debug(
-            "Operation completed",
+            "Operation completed callback",
             operation_type=operation.operation_type.value,
             primary_path=str(operation.primary_path),
             files_affected=str(operation.files_affected) if operation.files_affected else None,
@@ -178,7 +174,7 @@ class SmartDetectorManager:
             return
 
         log.debug(
-            "⏰ Emitting delayed operation",
+            "Emitting delayed operation",
             key=operation_key,
             file_paths=[str(p) for p in buffered_event.file_paths],
             operation_type=buffered_event.operation_type,
@@ -196,11 +192,9 @@ class SmartDetectorManager:
             log.warning("No emit callback available for delayed operation")
 
     def flush_all(self) -> None:
-        """Flush all pending operations immediately.
+        """Flush all pending operations and incomplete detections.
 
-        This includes:
-        - Any buffered post-operation delays
-        - Any incomplete operations from the streaming detectors
+        Called during shutdown to emit any buffered operations.
         """
         # First, flush any pending post-operation delays
         if self._pending_operations:
@@ -213,7 +207,7 @@ class SmartDetectorManager:
                     self._operation_timers[operation_key].cancel()
                 self._emit_operation(operation_key)
 
-        # Flush streaming detectors - emit any incomplete operations
+        # Flush streaming detectors
         for repo_id, detector in self._operation_detectors.items():
             pending_operations = detector.flush()
 
