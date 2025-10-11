@@ -108,9 +108,9 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
             )
         )
 
-        # Use new Foundation API
+        # Use new Foundation API (force=True to override auto-initialized config)
         hub = get_hub()
-        hub.initialize_foundation(config)
+        hub.initialize_foundation(config, force=True)
 
         # Register custom supsrc eventset for log enrichment
         try:
