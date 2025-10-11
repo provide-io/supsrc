@@ -75,7 +75,7 @@ class BufferedFileChangeEvent(Event):
             if move_chain:
                 if len(move_chain) > 2:
                     # Multiple moves: show chain with count
-                    return f"[{time_str}] {emoji} [{self.repo_id}] {' → '.join(move_chain)} ({len(move_chain)-1} moves)"
+                    return f"[{time_str}] {emoji} [{self.repo_id}] {' → '.join(move_chain)} ({len(move_chain) - 1} moves)"
                 else:
                     # Simple move: just show source → dest
                     return f"[{time_str}] {emoji} [{self.repo_id}] {' → '.join(move_chain)}"
@@ -130,8 +130,14 @@ class BufferedFileChangeEvent(Event):
         moves = []
         for entry in self.operation_history:
             if entry.get("change_type") == "moved" and entry.get("dest_path"):
-                src_name = entry["path"].name if hasattr(entry["path"], "name") else str(entry["path"])
-                dest_name = entry["dest_path"].name if hasattr(entry["dest_path"], "name") else str(entry["dest_path"])
+                src_name = (
+                    entry["path"].name if hasattr(entry["path"], "name") else str(entry["path"])
+                )
+                dest_name = (
+                    entry["dest_path"].name
+                    if hasattr(entry["dest_path"], "name")
+                    else str(entry["dest_path"])
+                )
                 moves.append((src_name, dest_name))
 
         if not moves:
@@ -140,7 +146,7 @@ class BufferedFileChangeEvent(Event):
         # Build chain: source → dest1 → dest2 → ...
         # Assumes moves are in chronological order (sorted by timestamp)
         chain = [moves[0][0]]  # Start with first source
-        for src, dest in moves:
+        for _src, dest in moves:
             chain.append(dest)
 
         return chain

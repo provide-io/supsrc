@@ -243,7 +243,11 @@ class MessageExtractor:
                         # Try to find move chain
                         last_entry = history[-1]
                         if last_entry.get("dest_path"):
-                            dest_name = last_entry["dest_path"].name if hasattr(last_entry["dest_path"], "name") else str(last_entry["dest_path"])
+                            dest_name = (
+                                last_entry["dest_path"].name
+                                if hasattr(last_entry["dest_path"], "name")
+                                else str(last_entry["dest_path"])
+                            )
                             return f"→ {dest_name}"
 
                 # For other operations, just show the type
