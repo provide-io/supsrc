@@ -193,6 +193,7 @@ class WatchOrchestrator:
                 repo_engines=self.repo_engines,
                 tui=tui,
                 config_reload_callback=self.reload_config,
+                event_collector=self.event_collector,
             )
 
             # Setup monitoring services

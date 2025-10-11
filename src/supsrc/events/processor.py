@@ -17,6 +17,7 @@ from supsrc.rules import check_trigger_condition
 from supsrc.state import RepositoryState, RepositoryStatus
 
 if TYPE_CHECKING:
+    from supsrc.events.collector import EventCollector
     from supsrc.protocols import RepositoryEngine
     from supsrc.runtime.action_handler import ActionHandler
     from supsrc.runtime.tui_interface import TUIInterface
@@ -37,6 +38,7 @@ class EventProcessor:
         repo_engines: dict[str, "RepositoryEngine"],
         tui: "TUIInterface",
         config_reload_callback: "Any",
+        event_collector: "EventCollector | None" = None,
     ):
         self.config = config
         self.event_queue = event_queue
@@ -46,6 +48,7 @@ class EventProcessor:
         self.repo_engines = repo_engines
         self.tui = tui
         self.config_reload_callback = config_reload_callback
+        self.event_collector = event_collector
         self._action_tasks: set[asyncio.Task] = set()
         self._recent_moves: set[Path] = set()
 
@@ -70,6 +73,70 @@ class EventProcessor:
             buffer_window_ms=global_config.event_buffer_window_ms,
             grouping_mode=global_config.event_grouping_mode,
         )
+
+    def _emit_event(self, event: Any) -> None:
+        """Emit event to all available event collectors (TUI and global).
+
+        Args:
+            event: Event to emit
+        """
+        emitted_to_tui = False
+        emitted_to_global = False
+
+        # Emit to TUI event collector if available
+        if (
+            self.tui
+            and hasattr(self.tui, "app")
+            and self.tui.app
+            and hasattr(self.tui.app, "event_collector")
+        ):
+            try:
+                self.tui.app.event_collector.emit(event)  # type: ignore[arg-type,union-attr]
+                emitted_to_tui = True
+                log.debug(
+                    "Event emitted to TUI event collector",
+                    event_type=type(event).__name__,
+                    repo_id=getattr(event, "repo_id", "unknown"),
+                )
+            except Exception as e:
+                log.warning(
+                    "Failed to emit event to TUI event collector",
+                    error=str(e),
+                    event_type=type(event).__name__,
+                    exc_info=True,
+                )
+
+        # Emit to global event collector if available (and different from TUI's)
+        if self.event_collector:
+            # Only emit if it's not the same collector as TUI's (avoid duplicates)
+            is_same_collector = (
+                emitted_to_tui
+                and hasattr(self.tui.app, "event_collector")
+                and self.event_collector is self.tui.app.event_collector
+            )
+
+            if not is_same_collector:
+                try:
+                    self.event_collector.emit(event)  # type: ignore[arg-type]
+                    emitted_to_global = True
+                    log.debug(
+                        "Event emitted to global event collector",
+                        event_type=type(event).__name__,
+                        repo_id=getattr(event, "repo_id", "unknown"),
+                    )
+                except Exception as e:
+                    log.warning(
+                        "Failed to emit event to global event collector",
+                        error=str(e),
+                        event_type=type(event).__name__,
+                        exc_info=True,
+                    )
+
+        if not (emitted_to_tui or emitted_to_global):
+            log.debug(
+                "Event not emitted - no event collectors available",
+                event_type=type(event).__name__,
+            )
 
     async def run(self) -> None:
         """Main event consumption loop."""
@@ -135,51 +202,46 @@ class EventProcessor:
 
                 self.tui.post_state_update(self.repo_states)
 
-                # Emit file change event for TUI event feed (with optional buffering)
-                if self.tui and hasattr(self.tui, "app") and self.tui.app:
-                    if hasattr(self.tui.app, "event_collector"):
-                        try:
-                            from supsrc.events.monitor import FileChangeEvent
+                # Emit file change event (with optional buffering)
+                try:
+                    from supsrc.events.monitor import FileChangeEvent
 
-                            change_event = FileChangeEvent(
-                                description=f"File {event.event_type}: {event.src_path.name}",
-                                repo_id=event.repo_id,
-                                file_path=event.src_path,
-                                change_type=event.event_type,
-                                dest_path=event.dest_path,  # Preserve destination for move events
-                            )
+                    change_event = FileChangeEvent(
+                        description=f"File {event.event_type}: {event.src_path.name}",
+                        repo_id=event.repo_id,
+                        file_path=event.src_path,
+                        change_type=event.event_type,
+                        dest_path=event.dest_path,  # Preserve destination for move events
+                    )
 
-                            # Use buffering if enabled, otherwise emit directly
-                            if self._event_buffer:
-                                log.info(
-                                    "📥 RAW EVENT RECEIVED",
-                                    event_type=event.event_type,
-                                    file_name=event.src_path.name,
-                                    dest_name=event.dest_path.name if event.dest_path else None,
-                                    repo_id=event.repo_id,
-                                    timestamp=change_event.timestamp.strftime("%H:%M:%S.%f"),
-                                )
-                                self._event_buffer.add_event(change_event)
-                            else:
-                                self.tui.app.event_collector.emit(change_event)  # type: ignore[arg-type,union-attr]
-                                log.debug(
-                                    "File change event emitted directly",
-                                    event_type=event.event_type,
-                                    file_name=event.src_path.name,
-                                    repo_id=event.repo_id,
-                                )
-                        except Exception as e:
-                            log.warning(
-                                "Failed to emit TUI file change event",
-                                error=str(e),
-                                event_type=event.event_type,
-                                repo_id=event.repo_id,
-                                exc_info=True,
-                            )
+                    # Use buffering if enabled, otherwise emit directly
+                    if self._event_buffer:
+                        log.info(
+                            "📥 RAW EVENT RECEIVED",
+                            event_type=event.event_type,
+                            file_name=event.src_path.name,
+                            dest_name=event.dest_path.name if event.dest_path else None,
+                            repo_id=event.repo_id,
+                            timestamp=change_event.timestamp.strftime("%H:%M:%S.%f"),
+                        )
+                        self._event_buffer.add_event(change_event)
                     else:
-                        log.warning("TUI app exists but no event_collector found")
-                else:
-                    log.debug("TUI or TUI app not available for event emission")
+                        # Emit directly to all available event collectors
+                        self._emit_event(change_event)
+                        log.debug(
+                            "File change event emitted directly",
+                            event_type=event.event_type,
+                            file_name=event.src_path.name,
+                            repo_id=event.repo_id,
+                        )
+                except Exception as e:
+                    log.warning(
+                        "Failed to emit file change event",
+                        error=str(e),
+                        event_type=event.event_type,
+                        repo_id=event.repo_id,
+                        exc_info=True,
+                    )
 
                 # For inactivity rules, start timer immediately (as mentioned in comment above)
                 repo_config = self.config.repositories.get(event.repo_id)
@@ -393,34 +455,29 @@ class EventProcessor:
         )
 
     def _emit_buffered_event(self, event: Any) -> None:
-        """Emit a buffered event to the TUI event collector."""
-        if (
-            self.tui
-            and hasattr(self.tui, "app")
-            and self.tui.app
-            and hasattr(self.tui.app, "event_collector")
-        ):
-            try:
-                file_paths = getattr(event, "file_paths", [])
-                file_names = [p.name for p in file_paths] if file_paths else []
+        """Emit a buffered event to all available event collectors."""
+        try:
+            file_paths = getattr(event, "file_paths", [])
+            file_names = [p.name for p in file_paths] if file_paths else []
 
-                log.info(
-                    "📤 EMITTING BUFFERED EVENT",
-                    operation_type=getattr(event, "operation_type", "unknown"),
-                    file_names=file_names,
-                    event_count=getattr(event, "event_count", 1),
-                    repo_id=getattr(event, "repo_id", "unknown"),
-                    timestamp=event.timestamp.strftime("%H:%M:%S.%f"),
-                )
+            log.info(
+                "📤 EMITTING BUFFERED EVENT",
+                operation_type=getattr(event, "operation_type", "unknown"),
+                file_names=file_names,
+                event_count=getattr(event, "event_count", 1),
+                repo_id=getattr(event, "repo_id", "unknown"),
+                timestamp=event.timestamp.strftime("%H:%M:%S.%f"),
+            )
 
-                self.tui.app.event_collector.emit(event)  # type: ignore[arg-type,union-attr]
-            except Exception as e:
-                log.warning(
-                    "Failed to emit buffered TUI event",
-                    error=str(e),
-                    event_type=getattr(event, "operation_type", "unknown"),
-                    exc_info=True,
-                )
+            # Emit to all available event collectors
+            self._emit_event(event)
+        except Exception as e:
+            log.warning(
+                "Failed to emit buffered event",
+                error=str(e),
+                event_type=getattr(event, "operation_type", "unknown"),
+                exc_info=True,
+            )
 
     async def stop(self) -> None:
         """Gracefully stop all scheduled action tasks."""
