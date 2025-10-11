@@ -70,6 +70,13 @@ class EventBuffer:
         # Per-repo operation detectors for smart mode
         self._operation_detectors: dict[str, OperationDetector] = {}
 
+        # Post-operation delay buffer (for smart mode)
+        # Key: f"{repo_id}:{primary_path}" for per-file debouncing
+        self._pending_operations: dict[str, BufferedFileChangeEvent] = {}
+        self._operation_timers: dict[str, asyncio.TimerHandle] = {}
+        # Post-operation delay (ms) - time to wait after detection before emitting to TUI
+        self._post_operation_delay_ms: int = 150
+
         # Store detector config for creating per-repo detectors
         if grouping_mode == GROUPING_MODE_SMART:
             self._detector_config = DetectorConfig(
@@ -270,7 +277,11 @@ class EventBuffer:
         return self._operation_detectors[repo_id]
 
     def _on_operation_complete(self, operation: Any, repo_id: str) -> None:
-        """Callback when foundation detects a completed operation."""
+        """Callback when foundation detects a completed operation.
+
+        Buffers the operation with a delay before emitting to TUI, allowing
+        filesystem/editor to settle and avoiding showing partial state.
+        """
         log.debug(
             "Operation completed callback",
             operation_type=operation.operation_type.value,
@@ -290,9 +301,67 @@ class EventBuffer:
             primary_change_type=buffered_event.primary_change_type,
         )
 
-        # Emit via callback
+        # Create unique key for per-file debouncing
+        # Use first file path as key (most operations have one file)
+        primary_file = buffered_event.file_paths[0] if buffered_event.file_paths else Path("unknown")
+        operation_key = f"{repo_id}:{primary_file}"
+
+        # Store in pending operations (replaces any existing operation for this file)
+        self._pending_operations[operation_key] = buffered_event
+
+        # Cancel existing timer for this operation if any (debouncing)
+        if operation_key in self._operation_timers:
+            self._operation_timers[operation_key].cancel()
+            log.trace("Cancelled existing timer for operation", key=operation_key)
+
+        # Schedule delayed emission
+        try:
+            loop = asyncio.get_event_loop()
+            self._operation_timers[operation_key] = loop.call_later(
+                self._post_operation_delay_ms / 1000.0,
+                self._emit_operation,
+                operation_key,
+            )
+            log.debug(
+                "Scheduled delayed operation emission",
+                key=operation_key,
+                delay_ms=self._post_operation_delay_ms,
+            )
+        except RuntimeError:
+            # No event loop - emit immediately (e.g., in tests)
+            log.warning("No event loop available, emitting operation immediately")
+            if self.emit_callback:
+                self.emit_callback(buffered_event)
+
+    def _emit_operation(self, operation_key: str) -> None:
+        """Emit a pending operation after delay (timer callback).
+
+        Args:
+            operation_key: Unique key identifying the operation
+        """
+        # Retrieve buffered event
+        buffered_event = self._pending_operations.get(operation_key)
+        if not buffered_event:
+            log.warning("Operation not found in pending buffer", key=operation_key)
+            return
+
+        log.debug(
+            "⏰ Emitting delayed operation",
+            key=operation_key,
+            file_paths=[str(p) for p in buffered_event.file_paths],
+            operation_type=buffered_event.operation_type,
+        )
+
+        # Clean up
+        del self._pending_operations[operation_key]
+        if operation_key in self._operation_timers:
+            del self._operation_timers[operation_key]
+
+        # Emit to TUI
         if self.emit_callback:
             self.emit_callback(buffered_event)
+        else:
+            log.warning("No emit callback available for delayed operation")
 
     def _convert_to_file_event(self, event: FileChangeEvent) -> FileEvent:
         """Convert a single FileChangeEvent to FileEvent for operation detection."""
@@ -439,6 +508,15 @@ class EventBuffer:
         For smart grouping, also flushes any incomplete operations from the
         streaming detectors, showing temp files if they never completed.
         """
+        # First, flush any pending post-operation delays (smart mode)
+        if self._pending_operations:
+            log.debug("Flushing pending operations on shutdown", count=len(self._pending_operations))
+            for operation_key in list(self._pending_operations.keys()):
+                # Cancel timer and emit immediately
+                if operation_key in self._operation_timers:
+                    self._operation_timers[operation_key].cancel()
+                self._emit_operation(operation_key)
+
         # Flush streaming detectors if in smart mode
         if self.grouping_mode == GROUPING_MODE_SMART:
             for repo_id, detector in self._operation_detectors.items():
