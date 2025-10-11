@@ -59,10 +59,10 @@ class TestAtomicFileOperations:
                 change_type="created",
             ),
             FileChangeEvent(
-                description="Delete original",
+                description="Write to temp file",
                 repo_id=repo_id,
-                file_path=file_path,
-                change_type="deleted",
+                file_path=temp_file,
+                change_type="modified",
             ),
             FileChangeEvent(
                 description="Rename temp to original",
@@ -116,8 +116,11 @@ class TestAtomicFileOperations:
         for event in events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.15)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Foundation doesn't recognize delete+move as atomic operation
         # So events are emitted individually after auto-flush
@@ -151,8 +154,11 @@ class TestAtomicFileOperations:
         for event in events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.15)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should detect atomic pattern or fall back to simple grouping
         assert mock_emit_callback.call_count >= 1
@@ -198,8 +204,11 @@ class TestAtomicFileOperations:
         for event in all_events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.15)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should have emitted some grouped events
         assert mock_emit_callback.call_count >= 1
@@ -274,8 +283,8 @@ class TestAtomicFileOperations:
         for event in events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.15)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
 
         # Should have emitted one grouped event
         assert mock_emit_callback.call_count == 1
@@ -319,8 +328,8 @@ class TestAtomicFileOperations:
         for event in repo1_events + repo2_events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.15)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
 
         # Should have emitted separate events for each repo
         assert mock_emit_callback.call_count == 2

@@ -1,7 +1,7 @@
 # src/supsrc/events/buffer/grouping.py
 
 """
-Simple event grouping logic for consolidating file change events.
+Event grouping strategies for simple time-window buffering.
 """
 
 from __future__ import annotations
@@ -21,14 +21,14 @@ log = get_logger("events.buffer.grouping")
 def group_events_simple(events: list[FileChangeEvent]) -> list[BufferedFileChangeEvent]:
     """Group events using simple file-based grouping.
 
-    Multiple events on the same file are consolidated into a single buffered event,
-    using the most recent change type and building a complete operation history.
+    Groups events by file path and consolidates multiple events on the same file
+    into a single buffered event.
 
     Args:
         events: List of file change events to group
 
     Returns:
-        List of buffered events with consolidated changes
+        List of grouped buffered events
     """
     log.debug("Starting simple event grouping", event_count=len(events))
 

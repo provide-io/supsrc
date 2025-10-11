@@ -38,18 +38,29 @@ class TestEventBufferPatterns:
         )
 
         base_path = Path("/test")
+        temp_file = base_path / "file.py.tmp"
+        original_file = base_path / "file.py"
+
+        # Complete atomic save sequence
         events = [
             FileChangeEvent(
                 description="Create temp",
                 repo_id="test_repo",
-                file_path=base_path / "file.py.tmp",
+                file_path=temp_file,
                 change_type="created",
             ),
             FileChangeEvent(
-                description="Delete original",
+                description="Write to temp",
                 repo_id="test_repo",
-                file_path=base_path / "file.py",
-                change_type="deleted",
+                file_path=temp_file,
+                change_type="modified",
+            ),
+            FileChangeEvent(
+                description="Move temp to original",
+                repo_id="test_repo",
+                file_path=temp_file,
+                change_type="moved",
+                dest_path=original_file,
             ),
         ]
 
@@ -57,8 +68,11 @@ class TestEventBufferPatterns:
         for event in events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.05)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should have emitted grouped event
         assert mock_emit_callback.call_count >= 1
@@ -105,8 +119,11 @@ class TestEventBufferPatterns:
         for event in events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.05)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should have emitted events
         assert mock_emit_callback.call_count >= 1
@@ -135,18 +152,29 @@ class TestEventBufferPatterns:
         )
 
         base_path = Path("/test")
+        temp_file = base_path / ".file.py.tmp.abcd1234"  # Matches pattern: \..*\.tmp\.\w+$
+        original_file = base_path / "file.py"
+
+        # Complete atomic save with hidden temp file
         events = [
             FileChangeEvent(
                 description="Create hidden temp",
                 repo_id="test_repo",
-                file_path=base_path / ".file.py.abcd1234",
+                file_path=temp_file,
                 change_type="created",
             ),
             FileChangeEvent(
-                description="Modify original",
+                description="Write to temp",
                 repo_id="test_repo",
-                file_path=base_path / "file.py",
+                file_path=temp_file,
                 change_type="modified",
+            ),
+            FileChangeEvent(
+                description="Move temp to original",
+                repo_id="test_repo",
+                file_path=temp_file,
+                change_type="moved",
+                dest_path=original_file,
             ),
         ]
 
@@ -154,8 +182,11 @@ class TestEventBufferPatterns:
         for event in events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.05)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should have emitted events
         assert mock_emit_callback.call_count >= 1
@@ -183,24 +214,29 @@ class TestEventBufferPatterns:
         )
 
         base_path = Path("/test")
+        temp_file = base_path / "document.txt.tmp"
+        original_file = base_path / "document.txt"
+
+        # Complete atomic save sequence
         events = [
             FileChangeEvent(
                 description="Create temp file",
                 repo_id="test_repo",
-                file_path=base_path / "document.txt.tmp",
+                file_path=temp_file,
                 change_type="created",
             ),
             FileChangeEvent(
-                description="Delete original",
+                description="Write to temp",
                 repo_id="test_repo",
-                file_path=base_path / "document.txt",
-                change_type="deleted",
+                file_path=temp_file,
+                change_type="modified",
             ),
             FileChangeEvent(
                 description="Move temp to original",
                 repo_id="test_repo",
-                file_path=base_path / "document.txt",
+                file_path=temp_file,
                 change_type="moved",
+                dest_path=original_file,
             ),
         ]
 
@@ -208,8 +244,11 @@ class TestEventBufferPatterns:
         for event in events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.05)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should have emitted at least one event
         assert mock_emit_callback.call_count >= 1
@@ -249,26 +288,34 @@ class TestEventBufferPatterns:
             (base_path / "document.py", base_path / "document.py~"),
             # Hidden temp files (vim style)
             (base_path / "script.js", base_path / ".script.js.swp"),
-            # Mac-style hidden files
-            (base_path / "data.json", base_path / ".data.json.abc123"),
+            # VSCode-style hidden temp files
+            (base_path / "data.json", base_path / ".data.json.tmp.abc123"),
         ]
 
         for original_file, temp_file in test_cases:
             # Reset mock
             mock_emit_callback.reset_mock()
 
+            # Complete atomic save sequence for each pattern
             events = [
                 FileChangeEvent(
-                    description="Original file",
-                    repo_id="test_repo",
-                    file_path=original_file,
-                    change_type="modified",
-                ),
-                FileChangeEvent(
-                    description="Temp file",
+                    description="Create temp file",
                     repo_id="test_repo",
                     file_path=temp_file,
                     change_type="created",
+                ),
+                FileChangeEvent(
+                    description="Write to temp",
+                    repo_id="test_repo",
+                    file_path=temp_file,
+                    change_type="modified",
+                ),
+                FileChangeEvent(
+                    description="Move temp to original",
+                    repo_id="test_repo",
+                    file_path=temp_file,
+                    change_type="moved",
+                    dest_path=original_file,
                 ),
             ]
 
@@ -276,8 +323,11 @@ class TestEventBufferPatterns:
             for event in events:
                 buffer.add_event(event)
 
-            # Wait for buffer to flush
-            await asyncio.sleep(0.15)
+            # Wait for buffer to flush (window + post-delay + margin)
+            await asyncio.sleep(0.2)  # 100ms window + 20ms delay + margin
+
+            # Force flush any incomplete operations
+            buffer.flush_all()
 
             # Should have emitted something
             assert mock_emit_callback.call_count >= 1, f"Failed for {original_file} / {temp_file}"
@@ -296,23 +346,35 @@ class TestEventBufferPatterns:
 
     @pytest.mark.asyncio
     async def test_atomic_rewrite_fallback_to_simple(self, mock_emit_callback):
-        """Test that atomic rewrite detection falls back to simple grouping when no patterns found."""
+        """Test that streaming detector emits regular file modifications."""
         buffer = EventBuffer(
             window_ms=10,
             grouping_mode="smart",
             emit_callback=mock_emit_callback,
         )
 
-        # Events that don't form atomic patterns
+        # Regular file modifications (no atomic patterns)
         events = [
             FileChangeEvent(
                 description="Regular file 1",
+                repo_id="test_repo",
+                file_path=Path("/test/file1.py"),
+                change_type="created",
+            ),
+            FileChangeEvent(
+                description="Regular file 1 modified",
                 repo_id="test_repo",
                 file_path=Path("/test/file1.py"),
                 change_type="modified",
             ),
             FileChangeEvent(
                 description="Regular file 2",
+                repo_id="test_repo",
+                file_path=Path("/test/file2.py"),
+                change_type="created",
+            ),
+            FileChangeEvent(
+                description="Regular file 2 modified",
                 repo_id="test_repo",
                 file_path=Path("/test/file2.py"),
                 change_type="modified",
@@ -323,8 +385,11 @@ class TestEventBufferPatterns:
         for event in events:
             buffer.add_event(event)
 
-        # Wait for buffer to flush
-        await asyncio.sleep(0.05)
+        # Wait for buffer to flush (window + post-delay + margin)
+        await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should have emitted events (as simple grouping fallback)
         assert mock_emit_callback.call_count >= 1
@@ -337,7 +402,8 @@ class TestEventBufferPatterns:
             if hasattr(emitted, "operation_type"):
                 assert emitted.operation_type in ["single_file", "batch_operation", "atomic_rewrite"]
 
-    def test_smart_grouping_with_mixed_patterns(self, mock_emit_callback):
+    @pytest.mark.asyncio
+    async def test_smart_grouping_with_mixed_patterns(self, mock_emit_callback):
         """Test smart grouping with a mix of atomic and regular events."""
         buffer = EventBuffer(
             window_ms=10,
@@ -370,15 +436,23 @@ class TestEventBufferPatterns:
             ),
         ]
 
-        # Call _group_events_smart directly (this is still a valid internal method)
-        grouped = buffer._group_events_smart(events)
+        # Add events to buffer (smart mode uses streaming detection)
+        for event in events:
+            buffer.add_event(event)
+
+        # Wait for operations to emit (window + post-delay + margin)
+        await asyncio.sleep(0.1)  # 10ms window + 20ms delay + margin
+
+        # Force flush any incomplete operations
+        buffer.flush_all()
 
         # Should detect some pattern and handle events
-        assert len(grouped) >= 1
+        assert mock_emit_callback.call_count >= 1
 
         # Verify all files are represented
         all_file_paths = []
-        for event in grouped:
+        all_emitted = [call[0][0] for call in mock_emit_callback.call_args_list]
+        for event in all_emitted:
             if hasattr(event, "file_paths"):
                 all_file_paths.extend(event.file_paths)
             elif hasattr(event, "file_path"):

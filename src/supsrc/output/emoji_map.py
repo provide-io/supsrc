@@ -28,6 +28,7 @@ class EmojiMapper:
         "ErrorEvent": "❌",  # CROSS MARK
         "ConfigReloadEvent": "🔄",  # RELOAD
         "UserActionEvent": "👤",  # USER
+        "TimerUpdateEvent": "⏱️",  # STOPWATCH
     }
 
     # Change type emojis (for file events)
@@ -65,6 +66,7 @@ class EmojiMapper:
         "❌": "[X]",  # Error
         "🔄": "[R]",  # Reload
         "👤": "[U]",  # User
+        "⏱️": "[T]",  # Timer
         "➕": "[+]",  # noqa: RUF001
         "✏️": "[M]",  # Modified
         "➖": "[-]",  # noqa: RUF001

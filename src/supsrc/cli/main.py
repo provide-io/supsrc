@@ -2,17 +2,18 @@
 
 """
 Main CLI entry point for supsrc using Click.
-Handles global options like logging level.
+Properly dogfoods provide-foundation's CLI framework.
 """
 
+from __future__ import annotations
+
+import logging
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import click
 import structlog
-
-# Replace custom CLI utils with Foundation's CLI framework
-# Import Foundation CLI utilities directly to avoid testing dependencies
+from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
 from provide.foundation.cli.decorators import error_handler, logging_options
 from provide.foundation.context import CLIContext
 from structlog.typing import FilteringBoundLogger as StructLogger
@@ -27,6 +28,74 @@ except PackageNotFoundError:
     __version__ = "0.0.0-dev"
 
 log: StructLogger = structlog.get_logger("cli.main")
+
+
+def _initialize_logging(cli_context: CLIContext) -> None:
+    """Initialize Foundation logging from CLIContext.
+
+    This function properly sets up provide-foundation's logging system
+    based on the CLI context configuration.
+
+    Args:
+        cli_context: CLIContext with log_level, log_format, and log_file settings
+    """
+    try:
+        # Map log level string to logging constant
+        # Handle TRACE specially since it's a Foundation custom level
+        if cli_context.log_level == "TRACE":
+            from provide.foundation.logger.trace import TRACE_LEVEL_NUM
+            level = TRACE_LEVEL_NUM
+            level_name = "TRACE"
+        else:
+            level = getattr(logging, cli_context.log_level, logging.WARNING)
+            level_name = logging.getLevelName(level)
+
+        # Setup Foundation using public API
+        config = TelemetryConfig(
+            logging=LoggingConfig(
+                console_formatter=cli_context.log_format,
+                default_level=level_name,
+                das_emoji_prefix_enabled=True,
+                logger_name_emoji_prefix_enabled=True,
+            )
+        )
+
+        # Initialize Foundation
+        hub = get_hub()
+        hub.initialize_foundation(config)
+
+        # Add file handler if needed
+        if cli_context.log_file:
+            file_handler = logging.FileHandler(str(cli_context.log_file), encoding="utf-8")
+            file_handler.setLevel(level)
+
+            # Use JSON formatter for file logs
+            if cli_context.log_format == "json":
+                import json
+                class JSONFileFormatter(logging.Formatter):
+                    def format(self, record):
+                        log_data = {
+                            "timestamp": self.formatTime(record),
+                            "level": record.levelname,
+                            "logger": record.name,
+                            "message": record.getMessage(),
+                        }
+                        if record.exc_info:
+                            log_data["exception"] = self.formatException(record.exc_info)
+                        return json.dumps(log_data)
+
+                file_handler.setFormatter(JSONFileFormatter())
+
+            logging.getLogger().addHandler(file_handler)
+
+    except Exception as e:
+        # Fallback to basic logging if Foundation setup fails
+        logging.basicConfig(
+            level=logging.WARNING,
+            format="%(levelname)s: %(message)s",
+            force=True,
+        )
+        log.warning("Failed to initialize Foundation logging, using fallback", error=str(e))
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -46,65 +115,30 @@ def cli(
     Monitors repositories and performs Git actions based on rules.
     Configuration precedence: CLI options > Environment Variables > Config File > Defaults.
     """
-    ctx.ensure_object(dict)
+    # Create or get CLIContext
+    if ctx.obj is None:
+        ctx.obj = {}
 
-    # Create Foundation CLI context and setup logging
-    CLIContext(
+    # Create Foundation CLI context with provided options
+    cli_context = CLIContext(
         log_level=log_level or "WARNING",
         log_format=log_format,
         log_file=log_file,
     )
 
-    # Use Foundation's public API
-    import logging
-
-    from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
-
-    try:
-        # Convert log level string to integer
-        level = getattr(logging, (log_level or "WARNING").upper(), logging.WARNING)
-
-        # Determine if JSON logs should be used
-        json_logs = log_format == "json"
-
-        # Setup Foundation using public API
-        formatter = "json" if json_logs else "key_value"
-        config = TelemetryConfig(
-            logging=LoggingConfig(
-                console_formatter=formatter,
-                default_level=logging.getLevelName(level),
-                das_emoji_prefix_enabled=True,
-                logger_name_emoji_prefix_enabled=True,
-            )
-        )
-
-        # Use public Foundation API
-        hub = get_hub()
-        hub.initialize_foundation(config)
-
-        # Add file handler if needed
-        if log_file:
-            file_handler = logging.FileHandler(str(log_file), encoding="utf-8")
-            file_handler.setLevel(level)
-            logging.getLogger().addHandler(file_handler)
-    except Exception:
-        # Fallback to basic logging setup if supsrc logging fails
-        import logging
-
-        logging.basicConfig(
-            level=getattr(logging, (log_level or "WARNING").upper()),
-            format="%(levelname)s: %(message)s",
-            force=True,
-        )
+    # Initialize logging using the context
+    _initialize_logging(cli_context)
 
     # Store context for subcommands
+    ctx.obj["CLI_CONTEXT"] = cli_context
     ctx.obj["LOG_LEVEL"] = log_level
     ctx.obj["LOG_FILE"] = log_file
     ctx.obj["LOG_FORMAT"] = log_format
+
     log.debug(
         "Main CLI group initialized",
-        log_level=log_level,
-        log_file=log_file,
+        log_level=cli_context.log_level,
+        log_file=str(log_file) if log_file else None,
         log_format=log_format,
     )
 
