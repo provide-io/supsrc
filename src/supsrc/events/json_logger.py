@@ -94,19 +94,39 @@ class JSONEventLogger:
 
             # Add event-specific fields if available
             for field_name in [
+                # Common fields
                 "repo_id",
+                # FileChangeEvent fields
                 "file_path",
                 "change_type",
-                "commit_hash",
-                "branch",
-                "files_changed",
-                "action",
-                "rule_type",
+                "dest_path",
                 # BufferedFileChangeEvent fields
                 "file_paths",
                 "operation_type",
                 "event_count",
                 "primary_change_type",
+                # Git event fields
+                "commit_hash",
+                "branch",
+                "files_changed",
+                "remote",
+                "commits_pushed",
+                "files_staged",
+                "old_branch",
+                "new_branch",
+                # Timer event fields
+                "seconds_remaining",
+                "total_seconds",
+                "rule_name",
+                # System event fields
+                "action",
+                "rule_type",
+                "config_path",
+                "error_type",
+                "reason",
+                "conflict_files",
+                "test_output",
+                "target",
             ]:
                 if hasattr(event, field_name):
                     value = getattr(event, field_name)
