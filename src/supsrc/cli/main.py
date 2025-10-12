@@ -45,6 +45,7 @@ def _initialize_logging(cli_context: CLIContext) -> None:
         # Handle TRACE specially since it's a Foundation custom level
         if cli_context.log_level == "TRACE":
             from provide.foundation.logger.trace import TRACE_LEVEL_NUM
+
             level = TRACE_LEVEL_NUM
             level_name = "TRACE"
         else:
@@ -65,7 +66,7 @@ def _initialize_logging(cli_context: CLIContext) -> None:
                 default_level=level_name,
                 das_emoji_prefix_enabled=True,
                 logger_name_emoji_prefix_enabled=True,
-            )
+            ),
         )
 
         # Initialize Foundation
@@ -91,6 +92,7 @@ def _initialize_logging(cli_context: CLIContext) -> None:
             # Use JSON formatter for file logs
             if cli_context.log_format == "json":
                 import json
+
                 class JSONFileFormatter(logging.Formatter):
                     def format(self, record):
                         log_data = {

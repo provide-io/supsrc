@@ -112,7 +112,7 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
                 das_emoji_prefix_enabled=True,
                 logger_name_emoji_prefix_enabled=True,
                 log_file=log_file_path,  # Enable file logging
-            )
+            ),
         )
 
         # Use new Foundation API

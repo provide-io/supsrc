@@ -28,7 +28,7 @@ DEFAULT_EVENT_BUFFER_WINDOW_MS = 500  # Buffer events for 500ms
 DEFAULT_EVENT_BUFFER_ENABLED = True  # Enable event buffering by default
 
 # Mode-specific grouping modes (Foundation bugs now fixed!)
-DEFAULT_EVENT_BUFFER_GROUPING_MODE_TUI = "smart"      # Clean TUI with atomic detection
+DEFAULT_EVENT_BUFFER_GROUPING_MODE_TUI = "smart"  # Clean TUI with atomic detection
 DEFAULT_EVENT_BUFFER_GROUPING_MODE_HEADLESS = "simple"  # Reliable headless monitoring
 
 # Legacy fallback for backwards compatibility
