@@ -12,11 +12,12 @@ from typing import TYPE_CHECKING, Any
 
 import pygit2
 import structlog
+from provide.foundation.logger import get_logger
 
 if TYPE_CHECKING:
     pass
 
-log = structlog.get_logger("engines.git.auth")
+log = get_logger(__name__)
 
 
 class GitAuthHandler:

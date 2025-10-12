@@ -12,6 +12,7 @@ All logging options and decorators are now provided by:
 from __future__ import annotations
 
 import structlog
+from provide.foundation.logger import get_logger
 
 # Re-export Foundation's CLI utilities for backwards compatibility
 from provide.foundation.cli.decorators import (  # noqa: F401
@@ -21,6 +22,6 @@ from provide.foundation.cli.decorators import (  # noqa: F401
 from provide.foundation.context import CLIContext  # noqa: F401
 
 # No custom setup needed - Foundation handles everything
-log = structlog.get_logger("cli.utils")
+log = get_logger(__name__)
 
 # ⚙️🛠️

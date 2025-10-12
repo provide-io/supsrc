@@ -9,6 +9,7 @@ import asyncio
 import re
 
 import structlog
+from provide.foundation.logger import get_logger
 
 # Add Foundation utilities for rate limiting and timing
 from provide.foundation.utils import TokenBucketRateLimiter, timed_block
@@ -26,7 +27,7 @@ try:
 except ImportError:
     genai = None
 
-log = structlog.get_logger("llm.provider.gemini")
+log = get_logger(__name__)
 
 
 def _clean_llm_output(raw_text: str) -> str:

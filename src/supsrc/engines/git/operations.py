@@ -13,8 +13,9 @@ from typing import Any
 
 import pygit2
 import structlog
+from provide.foundation.logger import get_logger
 
-log = structlog.get_logger("engines.git.operations")
+log = get_logger(__name__)
 
 # --- Constants for Change Summary ---
 MAX_SUMMARY_FILES = 10

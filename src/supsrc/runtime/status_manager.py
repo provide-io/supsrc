@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import structlog
+from provide.foundation.logger import get_logger
 
 from supsrc.protocols import RepositoryEngine
 from supsrc.state import RepositoryState
@@ -17,7 +18,7 @@ from supsrc.state import RepositoryState
 if TYPE_CHECKING:
     from supsrc.config import SupsrcConfig
 
-log = structlog.get_logger("runtime.status_manager")
+log = get_logger(__name__)
 
 
 class StatusManager:

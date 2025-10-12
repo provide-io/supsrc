@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 import structlog
+from provide.foundation.logger import get_logger
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical
 from textual.reactive import var
@@ -22,7 +23,7 @@ from supsrc.tui.base_app import TuiAppBase
 from supsrc.tui.managers import TimerManager
 from supsrc.tui.widgets import DraggableSplitter
 
-log = structlog.get_logger("tui.app")
+log = get_logger(__name__)
 
 
 class SupsrcTuiApp(TuiAppBase):

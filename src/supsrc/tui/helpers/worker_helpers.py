@@ -7,11 +7,12 @@ Worker helper methods for the TUI application.
 from __future__ import annotations
 
 import structlog
+from provide.foundation.logger import get_logger
 from textual.worker import Worker, WorkerState
 
 from supsrc.tui.messages import RepoDetailUpdate
 
-log = structlog.get_logger("tui.worker_helpers")
+log = get_logger(__name__)
 
 
 class WorkerHelperMixin:

@@ -11,6 +11,7 @@ from typing import Any
 
 import pygit2
 import structlog
+from provide.foundation.logger import get_logger
 
 # Add Foundation resilience patterns for Git operations
 from provide.foundation.resilience import BackoffStrategy, RetryPolicy, retry
@@ -30,7 +31,7 @@ from supsrc.protocols import (
 )
 from supsrc.state import RepositoryState
 
-log = structlog.get_logger("engines.git.base")
+log = get_logger(__name__)
 
 
 class GitEngine(RepositoryEngine):

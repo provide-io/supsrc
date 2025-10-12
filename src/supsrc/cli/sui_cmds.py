@@ -6,6 +6,7 @@ from pathlib import Path
 
 import click
 import structlog
+from provide.foundation.logger import get_logger
 from provide.foundation.cli.decorators import logging_options
 from structlog.typing import FilteringBoundLogger as StructLogger
 
@@ -20,14 +21,14 @@ except ImportError:
     TEXTUAL_AVAILABLE = False
     SupsrcTuiApp = None
 
-log: StructLogger = structlog.get_logger("cli.sui")
+log: StructLogger = get_logger(__name__)
 
 _shutdown_requested = asyncio.Event()
 
 
 async def _handle_signal_async(sig: int):
     signame = signal.Signals(sig).name
-    base_log = structlog.get_logger("cli.watch.signal")
+    base_log = get_logger(__name__)
     base_log.warning("Received shutdown signal", signal=signame, signal_num=sig)
     if not _shutdown_requested.is_set():
         base_log.info("Setting shutdown requested event.")
