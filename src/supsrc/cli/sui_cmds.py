@@ -109,6 +109,7 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
         )
 
         # Use new Foundation API
+        # Note: Foundation automatically detects explicit config and overrides auto-init
         hub = get_hub()
         hub.initialize_foundation(config)
 
