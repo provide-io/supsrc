@@ -56,12 +56,29 @@ class EventProcessor:
         self._pending_timer_checks: dict[str, asyncio.Task] = {}
         self._timer_check_delay = 0.5  # 500ms debounce delay for timer checks
 
-        # Initialize event buffer for TUI events
+        # Detect runtime mode (TUI vs headless) and select appropriate grouping
         global_config = config.global_config
+        is_tui_mode = tui and hasattr(tui, "app") and tui.app is not None
+
+        # Select mode-specific grouping or fall back to legacy field
+        if is_tui_mode:
+            grouping_mode = global_config.event_grouping_mode_tui
+            mode_name = "TUI"
+        else:
+            grouping_mode = global_config.event_grouping_mode_headless
+            mode_name = "headless"
+
+        log.info(
+            f"Detected {mode_name} mode, using event grouping",
+            mode=mode_name,
+            grouping_mode=grouping_mode,
+        )
+
+        # Initialize event buffer for TUI events
         if global_config.event_buffering_enabled:
             self._event_buffer = EventBuffer(
                 window_ms=global_config.event_buffer_window_ms,
-                grouping_mode=global_config.event_grouping_mode,
+                grouping_mode=grouping_mode,
                 emit_callback=self._emit_buffered_event,
             )
         else:
@@ -71,7 +88,8 @@ class EventProcessor:
             "EventProcessor initialized.",
             event_buffering_enabled=global_config.event_buffering_enabled,
             buffer_window_ms=global_config.event_buffer_window_ms,
-            grouping_mode=global_config.event_grouping_mode,
+            grouping_mode=grouping_mode,
+            runtime_mode=mode_name,
         )
 
     def _emit_event(self, event: Any) -> None:

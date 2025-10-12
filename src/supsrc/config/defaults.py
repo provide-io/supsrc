@@ -26,4 +26,10 @@ DEFAULT_TIMER_UPDATE_INTERVAL = 1.0  # Update timer countdown every second
 # =================================
 DEFAULT_EVENT_BUFFER_WINDOW_MS = 500  # Buffer events for 500ms
 DEFAULT_EVENT_BUFFER_ENABLED = True  # Enable event buffering by default
-DEFAULT_EVENT_BUFFER_GROUPING_MODE = "smart"  # Use smart operation detection
+
+# Mode-specific grouping modes (Foundation bugs now fixed!)
+DEFAULT_EVENT_BUFFER_GROUPING_MODE_TUI = "smart"      # Clean TUI with atomic detection
+DEFAULT_EVENT_BUFFER_GROUPING_MODE_HEADLESS = "simple"  # Reliable headless monitoring
+
+# Legacy fallback for backwards compatibility
+DEFAULT_EVENT_BUFFER_GROUPING_MODE = "simple"  # Use simple as safe default
