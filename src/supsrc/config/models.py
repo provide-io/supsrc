@@ -23,6 +23,8 @@ from provide.foundation.utils import parse_duration
 from supsrc.config.defaults import (
     DEFAULT_EVENT_BUFFER_ENABLED,
     DEFAULT_EVENT_BUFFER_GROUPING_MODE,
+    DEFAULT_EVENT_BUFFER_GROUPING_MODE_HEADLESS,
+    DEFAULT_EVENT_BUFFER_GROUPING_MODE_TUI,
     DEFAULT_EVENT_BUFFER_WINDOW_MS,
 )
 from supsrc.utils.directories import SupsrcDirectories
@@ -115,6 +117,16 @@ class GlobalConfig:
     event_buffer_window_ms: int = field(
         default=DEFAULT_EVENT_BUFFER_WINDOW_MS, validator=_validate_positive_int
     )
+
+    # Mode-specific grouping modes (Foundation bugs fixed!)
+    event_grouping_mode_tui: str = field(
+        default=DEFAULT_EVENT_BUFFER_GROUPING_MODE_TUI, validator=instance_of(str)
+    )
+    event_grouping_mode_headless: str = field(
+        default=DEFAULT_EVENT_BUFFER_GROUPING_MODE_HEADLESS, validator=instance_of(str)
+    )
+
+    # Legacy fallback for backwards compatibility
     event_grouping_mode: str = field(
         default=DEFAULT_EVENT_BUFFER_GROUPING_MODE, validator=instance_of(str)
     )
