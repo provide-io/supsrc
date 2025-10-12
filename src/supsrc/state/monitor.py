@@ -12,11 +12,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import structlog
+from provide.foundation.logger import get_logger
 
 if TYPE_CHECKING:
     from supsrc.state.control import StateData
 
-log = structlog.get_logger("state.monitor")
+log = get_logger(__name__)
 
 
 class StateMonitor:

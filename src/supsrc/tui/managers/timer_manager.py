@@ -9,12 +9,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import structlog
+from provide.foundation.logger import get_logger
 from textual.timer import Timer
 
 if TYPE_CHECKING:
     from supsrc.tui.app import SupsrcTuiApp
 
-log = structlog.get_logger("tui.timer_manager")
+log = get_logger(__name__)
 
 
 class TimerManager:
