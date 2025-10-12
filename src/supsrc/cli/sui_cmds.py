@@ -97,8 +97,14 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
 
     # Set up file logging for debugging using Foundation public API
     try:
-        config = TelemetryConfig(
-            service_name="supsrc",  # Set service name for OTLP/telemetry
+        # Start with from_env() to preserve OpenObserve/OTLP auto-configuration,
+        # then override service_name and logging settings
+        from attrs import evolve
+
+        base_config = TelemetryConfig.from_env()
+        config = evolve(
+            base_config,
+            service_name="supsrc",  # Override service name for OTLP/telemetry
             logging=LoggingConfig(
                 console_formatter="json",
                 default_level="TRACE",
