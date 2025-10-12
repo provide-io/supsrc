@@ -8,10 +8,11 @@ from datetime import UTC, datetime
 from enum import Enum, auto
 
 import structlog
+from provide.foundation.logger import get_logger
 from attrs import field, mutable
 
 # Logger specific to state management
-log: structlog.stdlib.BoundLogger = structlog.get_logger("state.runtime")
+log: structlog.stdlib.BoundLogger = get_logger(__name__)
 
 
 class RepositoryStatus(Enum):

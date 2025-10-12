@@ -7,8 +7,9 @@ UI helper methods for the TUI application.
 from __future__ import annotations
 
 import structlog
+from provide.foundation.logger import get_logger
 
-log = structlog.get_logger("tui.ui_helpers")
+log = get_logger(__name__)
 
 
 class UIHelperMixin:

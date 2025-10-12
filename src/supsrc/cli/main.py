@@ -16,6 +16,7 @@ import structlog
 from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
 from provide.foundation.cli.decorators import error_handler, logging_options
 from provide.foundation.context import CLIContext
+from provide.foundation.logger import get_logger
 from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.cli.config_cmds import config_cli
@@ -27,7 +28,7 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0-dev"
 
-log: StructLogger = structlog.get_logger("cli.main")
+log: StructLogger = get_logger(__name__)
 
 
 def _initialize_logging(cli_context: CLIContext) -> None:
