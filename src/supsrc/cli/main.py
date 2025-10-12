@@ -62,6 +62,7 @@ def _initialize_logging(cli_context: CLIContext) -> None:
         )
 
         # Initialize Foundation
+        # Note: Foundation automatically detects explicit config and overrides auto-init
         hub = get_hub()
         hub.initialize_foundation(config)
 
