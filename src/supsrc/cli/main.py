@@ -52,6 +52,7 @@ def _initialize_logging(cli_context: CLIContext) -> None:
 
         # Setup Foundation using public API
         config = TelemetryConfig(
+            service_name="supsrc",  # Set service name for OTLP/telemetry
             logging=LoggingConfig(
                 console_formatter=cli_context.log_format,
                 default_level=level_name,
@@ -63,6 +64,16 @@ def _initialize_logging(cli_context: CLIContext) -> None:
         # Initialize Foundation
         hub = get_hub()
         hub.initialize_foundation(config)
+
+        # Register custom supsrc eventset for log enrichment
+        try:
+            from provide.foundation.eventsets.registry import register_event_set
+            from supsrc.telemetry import SUPSRC_EVENT_SET
+
+            register_event_set(SUPSRC_EVENT_SET)
+            log.debug("Registered supsrc eventset for observability enrichment")
+        except Exception as e:
+            log.warning("Failed to register supsrc eventset", error=str(e))
 
         # Add file handler if needed
         if cli_context.log_file:

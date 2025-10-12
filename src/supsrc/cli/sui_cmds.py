@@ -98,6 +98,7 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
     # Set up file logging for debugging using Foundation public API
     try:
         config = TelemetryConfig(
+            service_name="supsrc",  # Set service name for OTLP/telemetry
             logging=LoggingConfig(
                 console_formatter="json",
                 default_level="TRACE",
@@ -110,6 +111,16 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
         # Use new Foundation API
         hub = get_hub()
         hub.initialize_foundation(config)
+
+        # Register custom supsrc eventset for log enrichment
+        try:
+            from provide.foundation.eventsets.registry import register_event_set
+            from supsrc.telemetry import SUPSRC_EVENT_SET
+
+            register_event_set(SUPSRC_EVENT_SET)
+            log.debug("Registered supsrc eventset for observability enrichment")
+        except Exception as e:
+            log.warning("Failed to register supsrc eventset", error=str(e))
 
         # CRITICAL: Remove all console handlers to prevent app logs from appearing in TUI
         # Must be done AFTER Foundation initialization
