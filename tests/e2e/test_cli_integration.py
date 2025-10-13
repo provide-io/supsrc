@@ -30,7 +30,7 @@ class TestCLIConfigDiscovery:
         """Test that CLI finds config when run from parent directory."""
         with with_parent_cwd():
             # Run supsrc config show from parent directory
-            result = run_command(
+            result = run(
                 [sys.executable, "-m", "supsrc.cli.main", "config", "show"],
                 timeout=10,
                 check=False,
@@ -45,7 +45,7 @@ class TestCLIConfigDiscovery:
         with with_parent_cwd():
             config_path = real_config_path()
 
-            result = run_command(
+            result = run(
                 [sys.executable, "-m", "supsrc.cli.main", "config", "show", "-c", str(config_path)],
                 timeout=10,
                 check=False,
@@ -55,7 +55,7 @@ class TestCLIConfigDiscovery:
 
     def test_cli_handles_missing_config_gracefully(self):
         """Test CLI error handling when config is missing."""
-        result = run_command(
+        result = run(
             [
                 sys.executable,
                 "-m",
@@ -82,7 +82,7 @@ class TestCLIWatchCommand:
         """Test watch command in dry-run mode with real config."""
         with with_parent_cwd():
             # Run watch command with short timeout and dry run
-            result = run_command(
+            result = run(
                 [sys.executable, "-m", "supsrc.cli.main", "watch", "--dry-run", "--timeout", "2"],
                 timeout=5,
                 check=False,
@@ -98,7 +98,7 @@ class TestCLIWatchCommand:
         with with_parent_cwd():
             config_path = real_config_path()
 
-            result = run_command(
+            result = run(
                 [
                     sys.executable,
                     "-m",
@@ -124,7 +124,7 @@ class TestCLITUICommand:
     @pytest.mark.slow
     def test_sui_command_help(self):
         """Test that sui command shows help correctly."""
-        result = run_command(
+        result = run(
             [sys.executable, "-m", "supsrc.cli.main", "sui", "--help"],
             timeout=5,
             check=False,
@@ -145,7 +145,7 @@ class TestCLITUICommand:
                 # Mock the TUI command to avoid actual startup
                 mock_sui.return_value = 0
 
-                run_command(
+                run(
                     [sys.executable, "-m", "supsrc.cli.main", "sui", "-c", str(config_path)],
                     timeout=5,
                     check=False,
@@ -160,7 +160,7 @@ class TestCLIErrorHandling:
 
     def test_invalid_command_handling(self):
         """Test handling of invalid commands."""
-        result = run_command(
+        result = run(
             [sys.executable, "-m", "supsrc.cli.main", "nonexistent-command"],
             timeout=5,
             check=False,
@@ -171,7 +171,7 @@ class TestCLIErrorHandling:
 
     def test_version_command(self):
         """Test version command works."""
-        result = run_command(
+        result = run(
             [sys.executable, "-m", "supsrc.cli.main", "--version"],
             timeout=5,
             check=False,
@@ -182,7 +182,7 @@ class TestCLIErrorHandling:
 
     def test_help_command(self):
         """Test help command works."""
-        result = run_command(
+        result = run(
             [sys.executable, "-m", "supsrc.cli.main", "--help"],
             timeout=5,
             check=False,
@@ -201,7 +201,7 @@ class TestCLIEnvironmentIntegration:
         # Test from supsrc directory
         supsrc_dir = Path(__file__).parent.parent.parent
 
-        result = run_command(
+        result = run(
             [sys.executable, "-m", "supsrc.cli.main", "config", "show"],
             cwd=supsrc_dir,
             timeout=10,
@@ -213,7 +213,7 @@ class TestCLIEnvironmentIntegration:
 
         # Test from parent directory
         with with_parent_cwd() as parent_dir:
-            result = run_command(
+            result = run(
                 [sys.executable, "-m", "supsrc.cli.main", "config", "show"],
                 cwd=parent_dir,
                 timeout=10,
@@ -227,7 +227,7 @@ class TestCLIEnvironmentIntegration:
         """Test that CLI works with Python module path."""
         with with_parent_cwd():
             # Test running as module
-            result = run_command(
+            result = run(
                 [sys.executable, "-m", "supsrc.cli.main", "--help"],
                 timeout=5,
                 check=False,
@@ -274,7 +274,7 @@ class TestCLIConfigIntegration:
     def test_config_show_formats_output_properly(self):
         """Test that config show command formats output readably."""
         with with_parent_cwd():
-            result = run_command(
+            result = run(
                 [sys.executable, "-m", "supsrc.cli.main", "config", "show"],
                 timeout=10,
                 check=False,
@@ -295,7 +295,7 @@ class TestCLIConfigIntegration:
             invalid_config = f.name
 
         try:
-            result = run_command(
+            result = run(
                 [sys.executable, "-m", "supsrc.cli.main", "config", "show", "-c", invalid_config],
                 timeout=5,
                 check=False,
