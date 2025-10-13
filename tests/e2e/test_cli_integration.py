@@ -17,7 +17,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from provide.foundation.process import run_command
+from provide.foundation.process import run
 from provide.foundation.process.lifecycle import ManagedProcess
 
 from tests.helpers.config_testing import real_config_path, with_parent_cwd
