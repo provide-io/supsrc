@@ -33,17 +33,22 @@ class TestWatchCommand:
         assert "--config-path" in result.output
         assert "--tui" not in result.output
 
+    @patch("provide.foundation.get_hub")
     @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
     @patch("supsrc.cli.watch_cmds.WatchOrchestrator")
     def test_watch_basic_operation(
-        self, mock_orchestrator_class: Mock, mock_runner: Mock, tmp_path: Path
+        self, mock_orchestrator_class: Mock, mock_runner: Mock, mock_foundation: Mock, tmp_path: Path
     ) -> None:
         """Test watch command basic operation."""
+        # Mock Foundation to avoid stream issues
+        mock_hub = Mock()
+        mock_foundation.return_value = mock_hub
+
         mock_orchestrator_instance = mock_orchestrator_class.return_value
         mock_runner.return_value = 0  # Simulate successful run
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories.test]\npath = '/tmp/test'")
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
 
         result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
 
@@ -63,16 +68,21 @@ class TestWatchCommand:
         assert result.exit_code != 0
         assert "Error" in result.output or "does not exist" in result.output
 
+    @patch("provide.foundation.get_hub")
     @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
     @patch("supsrc.cli.watch_cmds.WatchOrchestrator")
     def test_watch_with_env_config(
-        self, mock_orchestrator_class: Mock, mock_runner: Mock, tmp_path: Path
+        self, mock_orchestrator_class: Mock, mock_runner: Mock, mock_foundation: Mock, tmp_path: Path
     ) -> None:
         """Test watch command with config from environment variable."""
+        # Mock Foundation to avoid stream issues
+        mock_hub = Mock()
+        mock_foundation.return_value = mock_hub
+
         mock_runner.return_value = 0
         config_file = tmp_path / "env_test.conf"
         config_file.write_text("[repositories.env-test]\npath = '/tmp/env-test'")
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
 
         with patch.dict("os.environ", {"SUPSRC_CONF": str(config_file)}):
             result = runner.invoke(cli, ["watch"])
@@ -85,13 +95,18 @@ class TestWatchCommand:
     # Note: Logging setup is now handled by Foundation's CLI decorators
     # No need for explicit logging setup test
 
+    @patch("provide.foundation.get_hub")
     @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
-    def test_watch_runner_returns_error_code(self, mock_runner: Mock, tmp_path: Path) -> None:
+    def test_watch_runner_returns_error_code(self, mock_runner: Mock, mock_foundation: Mock, tmp_path: Path) -> None:
         """Test that a non-zero exit code from the runner is propagated."""
+        # Mock Foundation to avoid stream issues
+        mock_hub = Mock()
+        mock_foundation.return_value = mock_hub
+
         mock_runner.return_value = 130  # Simulate exit code from interrupt
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
 
         result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
 
@@ -99,15 +114,20 @@ class TestWatchCommand:
         # The CliRunner catches the sys.exit and reports the code here. This is the robust way to test it.
         assert result.exit_code == 130
 
+    @patch("provide.foundation.get_hub")
     @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
     def test_watch_runner_raises_keyboard_interrupt(
-        self, mock_runner: Mock, tmp_path: Path
+        self, mock_runner: Mock, mock_foundation: Mock, tmp_path: Path
     ) -> None:
         """Test that watch command handles KeyboardInterrupt from the runner."""
+        # Mock Foundation to avoid stream issues
+        mock_hub = Mock()
+        mock_foundation.return_value = mock_hub
+
         mock_runner.side_effect = KeyboardInterrupt()
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
 
         # The runner will catch the exception and store it in the result object.
         result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
