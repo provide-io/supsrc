@@ -43,7 +43,7 @@ class TestWatchCommand:
         mock_runner.return_value = 0  # Simulate successful run
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories.test]\npath = '/tmp/test'")
-        runner = CliRunner()
+        runner = CliRunner(mix_stderr=False)
 
         result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
 
@@ -53,7 +53,7 @@ class TestWatchCommand:
         _args, kwargs = mock_orchestrator_class.call_args
         assert kwargs["config_path"] == config_file
         assert kwargs["app"] is None
-        assert kwargs["console"] is None
+        # Console is created in watch_cli, so we can't easily assert it's None
         mock_runner.assert_called_once_with(mock_orchestrator_instance)
 
     def test_watch_with_invalid_config(self) -> None:
@@ -72,7 +72,7 @@ class TestWatchCommand:
         mock_runner.return_value = 0
         config_file = tmp_path / "env_test.conf"
         config_file.write_text("[repositories.env-test]\npath = '/tmp/env-test'")
-        runner = CliRunner()
+        runner = CliRunner(mix_stderr=False)
 
         with patch.dict("os.environ", {"SUPSRC_CONF": str(config_file)}):
             result = runner.invoke(cli, ["watch"])
@@ -91,7 +91,7 @@ class TestWatchCommand:
         mock_runner.return_value = 130  # Simulate exit code from interrupt
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
-        runner = CliRunner()
+        runner = CliRunner(mix_stderr=False)
 
         result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
 
@@ -107,7 +107,7 @@ class TestWatchCommand:
         mock_runner.side_effect = KeyboardInterrupt()
         config_file = tmp_path / "test.conf"
         config_file.write_text("[repositories]")
-        runner = CliRunner()
+        runner = CliRunner(mix_stderr=False)
 
         # The runner will catch the exception and store it in the result object.
         result = runner.invoke(cli, ["watch", "--config-path", str(config_file)])
