@@ -1,1 +1,0 @@
-Started watch with PID:  sleep 2 echo test echo Created test file to trigger inactivity timer sleep 5 echo Showing first part of output... head -50 /tmp/timer_test.log
