@@ -11,7 +11,6 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 import pygit2
-import structlog
 from provide.foundation.logger import get_logger
 
 if TYPE_CHECKING:

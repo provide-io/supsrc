@@ -5,9 +5,8 @@ import signal
 from pathlib import Path
 
 import click
-import structlog
-from provide.foundation.logger import get_logger
 from provide.foundation.cli.decorators import logging_options
+from provide.foundation.logger import get_logger
 from structlog.typing import FilteringBoundLogger as StructLogger
 
 from supsrc.config import load_config
@@ -123,6 +122,7 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
         # Register custom supsrc eventset for log enrichment
         try:
             from provide.foundation.eventsets.registry import register_event_set
+
             from supsrc.telemetry import SUPSRC_EVENT_SET
 
             register_event_set(SUPSRC_EVENT_SET)

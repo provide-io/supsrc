@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 
 import click
-import structlog
 from provide.foundation.cli.decorators import logging_options
 from provide.foundation.logger import get_logger
 from structlog.typing import FilteringBoundLogger as StructLogger

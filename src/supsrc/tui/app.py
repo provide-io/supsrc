@@ -9,7 +9,6 @@ import asyncio
 from pathlib import Path
 from typing import Any, ClassVar
 
-import structlog
 from provide.foundation.logger import get_logger
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical
