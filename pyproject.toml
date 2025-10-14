@@ -54,8 +54,7 @@ Issues = "https://github.com/provide-io/supsrc/issues"
 
 [dependency-groups]
 dev = [
-    "provide-testkit[standard,advanced-testing,build]",
-    "pytest-textual-snapshot>=1.1.0",
+    "provide-testkit[standard,advanced-testing,build,utils]",
     "supsrc[tui,llm]",
 ]
 docs = [
@@ -94,51 +93,6 @@ version = {file = "VERSION"}
 
 [tool.hatch.metadata]
 allow-direct-references = true
-
-
-#[tool.hatch.metadata.hooks.custom] # Example: Add copyright year automatically
-#path = "hatch_hooks.py" # Requires creating this file
-
-[tool.hatch.envs.default]
-description = "Default development environment (includes dev, tui, llm extras)"
-# Hatch automatically installs the project with its core dependencies.
-# It should also install 'dev' extras by default based on common conventions,
-# which now implicitly pulls in 'supsrc[tui,llm]'.
-# Adding explicit dependencies here is usually for tools *not* part of the project's deps.
-# dependencies = []
-skip-install = false
-dev-mode = true # Ensures editable install by default in hatch shell
-# scripts = { 
-#     # --- Quality Checks ---
-#     check = "hatch run lint && hatch run typecheck && hatch run test", \ 
-#     lint = "ruff check . && ruff format . --check", \ 
-#     typecheck = "pyre check", \ 
-#     # --- Formatting ---
-#     fmt = "ruff format . && ruff check . --fix", \ 
-#     # --- Testing ---
-#     test = "pytest tests/ {args}", \ 
-#     cov = "pytest --cov=src/supsrc --cov-report=term-missing --cov-report=xml --cov-report=html tests/ {args}", \ 
-#     cov-no-fail = "cov --cov-fail-under=0 {args}", \ 
-#     # --- Misc ---
-#     clean = "rm -rf .pyre/ .pytest_cache/ .ruff_cache/ build/ dist/ *.egg-info/ coverage.xml coverage_html_report/", \ 
-#     build = "hatch build", \ 
-#     all = "hatch run clean && hatch run check && hatch run cov", \ 
-# }
-
-# Example separate environment for linting only (faster if needed)
-[tool.hatch.envs.lint]
-detached = true
-dependencies = ["ruff"]
-# scripts = { 
-#     lint = "ruff check .. && ruff format .. --check", \ 
-#     fmt = "ruff format .. && ruff check .. --fix", \ 
-# }
-
-# Example separate environment for type checking only
-[tool.hatch.envs.types]
-detached = true
-dependencies = ["pyre-check"]
-scripts = { check = "pyre check .." }
 
 # --------------------------------------------------------------------------- #
 # Ruff Linter/Formatter Configuration                                         #
@@ -218,14 +172,15 @@ source_directories = ["src", "tests"]
 # Pytest Configuration                                                        #
 # --------------------------------------------------------------------------- #
 [tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "DEBUG"
 minversion = "7.0"
 addopts = "-ra -q --strict-markers --import-mode=importlib"
 testpaths = ["tests"]
+pythonpath = ["src", "."]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-log_cli = true
-log_cli_level = "DEBUG"
 filterwarnings = [
     "error", # Fail tests on warnings
     "ignore::UserWarning:provide.foundation.*", # Allow Foundation testing helpers warnings
