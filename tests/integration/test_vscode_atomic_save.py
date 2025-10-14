@@ -77,6 +77,9 @@ class TestVSCodeAtomicSaveIntegration:
         # Wait for auto-flush (500ms) + post-operation delay (150ms) + margin
         await asyncio.sleep(0.8)
 
+        # Explicitly flush to ensure all events are processed (best practice from CLAUDE.md)
+        buffer.flush_all()
+
         # Verify callback was called
         assert mock_callback.call_count >= 1, \
             f"Expected at least 1 callback, got {mock_callback.call_count}"
@@ -148,6 +151,9 @@ class TestVSCodeAtomicSaveIntegration:
         # Wait for auto-flush (500ms) + post-operation delay (150ms) + margin
         await asyncio.sleep(0.8)
 
+        # Explicitly flush to ensure all events are processed
+        buffer.flush_all()
+
         # Verify the final file with all dots preserved
         assert mock_callback.call_count >= 1
         all_emitted = [call[0][0] for call in mock_callback.call_args_list]
@@ -218,6 +224,9 @@ class TestVSCodeAtomicSaveIntegration:
 
         # Wait for auto-flush (500ms) + post-operation delay (150ms) + margin
         await asyncio.sleep(0.8)
+
+        # Explicitly flush to ensure all events are processed
+        buffer.flush_all()
 
         # NOW callback should fire with the complete operation
         assert mock_callback.call_count >= 1, \
@@ -291,6 +300,9 @@ class TestVSCodeAtomicSaveIntegration:
         # Wait for second operation: auto-flush (500ms) + post-operation delay (150ms) + margin
         await asyncio.sleep(0.8)
 
+        # Explicitly flush to ensure all events are processed
+        buffer.flush_all()
+
         # Should have at least 2 callbacks
         assert mock_callback.call_count >= 2, \
             f"Expected at least 2 callbacks for 2 operations, got {mock_callback.call_count}"
@@ -352,6 +364,9 @@ class TestVSCodeAtomicSaveIntegration:
 
         # Wait for auto-flush (500ms) + post-operation delay (150ms) + margin
         await asyncio.sleep(0.8)
+
+        # Explicitly flush to ensure all events are processed
+        buffer.flush_all()
 
         # Critical assertion: final file should be "orchestrator.py" NOT ".orchestrator.py"
         assert mock_callback.call_count >= 1
