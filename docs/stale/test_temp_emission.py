@@ -76,7 +76,7 @@ async def main():
     if mock_callback.call_count > 0:
         for i, call in enumerate(mock_callback.call_args_list):
             event = call[0][0]
-            print(f"\nEmission {i+1}:")
+            print(f"\nEmission {i + 1}:")
             print(f"  Operation type: {event.operation_type}")
             print(f"  File paths: {[str(p) for p in event.file_paths]}")
             print(f"  Primary change type: {event.primary_change_type}")

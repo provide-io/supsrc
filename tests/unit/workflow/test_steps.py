@@ -36,7 +36,6 @@ def workflow_steps(mock_dependencies):
 class TestWorkflowSteps:
     """Test suite for WorkflowSteps class."""
 
-
     async def test_execute_status_check_success(self, workflow_steps, mock_dependencies):
         """Test successful status check execution."""
         _, repo_states, repo_engines, tui, _ = mock_dependencies
@@ -279,9 +278,7 @@ class TestWorkflowSteps:
         staged_diff = "diff content"
 
         # Mock test failure
-        with patch(
-            "supsrc.runtime.workflow.steps.TestRunner.run_tests"
-        ) as mock_run_tests:
+        with patch("supsrc.runtime.workflow.steps.TestRunner.run_tests") as mock_run_tests:
             mock_run_tests.return_value = (1, "Tests failed", "Error output")
 
             should_continue, commit_message = await workflow_steps.execute_llm_pipeline(
@@ -290,7 +287,9 @@ class TestWorkflowSteps:
 
         assert should_continue is False
         assert commit_message == ""
-        repo_state.update_status.assert_called_with(RepositoryStatus.ERROR, "Tests Failed: Test run failed.")
+        repo_state.update_status.assert_called_with(
+            RepositoryStatus.ERROR, "Tests Failed: Test run failed."
+        )
         emit_event.assert_called_once()
 
     async def test_execute_llm_pipeline_success_with_message_generation(

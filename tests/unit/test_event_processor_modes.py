@@ -137,7 +137,9 @@ class TestModeDetection:
         assert processor._event_buffer is not None
         assert processor._event_buffer.grouping_mode == "simple"
 
-    def test_uses_default_tui_mode_from_config(self, mock_action_handler, mock_tui_interface_with_app):
+    def test_uses_default_tui_mode_from_config(
+        self, mock_action_handler, mock_tui_interface_with_app
+    ):
         """Test that default TUI mode from config is used."""
         config = SupsrcConfig(
             repositories={},
@@ -197,7 +199,9 @@ class TestModeDetection:
 
         assert processor._event_buffer.grouping_mode == DEFAULT_EVENT_BUFFER_GROUPING_MODE_HEADLESS
 
-    def test_buffering_disabled_creates_no_buffer(self, mock_action_handler, mock_tui_interface_with_app):
+    def test_buffering_disabled_creates_no_buffer(
+        self, mock_action_handler, mock_tui_interface_with_app
+    ):
         """Test that no buffer is created when buffering is disabled."""
         config = SupsrcConfig(
             repositories={},
@@ -230,7 +234,9 @@ class TestModeDetection:
 class TestModeSpecificBehavior:
     """Test suite for mode-specific buffering behavior."""
 
-    def test_tui_mode_uses_smart_grouping(self, mock_config, mock_action_handler, mock_tui_interface_with_app):
+    def test_tui_mode_uses_smart_grouping(
+        self, mock_config, mock_action_handler, mock_tui_interface_with_app
+    ):
         """Test that TUI mode uses smart grouping by default."""
         event_queue = asyncio.Queue()
         shutdown_event = asyncio.Event()

@@ -81,8 +81,9 @@ class TestVSCodeAtomicSaveIntegration:
         buffer.flush_all()
 
         # Verify callback was called
-        assert mock_callback.call_count >= 1, \
+        assert mock_callback.call_count >= 1, (
             f"Expected at least 1 callback, got {mock_callback.call_count}"
+        )
 
         # Find the emitted event(s) and verify the file path
         all_emitted = [call[0][0] for call in mock_callback.call_args_list]
@@ -95,20 +96,20 @@ class TestVSCodeAtomicSaveIntegration:
             elif hasattr(event, "file_path"):
                 emitted_files.append(event.file_path)
 
-        assert final_file in emitted_files, \
+        assert final_file in emitted_files, (
             f"Expected '{final_file}' in emitted files, got {emitted_files}"
+        )
 
         # Verify the temp file is NOT in the emitted events
-        assert temp_file not in emitted_files, \
+        assert temp_file not in emitted_files, (
             f"Temp file '{temp_file}' should not be in emitted files, got {emitted_files}"
+        )
 
         # Verify at least one event shows as atomic_rewrite (the operation type)
-        operation_types = [
-            getattr(event, "operation_type", None)
-            for event in all_emitted
-        ]
-        assert "atomic_rewrite" in operation_types, \
+        operation_types = [getattr(event, "operation_type", None) for event in all_emitted]
+        assert "atomic_rewrite" in operation_types, (
             f"Expected 'atomic_rewrite' operation, got {operation_types}"
+        )
 
     @pytest.mark.asyncio
     async def test_vscode_pattern_with_nested_dots(self):
@@ -165,8 +166,9 @@ class TestVSCodeAtomicSaveIntegration:
             elif hasattr(event, "file_path"):
                 emitted_files.append(event.file_path)
 
-        assert final_file in emitted_files, \
+        assert final_file in emitted_files, (
             f"Expected '{final_file}' with all dots preserved, got {emitted_files}"
+        )
 
     @pytest.mark.asyncio
     async def test_temp_file_hidden_until_operation_complete(self):
@@ -208,8 +210,9 @@ class TestVSCodeAtomicSaveIntegration:
         await asyncio.sleep(0.1)
 
         # No callback yet - temp files are buffered
-        assert mock_callback.call_count == 0, \
+        assert mock_callback.call_count == 0, (
             "Temp file events should not trigger callback before operation completes"
+        )
 
         # Now complete the operation
         buffer.add_event(
@@ -229,8 +232,7 @@ class TestVSCodeAtomicSaveIntegration:
         buffer.flush_all()
 
         # NOW callback should fire with the complete operation
-        assert mock_callback.call_count >= 1, \
-            "Callback should fire after operation completes"
+        assert mock_callback.call_count >= 1, "Callback should fire after operation completes"
 
         # Verify it shows the final file
         all_emitted = [call[0][0] for call in mock_callback.call_args_list]
@@ -304,8 +306,9 @@ class TestVSCodeAtomicSaveIntegration:
         buffer.flush_all()
 
         # Should have at least 2 callbacks
-        assert mock_callback.call_count >= 2, \
+        assert mock_callback.call_count >= 2, (
             f"Expected at least 2 callbacks for 2 operations, got {mock_callback.call_count}"
+        )
 
         # Verify both final files are in the emitted events
         all_emitted = [call[0][0] for call in mock_callback.call_args_list]
@@ -323,8 +326,7 @@ class TestVSCodeAtomicSaveIntegration:
             Path(".file2.py.tmp.2"),
         ]
         for temp_file in temp_files:
-            assert temp_file not in emitted_files, \
-                f"Temp file {temp_file} should not be emitted"
+            assert temp_file not in emitted_files, f"Temp file {temp_file} should not be emitted"
 
     @pytest.mark.asyncio
     async def test_vscode_pattern_matches_real_world_behavior(self):
@@ -379,10 +381,12 @@ class TestVSCodeAtomicSaveIntegration:
 
         # The bug was: emitted_files contained Path(".orchestrator.py")
         # After fix: should contain Path("orchestrator.py")
-        assert final_file in emitted_files, \
+        assert final_file in emitted_files, (
             f"Expected 'orchestrator.py' (without leading dot), got {emitted_files}"
+        )
 
         # Make sure the buggy version is NOT present
         buggy_file = Path(".orchestrator.py")
-        assert buggy_file not in emitted_files, \
+        assert buggy_file not in emitted_files, (
             f"Buggy file '.orchestrator.py' (with leading dot) should not be emitted"
+        )

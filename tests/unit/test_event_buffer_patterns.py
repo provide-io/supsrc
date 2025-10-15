@@ -87,8 +87,10 @@ class TestEventBufferPatterns:
 
         # The actual file should be in the paths
         original_path = base_path / "file.py"
-        assert any(original_path in event.file_paths for event in
-                   [call[0][0] for call in mock_emit_callback.call_args_list])
+        assert any(
+            original_path in event.file_paths
+            for event in [call[0][0] for call in mock_emit_callback.call_args_list]
+        )
 
     @pytest.mark.asyncio
     async def test_temp_file_pattern_detection_tilde(self, mock_emit_callback):
@@ -264,8 +266,11 @@ class TestEventBufferPatterns:
 
         # If atomic detected, verify it contains the correct file
         if has_atomic:
-            atomic_events = [e for e in all_emitted
-                           if hasattr(e, "operation_type") and e.operation_type == "atomic_rewrite"]
+            atomic_events = [
+                e
+                for e in all_emitted
+                if hasattr(e, "operation_type") and e.operation_type == "atomic_rewrite"
+            ]
             atomic_event = atomic_events[0]
             assert base_path / "document.txt" in atomic_event.file_paths
             assert atomic_event.event_count >= 2  # At least 2 events grouped
@@ -341,8 +346,9 @@ class TestEventBufferPatterns:
                 elif hasattr(emitted, "file_path"):
                     file_paths_emitted.append(emitted.file_path)
 
-            assert original_file in file_paths_emitted, \
+            assert original_file in file_paths_emitted, (
                 f"Original file {original_file} not found in emitted events for pattern {temp_file}"
+            )
 
     @pytest.mark.asyncio
     async def test_atomic_rewrite_fallback_to_simple(self, mock_emit_callback):
@@ -400,7 +406,11 @@ class TestEventBufferPatterns:
         # Verify no atomic_rewrite operation type (should be single_file or batch)
         for emitted in all_emitted:
             if hasattr(emitted, "operation_type"):
-                assert emitted.operation_type in ["single_file", "batch_operation", "atomic_rewrite"]
+                assert emitted.operation_type in [
+                    "single_file",
+                    "batch_operation",
+                    "atomic_rewrite",
+                ]
 
     @pytest.mark.asyncio
     async def test_smart_grouping_with_mixed_patterns(self, mock_emit_callback):
@@ -459,5 +469,7 @@ class TestEventBufferPatterns:
                 all_file_paths.append(event.file_path)
 
         # Check that the key files are present
-        assert base_path / "file.py" in all_file_paths or base_path / "file.py.tmp" in all_file_paths
+        assert (
+            base_path / "file.py" in all_file_paths or base_path / "file.py.tmp" in all_file_paths
+        )
         assert base_path / "other.py" in all_file_paths
