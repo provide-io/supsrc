@@ -8,7 +8,6 @@ LLMProvider implementation for Google Gemini.
 import asyncio
 import re
 
-import structlog
 from provide.foundation.logger import get_logger
 
 # Add Foundation utilities for rate limiting and timing

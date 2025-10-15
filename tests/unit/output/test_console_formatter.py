@@ -164,8 +164,10 @@ class TestConsoleEventFormatter:
         impact, file_str, message = formatter._format_event_details(event)
 
         # Verify no Rich markup in message
-        assert "[" not in message or "]" not in message or not any(
-            tag in message for tag in ["bold", "cyan", "dim", "blue"]
+        assert (
+            "[" not in message
+            or "]" not in message
+            or not any(tag in message for tag in ["bold", "cyan", "dim", "blue"])
         )
 
     def test_build_output_line_standard_layout(self):
@@ -185,6 +187,7 @@ class TestConsoleEventFormatter:
 
         # Should be a Rich Text object
         from rich.text import Text
+
         assert isinstance(result, Text)
 
         # Convert to string and verify content
@@ -296,7 +299,11 @@ class TestConsoleEventFormatter:
             primary_change_type="modified",
             operation_history=[
                 {"change_type": "created", "src_path": Path(".config.py.tmp")},
-                {"change_type": "moved", "src_path": Path(".config.py.tmp"), "dest_path": Path("config.py")},
+                {
+                    "change_type": "moved",
+                    "src_path": Path(".config.py.tmp"),
+                    "dest_path": Path("config.py"),
+                },
             ],
         )
 
@@ -326,7 +333,11 @@ class TestConsoleEventFormatter:
             primary_change_type="modified",
             operation_history=[
                 {"change_type": "created", "src_path": Path(".config.py.tmp")},
-                {"change_type": "moved", "src_path": Path(".config.py.tmp"), "dest_path": Path("config.py")},
+                {
+                    "change_type": "moved",
+                    "src_path": Path(".config.py.tmp"),
+                    "dest_path": Path("config.py"),
+                },
             ],
         )
 
@@ -471,7 +482,11 @@ class TestConsoleEventFormatter:
                 {"change_type": "created", "src_path": Path(".document.txt.tmp")},
                 {"change_type": "modified", "src_path": Path(".document.txt.tmp")},
                 {"change_type": "modified", "src_path": Path(".document.txt.tmp")},
-                {"change_type": "moved", "src_path": Path(".document.txt.tmp"), "dest_path": Path("document.txt")},
+                {
+                    "change_type": "moved",
+                    "src_path": Path(".document.txt.tmp"),
+                    "dest_path": Path("document.txt"),
+                },
             ],
         )
 

@@ -6,7 +6,6 @@ Action handler methods for the TUI application.
 
 from __future__ import annotations
 
-import structlog
 from provide.foundation.logger import get_logger
 from textual.widgets import DataTable, TabbedContent
 

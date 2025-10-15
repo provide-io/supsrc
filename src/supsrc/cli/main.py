@@ -12,7 +12,6 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import click
-import structlog
 from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
 from provide.foundation.cli.decorators import error_handler, logging_options
 from provide.foundation.context import CLIContext
@@ -77,6 +76,7 @@ def _initialize_logging(cli_context: CLIContext) -> None:
         # Register custom supsrc eventset for log enrichment
         try:
             from provide.foundation.eventsets.registry import register_event_set
+
             from supsrc.telemetry import SUPSRC_EVENT_SET
 
             register_event_set(SUPSRC_EVENT_SET)

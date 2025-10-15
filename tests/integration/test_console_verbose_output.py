@@ -36,8 +36,8 @@ class TestConsoleVerboseOutput:
         formatter = ConsoleEventFormatter(
             console=console,
             use_color=False,  # Easier to test without ANSI codes
-            use_ascii=True,   # ASCII mode for consistent output
-            verbose=True,     # Enable verbose mode
+            use_ascii=True,  # ASCII mode for consistent output
+            verbose=True,  # Enable verbose mode
         )
 
         # Create mock callback to capture emitted events
@@ -117,8 +117,9 @@ class TestConsoleVerboseOutput:
         assert "config.py" in output_text, "Verbose output should show final file path"
 
         # Should show aggregation count
-        assert "3 raw events" in output_text or "event" in output_text.lower(), \
+        assert "3 raw events" in output_text or "event" in output_text.lower(), (
             "Verbose output should show event aggregation"
+        )
 
     @pytest.mark.skip(reason="EventBuffer async timing - covered by test_vscode_atomic_save.py")
     @pytest.mark.asyncio
@@ -147,9 +148,7 @@ class TestConsoleVerboseOutput:
         )
 
         repo_id = "batch_repo"
-        files = [
-            Path(f"/test/repo/file{i}.txt") for i in range(5)
-        ]
+        files = [Path(f"/test/repo/file{i}.txt") for i in range(5)]
 
         # Simulate batch modification
         for file in files:
@@ -172,12 +171,14 @@ class TestConsoleVerboseOutput:
         output_text = output.getvalue()
 
         # Should show multiple files
-        assert "5" in output_text or "Files" in output_text, \
+        assert "5" in output_text or "Files" in output_text, (
             "Verbose output should indicate multiple files"
+        )
 
         # Should show file count
-        assert any(f"file{i}.txt" in output_text for i in range(5)) or "..." in output_text, \
+        assert any(f"file{i}.txt" in output_text for i in range(5)) or "..." in output_text, (
             "Verbose output should show file names or ellipsis for many files"
+        )
 
     def test_git_commit_event_verbose_output(self):
         """Test verbose output for git commit events."""
@@ -316,16 +317,20 @@ class TestConsoleVerboseOutput:
         assert "Sequence" in output_text, "Should show operation sequence"
 
         # Should show event count
-        assert "4" in output_text or "events" in output_text.lower(), \
+        assert "4" in output_text or "events" in output_text.lower(), (
             "Should indicate 4 events in sequence"
+        )
 
         # Should show individual operations
-        assert "[created]" in output_text or "created" in output_text.lower(), \
+        assert "[created]" in output_text or "created" in output_text.lower(), (
             "Should show created operation"
-        assert "[modified]" in output_text or "modified" in output_text.lower(), \
+        )
+        assert "[modified]" in output_text or "modified" in output_text.lower(), (
             "Should show modified operation"
-        assert "[moved]" in output_text or "moved" in output_text.lower(), \
+        )
+        assert "[moved]" in output_text or "moved" in output_text.lower(), (
             "Should show moved operation"
+        )
 
         # Should show final file (not temp file) in main event line
         assert "document.txt" in output_text, "Should show final file name"
@@ -353,7 +358,11 @@ class TestConsoleVerboseOutput:
             operation_history=[
                 {"change_type": "created", "src_path": Path(".test.py.tmp")},
                 {"change_type": "modified", "src_path": Path(".test.py.tmp")},
-                {"change_type": "moved", "src_path": Path(".test.py.tmp"), "dest_path": Path("test.py")},
+                {
+                    "change_type": "moved",
+                    "src_path": Path(".test.py.tmp"),
+                    "dest_path": Path("test.py"),
+                },
             ],
         )
 
@@ -363,8 +372,9 @@ class TestConsoleVerboseOutput:
 
         # Should NOT show verbose details
         assert "Sequence" not in output_text, "Non-verbose mode should not show sequence"
-        assert "operation_history" not in output_text.lower(), \
+        assert "operation_history" not in output_text.lower(), (
             "Non-verbose mode should not show operation history"
+        )
 
         # Should still show the basic event
         assert "test.py" in output_text, "Should show the file name"
@@ -391,13 +401,15 @@ class TestConsoleVerboseOutput:
         output_text = output.getvalue()
 
         # Should show repository count
-        assert "5 repositories" in output_text or "5" in output_text, \
+        assert "5 repositories" in output_text or "5" in output_text, (
             "Startup banner should show repository count"
+        )
 
         # Should show log paths (may have ANSI codes, so check for components)
         assert "events.jsonl" in output_text, "Should show event log path"
         assert "app.log" in output_text, "Should show app log path"
 
         # Should have separators
-        assert "━" in output_text or "=" in output_text or "-" in output_text, \
+        assert "━" in output_text or "=" in output_text or "-" in output_text, (
             "Should have visual separators"
+        )

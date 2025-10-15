@@ -16,7 +16,6 @@ from provide.foundation.logger import get_logger
 from supsrc.events.buffer.converters import create_single_event_group
 from supsrc.events.buffer.grouping import group_events_simple
 from supsrc.events.buffer.streaming import StreamingOperationHandler
-from supsrc.events.buffer_events import BufferedFileChangeEvent
 from supsrc.events.defaults import (
     DEFAULT_BUFFER_WINDOW_MS,
     DEFAULT_GROUPING_MODE,

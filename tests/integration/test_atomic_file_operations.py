@@ -402,8 +402,9 @@ class TestAtomicFileOperations:
             buffer.flush_all()
 
             # Should have emitted something
-            assert mock_callback.call_count >= 1, \
+            assert mock_callback.call_count >= 1, (
                 f"No events emitted for {original_file} / {temp_file}"
+            )
 
             # Verify the original file was included in emitted events
             all_emitted = [call[0][0] for call in mock_callback.call_args_list]
@@ -414,5 +415,6 @@ class TestAtomicFileOperations:
                 elif hasattr(emitted, "file_path"):
                     file_paths_emitted.append(emitted.file_path)
 
-            assert original_file in file_paths_emitted, \
+            assert original_file in file_paths_emitted, (
                 f"Original file {original_file} not found in emitted events for pattern {temp_file}"
+            )

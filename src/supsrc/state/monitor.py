@@ -11,7 +11,6 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import structlog
 from provide.foundation.logger import get_logger
 
 if TYPE_CHECKING:

@@ -9,4 +9,4 @@ from __future__ import annotations
 from supsrc.events.buffer.core import EventBuffer
 from supsrc.events.buffer_events import BufferedFileChangeEvent
 
-__all__ = ["EventBuffer", "BufferedFileChangeEvent"]
+__all__ = ["BufferedFileChangeEvent", "EventBuffer"]

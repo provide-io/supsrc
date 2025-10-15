@@ -166,9 +166,7 @@ class TestRuntimeWorkflow:
         repo_id = "test_repo_1"
 
         # Mock push failure
-        mock_repo_engine.perform_push.return_value = PushResult(
-            success=False, message="Push error"
-        )
+        mock_repo_engine.perform_push.return_value = PushResult(success=False, message="Push error")
 
         await runtime_workflow.execute_action_sequence(repo_id)
 
@@ -186,9 +184,7 @@ class TestRuntimeWorkflow:
         repo_id = "test_repo_1"
 
         # Mock commit with no hash
-        mock_repo_engine.perform_commit.return_value = CommitResult(
-            success=True, commit_hash=None
-        )
+        mock_repo_engine.perform_commit.return_value = CommitResult(success=True, commit_hash=None)
 
         await runtime_workflow.execute_action_sequence(repo_id)
 

@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from provide.foundation.file.operations import DetectorConfig, OperationDetector
 from provide.foundation.logger import get_logger

@@ -15,6 +15,7 @@ from supsrc.runtime.workflow.test_runner import TestRunner
 class TestTestRunner:
     """Test suite for TestRunner class."""
 
+
 class TestTestRunnerSync:
     """Test suite for non-async TestRunner methods."""
 

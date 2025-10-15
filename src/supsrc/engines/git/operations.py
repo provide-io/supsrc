@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 import pygit2
-import structlog
 from provide.foundation.logger import get_logger
 
 log = get_logger(__name__)
