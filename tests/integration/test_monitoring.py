@@ -52,6 +52,8 @@ async def monitoring_setup(tmp_path: Path):
     temp/
     """
     (repo_path / ".gitignore").write_text(gitignore_content)
+    subprocess.run(["git", "add", ".gitignore"], cwd=repo_path, check=True)
+    subprocess.run(["git", "commit", "-m", "Add .gitignore"], cwd=repo_path, check=True)
 
     # Create a separate temporary directory for the config file
     config_dir = Path(tempfile.mkdtemp())
