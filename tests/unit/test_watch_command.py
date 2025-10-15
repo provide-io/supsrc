@@ -39,6 +39,7 @@ class TestWatchCommand:
             # Output was captured before the exception, check stdout capture
             import sys
             from io import StringIO
+
             # We can't get the output after the exception, so just verify exit code
             output = ""
 

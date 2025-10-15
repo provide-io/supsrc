@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import contextlib
 
-import structlog
 from provide.foundation.logger import get_logger
 from textual.widgets import DataTable
 from textual.widgets import Log as TextualLog

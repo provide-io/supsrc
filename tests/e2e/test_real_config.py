@@ -214,8 +214,7 @@ class TestRealConfigDirectoryContext:
 
             # At least some repositories should be accessible
             assert len(accessible_repos) > 0, (
-                f"No repositories accessible from parent directory. "
-                f"Missing: {missing_repos}"
+                f"No repositories accessible from parent directory. Missing: {missing_repos}"
             )
 
 

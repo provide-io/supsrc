@@ -7,7 +7,6 @@ LLMProvider implementation for Ollama.
 
 import re
 
-import structlog
 from provide.foundation.logger import get_logger
 
 # Add Foundation utilities for rate limiting and timing
