@@ -1,4 +1,8 @@
-# src/supsrc/state/__init__.py
+# supsrc/state/__init__.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """
 State management system for supsrc.
 
@@ -259,3 +263,6 @@ def pause_context(
             pass
     """
     return PauseContext(repo_path, duration, reason, updated_by)
+
+
+# 🔼⚙️📦🪄

@@ -1,4 +1,7 @@
-"""Emoji mappings for event types with ASCII fallbacks."""
+# supsrc/output/emoji_map.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
 
@@ -114,3 +117,6 @@ class EmojiMapper:
         source = getattr(event, "source", "unknown")
         emoji = EmojiMapper.SOURCE_EMOJIS.get(source, "📝")
         return EmojiMapper.ASCII_FALLBACKS.get(emoji, "[?]") if use_ascii else emoji
+
+
+# 🔼⚙️🗺️🪄

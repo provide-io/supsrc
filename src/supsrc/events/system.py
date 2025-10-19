@@ -1,4 +1,7 @@
-# src/supsrc/events/system.py
+# supsrc/events/system.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 System and rule events.
@@ -143,3 +146,6 @@ class LLMVetoEvent(BaseEvent):
         """Format LLM veto event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         return f"[{time_str}] 🧠 [{self.repo_id}] LLM review blocked: {self.reason}"
+
+
+# 🔼⚙️📨🪄

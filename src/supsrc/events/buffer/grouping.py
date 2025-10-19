@@ -1,4 +1,7 @@
-# src/supsrc/events/buffer/grouping.py
+# supsrc/events/buffer/grouping.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Event grouping strategies for simple time-window buffering.
@@ -85,3 +88,6 @@ def group_events_simple(events: list[FileChangeEvent]) -> list[BufferedFileChang
         "Simple grouping complete", input_events=len(events), output_groups=len(grouped_events)
     )
     return grouped_events
+
+
+# 🔼⚙️📨🪄

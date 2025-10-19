@@ -1,4 +1,8 @@
-# src/supsrc/runtime/event_processor.py
+# supsrc/events/processor.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Consumes filesystem events, checks rules, manages timers, and triggers actions.
 """
@@ -516,3 +520,6 @@ class EventProcessor:
             task.cancel()
         await asyncio.gather(*self._action_tasks, return_exceptions=True)
         log.debug("All action tasks cancelled.")
+
+
+# 🔼⚙️📨🪄

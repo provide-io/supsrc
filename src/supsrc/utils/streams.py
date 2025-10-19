@@ -1,4 +1,8 @@
-# src/supsrc/utils/streams.py
+# supsrc/utils/streams.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Stream utilities for supsrc.
 
@@ -61,3 +65,6 @@ class NoOpStream:
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit."""
         pass
+
+
+# 🔼⚙️📄🪄

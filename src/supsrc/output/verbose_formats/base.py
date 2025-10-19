@@ -1,4 +1,7 @@
-# src/supsrc/output/verbose_formats/base.py
+# supsrc/output/verbose_formats/base.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """Base protocol for verbose event formatters."""
 
@@ -23,3 +26,6 @@ class VerboseFormatter(Protocol):
             List of strings to print (one per line)
         """
         ...
+
+
+# 🔼⚙️🏗️🪄

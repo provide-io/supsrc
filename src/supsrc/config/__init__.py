@@ -1,4 +1,8 @@
+# supsrc/config/__init__.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # config/__init__.py
 #
 """
@@ -37,3 +41,4 @@ __all__ = [
     "load_config",
     "load_repository_config",
 ]
+# 🔼⚙️📦🪄

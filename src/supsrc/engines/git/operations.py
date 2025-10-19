@@ -1,4 +1,7 @@
-# src/supsrc/engines/git/operations.py
+# supsrc/engines/git/operations.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Git operation helpers and utilities for the GitEngine.
@@ -139,3 +142,6 @@ class GitOperationsHelper:
         except Exception as e:
             self._log.exception("Unexpected error getting commit history")
             return [f"Unexpected error fetching history: {e}"]
+
+
+# 🔼⚙️📄🪄

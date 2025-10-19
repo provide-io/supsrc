@@ -1,4 +1,7 @@
-# src/supsrc/runtime/monitoring_coordinator.py
+# supsrc/runtime/monitoring_coordinator.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Monitoring coordination functionality for the WatchOrchestrator.
@@ -288,3 +291,6 @@ class MonitoringCoordinator:
     def is_suspended(self) -> bool:
         """Check if monitoring is currently suspended."""
         return self._is_suspended
+
+
+# 🔼⚙️📄🪄

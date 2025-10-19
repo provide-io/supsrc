@@ -1,4 +1,7 @@
-# src/supsrc/tui/handlers/actions.py
+# supsrc/tui/handlers/actions.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Action handler methods for the TUI application.
@@ -251,3 +254,6 @@ class ActionHandlerMixin:
             log.debug("All timers stopped during quit")
 
         self.exit()
+
+
+# 🔼⚙️🔄🪄

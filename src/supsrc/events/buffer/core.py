@@ -1,4 +1,7 @@
-# src/supsrc/events/buffer/core.py
+# supsrc/events/buffer/core.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Core event buffer orchestration for reducing TUI event log spam.
@@ -198,3 +201,6 @@ class EventBuffer:
             if repo_id in self._timers:
                 self._timers[repo_id].cancel()
             self._flush_buffer(repo_id)
+
+
+# 🔼⚙️📨🪄

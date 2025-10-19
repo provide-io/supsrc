@@ -1,4 +1,7 @@
-# src/supsrc/cli/utils.py
+# supsrc/cli/utils.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 CLI utilities - now uses provide-foundation's CLI framework.
@@ -23,3 +26,4 @@ from provide.foundation.logger import get_logger
 log = get_logger(__name__)
 
 # ⚙️🛠️
+# 🔼⚙️🖥️🪄

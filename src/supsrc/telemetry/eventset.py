@@ -1,6 +1,9 @@
-"""Supsrc-specific event enrichment for observability.
+# supsrc/telemetry/eventset.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
-This event set provides visual markers and metadata enrichment
+"""This event set provides visual markers and metadata enrichment
 for supsrc-specific log fields like repository status and rule types.
 """
 
@@ -102,3 +105,4 @@ SUPSRC_EVENT_SET = EventSet(
     ],
     priority=10,  # Higher than default DAS eventset (priority=0)
 )
+# 🔼⚙️🗃️🪄

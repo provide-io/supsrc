@@ -1,4 +1,8 @@
+# supsrc/monitor/handler.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # supsrc/monitor/handler.py
 #
 """
@@ -210,3 +214,4 @@ class SupsrcEventHandler(FileSystemEventHandler):
 
 
 # 🔼⚙️
+# 🔼⚙️🔄🪄

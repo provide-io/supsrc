@@ -1,4 +1,8 @@
+# supsrc/protocols.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # supsrc/protocols.py
 #
 """
@@ -175,3 +179,4 @@ class RepositoryEngine(Protocol):
 
 
 # 🔼⚙️
+# 🔼⚙️📡🪄

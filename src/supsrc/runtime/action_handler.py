@@ -1,4 +1,7 @@
-# src/supsrc/runtime/action_handler.py
+# supsrc/runtime/action_handler.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Legacy import module for ActionHandler.
@@ -16,3 +19,4 @@ from supsrc.runtime.workflow.executor import RuntimeWorkflow
 ActionHandler = RuntimeWorkflow
 
 __all__ = ["ActionHandler"]
+# 🔼⚙️🔄🪄

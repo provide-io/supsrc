@@ -1,4 +1,7 @@
-# src/supsrc/tui/helpers/ui_helpers.py
+# supsrc/tui/helpers/ui_helpers.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 UI helper methods for the TUI application.
@@ -107,3 +110,6 @@ class UIHelperMixin:
             "SUCCESS": "bold green",
         }
         return styles.get(level, "white")
+
+
+# 🔼⚙️📄🪄

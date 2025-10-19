@@ -1,6 +1,9 @@
-"""File path utilities for EventFeedTable."""
+# supsrc/events/feed_table/file_utils.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
-from __future__ import annotations
+"""from __future__ import annotations
 
 from pathlib import Path
 
@@ -121,3 +124,6 @@ class FilePathFormatter:
             files_str = FilePathFormatter.get_files_summary(file_paths)
 
         return count_str, files_str
+
+
+# 🔼⚙️📨🪄

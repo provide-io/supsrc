@@ -1,4 +1,8 @@
+# supsrc/llm/providers/gemini.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # src/supsrc/llm/providers/gemini.py
 #
 """
@@ -123,3 +127,4 @@ class GeminiProvider:
 
 
 # 🧠💎
+# 🔼⚙️🔌🪄

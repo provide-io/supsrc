@@ -1,4 +1,7 @@
-# src/supsrc/events/buffer/streaming.py
+# supsrc/events/buffer/streaming.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Streaming operation detection handler for smart event buffering.
@@ -225,3 +228,6 @@ class StreamingOperationHandler:
                 buffered_event = create_operation_event(operation, repo_id)
                 if self.emit_callback:
                     self.emit_callback(buffered_event)
+
+
+# 🔼⚙️📨🪄

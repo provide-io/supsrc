@@ -1,4 +1,7 @@
-# src/supsrc/events/base.py
+# supsrc/events/base.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Base event implementation using attrs.
@@ -33,3 +36,6 @@ class BaseEvent:
         """
         time_str = self.timestamp.strftime("%H:%M:%S")
         return f"[{time_str}] [{self.source}] {self.description}"
+
+
+# 🔼⚙️🏗️🪄

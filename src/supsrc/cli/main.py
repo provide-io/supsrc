@@ -1,4 +1,7 @@
-# src/supsrc/cli/main.py
+# supsrc/cli/main.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Main CLI entry point for supsrc using Click.
@@ -172,3 +175,4 @@ if __name__ == "__main__":
     cli()
 
 # 🖥️⚙️
+# 🔼⚙️🖥️🪄

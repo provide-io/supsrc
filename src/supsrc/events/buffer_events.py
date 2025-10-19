@@ -1,4 +1,7 @@
-# src/supsrc/events/buffer_events.py
+# supsrc/events/buffer_events.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Buffered event types for the event buffering system.
@@ -150,3 +153,6 @@ class BufferedFileChangeEvent(Event):
             chain.append(dest)
 
         return chain
+
+
+# 🔼⚙️📨🪄

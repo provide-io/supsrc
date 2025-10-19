@@ -1,4 +1,7 @@
-# src/supsrc/events/defaults.py
+# supsrc/events/defaults.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Default configurations for event processing and atomic save detection.
@@ -66,3 +69,4 @@ GROUPING_MODE_SIMPLE = "simple"
 GROUPING_MODE_SMART = "smart"
 
 DEFAULT_GROUPING_MODE = GROUPING_MODE_SMART
+# 🔼⚙️📨🪄

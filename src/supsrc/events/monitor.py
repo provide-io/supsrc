@@ -1,4 +1,7 @@
-# src/supsrc/events/monitor.py
+# supsrc/events/monitor.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Filesystem monitoring events.
@@ -68,3 +71,6 @@ class MonitoringStopEvent(BaseEvent):
         """Format monitoring stop event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         return f"[{time_str}] \U0001f6d1 Stopped monitoring [{self.repo_id}]"  # STOP SIGN
+
+
+# 🔼⚙️📨🪄

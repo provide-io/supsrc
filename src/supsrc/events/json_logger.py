@@ -1,4 +1,7 @@
-# src/supsrc/events/json_logger.py
+# supsrc/events/json_logger.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 JSON event logger for persisting events to structured log files.
@@ -164,3 +167,6 @@ class JSONEventLogger:
     def __del__(self) -> None:
         """Ensure file handle is closed on cleanup."""
         self.close()
+
+
+# 🔼⚙️📝🪄

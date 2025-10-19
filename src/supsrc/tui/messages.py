@@ -1,4 +1,8 @@
+# supsrc/tui/messages.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # supsrc/tui/messages.py
 #
 """
@@ -50,3 +54,4 @@ class RepoDetailUpdate(Message):
 
 
 # 🔼⚙️
+# 🔼⚙️📄🪄

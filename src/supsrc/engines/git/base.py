@@ -1,4 +1,7 @@
-# src/supsrc/engines/git/base.py
+# supsrc/engines/git/base.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Implementation of the RepositoryEngine protocol using pygit2.
@@ -515,3 +518,4 @@ class GitEngine(RepositoryEngine):
 
 
 # 🔼⚙️
+# 🔼⚙️🏗️🪄

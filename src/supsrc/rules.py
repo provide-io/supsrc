@@ -1,4 +1,8 @@
+# supsrc/rules.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # supsrc/rules.py
 #
 """
@@ -142,3 +146,4 @@ def check_trigger_condition(repo_state: RepositoryState, repo_config: Repository
 
 
 # 🔼⚙️
+# 🔼⚙️📄🪄

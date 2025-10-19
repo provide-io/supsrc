@@ -1,4 +1,7 @@
-# src/supsrc/cli/config_cmds.py
+# supsrc/cli/config_cmds.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
 
@@ -82,3 +85,4 @@ def show_config(ctx: click.Context, config_path: Path, **kwargs):
 
 
 # 🔼⚙️
+# 🔼⚙️⚙️🪄
