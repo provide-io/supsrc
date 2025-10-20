@@ -1,8 +1,9 @@
-# src/supsrc/output/verbose_formats/compact.py
+# supsrc/output/verbose_formats/compact.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
-"""Compact key=value verbose formatter."""
-
-from __future__ import annotations
+"""Compact key=value verbose formatter.from __future__ import annotations"""
 
 from typing import TYPE_CHECKING
 
@@ -205,3 +206,6 @@ class CompactVerboseFormatter:
         """Format FileChangeEvent in compact style."""
         op_line = self._format_pairs(pairs.get("operation", []))
         return [f"{self.indent}{op_line}"] if op_line else []
+
+
+# 🔼⚙️📄🪄

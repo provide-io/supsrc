@@ -1,7 +1,11 @@
-"""RuntimeWorkflow package for executing repository workflows."""
+# supsrc/runtime/workflow/__init__.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
 
 from supsrc.runtime.workflow.executor import RuntimeWorkflow
 
 __all__ = ["RuntimeWorkflow"]
+# 🔼⚙️📦🪄

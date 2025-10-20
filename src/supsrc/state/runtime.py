@@ -1,4 +1,8 @@
-# src/supsrc/state/runtime.py
+# supsrc/state/runtime.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Defines the dynamic state management models for monitored repositories in supsrc.
 """
@@ -286,3 +290,6 @@ class RepositoryState:
             self.display_status_emoji = "🔄"
         else:
             self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
+
+
+# 🔼⚙️💾🪄

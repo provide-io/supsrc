@@ -1,4 +1,7 @@
-"""Main RuntimeWorkflow executor for repository workflows."""
+# supsrc/runtime/workflow/executor.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
 
@@ -365,3 +368,6 @@ class RuntimeWorkflow:
             self._emit_event(action_error_event)
 
             self.tui.post_state_update(self.repo_states)
+
+
+# 🔼⚙️⚡🪄
