@@ -1,4 +1,7 @@
-"""Console event formatter for headless mode."""
+# supsrc/output/console_formatter.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
 
@@ -272,3 +275,6 @@ class ConsoleEventFormatter:
             else:
                 # Strip Rich markup for no-color mode
                 self.console.print(line, highlight=False, markup=False)
+
+
+# 🔼⚙️📄🪄

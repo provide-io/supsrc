@@ -1,10 +1,13 @@
+# supsrc/tui/messages.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # supsrc/tui/messages.py
 #
 """
-Defines custom messages for the Textual User Interface (TUI).
 """
-
+Defines custom messages for the Textual User Interface (TUI).
 from typing import (
     Any,
 )  # Ensure Any is kept if details in RepoDetailUpdate uses it, or other classes.
@@ -50,3 +53,4 @@ class RepoDetailUpdate(Message):
 
 
 # 🔼⚙️
+# 🔼⚙️📄🪄

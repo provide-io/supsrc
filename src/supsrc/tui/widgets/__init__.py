@@ -1,4 +1,7 @@
-# src/supsrc/tui/widgets/__init__.py
+# supsrc/tui/widgets/__init__.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 TUI widgets package.
@@ -7,3 +10,4 @@ TUI widgets package.
 from supsrc.tui.widgets.draggable_splitter import DraggableSplitter
 
 __all__ = ["DraggableSplitter"]
+# 🔼⚙️📦🪄

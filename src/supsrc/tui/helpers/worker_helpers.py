@@ -1,4 +1,7 @@
-# src/supsrc/tui/helpers/worker_helpers.py
+# supsrc/tui/helpers/worker_helpers.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Worker helper methods for the TUI application.
@@ -47,3 +50,6 @@ class WorkerHelperMixin:
             log.error(f"Error fetching repo details for {repo_id}", error=str(e))
             error_details = {"commit_history": [f"[bold red]Error loading details: {e}[/]"]}
             self.post_message(RepoDetailUpdate(repo_id, error_details))
+
+
+# 🔼⚙️📄🪄

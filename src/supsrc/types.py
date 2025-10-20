@@ -1,9 +1,12 @@
-#
 # supsrc/types.py
 #
-"""Common type definitions to avoid circular imports."""
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
-from typing import TypeAlias
+# supsrc/types.py
+#
+"""Common type definitions to avoid circular imports.from typing import TypeAlias
+"""
 
 from supsrc.state import RepositoryState
 
@@ -12,3 +15,4 @@ RepositoryStatesMap: TypeAlias = dict[str, RepositoryState]
 
 
 # 🔼⚙️
+# 🔼⚙️🧱🪄

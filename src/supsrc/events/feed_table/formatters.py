@@ -1,4 +1,7 @@
-"""Event formatting utilities for EventFeedTable."""
+# supsrc/events/feed_table/formatters.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
 
@@ -322,3 +325,6 @@ class DescriptionParser:
             message_str = message_str[:37] + "..."
 
         return file_str, message_str
+
+
+# 🔼⚙️📨🪄

@@ -1,4 +1,7 @@
-# src/supsrc/runtime/status_manager.py
+# supsrc/runtime/status_manager.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Status management functionality extracted from orchestrator to reduce file size
@@ -143,3 +146,6 @@ class StatusManager:
             log.error("Error updating repository statistics", repo_id=repo_id, error=str(e))
 
         return False
+
+
+# 🔼⚙️📋🪄
