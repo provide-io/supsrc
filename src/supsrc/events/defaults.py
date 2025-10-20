@@ -1,13 +1,13 @@
-# src/supsrc/events/defaults.py
+# supsrc/events/defaults.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Default configurations for event processing and atomic save detection.
 """
 
-from __future__ import annotations
-
 # Time windows for event grouping (milliseconds)
-DEFAULT_BUFFER_WINDOW_MS = 100  # Reduced from 500ms for better TUI responsiveness
 DEFAULT_ATOMIC_DETECTION_WINDOW_MS = 100  # Similar to chokidar's approach
 
 # Confidence thresholds for operation detection
@@ -66,3 +66,4 @@ GROUPING_MODE_SIMPLE = "simple"
 GROUPING_MODE_SMART = "smart"
 
 DEFAULT_GROUPING_MODE = GROUPING_MODE_SMART
+# 🔼⚙️📨🪄

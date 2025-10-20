@@ -1,8 +1,9 @@
-# src/supsrc/output/verbose_formats/table.py
+# supsrc/output/verbose_formats/table.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
-"""Table-style verbose formatter with box drawing."""
-
-from __future__ import annotations
+"""Table-style verbose formatter with box drawing.from __future__ import annotations"""
 
 from typing import TYPE_CHECKING
 
@@ -354,3 +355,6 @@ class TableVerboseFormatter:
             truncated_value = field_value[:width] if len(field_value) > width else field_value
             content = truncated_value.ljust(width)
             return f"{c['vertical']} {content} {c['vertical']}"
+
+
+# 🔼⚙️📄🪄

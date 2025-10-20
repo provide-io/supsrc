@@ -1,12 +1,9 @@
-"""File path utilities for EventFeedTable."""
-
-from __future__ import annotations
+# supsrc/events/feed_table/file_utils.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
-
-
-class FilePathFormatter:
-    """Handles formatting of file paths for display."""
 
     @staticmethod
     def get_files_summary_short(file_paths: list[Path]) -> str:
@@ -106,6 +103,7 @@ class FilePathFormatter:
         event, file_paths: list[Path], event_count: int
     ) -> tuple[str, str]:
         """Format event count and file details (legacy method).
+"""
 
         Returns:
             Tuple of (count_str, files_str)
@@ -121,3 +119,8 @@ class FilePathFormatter:
             files_str = FilePathFormatter.get_files_summary(file_paths)
 
         return count_str, files_str
+
+
+# 🔼⚙️📨🪄
+
+"""

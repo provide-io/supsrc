@@ -1,4 +1,7 @@
-# src/supsrc/runtime/repository_manager.py
+# supsrc/runtime/repository_manager.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Repository management functionality for the WatchOrchestrator.
@@ -430,3 +433,6 @@ class RepositoryManager:
         """Set the refreshing status for a repository."""
         if status_manager:
             status_manager.set_repo_refreshing_status(repo_id, is_refreshing)
+
+
+# 🔼⚙️📋🪄

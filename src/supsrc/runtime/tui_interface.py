@@ -1,4 +1,7 @@
-# src/supsrc/runtime/tui_interface.py
+# supsrc/runtime/tui_interface.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Provides a thread-safe interface for communicating with the Textual TUI.
@@ -63,3 +66,6 @@ class TUIInterface:
             self.app.post_message(log_msg)
         except Exception as e:
             log.warning("Failed to post log message to TUI", error=str(e), exc_info=False)
+
+
+# 🔼⚙️📄🪄

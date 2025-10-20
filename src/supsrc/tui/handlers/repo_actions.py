@@ -1,4 +1,7 @@
-# src/supsrc/tui/handlers/repo_actions.py
+# supsrc/tui/handlers/repo_actions.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Repository action handler methods for the TUI application.
@@ -165,3 +168,6 @@ class RepoActionHandlerMixin:
             self.post_message(
                 LogMessageUpdate(None, "ERROR", f"Failed to resume monitoring for '{repo_id}'.")
             )
+
+
+# 🔼⚙️🔄🪄

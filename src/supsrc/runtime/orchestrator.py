@@ -1,4 +1,7 @@
-# src/supsrc/runtime/orchestrator.py
+# supsrc/runtime/orchestrator.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 High-level coordinator for the supsrc watch process.
@@ -443,3 +446,6 @@ class WatchOrchestrator:
             raise
         except Exception as e:
             log.error("Timer update loop error", error=str(e), exc_info=True)
+
+
+# 🔼⚙️📄🪄

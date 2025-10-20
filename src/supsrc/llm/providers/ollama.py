@@ -1,10 +1,13 @@
+# supsrc/llm/providers/ollama.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # src/supsrc/llm/providers/ollama.py
 #
 """
-LLMProvider implementation for Ollama.
 """
-
+LLMProvider implementation for Ollama.
 import re
 
 from provide.foundation.logger import get_logger
@@ -126,3 +129,4 @@ class OllamaProvider:
 
 
 # 🧠🦙
+# 🔼⚙️🔌🪄

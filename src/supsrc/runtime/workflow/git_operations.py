@@ -1,4 +1,7 @@
-"""Git operation utilities for RuntimeWorkflow."""
+# supsrc/runtime/workflow/git_operations.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
 
@@ -60,3 +63,6 @@ class GitOperationsHelper:
             log.info("Saved change fragment", path=str(file_path))
         except OSError as e:
             log.error("Failed to save change fragment", path=str(file_path), error=str(e))
+
+
+# 🔼⚙️📄🪄

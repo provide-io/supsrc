@@ -1,4 +1,7 @@
-"""Individual workflow steps for RuntimeWorkflow execution."""
+# supsrc/runtime/workflow/steps.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
 
@@ -291,3 +294,6 @@ class WorkflowSteps:
             commit_hash=None,  # Could be enhanced to get actual commit hash
         )
         self._emit_event(external_commit_event)
+
+
+# 🔼⚙️📄🪄

@@ -1,4 +1,7 @@
-"""EventFeedTable widget for displaying events in a structured columnar format."""
+# supsrc/events/feed_table/widget.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
 
@@ -147,3 +150,6 @@ class EventFeedTable(DataTable):
         """Handle end key for scrolling."""
         max_row = max(0, self.row_count - 1)
         self.cursor_coordinate = (max_row, 0)
+
+
+# 🔼⚙️📨🪄

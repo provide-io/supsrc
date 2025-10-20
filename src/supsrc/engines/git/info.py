@@ -1,10 +1,13 @@
+# supsrc/engines/git/info.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # engines/git/info.py
 #
 """
-Data classes for Git-specific information.
 """
-
+Data classes for Git-specific information.
 from datetime import datetime
 
 from attrs import define
@@ -22,3 +25,4 @@ class GitRepoSummary:
 
 
 # 🔼⚙️
+# 🔼⚙️📄🪄

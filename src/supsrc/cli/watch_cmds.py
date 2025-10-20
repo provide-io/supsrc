@@ -1,4 +1,7 @@
-# src/supsrc/cli/watch_cmds.py
+# supsrc/cli/watch_cmds.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 import asyncio
 import contextlib
@@ -257,3 +260,4 @@ def watch_cli(
 
 
 # 🔼⚙️
+# 🔼⚙️🖥️🪄

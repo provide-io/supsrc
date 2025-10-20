@@ -1,10 +1,13 @@
+# supsrc/monitor/events.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # supsrc/monitor/events.py
 #
 """
-Defines the event structure used for communication between monitor handler and consumer.
 """
-
+Defines the event structure used for communication between monitor handler and consumer.
 from pathlib import Path
 
 from attrs import frozen
@@ -22,3 +25,4 @@ class MonitoredEvent:
 
 
 # 🔼⚙️
+# 🔼⚙️📨🪄

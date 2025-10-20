@@ -1,4 +1,7 @@
-from __future__ import annotations
+# supsrc/config/defaults.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Centralized default values for supsrc configuration.
@@ -33,3 +36,4 @@ DEFAULT_EVENT_BUFFER_GROUPING_MODE_HEADLESS = "simple"  # Reliable headless moni
 
 # Legacy fallback for backwards compatibility
 DEFAULT_EVENT_BUFFER_GROUPING_MODE = "simple"  # Use simple as safe default
+# 🔼⚙️⚙️🪄

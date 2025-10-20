@@ -1,4 +1,7 @@
-# src/supsrc/tui/handlers/events.py
+# supsrc/tui/handlers/events.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """
 Event handler methods for the TUI application.
@@ -300,3 +303,6 @@ class EventHandlerMixin:
                     log_widget.write_line(f"  ... and {len(commit_history) - 3} more commits")
         except Exception as e:
             log.error("Error updating repo details", error=str(e))
+
+
+# 🔼⚙️🔄🪄

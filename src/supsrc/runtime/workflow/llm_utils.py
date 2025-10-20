@@ -1,4 +1,7 @@
-"""LLM provider utilities for RuntimeWorkflow."""
+# supsrc/runtime/workflow/llm_utils.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
 
@@ -65,3 +68,6 @@ class LLMProviderManager:
         except (ImportError, ValueError) as e:
             log.error("Failed to instantiate LLM provider", error=str(e), exc_info=True)
             return None
+
+
+# 🔼⚙️📄🪄

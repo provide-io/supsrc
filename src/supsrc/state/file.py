@@ -1,4 +1,8 @@
-# src/supsrc/state/file.py
+# supsrc/state/file.py
+#
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """
 File operations for .supsrc.state files.
 """
@@ -221,3 +225,6 @@ class StateFile:
                     log.info("Cleaned up expired state file", path=str(state_file))
 
         return cleaned_count
+
+
+# 🔼⚙️💾🪄

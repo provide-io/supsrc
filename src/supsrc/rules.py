@@ -1,13 +1,16 @@
-#
 # supsrc/rules.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# supsrc/rules.py
+#
+"""
 """
 Implements the rule engine logic for supsrc triggers.
 
 Determines if configured conditions (e.g., inactivity, save count) are met
 based on the current state of a repository.
-"""
-
 from datetime import UTC, datetime
 
 from provide.foundation.logger import get_logger
@@ -142,3 +145,4 @@ def check_trigger_condition(repo_state: RepositoryState, repo_config: Repository
 
 
 # 🔼⚙️
+# 🔼⚙️📄🪄

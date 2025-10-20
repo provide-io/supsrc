@@ -1,10 +1,13 @@
+# supsrc/llm/providers/base.py
 #
+# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # src/supsrc/llm/providers/base.py
 #
 """
-Defines the base protocol for all LLM providers.
 """
-
+Defines the base protocol for all LLM providers.
 from typing import Protocol, runtime_checkable
 
 
@@ -70,3 +73,4 @@ class LLMProvider(Protocol):
 
 
 # 🧠📜
+# 🔼⚙️🏗️🪄
