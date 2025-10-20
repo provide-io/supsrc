@@ -3,9 +3,11 @@
 # SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
+
+"""Utilities for formatting file paths in the event feed table."""
 
 
 class FilePathFormatter:
