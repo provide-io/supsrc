@@ -6,8 +6,9 @@
 # src/supsrc/llm/providers/base.py
 #
 """
-"""
 Defines the base protocol for all LLM providers.
+"""
+
 from typing import Protocol, runtime_checkable
 
 

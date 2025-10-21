@@ -3,7 +3,9 @@
 # SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Base protocol for verbose event formatters.from __future__ import annotations"""
+"""Base protocol for verbose event formatters."""
+
+from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 

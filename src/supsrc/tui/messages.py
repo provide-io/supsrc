@@ -6,8 +6,9 @@
 # supsrc/tui/messages.py
 #
 """
-"""
 Defines custom messages for the Textual User Interface (TUI).
+"""
+
 from typing import (
     Any,
 )  # Ensure Any is kept if details in RepoDetailUpdate uses it, or other classes.

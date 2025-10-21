@@ -6,8 +6,9 @@
 # supsrc/exceptions.py
 #
 """
-"""
 Supsrc exceptions using Foundation's error system.
+"""
+
 from provide.foundation.errors import FoundationError
 from provide.foundation.errors.config import ConfigurationError as BaseConfigurationError
 

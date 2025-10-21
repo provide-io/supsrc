@@ -6,10 +6,11 @@
 # config/__init__.py
 #
 """
-"""
 Configuration module for supsrc.
 
 Re-exports all configuration models and loading functions for backwards compatibility.
+"""
+
 from __future__ import annotations
 
 # Re-export all config models and functions

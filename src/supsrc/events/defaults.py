@@ -7,7 +7,10 @@
 Default configurations for event processing and atomic save detection.
 """
 
+from __future__ import annotations
+
 # Time windows for event grouping (milliseconds)
+DEFAULT_BUFFER_WINDOW_MS = 100  # Reduced from 500ms for better TUI responsiveness
 DEFAULT_ATOMIC_DETECTION_WINDOW_MS = 100  # Similar to chokidar's approach
 
 # Confidence thresholds for operation detection

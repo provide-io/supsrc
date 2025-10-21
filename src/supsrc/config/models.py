@@ -6,8 +6,9 @@
 # config.py
 #
 """
-"""
 Supsrc configuration using Foundation's config system.
+"""
+
 import logging
 from collections.abc import Mapping
 from datetime import timedelta
