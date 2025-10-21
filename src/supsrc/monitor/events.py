@@ -6,8 +6,9 @@
 # supsrc/monitor/events.py
 #
 """
-"""
 Defines the event structure used for communication between monitor handler and consumer.
+"""
+
 from pathlib import Path
 
 from attrs import frozen

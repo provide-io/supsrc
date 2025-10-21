@@ -4,12 +4,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-"""
 Legacy import module for ActionHandler.
 
 This module provides backward compatibility by re-exporting the RuntimeWorkflow
-"""
 class as ActionHandler from the new workflow package structure.
+"""
+
 from __future__ import annotations
 
 # Import from new package structure for backward compatibility
@@ -20,5 +20,3 @@ ActionHandler = RuntimeWorkflow
 
 __all__ = ["ActionHandler"]
 # 🔼⚙️🔄🪄
-
-"""

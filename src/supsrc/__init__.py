@@ -3,10 +3,9 @@
 # SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# supsrc/__init__.py
-#
+from provide.foundation.utils.versioning import get_version
 
-from supsrc._version import __version__
+__version__ = get_version("supsrc", caller_file=__file__)
 
 __all__ = [
     "__version__",

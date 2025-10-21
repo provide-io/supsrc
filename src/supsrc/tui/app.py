@@ -6,8 +6,9 @@
 # src/supsrc/tui/app.py
 #
 """
-"""
 Main TUI application for supsrc monitoring.
+"""
+
 import asyncio
 from pathlib import Path
 from typing import Any, ClassVar

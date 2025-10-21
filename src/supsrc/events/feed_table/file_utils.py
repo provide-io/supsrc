@@ -3,7 +3,15 @@
 # SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+from __future__ import annotations
+
 from pathlib import Path
+
+"""Utilities for formatting file paths in the event feed table."""
+
+
+class FilePathFormatter:
+    """Handles formatting of file paths for display."""
 
     @staticmethod
     def get_files_summary_short(file_paths: list[Path]) -> str:
@@ -103,7 +111,6 @@ from pathlib import Path
         event, file_paths: list[Path], event_count: int
     ) -> tuple[str, str]:
         """Format event count and file details (legacy method).
-"""
 
         Returns:
             Tuple of (count_str, files_str)
@@ -122,5 +129,3 @@ from pathlib import Path
 
 
 # 🔼⚙️📨🪄
-
-"""

@@ -6,11 +6,12 @@
 # supsrc/rules.py
 #
 """
-"""
 Implements the rule engine logic for supsrc triggers.
 
 Determines if configured conditions (e.g., inactivity, save count) are met
 based on the current state of a repository.
+"""
+
 from datetime import UTC, datetime
 
 from provide.foundation.logger import get_logger
