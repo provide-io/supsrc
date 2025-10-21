@@ -6,11 +6,12 @@
 # supsrc/monitor/handler.py
 #
 """
-"""
 Custom watchdog FileSystemEventHandler for supsrc.
 
 Filters events based on .git directory and .gitignore rules, then
 puts relevant events onto an asyncio Queue using thread-safe methods.
+"""
+
 import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING

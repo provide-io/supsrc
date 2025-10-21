@@ -6,8 +6,9 @@
 # engines/git/info.py
 #
 """
-"""
 Data classes for Git-specific information.
+"""
+
 from datetime import datetime
 
 from attrs import define

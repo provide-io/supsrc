@@ -3,7 +3,9 @@
 # SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Compact key=value verbose formatter.from __future__ import annotations"""
+"""Compact key=value verbose formatter."""
+
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 

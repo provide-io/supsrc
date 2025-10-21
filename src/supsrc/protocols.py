@@ -6,9 +6,10 @@
 # supsrc/protocols.py
 #
 """
-"""
 Defines the runtime protocols for supsrc components like Rules, Engines,
 and standard result objects. Uses concrete attrs classes for results.
+"""
+
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
