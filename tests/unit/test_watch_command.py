@@ -6,7 +6,7 @@ Tests for the new 'watch' command (formerly 'tail' in non-TUI mode).
 """
 
 from pathlib import Path
-from unittest.mock import Mock, patch
+from provide.testkit.mocking import Mock, patch
 
 from click.testing import CliRunner
 
