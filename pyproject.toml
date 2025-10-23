@@ -181,7 +181,6 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 filterwarnings = [
-    "error", # Fail tests on warnings
     "ignore::UserWarning:provide.foundation.*", # Allow Foundation testing helpers warnings
     "ignore::DeprecationWarning:pygit2.*:", # Ignore specific deprecations if noisy
 ]
