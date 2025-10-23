@@ -11,7 +11,7 @@ import shutil
 import subprocess
 from datetime import timedelta
 from pathlib import Path
-from unittest.mock import Mock
+from provide.testkit.mocking import Mock
 
 import pytest
 

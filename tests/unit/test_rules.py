@@ -6,7 +6,7 @@ Comprehensive tests for the rule engine.
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import Mock
+from provide.testkit.mocking import Mock
 
 import pytest
 

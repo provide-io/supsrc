@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from unittest.mock import Mock
+from provide.testkit.mocking import Mock
 
 import pytest
 from supsrc.config import load_config

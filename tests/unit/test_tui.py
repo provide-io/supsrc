@@ -6,7 +6,7 @@ Comprehensive tests for the TUI application.
 
 import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, PropertyMock, patch
+from provide.testkit.mocking import AsyncMock, Mock, PropertyMock, patch
 
 import pytest
 from textual.widgets import DataTable

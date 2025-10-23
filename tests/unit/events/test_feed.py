@@ -4,7 +4,7 @@
 Tests for EventFeed widget.
 """
 
-from unittest.mock import Mock, patch
+from provide.testkit.mocking import Mock, patch
 
 from supsrc.events.base import BaseEvent
 from supsrc.events.feed import EventFeed

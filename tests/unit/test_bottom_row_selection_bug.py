@@ -10,7 +10,7 @@ would fail due to incorrect bounds checking.
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import Mock
+from provide.testkit.mocking import Mock
 
 import pytest
 

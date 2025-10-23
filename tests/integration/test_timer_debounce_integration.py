@@ -10,7 +10,7 @@ import asyncio
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock
+from provide.testkit.mocking import Mock
 
 import pytest
 

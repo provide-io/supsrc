@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import Mock
+from provide.testkit.mocking import Mock
 
 import pytest
 
