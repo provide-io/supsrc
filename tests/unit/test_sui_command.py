@@ -1,7 +1,7 @@
 # tests/unit/test_sui_command.py
 
 from pathlib import Path
-from unittest.mock import Mock, patch
+from provide.testkit.mocking import Mock, patch
 
 from click.testing import CliRunner
 
