@@ -184,7 +184,6 @@ filterwarnings = [
     "error", # Fail tests on warnings
     "ignore::UserWarning:provide.foundation.*", # Allow Foundation testing helpers warnings
     "ignore::DeprecationWarning:pygit2.*:", # Ignore specific deprecations if noisy
-    "ignore::pydantic.warnings.PydanticDeprecatedSince212", # Ignore google.genai Pydantic v2.12 deprecations
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
