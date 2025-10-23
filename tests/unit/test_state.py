@@ -5,7 +5,7 @@
 Comprehensive tests for repository state management.
 """
 
-from unittest.mock import Mock, patch
+from provide.testkit.mocking import Mock, patch
 
 from supsrc.state import RepositoryState, RepositoryStatus
 

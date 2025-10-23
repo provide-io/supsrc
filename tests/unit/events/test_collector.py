@@ -4,7 +4,7 @@
 Tests for EventCollector.
 """
 
-from unittest.mock import Mock
+from provide.testkit.mocking import Mock
 
 from supsrc.events.base import BaseEvent
 from supsrc.events.collector import EventCollector

@@ -14,7 +14,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import patch
+from provide.testkit.mocking import patch
 
 import pytest
 from provide.foundation.process import run

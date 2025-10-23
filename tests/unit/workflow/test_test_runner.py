@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from provide.testkit.mocking import AsyncMock, patch
 
 import pytest
 
