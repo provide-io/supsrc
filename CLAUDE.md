@@ -16,7 +16,7 @@ source .venv/bin/activate
 uv pip install -e ".[tui]"  # Install in dev mode with TUI support
 
 # Setup development environment (comprehensive setup)
-source env.sh
+uv sync
 ```
 
 ### Testing
