@@ -38,7 +38,7 @@ The `supsrc` project can be built and tested using a combination of `hatch`, `se
 *   `wrknv status`: Checks tool versions.
 *   `pytest`: Runs tests.
 *   `deactivate`: Exits the development environment.
-*   `source env.sh`: Activates the development environment.
+*   `uv sync`: Activates the development environment.
 
 ## Development Conventions
 
