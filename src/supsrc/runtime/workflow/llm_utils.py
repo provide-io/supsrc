@@ -13,18 +13,23 @@ from provide.foundation.logger import get_logger
 if TYPE_CHECKING:
     from supsrc.config import LLMConfig
 
-# LLM imports are conditional
-try:
+# LLM imports are conditional - use Foundation's optional dependency pattern
+from provide.foundation.utils.optional_deps import OptionalDependency
+
+# Create dependency handler for LLM features
+_llm_dep = OptionalDependency("google-generativeai", "llm")
+LLM_AVAILABLE = _llm_dep.is_available()
+
+if LLM_AVAILABLE:
     from supsrc.llm.providers.base import LLMProvider
     from supsrc.llm.providers.gemini import GeminiProvider
     from supsrc.llm.providers.ollama import OllamaProvider
+else:
+    from provide.foundation.utils import create_dependency_stub
 
-    LLM_AVAILABLE = True
-except ImportError:
-    LLM_AVAILABLE = False
-    LLMProvider = None
-    GeminiProvider = None
-    OllamaProvider = None
+    LLMProvider = create_dependency_stub("google-generativeai", "llm")
+    GeminiProvider = create_dependency_stub("google-generativeai", "llm")
+    OllamaProvider = create_dependency_stub("ollama", "llm")
 
 log = get_logger("runtime.workflow.llm_utils")
 

@@ -25,11 +25,8 @@ from supsrc.llm.prompts import (
     TEST_FAILURE_ANALYSIS_PROMPT_TEMPLATE,
 )
 
-try:
-    from google import genai
-except ImportError:
-    genai = None
-
+# Defer google-genai import to avoid pydantic deprecation warnings during test discovery
+# Import happens in __init__ when the provider is actually instantiated
 log = get_logger(__name__)
 
 
@@ -50,8 +47,11 @@ class GeminiProvider:
     """LLMProvider implementation for Google Gemini."""
 
     def __init__(self, model: str, api_key: str | None = None) -> None:
-        if not genai:
-            raise ImportError("Google GenAI library not found. Please install `supsrc[llm]`.")
+        # Import google-genai here to avoid pydantic deprecation warnings during test discovery
+        try:
+            from google import genai
+        except ImportError as e:
+            raise ImportError("Google GenAI library not found. Please install `supsrc[llm]`.") from e
 
         self.client = genai.Client(api_key=api_key)  # API key can be None
         self.model_name = model
