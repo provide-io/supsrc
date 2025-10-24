@@ -61,7 +61,7 @@ plugins:
   - search
   - autorefs
   - macros:
-      include_dir: .shared-theme/data
+      include_dir: docs/.shared-theme/data
   - mkdocstrings:
       default_handler: python
       handlers:
