@@ -24,12 +24,8 @@ from supsrc.llm.prompts import (
     TEST_FAILURE_ANALYSIS_PROMPT_TEMPLATE,
 )
 
-try:
-    import ollama
-except ImportError:
-    ollama = None
-
-
+# Defer ollama import to avoid issues during test discovery
+# Import happens in __init__ when the provider is actually instantiated
 log = get_logger(__name__)
 
 
@@ -50,8 +46,14 @@ class OllamaProvider:
     """LLMProvider implementation for a local Ollama instance."""
 
     def __init__(self, model: str, api_key: str | None = None) -> None:
-        if not ollama:
-            raise ImportError("Ollama library not found. Please install `supsrc[llm]`.")
+        # Import ollama here to defer loading until actually needed
+        try:
+            import ollama
+        except ImportError as e:
+            raise ImportError("Ollama library not found. Please install `supsrc[llm]`.") from e
+
+        # Store reference to ollama module for exception handling
+        self._ollama = ollama
         self.model = model
         self.client = ollama.AsyncClient()
 
@@ -83,7 +85,7 @@ class OllamaProvider:
             )
             return result
 
-        except ollama.ResponseError as e:
+        except self._ollama.ResponseError as e:
             log.error(
                 "Ollama API call failed",
                 error=str(e.body),
