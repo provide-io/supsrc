@@ -320,3 +320,6 @@ $RECYCLE.BIN/
 .supsrc/local/
 .claude
 .supsrc/logs*
+
+# Synced theme files (source: provide-foundry/shared-theme/)
+docs/.shared-theme/
