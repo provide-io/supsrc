@@ -51,7 +51,9 @@ class GeminiProvider:
         try:
             from google import genai
         except ImportError as e:
-            raise ImportError("Google GenAI library not found. Please install `supsrc[llm]`.") from e
+            raise ImportError(
+                "Google GenAI library not found. Please install `supsrc[llm]`."
+            ) from e
 
         self.client = genai.Client(api_key=api_key)  # API key can be None
         self.model_name = model
