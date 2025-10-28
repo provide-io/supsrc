@@ -90,8 +90,6 @@ where = ["src"]
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
 
-[tool.hatch.metadata]
-allow-direct-references = true
 
 # --------------------------------------------------------------------------- #
 # Ruff Linter/Formatter Configuration                                         #
