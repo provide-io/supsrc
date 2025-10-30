@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -143,5 +143,6 @@ class LLMVetoEvent(BaseEvent):
         """Format LLM veto event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         return f"[{time_str}] 🧠 [{self.repo_id}] LLM review blocked: {self.reason}"
+
 
 # 🔼⚙️🔚

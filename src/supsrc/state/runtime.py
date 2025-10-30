@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -285,5 +285,6 @@ class RepositoryState:
             self.display_status_emoji = "🔄"
         else:
             self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
+
 
 # 🔼⚙️🔚

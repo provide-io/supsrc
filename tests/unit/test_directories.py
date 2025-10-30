@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -149,5 +149,6 @@ class TestSupsrcDirectories:
         # New directories should also exist
         assert result["local_dir"].exists()
         assert result["logs_dir"].exists()
+
 
 # 🔼⚙️🔚

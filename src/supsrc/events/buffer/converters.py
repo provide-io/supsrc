@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -184,5 +184,6 @@ def create_single_event_group(event: FileChangeEvent) -> BufferedFileChangeEvent
         primary_change_type=event.change_type,
         operation_history=operation_history,
     )
+
 
 # 🔼⚙️🔚

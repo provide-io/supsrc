@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -370,5 +370,6 @@ class RuntimeWorkflow:
             self._emit_event(action_error_event)
 
             self.tui.post_state_update(self.repo_states)
+
 
 # 🔼⚙️🔚

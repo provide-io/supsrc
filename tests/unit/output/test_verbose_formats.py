@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -7,10 +7,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
-
-import pytest
 
 from supsrc.engines.git.events import GitCommitEvent, GitPushEvent
 from supsrc.events.buffer_events import BufferedFileChangeEvent
@@ -194,5 +191,6 @@ class TestCompactVerboseFormatter:
         full_output = "\n".join(lines)
         assert "type=FileChangeEvent" in full_output
         assert "change=modified" in full_output
+
 
 # 🔼⚙️🔚

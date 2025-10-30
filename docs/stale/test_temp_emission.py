@@ -6,7 +6,6 @@
 """Test to understand temp file emission in supsrc."""
 
 import asyncio
-from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -74,7 +73,7 @@ async def main():
     print("\n=== Waiting for auto-flush (600ms) ===")
     await asyncio.sleep(0.6)
 
-    print(f"\n=== Results ===")
+    print("\n=== Results ===")
     print(f"Callback call count: {mock_callback.call_count}")
 
     if mock_callback.call_count > 0:

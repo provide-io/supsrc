@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -47,5 +47,6 @@ class RepoDetailUpdate(Message):
         self.repo_id = repo_id
         self.details = details  # This will contain {"commit_history": [...]}
         super().__init__()
+
 
 # 🔼⚙️🔚

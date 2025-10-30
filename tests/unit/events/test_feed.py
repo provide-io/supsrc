@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -122,5 +122,6 @@ def test_feed_color_mapping() -> None:
             call_args = mock_write.call_args[0][0]
             # Check that the text has the expected color spans
             assert any(span.style == expected_color for span in call_args.spans)
+
 
 # 🔼⚙️🔚

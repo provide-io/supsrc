@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -84,5 +84,6 @@ def show_config(ctx: click.Context, config_path: Path, **kwargs):
         )
         click.echo(f"Error: An unexpected issue occurred: {e}", err=True)
         ctx.exit(2)
+
 
 # 🔼⚙️🔚
