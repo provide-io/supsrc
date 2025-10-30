@@ -1,13 +1,9 @@
-# supsrc/engines/git/info.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
-# engines/git/info.py
 #
-"""
-Data classes for Git-specific information.
-"""
+
+"""Data classes for Git-specific information."""
 
 from datetime import datetime
 
@@ -24,6 +20,4 @@ class GitRepoSummary:
     head_commit_message_summary: str | None = None  # First line of commit message
     head_commit_timestamp: datetime | None = None  # Timestamp of the HEAD commit
 
-
-# 🔼⚙️
-# 🔼⚙️📄🪄
+# 🔼⚙️🔚

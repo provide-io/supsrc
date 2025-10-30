@@ -1,8 +1,9 @@
-# tests/unit/test_dual_logging.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Tests for the dual logging functionality (EventCollector + JSONEventLogger).
-"""
+"""Tests for the dual logging functionality (EventCollector + JSONEventLogger)."""
 
 import json
 import tempfile
@@ -151,3 +152,5 @@ class TestDualLogging:
             event_data = json.loads(f.read().strip())
 
         assert event_data["metadata"]["file_path"] == "/tmp/test.txt"
+
+# 🔼⚙️🔚

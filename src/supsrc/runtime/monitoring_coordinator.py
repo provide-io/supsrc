@@ -1,12 +1,10 @@
-# supsrc/runtime/monitoring_coordinator.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Monitoring coordination functionality for the WatchOrchestrator.
-Handles filesystem monitoring setup, control, and configuration watching.
-"""
+"""Monitoring coordination functionality for the WatchOrchestrator.
+Handles filesystem monitoring setup, control, and configuration watching."""
 
 from __future__ import annotations
 
@@ -292,5 +290,4 @@ class MonitoringCoordinator:
         """Check if monitoring is currently suspended."""
         return self._is_suspended
 
-
-# 🔼⚙️📄🪄
+# 🔼⚙️🔚

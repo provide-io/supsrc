@@ -1,13 +1,9 @@
-# supsrc/llm/providers/gemini.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
-# src/supsrc/llm/providers/gemini.py
 #
-"""
-LLMProvider implementation for Google Gemini.
-"""
+
+"""LLMProvider implementation for Google Gemini."""
 
 import asyncio
 import re
@@ -129,4 +125,5 @@ class GeminiProvider:
 
 
 # 🧠💎
-# 🔼⚙️🔌🪄
+
+# 🔼⚙️🔚

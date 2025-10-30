@@ -1,11 +1,9 @@
-# supsrc/state/runtime.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Defines the dynamic state management models for monitored repositories in supsrc.
-"""
+"""Defines the dynamic state management models for monitored repositories in supsrc."""
 
 import asyncio
 from datetime import UTC, datetime
@@ -45,14 +43,11 @@ STATUS_EMOJI_MAP = {
     RepositoryStatus.CHANGED: "📝",
     RepositoryStatus.TRIGGERED: "🎯",
     RepositoryStatus.PROCESSING: "🔄",
-    RepositoryStatus.STAGING: "📦",
     RepositoryStatus.REVIEWING: "👀",
-    RepositoryStatus.TESTING: "🔬",
     RepositoryStatus.ANALYZING: "🤔",
     RepositoryStatus.GENERATING_COMMIT: "✍️",
     RepositoryStatus.COMMITTING: "💾",
     RepositoryStatus.PUSHING: "🚀",
-    RepositoryStatus.COMPLETED: "✅",
     RepositoryStatus.ERROR: "❌",
     RepositoryStatus.EXTERNAL_COMMIT_DETECTED: "🤔",
     RepositoryStatus.CONFLICT_DETECTED: "⚠️",
@@ -291,5 +286,4 @@ class RepositoryState:
         else:
             self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
 
-
-# 🔼⚙️💾🪄
+# 🔼⚙️🔚

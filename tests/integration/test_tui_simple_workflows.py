@@ -1,10 +1,11 @@
-# tests/integration/test_tui_simple_workflows.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Simple integration tests for TUI user workflows.
+"""Simple integration tests for TUI user workflows.
 
-These tests focus on basic user interactions that work reliably.
-"""
+These tests focus on basic user interactions that work reliably."""
 
 from __future__ import annotations
 
@@ -204,3 +205,5 @@ class TestSimpleTuiWorkflows:
 
             # Should have handled multiple events
             assert mock_event_collector.emit.call_count > 0
+
+# 🔼⚙️🔚

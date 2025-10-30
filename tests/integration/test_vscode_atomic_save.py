@@ -1,9 +1,13 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
 """Integration tests for VSCode atomic save pattern with EventBuffer.
 
 This test verifies that the full stack (supsrc EventBuffer + provide-foundation detectors)
 correctly handles VSCode's atomic save pattern and emits events with the correct final
-file path, not the temporary file path.
-"""
+file path, not the temporary file path."""
 
 from __future__ import annotations
 
@@ -390,3 +394,5 @@ class TestVSCodeAtomicSaveIntegration:
         assert buggy_file not in emitted_files, (
             f"Buggy file '.orchestrator.py' (with leading dot) should not be emitted"
         )
+
+# 🔼⚙️🔚

@@ -1,15 +1,11 @@
-# supsrc/config/__init__.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
-# config/__init__.py
 #
-"""
-Configuration module for supsrc.
 
-Re-exports all configuration models and loading functions for backwards compatibility.
-"""
+"""Configuration module for supsrc.
+
+Re-exports all configuration models and loading functions for backwards compatibility."""
 
 from __future__ import annotations
 
@@ -41,4 +37,5 @@ __all__ = [
     "load_config",
     "load_repository_config",
 ]
-# 🔼⚙️📦🪄
+
+# 🔼⚙️🔚

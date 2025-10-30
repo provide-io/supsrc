@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""
-Direct test of hot reload functionality.
-"""
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
+"""Direct test of hot reload functionality."""
 
 import asyncio
 
@@ -135,5 +137,4 @@ type = "supsrc.engines.git"
 if __name__ == "__main__":
     asyncio.run(test_hot_reload())
 
-
-# 🧪✅
+# 🔼⚙️🔚

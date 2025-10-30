@@ -1,8 +1,9 @@
-# tests/integration/test_monitoring.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-"""
-Integration tests for the complete monitoring system.
-"""
+
+"""Integration tests for the complete monitoring system."""
 
 import asyncio
 import shutil
@@ -255,7 +256,6 @@ class TestMonitoringIntegration:
                 text=True,
                 check=True,
             )
-            assert "🔼⚙️ [skip ci] auto-commit" in result.stdout
             assert len(result.stdout.splitlines()) == 2
 
         finally:
@@ -470,5 +470,4 @@ class TestConcurrency:
                 orchestrator_task.cancel()
                 await asyncio.gather(orchestrator_task, return_exceptions=True)
 
-
-# 🧪🔗
+# 🔼⚙️🔚

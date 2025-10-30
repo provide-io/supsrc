@@ -1,11 +1,12 @@
-# tests/helpers/config_testing.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Test helpers for configuration and directory context testing.
+"""Test helpers for configuration and directory context testing.
 
 This module provides utilities for testing supsrc with real configurations
-from different directory contexts, enabling comprehensive integration testing.
-"""
+from different directory contexts, enabling comprehensive integration testing."""
 
 from __future__ import annotations
 
@@ -174,3 +175,5 @@ def temp_real_config(real_config):
     """Pytest fixture providing temporary copy of real config."""
     with temp_config(real_config) as tmp_config:
         yield tmp_config
+
+# 🔼⚙️🔚

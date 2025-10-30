@@ -1,11 +1,9 @@
-# supsrc/events/system.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-System and rule events.
-"""
+"""System and rule events."""
 
 from __future__ import annotations
 
@@ -131,7 +129,6 @@ class TestFailureEvent(BaseEvent):
     def format(self) -> str:
         """Format test failure event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
-        return f"[{time_str}] 🔬 [{self.repo_id}] Automated tests failed"
 
 
 @attrs.define(frozen=True)
@@ -147,5 +144,4 @@ class LLMVetoEvent(BaseEvent):
         time_str = self.timestamp.strftime("%H:%M:%S")
         return f"[{time_str}] 🧠 [{self.repo_id}] LLM review blocked: {self.reason}"
 
-
-# 🔼⚙️📨🪄
+# 🔼⚙️🔚

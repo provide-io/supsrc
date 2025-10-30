@@ -1,4 +1,7 @@
-# tests/unit/output/test_verbose_formats.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
 """Unit tests for verbose output formatters."""
 
@@ -191,3 +194,5 @@ class TestCompactVerboseFormatter:
         full_output = "\n".join(lines)
         assert "type=FileChangeEvent" in full_output
         assert "change=modified" in full_output
+
+# 🔼⚙️🔚

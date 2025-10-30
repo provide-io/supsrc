@@ -1,11 +1,12 @@
-# tests/unit/test_event_buffer_patterns.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Unit tests for EventBuffer atomic pattern detection.
+"""Unit tests for EventBuffer atomic pattern detection.
 
 These tests verify that the EventBuffer properly detects and groups atomic file
-operations using the OperationDetector from provide-foundation.
-"""
+operations using the OperationDetector from provide-foundation."""
 
 from __future__ import annotations
 
@@ -473,3 +474,5 @@ class TestEventBufferPatterns:
             base_path / "file.py" in all_file_paths or base_path / "file.py.tmp" in all_file_paths
         )
         assert base_path / "other.py" in all_file_paths
+
+# 🔼⚙️🔚

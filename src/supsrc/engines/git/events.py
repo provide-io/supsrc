@@ -1,11 +1,9 @@
-# supsrc/engines/git/events.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Git-specific events for repository operations.
-"""
+"""Git-specific events for repository operations."""
 
 from __future__ import annotations
 
@@ -80,5 +78,4 @@ class GitBranchEvent(BaseEvent):
         else:
             return f"[{time_str}] 🌿 On branch {self.new_branch}"
 
-
-# 🔼⚙️📨🪄
+# 🔼⚙️🔚

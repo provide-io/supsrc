@@ -1,9 +1,9 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-# tests/unit/test_cli_refactor.py
-#
-"""
-Tests to ensure the CLI refactoring is complete and correct.
-"""
+
+"""Tests to ensure the CLI refactoring is complete and correct."""
 
 from click.testing import CliRunner
 
@@ -123,5 +123,4 @@ class TestCLIRefactoring:
             or "tui" in result.output.lower()
         )
 
-
-# 🧪🔄
+# 🔼⚙️🔚
