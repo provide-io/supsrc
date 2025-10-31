@@ -1,11 +1,9 @@
-# supsrc/events/collector.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Event collection and dispatching.
-"""
+"""Event collection and dispatching."""
 
 from __future__ import annotations
 
@@ -89,5 +87,4 @@ class EventCollector:
                     exc_info=True,
                 )
 
-
-# 🔼⚙️📨🪄
+# 🔼⚙️🔚

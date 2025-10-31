@@ -1,8 +1,9 @@
-# tests/unit/events/test_base.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Tests for BaseEvent implementation.
-"""
+"""Tests for BaseEvent implementation."""
 
 from datetime import datetime
 
@@ -73,3 +74,5 @@ def test_base_event_kw_only() -> None:
     # This should also work with explicit kwargs
     event2 = MockEvent(description="Another test", metadata={"test": True})
     assert event2.metadata == {"test": True}
+
+# 🔼⚙️🔚

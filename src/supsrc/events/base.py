@@ -1,11 +1,9 @@
-# supsrc/events/base.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Base event implementation using attrs.
-"""
+"""Base event implementation using attrs."""
 
 from __future__ import annotations
 
@@ -37,5 +35,4 @@ class BaseEvent:
         time_str = self.timestamp.strftime("%H:%M:%S")
         return f"[{time_str}] [{self.source}] {self.description}"
 
-
-# 🔼⚙️🏗️🪄
+# 🔼⚙️🔚

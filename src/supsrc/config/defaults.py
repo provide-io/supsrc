@@ -1,16 +1,11 @@
-# supsrc/config/defaults.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Centralized default values for supsrc configuration.
-All defaults are defined here instead of inline in field definitions.
-"""
+"""Centralized default values for supsrc configuration.
+All defaults are defined here instead of inline in field definitions."""
 
-# =================================
-# Watch command defaults
-# =================================
 DEFAULT_WATCH_ACTIVE_INTERVAL = 1.0  # Check every second when timers are active
 DEFAULT_WATCH_IDLE_INTERVAL = 10.0  # Check every 10 seconds when idle
 
@@ -36,4 +31,5 @@ DEFAULT_EVENT_BUFFER_GROUPING_MODE_HEADLESS = "simple"  # Reliable headless moni
 
 # Legacy fallback for backwards compatibility
 DEFAULT_EVENT_BUFFER_GROUPING_MODE = "simple"  # Use simple as safe default
-# 🔼⚙️⚙️🪄
+
+# 🔼⚙️🔚

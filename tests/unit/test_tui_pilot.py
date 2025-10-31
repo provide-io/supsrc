@@ -1,11 +1,12 @@
-# tests/unit/test_tui_pilot.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Pilot-based TUI tests using Textual's built-in testing framework.
+"""Pilot-based TUI tests using Textual's built-in testing framework.
 
 These tests use app.run_test() to run the TUI in headless mode and interact
-with it using the Pilot object, providing a "virtual browser" experience.
-"""
+with it using the Pilot object, providing a "virtual browser" experience."""
 
 from __future__ import annotations
 
@@ -38,7 +39,6 @@ def mock_shutdown_event() -> asyncio.Event:
 def sample_repo_states() -> dict[str, RepositoryState]:
     """Create sample repository states for testing."""
     state1 = RepositoryState(repo_id="repo1")
-    state1.display_status_emoji = "✅"
     state1.last_change_time = None
     state1.rule_emoji = "⏳"
     state1.rule_dynamic_indicator = "Waiting"
@@ -413,3 +413,5 @@ class TestTuiPilotErrorHandling:
             # App should handle all events without crashing
             # event_collector should have been called multiple times
             assert app.event_collector.emit.call_count >= 5
+
+# 🔼⚙️🔚

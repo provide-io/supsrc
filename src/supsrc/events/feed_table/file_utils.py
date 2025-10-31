@@ -1,7 +1,9 @@
-# supsrc/events/feed_table/file_utils.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+
+"""TODO: Add module docstring."""
 
 from __future__ import annotations
 
@@ -127,5 +129,4 @@ class FilePathFormatter:
 
         return count_str, files_str
 
-
-# 🔼⚙️📨🪄
+# 🔼⚙️🔚

@@ -1,11 +1,12 @@
-# tests/unit/test_bottom_row_selection_bug.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Test for bottom row selection bug fix.
+"""Test for bottom row selection bug fix.
 
 This test reproduces the bug where selecting the last row in a DataTable
-would fail due to incorrect bounds checking.
-"""
+would fail due to incorrect bounds checking."""
 
 from __future__ import annotations
 
@@ -156,3 +157,5 @@ class TestBottomRowSelectionBug:
         # First row should be saveable
         mock_table.cursor_row = 0
         assert mock_table.cursor_row < mock_table.row_count, "First row cursor should be saveable"
+
+# 🔼⚙️🔚

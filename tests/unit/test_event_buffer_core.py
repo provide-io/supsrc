@@ -1,8 +1,9 @@
-# tests/unit/test_event_buffer_core.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Unit tests for EventBuffer core functionality.
-"""
+"""Unit tests for EventBuffer core functionality."""
 
 from __future__ import annotations
 
@@ -258,3 +259,5 @@ class TestEventBufferCore:
         assert len(buffer._buffers) == 2
         assert "repo1" in buffer._buffers
         assert "repo2" in buffer._buffers
+
+# 🔼⚙️🔚

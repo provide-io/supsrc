@@ -1,11 +1,9 @@
-# supsrc/events/buffer/grouping.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Event grouping strategies for simple time-window buffering.
-"""
+"""Event grouping strategies for simple time-window buffering."""
 
 from __future__ import annotations
 
@@ -89,5 +87,4 @@ def group_events_simple(events: list[FileChangeEvent]) -> list[BufferedFileChang
     )
     return grouped_events
 
-
-# 🔼⚙️📨🪄
+# 🔼⚙️🔚

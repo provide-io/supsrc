@@ -1,7 +1,9 @@
-# supsrc/output/console_formatter.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+
+"""TODO: Add module docstring."""
 
 from __future__ import annotations
 
@@ -242,7 +244,6 @@ class ConsoleEventFormatter:
 
         self.console.print(separator, style="bold blue")
         self.console.print("🚀 Supsrc Watch - Event Stream Mode", style="bold cyan")
-        self.console.print(f"📁 Monitoring: {repo_count} repositories", style="cyan")
 
         if event_log_path:
             self.console.print(f"📝 Event Log: {event_log_path}", style="dim")
@@ -276,5 +277,4 @@ class ConsoleEventFormatter:
                 # Strip Rich markup for no-color mode
                 self.console.print(line, highlight=False, markup=False)
 
-
-# 🔼⚙️📄🪄
+# 🔼⚙️🔚

@@ -1,3 +1,8 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
 """Unit tests for GitOperationsHelper."""
 
 from __future__ import annotations
@@ -116,3 +121,5 @@ class TestGitOperationsHelper:
             result = await GitOperationsHelper.get_staged_diff(workdir)
 
             assert result == ""
+
+# 🔼⚙️🔚

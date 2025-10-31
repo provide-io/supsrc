@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""
-Debug script to monitor status changes and detect red X appearances.
-Run this to help identify when and why the red X appears.
-"""
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
+"""Debug script to monitor status changes and detect red X appearances.
+Run this to help identify when and why the red X appears."""
 
 import asyncio
 import sys
@@ -20,7 +22,6 @@ def monitor_status_changes():
     print("=" * 50)
 
     for status, emoji in STATUS_EMOJI_MAP.items():
-        indicator = "🚨 RED X!" if emoji == "❌" else "✅"
         print(f"{indicator} {status.name:25} -> {emoji}")
 
     print("\n📋 When you see the red X, check the logs for:")
@@ -32,3 +33,5 @@ def monitor_status_changes():
 
 if __name__ == "__main__":
     monitor_status_changes()
+
+# 🔼⚙️🔚

@@ -1,7 +1,16 @@
-# supsrc/events/feed_table/formatters.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+
+"""TODO: Add module docstring."""
+
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
+"""TODO: Add module docstring."""
 
 from __future__ import annotations
 
@@ -40,7 +49,6 @@ class EventFormatter:
             "ExternalCommitEvent": "🤔",  # THINKING FACE
             "ConflictDetectedEvent": "⚠️",  # WARNING SIGN
             "RepositoryFrozenEvent": "🧊",  # ICE CUBE
-            "TestFailureEvent": "🔬",  # MICROSCOPE
             "LLMVetoEvent": "🧠",  # BRAIN
             "GitCommitEvent": "📝",  # MEMO
             "GitPushEvent": "🚀",  # ROCKET
@@ -55,7 +63,6 @@ class EventFormatter:
             if event.operation_type == "atomic_rewrite":
                 return "🔄"  # COUNTERCLOCKWISE ARROWS BUTTON
             elif event.operation_type == "batch_operation":
-                return "📦"  # PACKAGE
 
         # Check if it has primary_change_type
         if hasattr(event, "primary_change_type"):
@@ -65,16 +72,12 @@ class EventFormatter:
                 "deleted": "➖",  # HEAVY MINUS SIGN  # noqa: RUF001
                 "moved": "🔄",  # COUNTERCLOCKWISE ARROWS BUTTON
             }
-            return emoji_map.get(event.primary_change_type, "📁")
 
         # Default based on event source
         source_emojis = {
-            "git": "🔧",  # WRENCH
             "monitor": "👁️",  # EYE
             "rules": "⚡",  # HIGH VOLTAGE SIGN
             "tui": "💻",  # PERSONAL COMPUTER
-            "buffer": "📁",  # FILE FOLDER
-            "system": "⚙️",  # GEAR
         }
 
         source = getattr(event, "source", "unknown")
@@ -326,5 +329,4 @@ class DescriptionParser:
 
         return file_str, message_str
 
-
-# 🔼⚙️📨🪄
+# 🔼⚙️🔚

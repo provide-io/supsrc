@@ -1,7 +1,9 @@
-# supsrc/events/feed_table/widget.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+
+"""TODO: Add module docstring."""
 
 from __future__ import annotations
 
@@ -42,10 +44,8 @@ class EventFeedTable(DataTable):
         """Initialize the EventFeedTable when mounted."""
         # Set up columns with proper proportions
         self.add_column("⏰", width=8)  # Time - HH:MM:SS format
-        self.add_column("📦", width=25)  # Repo - Repository ID (increased to 25)
         self.add_column("🎯", width=3)  # Operation - Operation type emoji
         self.add_column("#️⃣", width=5)  # Impact - Numerical impact
-        self.add_column("📁", width=30)  # File - Primary file (reduced to 30 to balance)
         self.add_column("💬")  # Message - Auto-size remaining space
 
         # Add initial message to show the widget is ready
@@ -151,5 +151,4 @@ class EventFeedTable(DataTable):
         max_row = max(0, self.row_count - 1)
         self.cursor_coordinate = (max_row, 0)
 
-
-# 🔼⚙️📨🪄
+# 🔼⚙️🔚

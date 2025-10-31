@@ -1,13 +1,12 @@
-# supsrc/tui/managers/__init__.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-TUI managers package.
-"""
+"""TUI managers package."""
 
 from .timer_manager import TimerManager
 
 __all__ = ["TimerManager"]
-# 🔼⚙️📦🪄
+
+# 🔼⚙️🔚
