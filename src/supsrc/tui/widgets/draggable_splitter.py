@@ -1,11 +1,9 @@
-# supsrc/tui/widgets/draggable_splitter.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Draggable splitter widget for resizing TUI panes.
-"""
+"""Draggable splitter widget for resizing TUI panes."""
 
 from __future__ import annotations
 
@@ -122,5 +120,4 @@ class DraggableSplitter(Static):
         else:
             self.styles.background = "#444444"
 
-
-# 🔼⚙️📄🪄
+# 🔼⚙️🔚

@@ -1,9 +1,9 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-# tests/unit/test_rules.py
-#
-"""
-Comprehensive tests for the rule engine.
-"""
+
+"""Comprehensive tests for the rule engine."""
 
 from datetime import UTC, datetime, timedelta
 from provide.testkit.mocking import Mock
@@ -212,5 +212,4 @@ class TestRuleEdgeCases:
 
         assert result is False
 
-
-# 🧪⚡
+# 🔼⚙️🔚

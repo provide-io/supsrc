@@ -1,12 +1,10 @@
-# supsrc/cli/main.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Main CLI entry point for supsrc using Click.
-Properly dogfoods provide-foundation's CLI framework.
-"""
+"""Main CLI entry point for supsrc using Click.
+Properly dogfoods provide-foundation's CLI framework."""
 
 from __future__ import annotations
 
@@ -174,5 +172,4 @@ cli.add_command(watch_cli)
 if __name__ == "__main__":
     cli()
 
-# 🖥️⚙️
-# 🔼⚙️🖥️🪄
+# 🔼⚙️🔚

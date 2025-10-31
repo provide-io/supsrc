@@ -1,11 +1,9 @@
-# supsrc/tui/base_app.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Base TUI application class combining all handler mixins.
-"""
+"""Base TUI application class combining all handler mixins."""
 
 from __future__ import annotations
 
@@ -30,5 +28,4 @@ class TuiAppBase(
 
     pass
 
-
-# 🔼⚙️📄🪄
+# 🔼⚙️🔚

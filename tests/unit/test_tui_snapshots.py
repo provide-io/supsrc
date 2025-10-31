@@ -1,11 +1,12 @@
-# tests/unit/test_tui_snapshots.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Visual regression tests using pytest-textual-snapshot.
+"""Visual regression tests using pytest-textual-snapshot.
 
 These tests capture SVG screenshots of the TUI and compare them against
-previous runs to catch visual regressions automatically.
-"""
+previous runs to catch visual regressions automatically."""
 
 from __future__ import annotations
 
@@ -36,7 +37,6 @@ def mock_shutdown_event() -> asyncio.Event:
 def sample_repo_states() -> dict[str, RepositoryState]:
     """Create sample repository states for testing."""
     state1 = RepositoryState(repo_id="test-repo-1")
-    state1.display_status_emoji = "✅"
     state1.last_change_time = None
     state1.rule_emoji = "⏳"
     state1.rule_dynamic_indicator = "25s"
@@ -195,7 +195,6 @@ class TestTuiSnapshots:
             states = {}
             for i in range(10):
                 state = RepositoryState(repo_id=f"repo-{i:02d}")
-                state.display_status_emoji = "✅" if i % 2 == 0 else "🔄"
                 state.current_branch = "main" if i % 3 == 0 else f"feature/branch-{i}"
                 state.total_files = 10 + i * 5
                 state.changed_files = i % 4
@@ -226,7 +225,6 @@ class TestTuiSnapshots:
 
             # Add some data to see the visual difference
             state = RepositoryState(repo_id="sample-repo")
-            state.display_status_emoji = "✅"
             state.current_branch = "main"
             state.total_files = 25
             state.timer_seconds_left = 15
@@ -238,3 +236,5 @@ class TestTuiSnapshots:
 
         # Snapshot with dark mode toggled
         assert snap_compare(app, run_before=toggle_dark_mode)
+
+# 🔼⚙️🔚

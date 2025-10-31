@@ -1,7 +1,9 @@
-# supsrc/cli/sui_cmds.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+
+"""TODO: Add module docstring."""
 
 import asyncio
 import signal
@@ -172,6 +174,4 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
         click.echo(f"\nAn unexpected error occurred in the TUI: {e}", err=True)
         ctx.exit(1)
 
-
-# 🔼⚙️
-# 🔼⚙️🖥️🪄
+# 🔼⚙️🔚

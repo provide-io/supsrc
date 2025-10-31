@@ -1,13 +1,9 @@
-# supsrc/exceptions.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
-# supsrc/exceptions.py
 #
-"""
-Supsrc exceptions using Foundation's error system.
-"""
+
+"""Supsrc exceptions using Foundation's error system."""
 
 from provide.foundation.errors import FoundationError
 from provide.foundation.errors.config import ConfigurationError as BaseConfigurationError
@@ -82,5 +78,4 @@ __all__ = [
     "SupsrcError",
 ]
 
-# 🔼⚙️
-# 🔼⚙️🐛🪄
+# 🔼⚙️🔚

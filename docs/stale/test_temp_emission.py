@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
 """Test to understand temp file emission in supsrc."""
 
 import asyncio
@@ -110,3 +114,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# 🔼⚙️🔚

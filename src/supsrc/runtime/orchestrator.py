@@ -1,12 +1,10 @@
-# supsrc/runtime/orchestrator.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-High-level coordinator for the supsrc watch process.
-Manages lifecycle of all runtime components.
-"""
+"""High-level coordinator for the supsrc watch process.
+Manages lifecycle of all runtime components."""
 
 from __future__ import annotations
 
@@ -45,7 +43,6 @@ RULE_EMOJI_MAP: dict[str, str] = {
     "supsrc.rules.inactivity": "⏳",
     "supsrc.rules.save_count": "💾",
     "supsrc.rules.manual": "✋",
-    "default": "⚙️",
 }
 
 # Initialize Foundation metrics (work with or without OpenTelemetry)
@@ -447,5 +444,4 @@ class WatchOrchestrator:
         except Exception as e:
             log.error("Timer update loop error", error=str(e), exc_info=True)
 
-
-# 🔼⚙️📄🪄
+# 🔼⚙️🔚

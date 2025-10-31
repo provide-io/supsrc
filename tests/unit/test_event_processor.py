@@ -1,4 +1,7 @@
-# tests/unit/test_event_processor.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
 """Unit tests for the EventProcessor component."""
 
@@ -166,3 +169,5 @@ class TestEventProcessor:
 
         # Assert: The event should have been consumed and ignored, leaving the queue empty.
         assert event_processor.event_queue.qsize() == 0
+
+# 🔼⚙️🔚

@@ -1,7 +1,9 @@
-# supsrc/output/emoji_map.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+
+"""TODO: Add module docstring."""
 
 from __future__ import annotations
 
@@ -19,14 +21,11 @@ class EmojiMapper:
         "ExternalCommitEvent": "🤔",  # THINKING FACE
         "ConflictDetectedEvent": "⚠️",  # WARNING SIGN
         "RepositoryFrozenEvent": "🧊",  # ICE CUBE
-        "TestFailureEvent": "🔬",  # MICROSCOPE
         "LLMVetoEvent": "🧠",  # BRAIN
         "GitCommitEvent": "📝",  # MEMO
         "GitPushEvent": "🚀",  # ROCKET
         "GitStageEvent": "📋",  # CLIPBOARD
         "GitBranchEvent": "🌿",  # HERB
-        "FileChangeEvent": "📁",  # FILE FOLDER
-        "BufferedFileChangeEvent": "📦",  # PACKAGE
         "RuleTriggeredEvent": "⏳",  # HOURGLASS
         "ErrorEvent": "❌",  # CROSS MARK
         "ConfigReloadEvent": "🔄",  # RELOAD
@@ -44,12 +43,9 @@ class EmojiMapper:
 
     # Source emojis (fallback)
     SOURCE_EMOJIS: ClassVar[dict[str, str]] = {
-        "git": "🔧",  # WRENCH
         "monitor": "👁️",  # EYE
         "rules": "⚡",  # HIGH VOLTAGE SIGN
         "tui": "💻",  # PERSONAL COMPUTER
-        "buffer": "📁",  # FILE FOLDER
-        "system": "⚙️",  # GEAR
     }
 
     # ASCII fallback mappings
@@ -57,14 +53,11 @@ class EmojiMapper:
         "🤔": "[?]",
         "⚠️": "[!]",
         "🧊": "[F]",  # Frozen
-        "🔬": "[T]",  # Test
         "🧠": "[A]",  # AI
         "📝": "[C]",  # Commit
         "🚀": "[P]",  # Push
         "📋": "[S]",  # Stage
         "🌿": "[B]",  # Branch
-        "📁": "[F]",  # File
-        "📦": "[M]",  # Multiple
         "⏳": "[R]",  # Rule
         "❌": "[X]",  # Error
         "🔄": "[R]",  # Reload
@@ -73,11 +66,9 @@ class EmojiMapper:
         "➕": "[+]",  # noqa: RUF001
         "✏️": "[M]",  # Modified
         "➖": "[-]",  # noqa: RUF001
-        "🔧": "[G]",  # Git
         "👁️": "[W]",  # Watch
         "⚡": "[!]",
         "💻": "[T]",  # TUI
-        "⚙️": "[S]",  # System
     }
 
     @staticmethod
@@ -103,7 +94,6 @@ class EmojiMapper:
                 emoji = "🔄"
                 return EmojiMapper.ASCII_FALLBACKS.get(emoji, "[R]") if use_ascii else emoji
             elif event.operation_type == "batch_operation":
-                emoji = "📦"
                 return EmojiMapper.ASCII_FALLBACKS.get(emoji, "[M]") if use_ascii else emoji
 
         # Check for primary change type
@@ -118,5 +108,4 @@ class EmojiMapper:
         emoji = EmojiMapper.SOURCE_EMOJIS.get(source, "📝")
         return EmojiMapper.ASCII_FALLBACKS.get(emoji, "[?]") if use_ascii else emoji
 
-
-# 🔼⚙️🗺️🪄
+# 🔼⚙️🔚

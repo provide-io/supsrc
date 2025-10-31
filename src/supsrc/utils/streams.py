@@ -1,13 +1,11 @@
-# supsrc/utils/streams.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Stream utilities for supsrc.
+"""Stream utilities for supsrc.
 
-Provides custom stream implementations for managing output redirection.
-"""
+Provides custom stream implementations for managing output redirection."""
 
 from __future__ import annotations
 
@@ -66,5 +64,4 @@ class NoOpStream:
         """Context manager exit."""
         pass
 
-
-# 🔼⚙️📄🪄
+# 🔼⚙️🔚

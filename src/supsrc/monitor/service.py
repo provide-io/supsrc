@@ -1,7 +1,9 @@
-# supsrc/monitor/service.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+
+"""TODO: Add module docstring."""
 
 import asyncio
 
@@ -176,6 +178,4 @@ class MonitoringService:
         )
         return self._is_running and observer_alive
 
-
-# 🔼⚙️
-# 🔼⚙️📄🪄
+# 🔼⚙️🔚

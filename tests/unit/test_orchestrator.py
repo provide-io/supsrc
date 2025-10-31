@@ -1,4 +1,7 @@
-# tests/unit/test_orchestrator.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
 """Unit tests for the refactored WatchOrchestrator component."""
 
@@ -156,3 +159,5 @@ class TestOrchestratorFeatures:
         result = mock_orchestrator.toggle_repository_pause(repo_id)
         assert result is True
         mock_repo_manager.toggle_repository_pause.assert_called_with(repo_id)
+
+# 🔼⚙️🔚

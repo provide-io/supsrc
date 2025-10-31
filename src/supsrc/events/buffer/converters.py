@@ -1,11 +1,9 @@
-# supsrc/events/buffer/converters.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Event conversion utilities for transforming between different event formats.
-"""
+"""Event conversion utilities for transforming between different event formats."""
 
 from __future__ import annotations
 
@@ -187,5 +185,4 @@ def create_single_event_group(event: FileChangeEvent) -> BufferedFileChangeEvent
         operation_history=operation_history,
     )
 
-
-# 🔼⚙️📨🪄
+# 🔼⚙️🔚

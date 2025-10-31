@@ -1,8 +1,9 @@
-# tests/integration/test_atomic_file_operations.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Integration tests for atomic file operations with event buffering.
-"""
+"""Integration tests for atomic file operations with event buffering."""
 
 from __future__ import annotations
 
@@ -418,3 +419,5 @@ class TestAtomicFileOperations:
             assert original_file in file_paths_emitted, (
                 f"Original file {original_file} not found in emitted events for pattern {temp_file}"
             )
+
+# 🔼⚙️🔚

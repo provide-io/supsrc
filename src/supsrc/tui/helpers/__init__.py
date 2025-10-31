@@ -1,14 +1,13 @@
-# supsrc/tui/helpers/__init__.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-TUI helper components package.
-"""
+"""TUI helper components package."""
 
 from supsrc.tui.helpers.ui_helpers import UIHelperMixin
 from supsrc.tui.helpers.worker_helpers import WorkerHelperMixin
 
 __all__ = ["UIHelperMixin", "WorkerHelperMixin"]
-# 🔼⚙️📦🪄
+
+# 🔼⚙️🔚

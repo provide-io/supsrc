@@ -1,8 +1,9 @@
-# tests/integration/test_timer_debounce_integration.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Integration tests for timer debounce functionality with rapid file changes.
-"""
+"""Integration tests for timer debounce functionality with rapid file changes."""
 
 from __future__ import annotations
 
@@ -464,3 +465,5 @@ class TestTimerDebounceIntegration:
         finally:
             shutdown_event.set()
             await asyncio.gather(processor_task, return_exceptions=True)
+
+# 🔼⚙️🔚

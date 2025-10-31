@@ -1,3 +1,8 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
 """Unit tests for TestRunner."""
 
 from __future__ import annotations
@@ -168,3 +173,5 @@ class TestTestRunnerSync:
             exit_code, stdout, stderr = await TestRunner.run_tests(command, workdir)
 
             assert exit_code == 0  # Should default to 0 when returncode is None
+
+# 🔼⚙️🔚

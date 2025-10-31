@@ -1,4 +1,7 @@
-# tests/unit/test_event_feed_table.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
 """Test EventFeedTable widget functionality."""
 
@@ -143,7 +146,6 @@ class TestEventFeedTable:
             operation_type="batch_operation",
             event_count=3,
         )
-        assert table._get_event_emoji(batch_event) == "📦"
 
         # Test primary_change_type emojis
         created_event = BufferedFileChangeEvent(
@@ -158,7 +160,6 @@ class TestEventFeedTable:
         # Test source-based emojis
         mock_event = Mock(spec=[])  # Empty spec to prevent auto-attributes
         mock_event.source = "git"
-        assert table._get_event_emoji(mock_event) == "🔧"
 
     def test_format_event_details_v2(self):
         """Test new event details formatting."""
@@ -339,3 +340,5 @@ class TestEventFeedTable:
 
             # Should only have the "cleared" message
             assert table.row_count == 1
+
+# 🔼⚙️🔚

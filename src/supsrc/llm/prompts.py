@@ -1,15 +1,9 @@
-# supsrc/llm/prompts.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
-# src/supsrc/llm/prompts.py
 #
-"""
-Stores prompt templates for LLM interactions.
-"""
 
-# --- Commit Message Generation ---
+"""Stores prompt templates for LLM interactions."""
 
 CONVENTIONAL_COMMIT_PROMPT_TEMPLATE = """
 Analyze the following git diff and generate a concise, one-line commit message
@@ -106,4 +100,5 @@ Commit Message: {commit_message}
 """
 
 # 🧠📝
-# 🔼⚙️📄🪄
+
+# 🔼⚙️🔚

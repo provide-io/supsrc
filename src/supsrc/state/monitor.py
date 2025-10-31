@@ -1,11 +1,9 @@
-# supsrc/state/monitor.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Monitoring for state file changes.
-"""
+"""Monitoring for state file changes."""
 
 from __future__ import annotations
 
@@ -234,5 +232,4 @@ class StateMonitor:
                 del self._current_states[repo_id]
             log.debug("Removed repository from state monitor", repo_path=str(repo_path))
 
-
-# 🔼⚙️💾🪄
+# 🔼⚙️🔚

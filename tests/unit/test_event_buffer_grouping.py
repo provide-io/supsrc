@@ -1,8 +1,9 @@
-# tests/unit/test_event_buffer_grouping.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Unit tests for EventBuffer grouping functionality.
-"""
+"""Unit tests for EventBuffer grouping functionality."""
 
 from __future__ import annotations
 
@@ -221,3 +222,5 @@ class TestEventBufferGrouping:
         assert "file2.py" in formatted
         assert "modified" in formatted
         assert "✏️" in formatted  # Uses operation emoji, not batch emoji
+
+# 🔼⚙️🔚

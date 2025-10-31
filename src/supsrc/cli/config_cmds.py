@@ -1,7 +1,9 @@
-# supsrc/cli/config_cmds.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+
+"""TODO: Add module docstring."""
 
 from pathlib import Path
 
@@ -83,6 +85,4 @@ def show_config(ctx: click.Context, config_path: Path, **kwargs):
         click.echo(f"Error: An unexpected issue occurred: {e}", err=True)
         ctx.exit(2)
 
-
-# 🔼⚙️
-# 🔼⚙️⚙️🪄
+# 🔼⚙️🔚

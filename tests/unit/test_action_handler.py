@@ -1,4 +1,7 @@
-# tests/unit/test_action_handler.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
 """Unit tests for the ActionHandler component."""
 
@@ -168,3 +171,5 @@ class TestActionHandler:
 
         mock_repo_engine.perform_push.assert_not_called()
         assert state.status == RepositoryStatus.IDLE
+
+# 🔼⚙️🔚

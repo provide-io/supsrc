@@ -1,10 +1,9 @@
-# supsrc/state/__init__.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-State management system for supsrc.
+"""State management system for supsrc.
 
 This module provides external control over supsrc's monitoring behavior through
 .supsrc.state files and programmatic APIs.
@@ -22,8 +21,7 @@ Usage:
     state_manager = StateManager([Path("/path/to/repo")])
     with state_manager.pause_context(duration=300, reason="Batch processing"):
         # Do work that needs supsrc paused
-        pass
-"""
+        pass"""
 
 from __future__ import annotations
 
@@ -264,5 +262,4 @@ def pause_context(
     """
     return PauseContext(repo_path, duration, reason, updated_by)
 
-
-# 🔼⚙️📦🪄
+# 🔼⚙️🔚

@@ -1,13 +1,9 @@
-# supsrc/tui/app.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
-# src/supsrc/tui/app.py
 #
-"""
-Main TUI application for supsrc monitoring.
-"""
+
+"""Main TUI application for supsrc monitoring."""
 
 import asyncio
 from pathlib import Path
@@ -242,7 +238,6 @@ class SupsrcTuiApp(TuiAppBase):
         table.add_column("⏱️", width=4)  # Timer/countdown - 4 characters as requested
         table.add_column("Repository", width=20)  # Repository name (increased to 20)
         table.add_column("Branch")  # Branch name - auto-size with truncation handling
-        table.add_column("📁", width=3)  # Total files (reduced from 4)
         table.add_column("📝", width=3)  # Changed files (reduced from 4)
         table.add_column("\u2795", width=2)  # Added files (reduced from 4)
         table.add_column("\u2796", width=2)  # Deleted files (reduced from 4)
@@ -362,7 +357,6 @@ class SupsrcTuiApp(TuiAppBase):
                     details_text = f"""📍 Repository: {repo_id}
 🌿 Branch: {repo_state.current_branch or "unknown"}
 📊 Status: {repo_state.display_status_emoji} {repo_state.status.name}
-📁 Total files: {repo_state.total_files}
 📝 Changed files: {repo_state.changed_files}
 \u2795 Added: {repo_state.added_files}
 \u2796 Deleted: {repo_state.deleted_files}
@@ -405,7 +399,6 @@ class SupsrcTuiApp(TuiAppBase):
 
             self._event_feed.write(
                 Text.from_markup(
-                    f"[bold magenta]🧪 Manual test triggered at {timestamp}[/bold magenta]"
                 )
             )
 
@@ -446,4 +439,5 @@ class SupsrcTuiApp(TuiAppBase):
 
 
 # 🖥️✨
-# 🔼⚙️📄🪄
+
+# 🔼⚙️🔚

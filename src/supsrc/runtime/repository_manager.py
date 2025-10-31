@@ -1,12 +1,10 @@
-# supsrc/runtime/repository_manager.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Repository management functionality for the WatchOrchestrator.
-Handles repository initialization, state management, and lifecycle operations.
-"""
+"""Repository management functionality for the WatchOrchestrator.
+Handles repository initialization, state management, and lifecycle operations."""
 
 from __future__ import annotations
 
@@ -31,7 +29,6 @@ RULE_EMOJI_MAP: dict[str, str] = {
     "supsrc.rules.inactivity": "⏳",
     "supsrc.rules.save_count": "💾",
     "supsrc.rules.manual": "✋",
-    "default": "⚙️",
 }
 
 
@@ -434,5 +431,4 @@ class RepositoryManager:
         if status_manager:
             status_manager.set_repo_refreshing_status(repo_id, is_refreshing)
 
-
-# 🔼⚙️📋🪄
+# 🔼⚙️🔚

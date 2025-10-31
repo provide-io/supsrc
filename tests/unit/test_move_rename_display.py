@@ -1,14 +1,15 @@
-# tests/unit/test_move_rename_display.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Comprehensive tests for move/rename event display.
+"""Comprehensive tests for move/rename event display.
 
 Tests cover:
 - Simple moves (single file renamed)
 - Move chains (multiple sequential renames)
 - Edge cases (missing dest_path, empty history)
-- Integration with buffering system
-"""
+- Integration with buffering system"""
 
 from __future__ import annotations
 
@@ -476,3 +477,5 @@ class TestIntegrationScenarios:
         assert "(3 moves)" in formatted
         # Should have the repo_id
         assert "provide-foundation" in formatted
+
+# 🔼⚙️🔚

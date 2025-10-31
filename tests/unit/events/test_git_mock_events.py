@@ -1,8 +1,9 @@
-# tests/unit/events/test_git_mock_events.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Tests for git-specific events without importing git dependencies.
-"""
+"""Tests for git-specific events without importing git dependencies."""
 
 from datetime import datetime
 
@@ -57,3 +58,5 @@ def test_mock_git_commit_event_format() -> None:
     assert "5 files" in formatted
     assert "abc123d" in formatted  # Shortened hash
     assert "feature-branch" in formatted
+
+# 🔼⚙️🔚

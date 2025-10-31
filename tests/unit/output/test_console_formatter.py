@@ -1,3 +1,8 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
 """Unit tests for ConsoleEventFormatter."""
 
 from __future__ import annotations
@@ -565,3 +570,5 @@ class TestConsoleEventFormatter:
         assert "📝" not in output_text
         assert "🚀" not in output_text
         assert "👁️" not in output_text
+
+# 🔼⚙️🔚

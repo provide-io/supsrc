@@ -1,10 +1,13 @@
-# tests/e2e/__init__.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-End-to-end tests for supsrc.
+"""End-to-end tests for supsrc.
 
 This package contains comprehensive integration tests that use real
-configurations and test complete user workflows.
-"""
+configurations and test complete user workflows."""
 
 from __future__ import annotations
+
+# 🔼⚙️🔚

@@ -1,8 +1,9 @@
-# tests/unit/events/test_feed.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Tests for EventFeed widget.
-"""
+"""Tests for EventFeed widget."""
 
 from provide.testkit.mocking import Mock, patch
 
@@ -121,3 +122,5 @@ def test_feed_color_mapping() -> None:
             call_args = mock_write.call_args[0][0]
             # Check that the text has the expected color spans
             assert any(span.style == expected_color for span in call_args.spans)
+
+# 🔼⚙️🔚

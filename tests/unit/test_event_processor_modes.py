@@ -1,3 +1,8 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
 """Unit tests for EventProcessor mode detection and mode-specific buffering."""
 
 from __future__ import annotations
@@ -333,3 +338,5 @@ class TestModeSpecificBehavior:
         )
 
         assert processor._event_buffer.grouping_mode == "off"
+
+# 🔼⚙️🔚

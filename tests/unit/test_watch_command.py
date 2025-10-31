@@ -1,9 +1,9 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-# tests/unit/test_watch_command.py
-#
-"""
-Tests for the new 'watch' command (formerly 'tail' in non-TUI mode).
-"""
+
+"""Tests for the new 'watch' command (formerly 'tail' in non-TUI mode)."""
 
 from pathlib import Path
 from provide.testkit.mocking import Mock, patch
@@ -162,3 +162,5 @@ class TestWatchCommand:
         # It does NOT store the exception in result.exception for this specific case.
         # Instead, it aborts execution and returns an exit code of 1.
         assert exit_code == 1
+
+# 🔼⚙️🔚

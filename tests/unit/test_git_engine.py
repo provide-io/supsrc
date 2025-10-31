@@ -1,9 +1,9 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-# tests/unit/test_git_engine.py
-#
-"""
-Comprehensive tests for the Git engine implementation.
-"""
+
+"""Comprehensive tests for the Git engine implementation."""
 
 import subprocess
 from pathlib import Path
@@ -235,5 +235,4 @@ class TestGitEngine:
         assert result.skipped
         assert "disabled" in result.message
 
-
-# 🧪🔧
+# 🔼⚙️🔚

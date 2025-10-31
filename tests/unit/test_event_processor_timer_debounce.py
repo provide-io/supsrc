@@ -1,8 +1,9 @@
-# tests/unit/test_event_processor_timer_debounce.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Unit tests for EventProcessor timer debounce functionality.
-"""
+"""Unit tests for EventProcessor timer debounce functionality."""
 
 from __future__ import annotations
 
@@ -379,3 +380,5 @@ class TestEventProcessorTimerDebounce:
                 await second_task
             except asyncio.CancelledError:
                 pass
+
+# 🔼⚙️🔚

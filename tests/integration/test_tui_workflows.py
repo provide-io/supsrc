@@ -1,11 +1,12 @@
-# tests/integration/test_tui_workflows.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Integration tests for complete TUI user workflows.
+"""Integration tests for complete TUI user workflows.
 
 These tests simulate real user interactions and workflows to ensure
-the TUI functions correctly for end-to-end scenarios.
-"""
+the TUI functions correctly for end-to-end scenarios."""
 
 from __future__ import annotations
 
@@ -61,7 +62,6 @@ def mock_app_setup():
 def sample_repo_states() -> dict[str, RepositoryState]:
     """Create sample repository states for testing."""
     state1 = RepositoryState(repo_id="project-alpha")
-    state1.display_status_emoji = "✅"
     state1.last_change_time = None
     state1.rule_emoji = "⏳"
     state1.rule_dynamic_indicator = "30s"
@@ -445,3 +445,5 @@ class TestTuiUserWorkflows:
             # All shortcuts should have been processed without errors
             # (exact verification depends on mock calls)
             assert app.event_collector.emit.call_count > 0
+
+# 🔼⚙️🔚

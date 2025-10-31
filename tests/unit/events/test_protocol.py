@@ -1,8 +1,9 @@
-# tests/unit/events/test_protocol.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Tests for the Event protocol.
-"""
+"""Tests for the Event protocol."""
 
 from datetime import datetime
 
@@ -50,3 +51,5 @@ def test_event_format() -> None:
     formatted = event.format()
     assert "[monitor]" in formatted
     assert "File changed" in formatted
+
+# 🔼⚙️🔚

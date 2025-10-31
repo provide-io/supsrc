@@ -1,8 +1,9 @@
-# tests/conftest.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Enhanced pytest configuration and fixtures for comprehensive testing.
-"""
+"""Enhanced pytest configuration and fixtures for comprehensive testing."""
 
 from __future__ import annotations
 
@@ -217,5 +218,4 @@ def integration_test_context(parent_cwd, real_config, real_repos):
         "repositories": real_repos,
     }
 
-
-# 🧪🔧
+# 🔼⚙️🔚

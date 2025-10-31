@@ -1,4 +1,9 @@
-# tests/unit/test_sui_command.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
+"""TODO: Add module docstring."""
 
 from pathlib import Path
 from provide.testkit.mocking import Mock, patch
@@ -167,5 +172,4 @@ class TestSuiCommand:
         assert result.exit_code == 1
         assert "aborted" in result.output.lower()
 
-
-# 🧪👀
+# 🔼⚙️🔚

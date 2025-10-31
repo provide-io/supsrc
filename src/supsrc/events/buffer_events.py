@@ -1,11 +1,9 @@
-# supsrc/events/buffer_events.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Buffered event types for the event buffering system.
-"""
+"""Buffered event types for the event buffering system."""
 
 from __future__ import annotations
 
@@ -70,7 +68,6 @@ class BufferedFileChangeEvent(Event):
             "deleted": "-",  # MINUS SIGN
             "moved": "🔄",  # COUNTERCLOCKWISE ARROWS BUTTON
         }
-        emoji = emoji_map.get(self.primary_change_type, "📄")  # PAGE FACING UP
 
         # Special handling for move events - reconstruct the move chain
         if self.primary_change_type == "moved" and self.operation_history:
@@ -154,5 +151,4 @@ class BufferedFileChangeEvent(Event):
 
         return chain
 
-
-# 🔼⚙️📨🪄
+# 🔼⚙️🔚

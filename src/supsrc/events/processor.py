@@ -1,11 +1,9 @@
-# supsrc/events/processor.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Consumes filesystem events, checks rules, manages timers, and triggers actions.
-"""
+"""Consumes filesystem events, checks rules, manages timers, and triggers actions."""
 
 import asyncio
 from pathlib import Path
@@ -521,5 +519,4 @@ class EventProcessor:
         await asyncio.gather(*self._action_tasks, return_exceptions=True)
         log.debug("All action tasks cancelled.")
 
-
-# 🔼⚙️📨🪄
+# 🔼⚙️🔚

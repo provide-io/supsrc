@@ -1,7 +1,7 @@
-# supsrc/output/verbose_formats/compact.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
 """Compact key=value verbose formatter."""
 
@@ -209,5 +209,4 @@ class CompactVerboseFormatter:
         op_line = self._format_pairs(pairs.get("operation", []))
         return [f"{self.indent}{op_line}"] if op_line else []
 
-
-# 🔼⚙️📄🪄
+# 🔼⚙️🔚

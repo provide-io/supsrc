@@ -1,11 +1,10 @@
-# supsrc/telemetry/eventset.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
 """This event set provides visual markers and metadata enrichment
-for supsrc-specific log fields like repository status and rule types.
-"""
+for supsrc-specific log fields like repository status and rule types."""
 
 from __future__ import annotations
 
@@ -22,10 +21,7 @@ SUPSRC_EVENT_SET = EventSet(
                 "idle": "💤",
                 "changed": "📝",
                 "triggered": "🎯",
-                "committing": "📦",
                 "pushing": "🚀",
-                "clean": "✅",
-                "dirty": "📄",
                 # Error states
                 "error": "❌",
                 "conflict": "⚠️",
@@ -46,7 +42,6 @@ SUPSRC_EVENT_SET = EventSet(
                 "save_count": "💾",
                 "manual": "✋",
                 "timer": "⏱️",
-                "default": "⚙️",
             },
             default_key="default",
         ),
@@ -55,7 +50,6 @@ SUPSRC_EVENT_SET = EventSet(
             visual_markers={
                 "status": "🔍",
                 "stage": "➕",
-                "commit": "📦",
                 "push": "🚀",
                 "pull": "⬇️",
                 "fetch": "📥",
@@ -63,7 +57,6 @@ SUPSRC_EVENT_SET = EventSet(
                 "checkout": "🔀",
                 "merge": "🔗",
                 "rebase": "🧬",
-                "default": "🔧",
             },
             default_key="default",
         ),
@@ -74,7 +67,6 @@ SUPSRC_EVENT_SET = EventSet(
                 "smart": "🧠",
                 "off": "⏹️",
                 "atomic_rewrite": "✨",
-                "single_file": "📄",
                 "batch_operation": "📚",
                 "default": "📑",
             },
@@ -105,4 +97,5 @@ SUPSRC_EVENT_SET = EventSet(
     ],
     priority=10,  # Higher than default DAS eventset (priority=0)
 )
-# 🔼⚙️🗃️🪄
+
+# 🔼⚙️🔚

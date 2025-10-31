@@ -1,11 +1,9 @@
-# supsrc/state/control.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Data models and validation for external supsrc state control.
-"""
+"""Data models and validation for external supsrc state control."""
 
 from __future__ import annotations
 
@@ -330,5 +328,4 @@ def validate_state_file(file_path: Path) -> bool:
     except (json.JSONDecodeError, OSError):
         return False
 
-
-# 🔼⚙️💾🪄
+# 🔼⚙️🔚

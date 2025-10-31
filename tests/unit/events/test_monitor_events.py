@@ -1,8 +1,9 @@
-# tests/unit/events/test_monitor_events.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Tests for monitor events.
-"""
+"""Tests for monitor events."""
 
 from pathlib import Path
 
@@ -181,3 +182,5 @@ def test_all_monitor_events_have_monitor_source() -> None:
     assert file_event.source == "monitor"
     assert start_event.source == "monitor"
     assert stop_event.source == "monitor"
+
+# 🔼⚙️🔚

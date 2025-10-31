@@ -1,3 +1,8 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
 """Unit tests for LLMProviderManager."""
 
 from __future__ import annotations
@@ -181,3 +186,5 @@ class TestLLMProviderManager:
         assert provider2 == mock_provider2
         assert provider1 != provider2
         assert mock_gemini_provider.call_count == 2
+
+# 🔼⚙️🔚

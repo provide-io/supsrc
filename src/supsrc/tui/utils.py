@@ -1,11 +1,9 @@
-# supsrc/tui/utils.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Utility functions for the TUI application.
-"""
+"""Utility functions for the TUI application."""
 
 from __future__ import annotations
 
@@ -76,5 +74,4 @@ def format_last_commit_time(last_change_time, threshold_hours=3):
         else:
             return f"{hours}h ago"
 
-
-# 🔼⚙️📄🪄
+# 🔼⚙️🔚

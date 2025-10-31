@@ -1,11 +1,12 @@
-# tests/e2e/test_cli_integration.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-CLI integration tests using foundation's process utilities.
+"""CLI integration tests using foundation's process utilities.
 
 These tests run the actual supsrc CLI commands using provide-foundation's
-process utilities to test real-world usage scenarios from the command line.
-"""
+process utilities to test real-world usage scenarios from the command line."""
 
 from __future__ import annotations
 
@@ -288,3 +289,5 @@ class TestCLIConfigIntegration:
             assert len(result.stderr) > 0
         finally:
             Path(invalid_config).unlink(missing_ok=True)
+
+# 🔼⚙️🔚

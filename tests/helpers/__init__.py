@@ -1,10 +1,13 @@
-# tests/helpers/__init__.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Test helper modules for supsrc testing framework.
+"""Test helper modules for supsrc testing framework.
 
 This package contains utilities for testing with real configurations,
-directory contexts, and integration scenarios.
-"""
+directory contexts, and integration scenarios."""
 
 from __future__ import annotations
+
+# 🔼⚙️🔚

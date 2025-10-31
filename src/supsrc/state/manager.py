@@ -1,11 +1,9 @@
-# supsrc/state/manager.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Main state management coordination class.
-"""
+"""Main state management coordination class."""
 
 from __future__ import annotations
 
@@ -384,5 +382,4 @@ class StateManager:
                 del self._repo_states[repo_id]
             log.debug("Removed repository from state manager", repo_path=str(repo_path))
 
-
-# 🔼⚙️📋🪄
+# 🔼⚙️🔚
