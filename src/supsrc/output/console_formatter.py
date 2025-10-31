@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -276,5 +276,6 @@ class ConsoleEventFormatter:
             else:
                 # Strip Rich markup for no-color mode
                 self.console.print(line, highlight=False, markup=False)
+
 
 # 🔼⚙️🔚

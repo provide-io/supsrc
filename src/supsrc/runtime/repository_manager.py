@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -29,6 +29,7 @@ RULE_EMOJI_MAP: dict[str, str] = {
     "supsrc.rules.inactivity": "⏳",
     "supsrc.rules.save_count": "💾",
     "supsrc.rules.manual": "✋",
+    "default": "⚙️",
 }
 
 
@@ -430,5 +431,6 @@ class RepositoryManager:
         """Set the refreshing status for a repository."""
         if status_manager:
             status_manager.set_repo_refreshing_status(repo_id, is_refreshing)
+
 
 # 🔼⚙️🔚

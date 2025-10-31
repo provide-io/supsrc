@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -19,5 +19,6 @@ class GitRepoSummary:
     head_commit_hash: str | None = None  # Full commit SHA
     head_commit_message_summary: str | None = None  # First line of commit message
     head_commit_timestamp: datetime | None = None  # Timestamp of the HEAD commit
+
 
 # 🔼⚙️🔚

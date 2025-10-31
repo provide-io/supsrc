@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from provide.testkit.mocking import AsyncMock, MagicMock, patch
 
 import pytest
+from provide.testkit.mocking import AsyncMock, patch
 
 from supsrc.runtime.workflow.git_operations import GitOperationsHelper
 
@@ -121,5 +121,6 @@ class TestGitOperationsHelper:
             result = await GitOperationsHelper.get_staged_diff(workdir)
 
             assert result == ""
+
 
 # 🔼⚙️🔚

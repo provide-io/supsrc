@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -69,5 +69,6 @@ class MonitoringStopEvent(BaseEvent):
         """Format monitoring stop event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         return f"[{time_str}] \U0001f6d1 Stopped monitoring [{self.repo_id}]"  # STOP SIGN
+
 
 # 🔼⚙️🔚

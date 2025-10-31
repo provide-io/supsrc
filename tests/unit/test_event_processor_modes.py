@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -8,18 +8,16 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
-from provide.testkit.mocking import AsyncMock, MagicMock, Mock
 
 import pytest
+from provide.testkit.mocking import AsyncMock, Mock
 
-from supsrc.config import GlobalConfig, RepositoryConfig, SupsrcConfig
+from supsrc.config import GlobalConfig, SupsrcConfig
 from supsrc.config.defaults import (
     DEFAULT_EVENT_BUFFER_GROUPING_MODE_HEADLESS,
     DEFAULT_EVENT_BUFFER_GROUPING_MODE_TUI,
 )
 from supsrc.events.processor import EventProcessor
-from supsrc.monitor import MonitoredEvent
 
 
 @pytest.fixture
@@ -338,5 +336,6 @@ class TestModeSpecificBehavior:
         )
 
         assert processor._event_buffer.grouping_mode == "off"
+
 
 # 🔼⚙️🔚

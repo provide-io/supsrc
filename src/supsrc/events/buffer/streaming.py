@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -226,5 +226,6 @@ class StreamingOperationHandler:
                 buffered_event = create_operation_event(operation, repo_id)
                 if self.emit_callback:
                     self.emit_callback(buffered_event)
+
 
 # 🔼⚙️🔚

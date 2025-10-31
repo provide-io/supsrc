@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -8,9 +8,9 @@
 import asyncio
 import contextlib
 from pathlib import Path
-from provide.testkit.mocking import AsyncMock, MagicMock, patch
 
 import pytest
+from provide.testkit.mocking import AsyncMock, MagicMock, patch
 
 from supsrc.config import SupsrcConfig
 from supsrc.config.defaults import DEFAULT_DEBOUNCE_DELAY
@@ -169,5 +169,6 @@ class TestEventProcessor:
 
         # Assert: The event should have been consumed and ignored, leaving the queue empty.
         assert event_processor.event_queue.qsize() == 0
+
 
 # 🔼⚙️🔚

@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -175,5 +175,6 @@ def temp_real_config(real_config):
     """Pytest fixture providing temporary copy of real config."""
     with temp_config(real_config) as tmp_config:
         yield tmp_config
+
 
 # 🔼⚙️🔚

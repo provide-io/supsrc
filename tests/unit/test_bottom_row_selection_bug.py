@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -11,9 +11,9 @@ would fail due to incorrect bounds checking."""
 from __future__ import annotations
 
 import asyncio
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
 pytestmark = pytest.mark.skip(reason="TUI in active development")
 from textual.widgets import DataTable
@@ -157,5 +157,6 @@ class TestBottomRowSelectionBug:
         # First row should be saveable
         mock_table.cursor_row = 0
         assert mock_table.cursor_row < mock_table.row_count, "First row cursor should be saveable"
+
 
 # 🔼⚙️🔚

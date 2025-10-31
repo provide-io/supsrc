@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -134,8 +134,7 @@ class RepoActionHandlerMixin:
         success = await self._orchestrator.refresh_repository_status(repo_id)
         self._orchestrator.set_repo_refreshing_status(repo_id, False)
         if success:
-            self.post_message(
-            )
+            self.post_message()
         else:
             self.post_message(
                 LogMessageUpdate(None, "ERROR", f"❌ Failed to refresh status for '{repo_id}'.")
@@ -165,5 +164,6 @@ class RepoActionHandlerMixin:
             self.post_message(
                 LogMessageUpdate(None, "ERROR", f"Failed to resume monitoring for '{repo_id}'.")
             )
+
 
 # 🔼⚙️🔚

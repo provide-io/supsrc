@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -44,8 +44,10 @@ class EventFeedTable(DataTable):
         """Initialize the EventFeedTable when mounted."""
         # Set up columns with proper proportions
         self.add_column("⏰", width=8)  # Time - HH:MM:SS format
+        self.add_column("📦", width=8)  # Source/Repo - Repository identifier
         self.add_column("🎯", width=3)  # Operation - Operation type emoji
         self.add_column("#️⃣", width=5)  # Impact - Numerical impact
+        self.add_column("📄", width=20)  # Files - Affected files
         self.add_column("💬")  # Message - Auto-size remaining space
 
         # Add initial message to show the widget is ready
@@ -150,5 +152,6 @@ class EventFeedTable(DataTable):
         """Handle end key for scrolling."""
         max_row = max(0, self.row_count - 1)
         self.cursor_coordinate = (max_row, 0)
+
 
 # 🔼⚙️🔚

@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -65,5 +65,6 @@ class GitOperationsHelper:
             log.info("Saved change fragment", path=str(file_path))
         except OSError as e:
             log.error("Failed to save change fragment", path=str(file_path), error=str(e))
+
 
 # 🔼⚙️🔚
