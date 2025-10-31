@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -7,9 +7,9 @@
 
 import asyncio
 from pathlib import Path
-from provide.testkit.mocking import AsyncMock, MagicMock, patch
 
 import pytest
+from provide.testkit.mocking import AsyncMock, MagicMock, patch
 
 from supsrc.config import SupsrcConfig
 from supsrc.engines.git import GitEngine
@@ -159,5 +159,6 @@ class TestOrchestratorFeatures:
         result = mock_orchestrator.toggle_repository_pause(repo_id)
         assert result is True
         mock_repo_manager.toggle_repository_pause.assert_called_with(repo_id)
+
 
 # 🔼⚙️🔚

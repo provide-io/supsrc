@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -75,5 +75,6 @@ class LLMProviderManager:
         except (ImportError, ValueError) as e:
             log.error("Failed to instantiate LLM provider", error=str(e), exc_info=True)
             return None
+
 
 # 🔼⚙️🔚

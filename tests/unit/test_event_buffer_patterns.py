@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
 from supsrc.events.buffer import EventBuffer
 from supsrc.events.monitor import FileChangeEvent
@@ -474,5 +474,6 @@ class TestEventBufferPatterns:
             base_path / "file.py" in all_file_paths or base_path / "file.py.tmp" in all_file_paths
         )
         assert base_path / "other.py" in all_file_paths
+
 
 # 🔼⚙️🔚

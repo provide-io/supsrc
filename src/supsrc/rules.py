@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -139,5 +139,6 @@ def check_trigger_condition(repo_state: RepositoryState, repo_config: Repository
             return False
 
     # This logging statement is unreachable - removed
+
 
 # 🔼⚙️🔚

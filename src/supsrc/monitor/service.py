@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -177,5 +177,6 @@ class MonitoringService:
             hasattr(self, "_observer") and self._observer is not None and self._observer.is_alive()
         )
         return self._is_running and observer_alive
+
 
 # 🔼⚙️🔚

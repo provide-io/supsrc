@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -70,5 +70,6 @@ class SupsrcDirectories:
         """Get path for repository config: .supsrc/config.toml"""
         ensure_dir(repo_path / cls.SUPSRC_DIR)
         return repo_path / cls.SUPSRC_DIR / "config.toml"
+
 
 # 🔼⚙️🔚

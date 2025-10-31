@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -207,5 +207,6 @@ class SupsrcEventHandler(FileSystemEventHandler):
 
     def on_moved(self, event: FileSystemEvent):
         self._process_and_queue_event(event)
+
 
 # 🔼⚙️🔚

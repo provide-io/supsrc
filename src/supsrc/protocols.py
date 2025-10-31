@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -172,5 +172,6 @@ class RepositoryEngine(Protocol):
         # Define a specific SummaryResult protocol/attrs class if needed
         log.warning("get_summary called on base protocol, implementation needed.")
         return None
+
 
 # 🔼⚙️🔚

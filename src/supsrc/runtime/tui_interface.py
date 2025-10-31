@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -64,5 +64,6 @@ class TUIInterface:
             self.app.post_message(log_msg)
         except Exception as e:
             log.warning("Failed to post log message to TUI", error=str(e), exc_info=False)
+
 
 # 🔼⚙️🔚

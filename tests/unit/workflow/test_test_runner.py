@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from provide.testkit.mocking import AsyncMock, patch
 
 import pytest
+from provide.testkit.mocking import AsyncMock, patch
 
 from supsrc.runtime.workflow.test_runner import TestRunner
 
@@ -173,5 +173,6 @@ class TestTestRunnerSync:
             exit_code, stdout, stderr = await TestRunner.run_tests(command, workdir)
 
             assert exit_code == 0  # Should default to 0 when returncode is None
+
 
 # 🔼⚙️🔚

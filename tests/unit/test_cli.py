@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -8,10 +8,10 @@
 import subprocess
 import tempfile
 from pathlib import Path
-from provide.testkit.mocking import patch
 
 import pytest
 from click.testing import CliRunner
+from provide.testkit.mocking import patch
 
 from supsrc.cli.main import cli
 
@@ -285,5 +285,6 @@ class TestCLIUtilities:
         runner = CliRunner()
         result = runner.invoke(cli, ["--log-level", "DEBUG", "config", "show", "--help"])
         assert result.exit_code == 0
+
 
 # 🔼⚙️🔚

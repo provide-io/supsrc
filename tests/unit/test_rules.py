@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -6,9 +6,9 @@
 """Comprehensive tests for the rule engine."""
 
 from datetime import UTC, datetime, timedelta
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
 from supsrc.config import (
     InactivityRuleConfig,
@@ -211,5 +211,6 @@ class TestRuleEdgeCases:
         result = check_inactivity(state, rule_config)
 
         assert result is False
+
 
 # 🔼⚙️🔚

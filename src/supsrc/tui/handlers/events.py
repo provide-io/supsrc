@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -84,7 +84,7 @@ class EventHandlerMixin:
                 if table.cursor_row < table.row_count:
                     cursor_coordinate = table.coordinate_to_cell_key((table.cursor_row, 0))
                     cursor_row_key = cursor_coordinate.row_key
-                    log.debug(f"Saved cursor position for row key: {cursor_row_key}")
+                    log.debug("Saved cursor position", row_key=cursor_row_key)
             except Exception:
                 pass
 
@@ -197,13 +197,12 @@ class EventHandlerMixin:
                     status_display,
                     timer_display,
                     repository_display,
-                    branch_display,  # New branch column
-                    total_files_display,
+                    branch_display,
                     changed_files_display,
                     added_display,
                     deleted_display,
                     modified_display,
-                    last_change_display,  # Moved after modified
+                    last_change_display,
                     rule_display,
                 )
 
@@ -260,10 +259,12 @@ class EventHandlerMixin:
                         if new_cursor_row != table.cursor_row:
                             table.cursor_row = new_cursor_row
                             log.debug(
-                                f"Restored cursor to row {new_cursor_row} for key {cursor_row_key}"
+                                "Restored cursor position",
+                                new_row=new_cursor_row,
+                                row_key=cursor_row_key,
                             )
                 except Exception as e:
-                    log.debug(f"Failed to restore cursor position: {e}")
+                    log.debug("Failed to restore cursor position", error=str(e))
 
         except Exception as e:
             log.error("Failed to update TUI table", error=str(e))
@@ -279,13 +280,23 @@ class EventHandlerMixin:
             )
             log_widget.write_line(formatted_message)
         except Exception as e:
-            # Using the app's own logger here is fine for TUI-specific errors.
-            log.error(
-                "Failed to write to TUI log widget",
-                error=str(e),
-                raw_message_level=message.level,
-                raw_message_content=message.message,
-            )
+            # Check if this is a "widget not found" error (expected during initialization)
+            error_msg = str(e)
+            if "No nodes match" in error_msg:
+                # Widget not ready yet - expected during initialization
+                log.debug(
+                    "TUI log widget not yet available",
+                    error=error_msg,
+                    message_level=message.level,
+                )
+            else:
+                # Unexpected error - log as error
+                log.error(
+                    "Failed to write to TUI log widget",
+                    error=error_msg,
+                    message_level=message.level,
+                    message_content=message.message,
+                )
 
     def on_repo_detail_update(self, message: RepoDetailUpdate) -> None:
         """Handle repository detail updates (simplified - log to main log)."""
@@ -300,6 +311,22 @@ class EventHandlerMixin:
                 if len(commit_history) > 3:
                     log_widget.write_line(f"  ... and {len(commit_history) - 3} more commits")
         except Exception as e:
-            log.error("Error updating repo details", error=str(e))
+            # Check if this is a "widget not found" error (expected during initialization)
+            error_msg = str(e)
+            if "No nodes match" in error_msg:
+                # Widget not ready yet - expected during initialization
+                log.debug(
+                    "TUI log widget not yet available for repo details",
+                    repo_id=message.repo_id,
+                    error=error_msg,
+                )
+            else:
+                # Unexpected error - log as error
+                log.error(
+                    "Error updating repo details",
+                    repo_id=message.repo_id,
+                    error=error_msg,
+                )
+
 
 # 🔼⚙️🔚

@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -96,5 +96,6 @@ class EventFeed(RichLog):
     def key_end(self) -> None:
         """Handle end key for scrolling."""
         self.scroll_end()
+
 
 # 🔼⚙️🔚

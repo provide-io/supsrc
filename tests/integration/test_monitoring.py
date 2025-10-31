@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -10,9 +10,9 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
 # Correctly import dependencies for the test fix
 from supsrc.config import load_config
@@ -469,5 +469,6 @@ class TestConcurrency:
             except TimeoutError:
                 orchestrator_task.cancel()
                 await asyncio.gather(orchestrator_task, return_exceptions=True)
+
 
 # 🔼⚙️🔚

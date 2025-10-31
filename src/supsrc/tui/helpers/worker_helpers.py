@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -41,12 +41,17 @@ class WorkerHelperMixin:
             return
 
         try:
-            log.debug(f"Fetching details for {repo_id}")
+            log.debug("Fetching repository details", repo_id=repo_id)
             details = await self._orchestrator.get_repository_details(repo_id)
             self.post_message(RepoDetailUpdate(repo_id, details))
         except Exception as e:
-            log.error(f"Error fetching repo details for {repo_id}", error=str(e))
+            log.error(
+                "Error fetching repository details",
+                repo_id=repo_id,
+                error=str(e),
+            )
             error_details = {"commit_history": [f"[bold red]Error loading details: {e}[/]"]}
             self.post_message(RepoDetailUpdate(repo_id, error_details))
+
 
 # 🔼⚙️🔚

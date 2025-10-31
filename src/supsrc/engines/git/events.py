@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -77,5 +77,6 @@ class GitBranchEvent(BaseEvent):
             return f"[{time_str}] 🌿 Switched from {self.old_branch} to {self.new_branch}"
         else:
             return f"[{time_str}] 🌿 On branch {self.new_branch}"
+
 
 # 🔼⚙️🔚

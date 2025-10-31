@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -216,5 +216,6 @@ class TestGlobalConfiguration:
 
         assert config.global_config.log_level == "DEBUG"
         assert config.global_config.numeric_log_level == 10
+
 
 # 🔼⚙️🔚
