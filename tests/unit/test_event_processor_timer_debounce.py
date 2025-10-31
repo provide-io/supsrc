@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from provide.testkit.mocking import AsyncMock, MagicMock, patch
 
 import pytest
+from provide.testkit.mocking import AsyncMock, MagicMock, patch
 
 from supsrc.config import InactivityRuleConfig, SupsrcConfig
 from supsrc.events.processor import EventProcessor
@@ -380,5 +380,6 @@ class TestEventProcessorTimerDebounce:
                 await second_task
             except asyncio.CancelledError:
                 pass
+
 
 # 🔼⚙️🔚

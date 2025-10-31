@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -10,16 +10,12 @@ process utilities to test real-world usage scenarios from the command line."""
 
 from __future__ import annotations
 
-import signal
 import sys
 import tempfile
-import time
 from pathlib import Path
-from provide.testkit.mocking import patch
 
 import pytest
 from provide.foundation.process import run
-from provide.foundation.process.lifecycle import ManagedProcess
 
 from tests.helpers.config_testing import real_config_path, with_parent_cwd
 
@@ -289,5 +285,6 @@ class TestCLIConfigIntegration:
             assert len(result.stderr) > 0
         finally:
             Path(invalid_config).unlink(missing_ok=True)
+
 
 # 🔼⚙️🔚

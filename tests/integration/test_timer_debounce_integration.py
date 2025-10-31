@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -11,9 +11,9 @@ import asyncio
 import subprocess
 import tempfile
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
 from supsrc.config import (
     GlobalConfig,
@@ -465,5 +465,6 @@ class TestTimerDebounceIntegration:
         finally:
             shutdown_event.set()
             await asyncio.gather(processor_task, return_exceptions=True)
+
 
 # 🔼⚙️🔚

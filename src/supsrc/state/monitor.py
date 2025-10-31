@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -231,5 +231,6 @@ class StateMonitor:
             if repo_id in self._current_states:
                 del self._current_states[repo_id]
             log.debug("Removed repository from state monitor", repo_path=str(repo_path))
+
 
 # 🔼⚙️🔚

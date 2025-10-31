@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -182,5 +182,6 @@ def test_event_sources() -> None:
     assert config_event.source == "system"
     assert user_event.source == "tui"
     assert error_event.source == "custom"  # Source is customizable for errors
+
 
 # 🔼⚙️🔚

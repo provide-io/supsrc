@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -8,10 +8,10 @@
 from __future__ import annotations
 
 import os
-from provide.testkit.mocking import MagicMock, patch
 
 import pytest
 from attrs import evolve
+from provide.testkit.mocking import MagicMock, patch
 
 from supsrc.config import LLMConfig
 from supsrc.runtime.workflow.llm_utils import LLMProviderManager
@@ -186,5 +186,6 @@ class TestLLMProviderManager:
         assert provider2 == mock_provider2
         assert provider1 != provider2
         assert mock_gemini_provider.call_count == 2
+
 
 # 🔼⚙️🔚

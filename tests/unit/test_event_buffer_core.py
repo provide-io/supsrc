@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
 from supsrc.events.buffer import EventBuffer
 from supsrc.events.monitor import FileChangeEvent
@@ -259,5 +259,6 @@ class TestEventBufferCore:
         assert len(buffer._buffers) == 2
         assert "repo1" in buffer._buffers
         assert "repo2" in buffer._buffers
+
 
 # 🔼⚙️🔚

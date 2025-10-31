@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -15,8 +15,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-
-import pytest
 
 from supsrc.events.buffer_events import BufferedFileChangeEvent
 from supsrc.events.monitor import FileChangeEvent
@@ -477,5 +475,6 @@ class TestIntegrationScenarios:
         assert "(3 moves)" in formatted
         # Should have the repo_id
         assert "provide-foundation" in formatted
+
 
 # 🔼⚙️🔚

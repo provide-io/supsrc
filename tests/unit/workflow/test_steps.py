@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -7,10 +7,8 @@
 
 from __future__ import annotations
 
-from provide.testkit.mocking import AsyncMock, MagicMock
-
 import pytest
-from provide.testkit.mocking import patch
+from provide.testkit.mocking import AsyncMock, MagicMock, patch
 
 from supsrc.config import LLMConfig, RepositoryConfig, SupsrcConfig
 from supsrc.protocols import RepoStatusResult
@@ -325,5 +323,6 @@ class TestWorkflowSteps:
         assert commit_message == "feat: add new feature\n\n{{change_summary}}"
         repo_state.update_status.assert_called_with(RepositoryStatus.GENERATING_COMMIT)
         llm_provider.generate_commit_message.assert_called_once_with(staged_diff, True)
+
 
 # 🔼⚙️🔚

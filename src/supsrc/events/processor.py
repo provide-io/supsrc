@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -518,5 +518,6 @@ class EventProcessor:
             task.cancel()
         await asyncio.gather(*self._action_tasks, return_exceptions=True)
         log.debug("All action tasks cancelled.")
+
 
 # 🔼⚙️🔚

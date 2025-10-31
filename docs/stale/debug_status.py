@@ -6,14 +6,13 @@
 """Debug script to monitor status changes and detect red X appearances.
 Run this to help identify when and why the red X appears."""
 
-import asyncio
 import sys
 from pathlib import Path
 
 # Add the source directory to the path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from supsrc.state.runtime import RepositoryStatus, STATUS_EMOJI_MAP
+from supsrc.state.runtime import STATUS_EMOJI_MAP
 
 
 def monitor_status_changes():

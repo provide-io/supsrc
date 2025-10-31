@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -410,6 +410,7 @@ class GitEngine(RepositoryEngine):
 
             change_summary = self.operations.generate_change_summary(diff)
             commit_message_template_str = message_template or self.operations.get_config_value(
+                "commit_message_template", config, "🔼⚙️ [skip ci] auto-commit\n\n{{change_summary}}"
             )
             timestamp_str = datetime.now(UTC).isoformat()
             commit_message = (
@@ -512,5 +513,6 @@ class GitEngine(RepositoryEngine):
     async def get_commit_history(self, working_dir: Path, limit: int = 10) -> list[str]:
         """Retrieves the last N commit messages from the repository asynchronously."""
         return await self.operations.get_commit_history(working_dir, limit)
+
 
 # 🔼⚙️🔚

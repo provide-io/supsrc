@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -8,9 +8,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
 from supsrc.events.buffer import BufferedFileChangeEvent
 from supsrc.events.feed_table import EventFeedTable
@@ -340,5 +340,6 @@ class TestEventFeedTable:
 
             # Should only have the "cleared" message
             assert table.row_count == 1
+
 
 # 🔼⚙️🔚

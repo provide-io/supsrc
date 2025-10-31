@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -208,5 +208,6 @@ class CompactVerboseFormatter:
         """Format FileChangeEvent in compact style."""
         op_line = self._format_pairs(pairs.get("operation", []))
         return [f"{self.indent}{op_line}"] if op_line else []
+
 
 # 🔼⚙️🔚

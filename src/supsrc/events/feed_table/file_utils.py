@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -128,5 +128,6 @@ class FilePathFormatter:
             files_str = FilePathFormatter.get_files_summary(file_paths)
 
         return count_str, files_str
+
 
 # 🔼⚙️🔚

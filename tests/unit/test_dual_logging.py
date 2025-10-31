@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -152,5 +152,6 @@ class TestDualLogging:
             event_data = json.loads(f.read().strip())
 
         assert event_data["metadata"]["file_path"] == "/tmp/test.txt"
+
 
 # 🔼⚙️🔚

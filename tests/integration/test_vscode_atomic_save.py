@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -12,11 +12,10 @@ file path, not the temporary file path."""
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
 from supsrc.events.buffer import EventBuffer
 from supsrc.events.monitor import FileChangeEvent
@@ -392,7 +391,8 @@ class TestVSCodeAtomicSaveIntegration:
         # Make sure the buggy version is NOT present
         buggy_file = Path(".orchestrator.py")
         assert buggy_file not in emitted_files, (
-            f"Buggy file '.orchestrator.py' (with leading dot) should not be emitted"
+            "Buggy file '.orchestrator.py' (with leading dot) should not be emitted"
         )
+
 
 # 🔼⚙️🔚

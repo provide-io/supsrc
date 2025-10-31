@@ -1,13 +1,12 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 
 """Unit tests for the ActionHandler component."""
 
-from provide.testkit.mocking import AsyncMock, MagicMock
-
 import pytest
+from provide.testkit.mocking import AsyncMock, MagicMock
 
 from supsrc.config import SupsrcConfig
 from supsrc.protocols import CommitResult, PushResult, RepoStatusResult, StageResult
@@ -171,5 +170,6 @@ class TestActionHandler:
 
         mock_repo_engine.perform_push.assert_not_called()
         assert state.status == RepositoryStatus.IDLE
+
 
 # 🔼⚙️🔚

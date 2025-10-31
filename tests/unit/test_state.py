@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -241,5 +241,6 @@ class TestRepositoryStatePreviousStatistics:
         assert state.last_committed_added == 1
         assert state.last_committed_deleted == 1
         assert state.last_committed_modified == 1
+
 
 # 🔼⚙️🔚

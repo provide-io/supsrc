@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -10,9 +10,9 @@ from __future__ import annotations
 import asyncio
 import tempfile
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
 from supsrc.events.buffer import EventBuffer
 from supsrc.events.monitor import FileChangeEvent
@@ -419,5 +419,6 @@ class TestAtomicFileOperations:
             assert original_file in file_paths_emitted, (
                 f"Original file {original_file} not found in emitted events for pattern {temp_file}"
             )
+
 
 # 🔼⚙️🔚

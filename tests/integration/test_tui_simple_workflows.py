@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
 pytestmark = pytest.mark.skip(reason="TUI in active development")
 
@@ -205,5 +205,6 @@ class TestSimpleTuiWorkflows:
 
             # Should have handled multiple events
             assert mock_event_collector.emit.call_count > 0
+
 
 # 🔼⚙️🔚

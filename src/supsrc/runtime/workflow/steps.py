@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -296,5 +296,6 @@ class WorkflowSteps:
             commit_hash=None,  # Could be enhanced to get actual commit hash
         )
         self._emit_event(external_commit_event)
+
 
 # 🔼⚙️🔚

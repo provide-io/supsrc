@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -6,9 +6,9 @@
 """Tests for the new 'watch' command (formerly 'tail' in non-TUI mode)."""
 
 from pathlib import Path
-from provide.testkit.mocking import Mock, patch
 
 from click.testing import CliRunner
+from provide.testkit.mocking import Mock, patch
 
 from supsrc.cli.main import cli
 
@@ -37,8 +37,6 @@ class TestWatchCommand:
             # Foundation closed streams, but help was shown successfully
             exit_code = 0
             # Output was captured before the exception, check stdout capture
-            import sys
-            from io import StringIO
 
             # We can't get the output after the exception, so just verify exit code
             output = ""
@@ -162,5 +160,6 @@ class TestWatchCommand:
         # It does NOT store the exception in result.exception for this specific case.
         # Instead, it aborts execution and returns an exit code of 1.
         assert exit_code == 1
+
 
 # 🔼⚙️🔚

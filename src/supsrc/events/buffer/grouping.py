@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -86,5 +86,6 @@ def group_events_simple(events: list[FileChangeEvent]) -> list[BufferedFileChang
         "Simple grouping complete", input_events=len(events), output_groups=len(grouped_events)
     )
     return grouped_events
+
 
 # 🔼⚙️🔚

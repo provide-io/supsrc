@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -12,11 +12,11 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
-from supsrc.config import load_config
+from provide.testkit.mocking import Mock
 
+from supsrc.config import load_config
 from supsrc.tui.app import SupsrcTuiApp
 from tests.helpers.config_testing import (
     real_config_path,
@@ -329,5 +329,6 @@ class TestRealConfigPerformance:
 
                 # Should have processed events
                 assert app.event_collector.emit.call_count > 0
+
 
 # 🔼⚙️🔚

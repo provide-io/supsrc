@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -64,5 +64,6 @@ class TimerManager:
         for name in timer_names:
             self.stop_timer(name)
         self._logger.debug("All timers stopped", count=len(timer_names))
+
 
 # 🔼⚙️🔚

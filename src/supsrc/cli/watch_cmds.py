@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -259,5 +259,6 @@ def watch_cli(
     log.info("'watch' command finished.")
     if exit_code != 0:
         sys.exit(exit_code)
+
 
 # 🔼⚙️🔚

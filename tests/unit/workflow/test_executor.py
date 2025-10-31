@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -7,15 +7,13 @@
 
 from __future__ import annotations
 
-from provide.testkit.mocking import AsyncMock, MagicMock
-
 import pytest
-from provide.testkit.mocking import patch
+from provide.testkit.mocking import AsyncMock, MagicMock, patch
 
 from supsrc.config import SupsrcConfig
 from supsrc.protocols import CommitResult, PushResult, RepoStatusResult, StageResult
-from supsrc.runtime.workflow.executor import RuntimeWorkflow
 from supsrc.runtime.tui_interface import TUIInterface
+from supsrc.runtime.workflow.executor import RuntimeWorkflow
 from supsrc.state import RepositoryState, RepositoryStatus
 
 
@@ -279,5 +277,6 @@ class TestRuntimeWorkflow:
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
         assert "LLM provider failed" in repo_state.error_message
+
 
 # 🔼⚙️🔚

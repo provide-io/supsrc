@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -12,17 +12,17 @@ import shutil
 import subprocess
 from datetime import timedelta
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
 from supsrc.config import (
     GlobalConfig,
     InactivityRuleConfig,
     RepositoryConfig,
     SupsrcConfig,
+    load_config,
 )
-from supsrc.config import load_config
 from supsrc.tui.app import SupsrcTuiApp
 from tests.helpers.config_testing import (
     real_config_path,
@@ -134,7 +134,7 @@ def tui_with_real_config(real_config):
     mock_orchestrator.repo_states = {}
     app._orchestrator = mock_orchestrator
 
-    yield app, shutdown_event
+    return app, shutdown_event
 
 
 @pytest.fixture
@@ -217,5 +217,6 @@ def integration_test_context(parent_cwd, real_config, real_repos):
         "config": load_config(real_config),
         "repositories": real_repos,
     }
+
 
 # 🔼⚙️🔚

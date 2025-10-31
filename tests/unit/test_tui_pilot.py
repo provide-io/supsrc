@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from provide.testkit.mocking import AsyncMock, Mock
 
 import pytest
+from provide.testkit.mocking import AsyncMock, Mock
 
 pytestmark = pytest.mark.skip(reason="TUI in active development")
 from textual.widgets import DataTable
@@ -413,5 +413,6 @@ class TestTuiPilotErrorHandling:
             # App should handle all events without crashing
             # event_collector should have been called multiple times
             assert app.event_collector.emit.call_count >= 5
+
 
 # 🔼⚙️🔚

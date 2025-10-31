@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -8,11 +8,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
-from supsrc.events.buffer import BufferedFileChangeEvent, EventBuffer
+from supsrc.events.buffer import BufferedFileChangeEvent
 from supsrc.events.buffer.converters import create_single_event_group
 from supsrc.events.buffer.grouping import group_events_simple
 from supsrc.events.monitor import FileChangeEvent
@@ -222,5 +222,6 @@ class TestEventBufferGrouping:
         assert "file2.py" in formatted
         assert "modified" in formatted
         assert "✏️" in formatted  # Uses operation emoji, not batch emoji
+
 
 # 🔼⚙️🔚

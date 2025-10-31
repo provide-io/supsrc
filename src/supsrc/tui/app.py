@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -397,10 +397,7 @@ class SupsrcTuiApp(TuiAppBase):
         if self._event_feed:
             from rich.text import Text
 
-            self._event_feed.write(
-                Text.from_markup(
-                )
-            )
+            self._event_feed.write(Text.from_markup())
 
         # Emit test events using the event system
         from pathlib import Path

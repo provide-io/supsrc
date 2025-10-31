@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -7,10 +7,9 @@
 
 import asyncio
 from pathlib import Path
-from provide.testkit.mocking import AsyncMock, Mock, PropertyMock, patch
 
 import pytest
-from textual.widgets import DataTable
+from provide.testkit.mocking import AsyncMock, Mock, PropertyMock, patch
 from textual.worker import Worker, WorkerState
 
 from supsrc.state import RepositoryState
@@ -500,5 +499,6 @@ class TestTuiAccessibility:
         tui_app.action_hide_detail_pane()
 
         mock_table.focus.assert_called_once()
+
 
 # 🔼⚙️🔚

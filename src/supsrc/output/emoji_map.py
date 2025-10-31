@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -107,5 +107,6 @@ class EmojiMapper:
         source = getattr(event, "source", "unknown")
         emoji = EmojiMapper.SOURCE_EMOJIS.get(source, "📝")
         return EmojiMapper.ASCII_FALLBACKS.get(emoji, "[?]") if use_ascii else emoji
+
 
 # 🔼⚙️🔚

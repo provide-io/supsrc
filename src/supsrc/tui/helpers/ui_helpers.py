@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -33,12 +33,16 @@ class UIHelperMixin:
                     repo_state.update_timer_countdown()
                     if repo_state.timer_seconds_left is not None:
                         active_timers += 1
-                        log.warning(
-                            f"ACTIVE TIMER: {repo_state.repo_id} = {repo_state.timer_seconds_left}s"
+                        log.debug(
+                            "Active timer",
+                            repo_id=repo_state.repo_id,
+                            timer_seconds_left=repo_state.timer_seconds_left,
                         )
 
-                log.warning(
-                    f"UPDATED {len(self._orchestrator.repo_states)} repo states, {active_timers} active timers"
+                log.debug(
+                    "Updated repo states",
+                    repo_count=len(self._orchestrator.repo_states),
+                    active_timers=active_timers,
                 )
 
                 # Post full StateUpdate to ensure timers update properly
@@ -47,10 +51,13 @@ class UIHelperMixin:
 
                     self.post_message(StateUpdate(self._orchestrator.repo_states))
             else:
-                log.warning("NO ORCHESTRATOR AVAILABLE FOR COUNTDOWN UPDATE")
+                log.debug("No orchestrator available for countdown update")
         except Exception as e:
-            # Use warning level to make errors more visible during debugging
-            log.warning(f"ERROR UPDATING COUNTDOWN DISPLAY: {e}", exc_info=True)
+            log.error(
+                "Error updating countdown display",
+                error=str(e),
+                exc_info=True,
+            )
 
     def _update_timer_columns_only(self) -> None:
         """Update only the timer column for all repositories to avoid cursor jumping."""
@@ -78,8 +85,10 @@ class UIHelperMixin:
                             )
                         except Exception as e:
                             # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
-                            log.warning(
-                                f"Failed to update timer cell for {repo_id_str}, skipping update: {e}",
+                            log.debug(
+                                "Failed to update timer cell, skipping update",
+                                repo_id=str(repo_id_str),
+                                error=str(e),
                                 exc_info=True,
                             )
                             # Continue to next repository instead of breaking/posting StateUpdate
@@ -87,7 +96,11 @@ class UIHelperMixin:
 
         except Exception as e:
             # Log the error but DO NOT fall back to StateUpdate to prevent cursor jumping
-            log.warning(f"Error in timer column update, skipping timer updates: {e}", exc_info=True)
+            log.debug(
+                "Error in timer column update, skipping timer updates",
+                error=str(e),
+                exc_info=True,
+            )
 
     def _update_sub_title(self, text: str) -> None:
         """Update subtitle safely."""
@@ -108,5 +121,6 @@ class UIHelperMixin:
             "SUCCESS": "bold green",
         }
         return styles.get(level, "white")
+
 
 # 🔼⚙️🔚

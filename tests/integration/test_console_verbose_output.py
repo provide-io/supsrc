@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -11,10 +11,8 @@ details for atomic operations, batch operations, and git events."""
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
 from io import StringIO
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
 import pytest
 from rich.console import Console
@@ -417,5 +415,6 @@ class TestConsoleVerboseOutput:
         assert "━" in output_text or "=" in output_text or "-" in output_text, (
             "Should have visual separators"
         )
+
 
 # 🔼⚙️🔚

@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -10,9 +10,8 @@ from __future__ import annotations
 from datetime import datetime
 from io import StringIO
 from pathlib import Path
-from provide.testkit.mocking import Mock
 
-import pytest
+from provide.testkit.mocking import Mock
 from rich.console import Console
 
 from supsrc.engines.git.events import GitCommitEvent, GitPushEvent
@@ -570,5 +569,6 @@ class TestConsoleEventFormatter:
         assert "📝" not in output_text
         assert "🚀" not in output_text
         assert "👁️" not in output_text
+
 
 # 🔼⚙️🔚

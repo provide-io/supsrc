@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -73,5 +73,6 @@ def format_last_commit_time(last_change_time, threshold_hours=3):
             return f"{hours}h {minutes}m ago"
         else:
             return f"{hours}h ago"
+
 
 # 🔼⚙️🔚

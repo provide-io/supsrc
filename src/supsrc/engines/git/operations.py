@@ -1,4 +1,4 @@
-# 
+#
 # SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -140,5 +140,6 @@ class GitOperationsHelper:
         except Exception as e:
             self._log.exception("Unexpected error getting commit history")
             return [f"Unexpected error fetching history: {e}"]
+
 
 # 🔼⚙️🔚
