@@ -1,14 +1,10 @@
-# supsrc/protocols.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
-# supsrc/protocols.py
 #
-"""
-Defines the runtime protocols for supsrc components like Rules, Engines,
-and standard result objects. Uses concrete attrs classes for results.
-"""
+
+"""Defines the runtime protocols for supsrc components like Rules, Engines,
+and standard result objects. Uses concrete attrs classes for results."""
 
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -177,6 +173,4 @@ class RepositoryEngine(Protocol):
         log.warning("get_summary called on base protocol, implementation needed.")
         return None
 
-
-# 🔼⚙️
-# 🔼⚙️📡🪄
+# 🔼⚙️🔚

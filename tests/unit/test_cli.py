@@ -1,9 +1,9 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-# tests/unit/test_cli.py
-#
-"""
-Comprehensive tests for CLI functionality.
-"""
+
+"""Comprehensive tests for CLI functionality."""
 
 import subprocess
 import tempfile
@@ -286,5 +286,4 @@ class TestCLIUtilities:
         result = runner.invoke(cli, ["--log-level", "DEBUG", "config", "show", "--help"])
         assert result.exit_code == 0
 
-
-# 🧪🖥️
+# 🔼⚙️🔚

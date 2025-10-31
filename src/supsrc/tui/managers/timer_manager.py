@@ -1,11 +1,9 @@
-# supsrc/tui/managers/timer_manager.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Timer management for the TUI application.
-"""
+"""Timer management for the TUI application."""
 
 from __future__ import annotations
 
@@ -67,5 +65,4 @@ class TimerManager:
             self.stop_timer(name)
         self._logger.debug("All timers stopped", count=len(timer_names))
 
-
-# 🔼⚙️📋🪄
+# 🔼⚙️🔚

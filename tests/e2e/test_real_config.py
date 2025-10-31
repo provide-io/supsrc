@@ -1,11 +1,12 @@
-# tests/e2e/test_real_config.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-End-to-end tests using real configuration from parent directory.
+"""End-to-end tests using real configuration from parent directory.
 
 These tests run supsrc with the actual supsrc.conf file from the
-provide-io directory, testing real-world scenarios and workflows.
-"""
+provide-io directory, testing real-world scenarios and workflows."""
 
 from __future__ import annotations
 
@@ -328,3 +329,5 @@ class TestRealConfigPerformance:
 
                 # Should have processed events
                 assert app.event_collector.emit.call_count > 0
+
+# 🔼⚙️🔚

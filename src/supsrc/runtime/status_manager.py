@@ -1,12 +1,10 @@
-# supsrc/runtime/status_manager.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Status management functionality extracted from orchestrator to reduce file size
-and provide dedicated repository status refresh capabilities.
-"""
+"""Status management functionality extracted from orchestrator to reduce file size
+and provide dedicated repository status refresh capabilities."""
 
 from __future__ import annotations
 
@@ -147,5 +145,4 @@ class StatusManager:
 
         return False
 
-
-# 🔼⚙️📋🪄
+# 🔼⚙️🔚

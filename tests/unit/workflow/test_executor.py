@@ -1,3 +1,8 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
 """Unit tests for RuntimeWorkflow executor."""
 
 from __future__ import annotations
@@ -274,3 +279,5 @@ class TestRuntimeWorkflow:
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.status == RepositoryStatus.ERROR
         assert "LLM provider failed" in repo_state.error_message
+
+# 🔼⚙️🔚

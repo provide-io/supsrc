@@ -1,11 +1,9 @@
-# supsrc/tui/handlers/repo_actions.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Repository action handler methods for the TUI application.
-"""
+"""Repository action handler methods for the TUI application."""
 
 from __future__ import annotations
 
@@ -137,7 +135,6 @@ class RepoActionHandlerMixin:
         self._orchestrator.set_repo_refreshing_status(repo_id, False)
         if success:
             self.post_message(
-                LogMessageUpdate(None, "INFO", f"✅ Status for '{repo_id}' refreshed.")
             )
         else:
             self.post_message(
@@ -169,5 +166,4 @@ class RepoActionHandlerMixin:
                 LogMessageUpdate(None, "ERROR", f"Failed to resume monitoring for '{repo_id}'.")
             )
 
-
-# 🔼⚙️🔄🪄
+# 🔼⚙️🔚

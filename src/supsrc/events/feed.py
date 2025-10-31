@@ -1,11 +1,9 @@
-# supsrc/events/feed.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-EventFeed widget for displaying events in the TUI.
-"""
+"""EventFeed widget for displaying events in the TUI."""
 
 from __future__ import annotations
 
@@ -99,5 +97,4 @@ class EventFeed(RichLog):
         """Handle end key for scrolling."""
         self.scroll_end()
 
-
-# 🔼⚙️📨🪄
+# 🔼⚙️🔚

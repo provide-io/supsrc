@@ -1,3 +1,8 @@
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
 """Tests for directory management utilities."""
 
 from __future__ import annotations
@@ -144,3 +149,5 @@ class TestSupsrcDirectories:
         # New directories should also exist
         assert result["local_dir"].exists()
         assert result["logs_dir"].exists()
+
+# 🔼⚙️🔚

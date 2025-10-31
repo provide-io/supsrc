@@ -1,7 +1,9 @@
-# supsrc/cli/watch_cmds.py
-#
-# SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+
+"""TODO: Add module docstring."""
 
 import asyncio
 import contextlib
@@ -258,6 +260,4 @@ def watch_cli(
     if exit_code != 0:
         sys.exit(exit_code)
 
-
-# 🔼⚙️
-# 🔼⚙️🖥️🪄
+# 🔼⚙️🔚

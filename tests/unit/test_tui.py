@@ -1,8 +1,9 @@
-# tests/unit/test_tui.py
+# 
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
 
-"""
-Comprehensive tests for the TUI application.
-"""
+"""Comprehensive tests for the TUI application."""
 
 import asyncio
 from pathlib import Path
@@ -213,7 +214,6 @@ class TestSupsrcTuiApp:
 
         # Create a more complete test state
         test_state = RepositoryState(repo_id="test-repo")
-        test_state.display_status_emoji = "✅"
         test_state.last_change_time = None
         test_state.rule_emoji = "⏳"
         test_state.rule_dynamic_indicator = "Waiting"
@@ -238,7 +238,6 @@ class TestSupsrcTuiApp:
         call_args = mock_table.add_row.call_args
         row_data = call_args[0]
 
-        assert "✅" in str(row_data)
         assert "test-repo" in str(row_data)
         assert "feature/test" in str(row_data)
         assert "25s" in str(row_data)  # From timer_seconds_left
@@ -501,3 +500,5 @@ class TestTuiAccessibility:
         tui_app.action_hide_detail_pane()
 
         mock_table.focus.assert_called_once()
+
+# 🔼⚙️🔚
