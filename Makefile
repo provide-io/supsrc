@@ -1,5 +1,8 @@
 # Makefile for supsrc development
 
+# Include shared documentation targets from provide-foundry
+include ../provide-foundry/Makefile.docs.inc
+
 .PHONY: help setup test lint typecheck coverage clean build all test-unit test-integration test-workflow run-watch run-tui
 
 # Default target
