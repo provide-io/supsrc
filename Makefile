@@ -1,9 +1,6 @@
 # Makefile for supsrc development
 
-# Include shared documentation targets from provide-foundry
-include ../provide-foundry/Makefile.docs.inc
-
-.PHONY: help setup test lint typecheck coverage clean build all test-unit test-integration test-workflow run-watch run-tui
+.PHONY: help setup test lint typecheck coverage clean build all test-unit test-integration test-workflow run-watch run-tui docs-setup docs-build docs-serve docs-clean
 
 # Default target
 help:
@@ -110,3 +107,15 @@ run-watch:
 run-tui:
 	@echo "Starting supsrc with TUI..."
 	source .venv/bin/activate && supsrc sui
+# Documentation targets
+docs-setup:
+	@python -c "from provide.foundry.config import extract_base_mkdocs; from pathlib import Path; extract_base_mkdocs(Path('.'))"
+
+docs-build: docs-setup
+	@mkdocs build
+
+docs-serve: docs-setup
+	@mkdocs serve
+
+docs-clean:
+	@rm -rf site .provide
