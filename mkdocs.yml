@@ -42,4 +42,6 @@ theme:
 
 nav:
   - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
   - API Reference: api/index.md
