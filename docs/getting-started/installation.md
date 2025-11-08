@@ -442,14 +442,14 @@ If you encounter issues:
 
 ### Quick Start
 
-1. **[Quick Start Guide](quick-start.md)** - Set up your first monitored repository
-2. **[Configuration Guide](../user-guide/configuration.md)** - Learn about all configuration options
-3. **[Rule Types](../user-guide/rules.md)** - Understand inactivity, save count, and manual rules
+1. **[Quick Start Guide](quick-start/)** - Set up your first monitored repository
+2. **[Configuration Guide](../user-guide/configuration/)** - Learn about all configuration options
+3. **[Rule Types](../user-guide/rules/)** - Understand inactivity, save count, and manual rules
 
 ### Advanced Topics
 
-- **[Event Buffering](../user-guide/buffering.md)** - Understanding buffering modes and atomic operation detection
-- **[TUI Interface](../user-guide/tui.md)** - Using the interactive Terminal UI
-- **[Development Guide](../development/contributing.md)** - Contributing to SupSrc
+- **[Event Buffering](../user-guide/buffering/)** - Understanding buffering modes and atomic operation detection
+- **[TUI Interface](../user-guide/tui/)** - Using the interactive Terminal UI
+- **[Development Guide](../development/contributing/)** - Contributing to SupSrc
 
-Ready to automate your Git workflow? Start with the [Quick Start Guide](quick-start.md)!
+Ready to automate your Git workflow? Start with the [Quick Start Guide](quick-start/)!

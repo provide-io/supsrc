@@ -137,7 +137,7 @@ git.commit(message)
 
 ## API Reference
 
-For complete API documentation, see the [API Reference](api/index.md).
+For complete API documentation, see the [API Reference](api/index/).
 
 ## Core Features
 
