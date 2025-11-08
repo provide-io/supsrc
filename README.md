@@ -1,17 +1,14 @@
-<div align="center">
-
 # 🔼⚙️ `supsrc`
+
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![uv](https://img.shields.io/badge/uv-package_manager-FF6B35.svg)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![CI](https://github.com/provide-io/supsrc/actions/workflows/ci.yml/badge.svg)](https://github.com/provide-io/supsrc/actions)
 
 **Keep your work safe, effortlessly.**
 
 Automated Git commit/push utility based on filesystem events and rules.
-
-[![PyPI Version](https://img.shields.io/pypi/v/supsrc?style=flat-square)](https://pypi.org/project/supsrc/) <!-- Placeholder -->
-[![Python Versions](https://img.shields.io/pypi/pyversions/supsrc?style=flat-square)](https://pypi.org/project/supsrc/)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
-[![Package Manager: uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/refs/heads/main/assets/badge/v0.json&style=flat-square)](https://github.com/astral-sh/uv)
-[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
-[![Powered by Structlog](https://img.shields.io/badge/powered%20by-structlog-lightgrey.svg?style=flat-square)](https://www.structlog.org/)
 
 ---
 
