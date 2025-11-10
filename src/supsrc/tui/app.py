@@ -13,6 +13,7 @@ from provide.foundation.logger import get_logger
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical
 from textual.reactive import var
+from textual.worker import Worker
 from textual.widgets import DataTable, Footer, Header, Label, TabbedContent, TabPane
 
 from supsrc.events.collector import EventCollector
@@ -181,8 +182,8 @@ class SupsrcTuiApp(TuiAppBase):
         self._cli_shutdown_event = cli_shutdown_event
         self._shutdown_event = asyncio.Event()
         self._orchestrator: WatchOrchestrator | None = None  # type: ignore[assignment]
-        self._worker = None
-        self._countdown_task = None
+        self._worker: Worker[None] | None = None
+        self._countdown_task: Worker[None] | None = None
         self._is_shutting_down = False
         self.timer_manager: TimerManager | None = None
         self._timer_manager = TimerManager(self)
@@ -299,7 +300,7 @@ class SupsrcTuiApp(TuiAppBase):
                 log.error("Failed to create countdown task", error=str(e))
 
             # Set the main worker
-            self._worker = self.run_worker(  # type: ignore[assignment]
+            self._worker = self.run_worker(
                 self._run_orchestrator(),
                 thread=False,
                 group="orchestrator_runner",
@@ -355,6 +356,11 @@ class SupsrcTuiApp(TuiAppBase):
             if self._orchestrator and hasattr(self._orchestrator, "repo_states"):
                 repo_state = self._orchestrator.repo_states.get(repo_id)
                 if repo_state:
+                    last_updated = getattr(repo_state, "last_updated", None)
+                    last_updated_display = (
+                        last_updated.strftime("%Y-%m-%d %H:%M:%S") if last_updated else "never"
+                    )
+                    rule_name = getattr(repo_state, "rule_name", None) or "default"
                     details_text = f"""📍 Repository: {repo_id}
 🌿 Branch: {repo_state.current_branch or "unknown"}
 📊 Status: {repo_state.display_status_emoji} {repo_state.status.name}
@@ -363,9 +369,9 @@ class SupsrcTuiApp(TuiAppBase):
 \u2796 Deleted: {repo_state.deleted_files}
 ✏️ Modified: {repo_state.modified_files}
 ⏱️ Timer: {repo_state.timer_seconds_left}s remaining
-🔄 Last updated: {repo_state.last_updated.strftime("%Y-%m-%d %H:%M:%S") if repo_state.last_updated else "never"}
+🔄 Last updated: {last_updated_display}
 
-🎯 Rule: {repo_state.rule_name or "default"}
+🎯 Rule: {rule_name}
 ⏸️ Paused: {"Yes" if repo_state.is_paused else "No"}
 ⏹️ Stopped: {"Yes" if repo_state.is_stopped else "No"}"""
                 else:
@@ -376,7 +382,7 @@ class SupsrcTuiApp(TuiAppBase):
             details_label.update(details_text)
 
             # Switch to the repo details tab
-            tabbed_content = self.query_one(TabbedContent)
+            tabbed_content = self.query_one("TabbedContent", TabbedContent)
             tabbed_content.active = "details-tab"
 
         except Exception as e:
@@ -393,12 +399,6 @@ class SupsrcTuiApp(TuiAppBase):
         import datetime
 
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-
-        # Add direct test message to the feed first
-        if self._event_feed:
-            from rich.text import Text
-
-            self._event_feed.write(Text.from_markup())
 
         # Emit test events using the event system
         from pathlib import Path
@@ -423,6 +423,7 @@ class SupsrcTuiApp(TuiAppBase):
                 commit_hash="abc123",
                 branch="main",
                 files_changed=3,
+                repo_id="test-repo",
             ),
             ErrorEvent(
                 description=f"Test error message {timestamp}",
