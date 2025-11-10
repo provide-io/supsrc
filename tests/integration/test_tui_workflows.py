@@ -15,12 +15,12 @@ from pathlib import Path
 
 import pytest
 from provide.testkit.mocking import AsyncMock, Mock
-
-pytestmark = pytest.mark.skip(reason="TUI in active development")
 from textual.widgets import DataTable, TabbedContent
 
 from supsrc.state import RepositoryState
 from supsrc.tui.app import SupsrcTuiApp
+
+pytestmark = pytest.mark.skip(reason="TUI in active development")
 
 
 @pytest.fixture
