@@ -57,6 +57,7 @@ class RuntimeWorkflow:
         self._workflow_steps = WorkflowSteps(
             config, repo_states, repo_engines, tui, self._emit_event
         )
+        self._background_tasks: set[asyncio.Task[None]] = set()
         log.debug("RuntimeWorkflow initialized.")
 
     def _emit_event(self, event) -> None:
@@ -117,9 +118,11 @@ class RuntimeWorkflow:
                 # Handle special case of external commit detection
                 if repo_state.status == RepositoryStatus.EXTERNAL_COMMIT_DETECTED:
                     # Reset after brief pause to show the status
-                    _reset_task = asyncio.create_task(
+                    reset_task = asyncio.create_task(
                         self._delayed_reset_after_external_commit(repo_state)
                     )
+                    self._background_tasks.add(reset_task)
+                    reset_task.add_done_callback(self._background_tasks.discard)
                 return
 
             # 2. Staging
