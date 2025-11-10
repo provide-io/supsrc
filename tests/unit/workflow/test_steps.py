@@ -41,7 +41,7 @@ class TestWorkflowSteps:
 
     async def test_execute_status_check_success(self, workflow_steps, mock_dependencies):
         """Test successful status check execution."""
-        _, repo_states, repo_engines, tui, _ = mock_dependencies
+        _, repo_states, repo_engines, _, _ = mock_dependencies
         repo_id = "test_repo"
 
         # Setup mocks
@@ -202,7 +202,7 @@ class TestWorkflowSteps:
 
     async def test_execute_staging_failure(self, workflow_steps, mock_dependencies):
         """Test staging execution with failure."""
-        _, repo_states, repo_engines, tui, emit_event = mock_dependencies
+        _, repo_states, repo_engines, _, emit_event = mock_dependencies
         repo_id = "test_repo"
 
         # Setup mocks
