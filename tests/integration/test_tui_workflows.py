@@ -117,7 +117,7 @@ class TestTuiUserWorkflows:
     ) -> None:
         """Test a complete workflow of monitoring repositories."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
-        mock_event_collector, mock_orchestrator = mock_app_setup(app)
+        mock_app_setup(app)
 
         async with app.run_test() as pilot:
             # 1. Start with empty app
