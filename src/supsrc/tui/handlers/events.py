@@ -148,21 +148,6 @@ class EventHandlerMixin:
                     rule_display=repr(rule_display),
                 )
 
-                # Format file statistics with color based on commit status
-                # Show loading indicator for repos that haven't been initialized yet
-                if (
-                    state.total_files == 0
-                    and not state.has_uncommitted_changes
-                    and state.status == RepositoryStatus.IDLE
-                ):
-                    # Likely still loading
-                    total_files_display = "[dim]...[/dim]"
-                elif state.total_files == 0:
-                    # Show a question mark for 0 files after loading is complete
-                    total_files_display = "[bold red]?[/bold red]"
-                else:
-                    total_files_display = str(state.total_files)
-
                 # Format file statistics: current (bright) when changes exist, previous (dim) otherwise
                 changed_files_display = self._format_change_display(
                     state.changed_files,
