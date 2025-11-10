@@ -96,12 +96,12 @@ class EventHandlerMixin:
                     cursor_coordinate = table.coordinate_to_cell_key(
                         Coordinate(row=table.cursor_row, column=0)
                     )
-                    cursor_row_key = cursor_coordinate.row_key
+                    cursor_row_key = cursor_coordinate.row_key.value
                     log.debug("Saved cursor position", row_key=cursor_row_key)
             except Exception:
                 pass
 
-            current_keys = {str(row_key) for row_key in table_any.rows}
+            current_keys = {row_key.value for row_key in table_any.rows}
             incoming_keys = set(message.repo_states.keys())
 
             # Remove obsolete rows
@@ -262,7 +262,7 @@ class EventHandlerMixin:
                     table.add_row(*row_data, key=repo_id_str)
 
             # Restore cursor position using row key
-            row_keys_after = {str(row_key) for row_key in table.rows}
+            row_keys_after = {row_key.value for row_key in table.rows}
             if cursor_row_key is not None:
                 try:
                     # Find the row index for the saved row key
