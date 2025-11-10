@@ -137,7 +137,7 @@ class TestTestRunnerSync:
             mock_process.returncode = 0
             mock_subprocess.return_value = mock_process
 
-            exit_code, stdout, stderr = await TestRunner.run_tests(None, workdir)
+            exit_code, stdout, _stderr = await TestRunner.run_tests(None, workdir)
 
             assert exit_code == 0
             assert stdout == stdout_output
@@ -170,7 +170,7 @@ class TestTestRunnerSync:
             mock_process.returncode = None  # Simulate None returncode
             mock_subprocess.return_value = mock_process
 
-            exit_code, stdout, stderr = await TestRunner.run_tests(command, workdir)
+            exit_code, _, _ = await TestRunner.run_tests(command, workdir)
 
             assert exit_code == 0  # Should default to 0 when returncode is None
 
