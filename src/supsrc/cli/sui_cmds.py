@@ -5,11 +5,14 @@
 
 """TODO: Add module docstring."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import signal
 import sys
 from pathlib import Path
+from typing import Protocol
 
 import click
 from provide.foundation.cli.decorators import logging_options
@@ -19,13 +22,22 @@ from structlog.typing import FilteringBoundLogger as StructLogger
 from supsrc.config import load_config
 from supsrc.utils.directories import SupsrcDirectories
 
+
+class SupsrcTuiAppProtocol(Protocol):
+    def __init__(self, *, config_path: Path, cli_shutdown_event: asyncio.Event) -> None: ...
+
+    def run(self) -> None: ...
+
+
 try:
-    from supsrc.tui.app import SupsrcTuiApp
+    from supsrc.tui.app import SupsrcTuiApp as SupsrcTuiAppImpl
 
     TEXTUAL_AVAILABLE = True
 except ImportError:
     TEXTUAL_AVAILABLE = False
-    SupsrcTuiApp = None
+    SupsrcTuiAppImpl = None
+
+SupsrcTuiApp: type[SupsrcTuiAppProtocol] | None = SupsrcTuiAppImpl
 
 log: StructLogger = get_logger(__name__)
 
@@ -47,7 +59,7 @@ async def _handle_signal_async(sig: int):
 @click.option(
     "-c",
     "--config-path",
-    type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path),
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, path_type=str),
     default=Path("supsrc.conf"),
     show_default=True,
     envvar="SUPSRC_CONF",
@@ -56,7 +68,7 @@ async def _handle_signal_async(sig: int):
 )
 @logging_options
 @click.pass_context
-def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
+def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
     """Supsrc User Interface - Interactive dashboard for monitoring repositories."""
     import os
 
@@ -66,11 +78,12 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
         sys.stderr = dev_null
 
         try:
+            config_path = Path(config_path)
             # Determine log file path
             log_file_path = Path("/tmp/supsrc_tui_debug.log")
             try:
-                config = load_config(config_path)
-                for _repo_id, repo_config in config.repositories.items():
+                supsrc_config = load_config(config_path)
+                for _repo_id, repo_config in supsrc_config.repositories.items():
                     if repo_config.enabled and repo_config._path_valid:
                         log_file_path = (
                             SupsrcDirectories.get_log_dir(repo_config.path) / "supsrc_tui_debug.log"
@@ -99,7 +112,7 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
 
             try:
                 base_config = TelemetryConfig.from_env()
-                config = evolve(
+                telemetry_config = evolve(
                     base_config,
                     service_name="supsrc",
                     logging=LoggingConfig(
@@ -111,7 +124,7 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
                     ),
                 )
                 hub = get_hub()
-                hub.initialize_foundation(config)
+                hub.initialize_foundation(telemetry_config)
 
                 # Register eventset
                 try:
