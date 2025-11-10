@@ -73,8 +73,7 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
                 for _repo_id, repo_config in config.repositories.items():
                     if repo_config.enabled and repo_config._path_valid:
                         log_file_path = (
-                            SupsrcDirectories.get_log_dir(repo_config.path)
-                            / "supsrc_tui_debug.log"
+                            SupsrcDirectories.get_log_dir(repo_config.path) / "supsrc_tui_debug.log"
                         )
                         break
             except Exception:
