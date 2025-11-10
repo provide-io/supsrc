@@ -6,6 +6,7 @@
 """Debug script to monitor status changes and detect red X appearances.
 Run this to help identify when and why the red X appears."""
 
+import logging
 import sys
 from pathlib import Path
 
@@ -14,20 +15,24 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from supsrc.state.runtime import STATUS_EMOJI_MAP
 
+logger = logging.getLogger(__name__)
+
 
 def monitor_status_changes():
     """Print all possible status transitions to help debug."""
-    print("🔍 Debugging Status Emojis:")
-    print("=" * 50)
+    logging.basicConfig(level=logging.INFO)
+    logger.info("🔍 Debugging Status Emojis:")
+    logger.info("=" * 50)
 
     for status, emoji in STATUS_EMOJI_MAP.items():
-        print(f"{indicator} {status.name:25} -> {emoji}")
+        logger.info("%s %s -> %s", emoji, f"{status.name:25}", emoji)
 
-    print("\n📋 When you see the red X, check the logs for:")
-    print("- 'Status check failed during action'")
-    print("- 'Repository is clean during action - external commit detected'")
-    print("- Any ERROR status transitions")
-    print("- The specific RepositoryStatus that triggered the ❌")
+    logger.info("")
+    logger.info("📋 When you see the red X, check the logs for:")
+    logger.info("- 'Status check failed during action'")
+    logger.info("- 'Repository is clean during action - external commit detected'")
+    logger.info("- Any ERROR status transitions")
+    logger.info("- The specific RepositoryStatus that triggered the ❌")
 
 
 if __name__ == "__main__":
