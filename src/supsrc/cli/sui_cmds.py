@@ -160,12 +160,15 @@ def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
             except Exception:
                 pass
 
+            log.info("Initializing interactive dashboard...", config_path=str(config_path))
             # Run the TUI app (stderr still suppressed)
             app = SupsrcTuiApp(config_path=config_path, cli_shutdown_event=_shutdown_requested)
             app.run()
 
         except KeyboardInterrupt:
-            pass
+            sys.stderr = _original_stderr
+            click.echo("\nAborted by user.", err=True)
+            ctx.exit(1)
         except Exception as e:
             sys.stderr = _original_stderr
             click.echo(f"\nAn error occurred: {e}", err=True)
