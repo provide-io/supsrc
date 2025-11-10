@@ -14,7 +14,6 @@ from textual.widgets import DataTable
 from textual.widgets import Log as TextualLog
 from textual.worker import Worker, WorkerState
 
-from supsrc.state import RepositoryStatus
 from supsrc.tui.messages import LogMessageUpdate, RepoDetailUpdate, StateUpdate
 from supsrc.tui.utils import format_last_commit_time, get_countdown_display
 
