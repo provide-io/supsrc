@@ -139,7 +139,11 @@ class RuntimeWorkflow:
 
             # 3. LLM Pipeline (if enabled)
             llm_config = repo_config.llm
-            if llm_config and llm_config.enabled and LLM_AVAILABLE:
+            if llm_config and llm_config.enabled:
+                if not LLM_AVAILABLE:
+                    await self._handle_llm_provider_failure(repo_id, repo_state)
+                    return
+
                 llm_provider = self._llm_manager.get_llm_provider(llm_config)
                 if not llm_provider:
                     await self._handle_llm_provider_failure(repo_id, repo_state)
