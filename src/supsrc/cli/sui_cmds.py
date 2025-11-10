@@ -8,11 +8,12 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import logging
 import signal
 import sys
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, cast
 
 import click
 from provide.foundation.cli.decorators import logging_options
@@ -30,14 +31,13 @@ class SupsrcTuiAppProtocol(Protocol):
 
 
 try:
-    from supsrc.tui.app import SupsrcTuiApp as SupsrcTuiAppImpl
-
-    TEXTUAL_AVAILABLE = True
+    _tui_module = importlib.import_module("supsrc.tui.app")
 except ImportError:
+    SupsrcTuiApp: type[SupsrcTuiAppProtocol] | None = None
     TEXTUAL_AVAILABLE = False
-    SupsrcTuiAppImpl = None
-
-SupsrcTuiApp: type[SupsrcTuiAppProtocol] | None = SupsrcTuiAppImpl
+else:
+    SupsrcTuiApp = cast(type[SupsrcTuiAppProtocol], _tui_module.SupsrcTuiApp)
+    TEXTUAL_AVAILABLE = True
 
 log: StructLogger = get_logger(__name__)
 
