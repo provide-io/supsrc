@@ -62,102 +62,104 @@ def sui_cli(ctx: click.Context, config_path: Path, **kwargs):
 
     # CRITICAL: Suppress stderr immediately to prevent any initialization logs
     _original_stderr = sys.stderr
-    _dev_null = open(os.devnull, "w")
-    sys.stderr = _dev_null
-
-    try:
-        # Determine log file path
-        log_file_path = Path("/tmp/supsrc_tui_debug.log")
-        try:
-            config = load_config(config_path)
-            for _repo_id, repo_config in config.repositories.items():
-                if repo_config.enabled and repo_config._path_valid:
-                    log_file_path = (
-                        SupsrcDirectories.get_log_dir(repo_config.path) / "supsrc_tui_debug.log"
-                    )
-                    break
-        except Exception:
-            pass
-
-        # Check for TUI dependencies
-        if not TEXTUAL_AVAILABLE or SupsrcTuiApp is None:
-            sys.stderr = _original_stderr
-            log.error("TUI dependencies not installed for 'sui' command.")
-            click.echo(
-                "Error: The 'sui' command requires the 'textual' library, provided by the 'tui' extra.",
-                err=True,
-            )
-            click.echo("Hint: pip install 'supsrc[tui]' or uv pip install 'supsrc[tui]'", err=True)
-            ctx.exit(1)
-            return
-
-        # Set up file logging (logs still suppressed from stderr)
-        from attrs import evolve
-        from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
+    with open(os.devnull, "w") as dev_null:
+        sys.stderr = dev_null
 
         try:
-            base_config = TelemetryConfig.from_env()
-            config = evolve(
-                base_config,
-                service_name="supsrc",
-                logging=LoggingConfig(
-                    console_formatter="json",
-                    default_level="TRACE",
-                    das_emoji_prefix_enabled=True,
-                    logger_name_emoji_prefix_enabled=True,
-                    log_file=log_file_path,
-                ),
-            )
-            hub = get_hub()
-            hub.initialize_foundation(config)
-
-            # Register eventset
+            # Determine log file path
+            log_file_path = Path("/tmp/supsrc_tui_debug.log")
             try:
-                from provide.foundation.eventsets.registry import register_event_set
-
-                from supsrc.telemetry import SUPSRC_EVENT_SET
-
-                register_event_set(SUPSRC_EVENT_SET)
+                config = load_config(config_path)
+                for _repo_id, repo_config in config.repositories.items():
+                    if repo_config.enabled and repo_config._path_valid:
+                        log_file_path = (
+                            SupsrcDirectories.get_log_dir(repo_config.path)
+                            / "supsrc_tui_debug.log"
+                        )
+                        break
             except Exception:
                 pass
 
-            # Suppress all logging to prevent TUI flicker during initialization
-            # Set root logger to CRITICAL to suppress everything except critical errors
-            root_logger = logging.getLogger()
-            root_logger.setLevel(logging.CRITICAL)
+            # Check for TUI dependencies
+            if not TEXTUAL_AVAILABLE or SupsrcTuiApp is None:
+                sys.stderr = _original_stderr
+                log.error("TUI dependencies not installed for 'sui' command.")
+                click.echo(
+                    "Error: The 'sui' command requires the 'textual' library, provided by the 'tui' extra.",
+                    err=True,
+                )
+                click.echo(
+                    "Hint: pip install 'supsrc[tui]' or uv pip install 'supsrc[tui]'", err=True
+                )
+                ctx.exit(1)
+                return
 
-            # Also set all known loggers to CRITICAL
-            for name in list(logging.root.manager.loggerDict.keys()):
-                logging.getLogger(name).setLevel(logging.CRITICAL)
+            # Set up file logging (logs still suppressed from stderr)
+            from attrs import evolve
+            from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
 
-            # Remove console handlers to prevent any output
-            for logger_obj in [root_logger] + [
-                logging.getLogger(name) for name in logging.root.manager.loggerDict
-            ]:
-                for handler in [
-                    h
-                    for h in logger_obj.handlers
-                    if isinstance(h, logging.StreamHandler)
-                    and not isinstance(h, logging.FileHandler)
+            try:
+                base_config = TelemetryConfig.from_env()
+                config = evolve(
+                    base_config,
+                    service_name="supsrc",
+                    logging=LoggingConfig(
+                        console_formatter="json",
+                        default_level="TRACE",
+                        das_emoji_prefix_enabled=True,
+                        logger_name_emoji_prefix_enabled=True,
+                        log_file=log_file_path,
+                    ),
+                )
+                hub = get_hub()
+                hub.initialize_foundation(config)
+
+                # Register eventset
+                try:
+                    from provide.foundation.eventsets.registry import register_event_set
+
+                    from supsrc.telemetry import SUPSRC_EVENT_SET
+
+                    register_event_set(SUPSRC_EVENT_SET)
+                except Exception:
+                    pass
+
+                # Suppress all logging to prevent TUI flicker during initialization
+                # Set root logger to CRITICAL to suppress everything except critical errors
+                root_logger = logging.getLogger()
+                root_logger.setLevel(logging.CRITICAL)
+
+                # Also set all known loggers to CRITICAL
+                for name in list(logging.root.manager.loggerDict.keys()):
+                    logging.getLogger(name).setLevel(logging.CRITICAL)
+
+                # Remove console handlers to prevent any output
+                for logger_obj in [root_logger] + [
+                    logging.getLogger(name) for name in logging.root.manager.loggerDict
                 ]:
-                    logger_obj.removeHandler(handler)
+                    for handler in [
+                        h
+                        for h in logger_obj.handlers
+                        if isinstance(h, logging.StreamHandler)
+                        and not isinstance(h, logging.FileHandler)
+                    ]:
+                        logger_obj.removeHandler(handler)
 
-        except Exception:
+            except Exception:
+                pass
+
+            # Run the TUI app (stderr still suppressed)
+            app = SupsrcTuiApp(config_path=config_path, cli_shutdown_event=_shutdown_requested)
+            app.run()
+
+        except KeyboardInterrupt:
             pass
-
-        # Run the TUI app (stderr still suppressed)
-        app = SupsrcTuiApp(config_path=config_path, cli_shutdown_event=_shutdown_requested)
-        app.run()
-
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        sys.stderr = _original_stderr
-        click.echo(f"\nAn error occurred: {e}", err=True)
-        ctx.exit(1)
-    finally:
-        sys.stderr = _original_stderr
-        _dev_null.close()
+        except Exception as e:
+            sys.stderr = _original_stderr
+            click.echo(f"\nAn error occurred: {e}", err=True)
+            ctx.exit(1)
+        finally:
+            sys.stderr = _original_stderr
 
 
 # 🔼⚙️🔚
