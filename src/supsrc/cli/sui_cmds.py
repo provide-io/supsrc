@@ -160,7 +160,8 @@ def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
             except Exception:
                 pass
 
-            log.info("Initializing interactive dashboard...", config_path=str(config_path))
+            log.info("Initializing interactive dashboard...")
+            log.debug("Launching interactive dashboard", config_path=str(config_path))
             # Run the TUI app (stderr still suppressed)
             app = SupsrcTuiApp(config_path=config_path, cli_shutdown_event=_shutdown_requested)
             app.run()
