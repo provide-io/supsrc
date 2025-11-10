@@ -15,8 +15,8 @@ from provide.foundation.logger import get_logger
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical
 from textual.reactive import var
-from textual.worker import Worker
 from textual.widgets import DataTable, Footer, Header, Label, TabbedContent, TabPane
+from textual.worker import Worker
 
 from supsrc.events.collector import EventCollector
 from supsrc.events.feed_table import EventFeedTable
