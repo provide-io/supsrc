@@ -68,14 +68,17 @@ class RuntimeWorkflow:
                 "Emitting event via workflow event collector", event_type=type(event).__name__
             )
             self.event_collector.emit(event)
+            return
+
         # Fall back to TUI event collector if available
-        elif hasattr(self.tui.app, "event_collector"):
+        tui_app = getattr(self.tui, "app", None)
+        event_collector = getattr(tui_app, "event_collector", None) if tui_app else None
+        if event_collector:
             log.debug("Emitting event via TUI app event collector", event_type=type(event).__name__)
-            self.tui.app.event_collector.emit(event)
-        else:
-            log.warning(
-                "No event collector available to emit event", event_type=type(event).__name__
-            )
+            event_collector.emit(event)
+            return
+
+        log.warning("No event collector available to emit event", event_type=type(event).__name__)
 
     async def _delayed_reset_after_external_commit(self, repo_state: RepositoryState) -> None:
         """Reset repository state after a brief delay to show external commit status."""
@@ -102,7 +105,7 @@ class RuntimeWorkflow:
         repo_engine = self.repo_engines.get(repo_id)
         action_log = log.bind(repo_id=repo_id)
 
-        if not all((repo_state, repo_config, repo_engine)):
+        if repo_state is None or repo_config is None or repo_engine is None:
             action_log.error("Action failed: Missing state, config, or engine.")
             self.tui.post_log_update(
                 repo_id, "ERROR", "Action failed: Missing state/config/engine."

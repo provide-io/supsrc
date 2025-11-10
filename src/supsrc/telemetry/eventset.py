@@ -49,7 +49,7 @@ SUPSRC_EVENT_SET = EventSet(
             name="git_operation",
             visual_markers={
                 "status": "🔍",
-                "stage": "➕",
+                "stage": "+",
                 "push": "🚀",
                 "pull": "⬇️",
                 "fetch": "📥",
