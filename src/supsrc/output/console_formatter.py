@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -279,7 +280,11 @@ class ConsoleEventFormatter:
         else:
             plain_text = self._strip_rich_markup(str(renderable))
 
-        self.console.print(plain_text, highlight=False, markup=False)
+        output_stream = getattr(self.console, "file", sys.stdout)
+        if not plain_text.endswith("\n"):
+            plain_text = f"{plain_text}\n"
+        output_stream.write(plain_text)
+        output_stream.flush()
 
 
 # 🔼⚙️🔚
