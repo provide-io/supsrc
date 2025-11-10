@@ -8,14 +8,19 @@
 from __future__ import annotations
 
 import contextlib
+from typing import TYPE_CHECKING
 
 from provide.foundation.logger import get_logger
 from textual.widgets import DataTable
 from textual.widgets import Log as TextualLog
 from textual.worker import Worker, WorkerState
 
+from supsrc.state import RepositoryStatus
 from supsrc.tui.messages import LogMessageUpdate, RepoDetailUpdate, StateUpdate
 from supsrc.tui.utils import format_last_commit_time, get_countdown_display
+
+if TYPE_CHECKING:
+    from supsrc.tui.app import SupsrcTuiApp
 
 log = get_logger(__name__)
 
@@ -34,7 +39,7 @@ class EventHandlerMixin:
         else:
             return "[dim]0[/dim]"
 
-    def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
+    def on_worker_state_changed(self: SupsrcTuiApp, event: Worker.StateChanged) -> None:
         """Handle worker state changes."""
         try:
             if event.state == WorkerState.SUCCESS and event.worker.group == "orchestrator_runner":
@@ -48,7 +53,7 @@ class EventHandlerMixin:
         except Exception as e:
             log.error("Error handling worker state change", error=str(e))
 
-    def on_state_update(self, message: StateUpdate) -> None:
+    def on_state_update(self: SupsrcTuiApp, message: StateUpdate) -> None:
         """Handle repository state updates."""
         log.info(
             "TUI on_state_update received",
@@ -147,6 +152,18 @@ class EventHandlerMixin:
                     rule_display=repr(rule_display),
                 )
 
+                # Format total file count for display in the table
+                if (
+                    state.total_files == 0
+                    and not state.has_uncommitted_changes
+                    and state.status == RepositoryStatus.IDLE
+                ):
+                    total_files_display = "[dim]...[/dim]"
+                elif state.total_files == 0:
+                    total_files_display = "[bold red]?[/bold red]"
+                else:
+                    total_files_display = str(state.total_files)
+
                 # Format file statistics: current (bright) when changes exist, previous (dim) otherwise
                 changed_files_display = self._format_change_display(
                     state.changed_files,
@@ -182,6 +199,7 @@ class EventHandlerMixin:
                     timer_display,
                     repository_display,
                     branch_display,
+                    total_files_display,
                     changed_files_display,
                     added_display,
                     deleted_display,
@@ -253,7 +271,7 @@ class EventHandlerMixin:
         except Exception as e:
             log.error("Failed to update TUI table", error=str(e))
 
-    def on_log_message_update(self, message: LogMessageUpdate) -> None:
+    def on_log_message_update(self: SupsrcTuiApp, message: LogMessageUpdate) -> None:
         """Handle log message updates."""
         try:
             # Try to find the log widget - it should be findable even inside a TabPane
@@ -282,7 +300,7 @@ class EventHandlerMixin:
                     message_content=message.message,
                 )
 
-    def on_repo_detail_update(self, message: RepoDetailUpdate) -> None:
+    def on_repo_detail_update(self: SupsrcTuiApp, message: RepoDetailUpdate) -> None:
         """Handle repository detail updates (simplified - log to main log)."""
         try:
             log_widget = self.query_one("#event-log", TextualLog)
