@@ -18,6 +18,8 @@ from supsrc.events.system import UserActionEvent
 
 pytestmark = pytest.mark.skip(reason="TUI in active development")
 
+HEAVY_PLUS = "\N{HEAVY PLUS SIGN}"
+
 
 class TestEventFeedTable:
     """Test EventFeedTable widget."""
@@ -140,7 +142,7 @@ class TestEventFeedTable:
         )
         assert table._get_event_emoji(atomic_event) == "🔄"
 
-        batch_event = BufferedFileChangeEvent(
+        _batch_event = BufferedFileChangeEvent(
             repo_id="test",
             file_paths=[Path("test.py")],
             operation_type="batch_operation",
@@ -155,7 +157,7 @@ class TestEventFeedTable:
             event_count=1,
             primary_change_type="created",
         )
-        assert table._get_event_emoji(created_event) == "➕"
+        assert table._get_event_emoji(created_event) == HEAVY_PLUS
 
         # Test source-based emojis
         mock_event = Mock(spec=[])  # Empty spec to prevent auto-attributes

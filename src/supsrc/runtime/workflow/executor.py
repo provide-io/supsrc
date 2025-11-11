@@ -57,6 +57,7 @@ class RuntimeWorkflow:
         self._workflow_steps = WorkflowSteps(
             config, repo_states, repo_engines, tui, self._emit_event
         )
+        self._background_tasks: set[asyncio.Task[None]] = set()
         log.debug("RuntimeWorkflow initialized.")
 
     def _emit_event(self, event) -> None:
@@ -67,14 +68,17 @@ class RuntimeWorkflow:
                 "Emitting event via workflow event collector", event_type=type(event).__name__
             )
             self.event_collector.emit(event)
+            return
+
         # Fall back to TUI event collector if available
-        elif hasattr(self.tui.app, "event_collector"):
+        tui_app = getattr(self.tui, "app", None)
+        event_collector = getattr(tui_app, "event_collector", None) if tui_app else None
+        if event_collector:
             log.debug("Emitting event via TUI app event collector", event_type=type(event).__name__)
-            self.tui.app.event_collector.emit(event)
-        else:
-            log.warning(
-                "No event collector available to emit event", event_type=type(event).__name__
-            )
+            event_collector.emit(event)
+            return
+
+        log.warning("No event collector available to emit event", event_type=type(event).__name__)
 
     async def _delayed_reset_after_external_commit(self, repo_state: RepositoryState) -> None:
         """Reset repository state after a brief delay to show external commit status."""
@@ -101,7 +105,7 @@ class RuntimeWorkflow:
         repo_engine = self.repo_engines.get(repo_id)
         action_log = log.bind(repo_id=repo_id)
 
-        if not all((repo_state, repo_config, repo_engine)):
+        if repo_state is None or repo_config is None or repo_engine is None:
             action_log.error("Action failed: Missing state, config, or engine.")
             self.tui.post_log_update(
                 repo_id, "ERROR", "Action failed: Missing state/config/engine."
@@ -117,9 +121,11 @@ class RuntimeWorkflow:
                 # Handle special case of external commit detection
                 if repo_state.status == RepositoryStatus.EXTERNAL_COMMIT_DETECTED:
                     # Reset after brief pause to show the status
-                    _reset_task = asyncio.create_task(
+                    reset_task = asyncio.create_task(
                         self._delayed_reset_after_external_commit(repo_state)
                     )
+                    self._background_tasks.add(reset_task)
+                    reset_task.add_done_callback(self._background_tasks.discard)
                 return
 
             # 2. Staging
@@ -133,7 +139,11 @@ class RuntimeWorkflow:
 
             # 3. LLM Pipeline (if enabled)
             llm_config = repo_config.llm
-            if llm_config and llm_config.enabled and LLM_AVAILABLE:
+            if llm_config and llm_config.enabled:
+                if not LLM_AVAILABLE:
+                    await self._handle_llm_provider_failure(repo_id, repo_state)
+                    return
+
                 llm_provider = self._llm_manager.get_llm_provider(llm_config)
                 if not llm_provider:
                     await self._handle_llm_provider_failure(repo_id, repo_state)

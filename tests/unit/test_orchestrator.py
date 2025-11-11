@@ -40,23 +40,23 @@ class TestOrchestratorLifecycle:
     @patch("supsrc.runtime.orchestrator.MonitoringCoordinator")
     async def test_run_initializes_all_components(
         self,
-        MockMonitoringService: MagicMock,
-        MockEventProcessor: MagicMock,
-        MockActionHandler: MagicMock,
-        MockTUIInterface: MagicMock,
+        mock_monitoring_service: MagicMock,
+        mock_event_processor: MagicMock,
+        mock_action_handler: MagicMock,
+        mock_tui_interface: MagicMock,
         minimal_config: SupsrcConfig,
     ):
         """Verify that run() instantiates all runtime components."""
         mock_processor_instance = AsyncMock()
         mock_processor_instance.run.return_value = None
-        MockEventProcessor.return_value = mock_processor_instance
+        mock_event_processor.return_value = mock_processor_instance
 
         mock_monitor_instance = MagicMock()
         mock_monitor_instance.setup_monitoring = MagicMock()
         mock_monitor_instance.setup_config_watcher = MagicMock()
         mock_monitor_instance.start_services = AsyncMock(return_value=True)
         mock_monitor_instance.stop_services = AsyncMock()
-        MockMonitoringService.return_value = mock_monitor_instance
+        mock_monitoring_service.return_value = mock_monitor_instance
 
         with patch("supsrc.runtime.orchestrator.load_config", return_value=minimal_config):
             shutdown_event = asyncio.Event()
@@ -70,10 +70,10 @@ class TestOrchestratorLifecycle:
 
             await run_and_shutdown()
 
-        MockTUIInterface.assert_called_once()
-        MockActionHandler.assert_called_once()
-        MockEventProcessor.assert_called_once()
-        MockMonitoringService.assert_called_once()
+        mock_tui_interface.assert_called_once()
+        mock_action_handler.assert_called_once()
+        mock_event_processor.assert_called_once()
+        mock_monitoring_service.assert_called_once()
         mock_monitor_instance.setup_monitoring.assert_called_once()
         mock_monitor_instance.start_services.assert_called_once()
         mock_processor_instance.run.assert_called_once()
@@ -90,7 +90,7 @@ class TestOrchestratorLifecycle:
         )
 
         # Mock the git engine creation and status operations to avoid file system ops
-        with patch("supsrc.runtime.repository_manager.GitEngine") as MockGitEngine:
+        with patch("supsrc.runtime.repository_manager.GitEngine") as mock_git_engine:
             mock_engine = MagicMock()
             mock_engine.get_summary.return_value = MagicMock(
                 head_commit_hash=None, is_empty=True, head_ref_name="UNBORN"
@@ -105,7 +105,7 @@ class TestOrchestratorLifecycle:
                 is_clean=True,
                 current_branch="main",
             )
-            MockGitEngine.return_value = mock_engine
+            mock_git_engine.return_value = mock_engine
 
             await mock_orchestrator.repository_manager.initialize_repositories(
                 mock_orchestrator.config, mock_tui

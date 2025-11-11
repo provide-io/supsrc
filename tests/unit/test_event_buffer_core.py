@@ -200,7 +200,7 @@ class TestEventBufferCore:
         """Test handling of empty events list - now tested via grouping module."""
         from supsrc.events.buffer.grouping import group_events_simple
 
-        buffer = EventBuffer(
+        EventBuffer(
             window_ms=10,
             grouping_mode="smart",
             emit_callback=mock_emit_callback,

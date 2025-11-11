@@ -15,12 +15,12 @@ from pathlib import Path
 
 import pytest
 from provide.testkit.mocking import AsyncMock, Mock
-
-pytestmark = pytest.mark.skip(reason="TUI in active development")
 from textual.widgets import DataTable, TabbedContent
 
 from supsrc.state import RepositoryState
 from supsrc.tui.app import SupsrcTuiApp
+
+pytestmark = pytest.mark.skip(reason="TUI in active development")
 
 
 @pytest.fixture
@@ -117,7 +117,7 @@ class TestTuiUserWorkflows:
     ) -> None:
         """Test a complete workflow of monitoring repositories."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
-        mock_event_collector, mock_orchestrator = mock_app_setup(app)
+        mock_app_setup(app)
 
         async with app.run_test() as pilot:
             # 1. Start with empty app
