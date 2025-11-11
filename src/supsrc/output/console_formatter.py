@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -87,12 +88,7 @@ class ConsoleEventFormatter:
             # Build the output line
             line = self._build_output_line(timestamp, repo_id, emoji, impact, file_str, message)
 
-            # Print to console
-            if self.use_color:
-                self.console.print(line)
-            else:
-                # Strip Rich markup for no-color mode
-                self.console.print(line, highlight=False, markup=False)
+            self._print_renderable(line)
 
             # Print verbose details if enabled
             if self.verbose:
@@ -271,11 +267,24 @@ class ConsoleEventFormatter:
 
         # Print each line
         for line in detail_lines:
-            if self.use_color:
-                self.console.print(line)
-            else:
-                # Strip Rich markup for no-color mode
-                self.console.print(line, highlight=False, markup=False)
+            self._print_renderable(line)
+
+    def _print_renderable(self, renderable: Text | str) -> None:
+        """Print a renderable with or without color support."""
+        if self.use_color:
+            self.console.print(renderable)
+            return
+
+        if isinstance(renderable, Text):
+            plain_text = renderable.plain
+        else:
+            plain_text = self._strip_rich_markup(str(renderable))
+
+        output_stream = getattr(self.console, "file", sys.stdout)
+        if not plain_text.endswith("\n"):
+            plain_text = f"{plain_text}\n"
+        output_stream.write(plain_text)
+        output_stream.flush()
 
 
 # 🔼⚙️🔚

@@ -312,7 +312,6 @@ class TestConsoleVerboseOutput:
 
         assert len(emitted_events) >= 1
 
-        buffered_event = emitted_events[0]
         output_text = output.getvalue()
 
         # Verify operation history is shown
