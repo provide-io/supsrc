@@ -140,7 +140,15 @@ class TestCLITUICommand:
 
             # Test help command with config path to verify option works
             result = run(
-                [sys.executable, "-m", "supsrc.cli.main", "sui", "--help"],
+                [
+                    sys.executable,
+                    "-m",
+                    "supsrc.cli.main",
+                    "sui",
+                    "-c",
+                    str(config_path),
+                    "--help",
+                ],
                 timeout=5,
                 check=False,
             )

@@ -129,6 +129,8 @@ class TestFailureEvent(BaseEvent):
     def format(self) -> str:
         """Format test failure event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
+        output_suffix = f": {self.test_output}" if self.test_output else ""
+        return f"[{time_str}] ❗ [{self.repo_id}] Tests failed{output_suffix}"
 
 
 @attrs.define(frozen=True)

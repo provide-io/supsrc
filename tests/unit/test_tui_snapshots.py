@@ -15,10 +15,10 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="TUI in active development")
-
 from supsrc.state import RepositoryState
 from supsrc.tui.app import SupsrcTuiApp
+
+pytestmark = pytest.mark.skip(reason="TUI in active development")
 
 
 @pytest.fixture

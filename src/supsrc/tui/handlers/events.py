@@ -7,9 +7,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
+from typing import TYPE_CHECKING, Any, cast
 
 from provide.foundation.logger import get_logger
+from textual.coordinate import Coordinate
 from textual.widgets import DataTable
 from textual.widgets import Log as TextualLog
 from textual.worker import Worker, WorkerState
@@ -23,6 +26,13 @@ log = get_logger(__name__)
 
 class EventHandlerMixin:
     """Mixin containing event handler methods for the TUI."""
+
+    if TYPE_CHECKING:
+        _cli_shutdown_event: asyncio.Event | None
+        _orchestrator: Any
+        app: Any
+
+        def query_one(self, selector: str, widget_type: type[Any] | None = ...) -> Any: ...
 
     def _format_change_display(
         self, current: int, previous: int, color: str, has_changes: bool
@@ -76,19 +86,22 @@ class EventHandlerMixin:
             # debug_message_content = repr(message.repo_states)
             # log.debug(f"DEBUG_TUI_APP: on_state_update received: {debug_message_content}")
 
-            table = self.query_one("#repository_table", DataTable)
+            table = cast(DataTable, self.query_one("#repository_table", DataTable))
+            table_any = cast(Any, table)
 
             # Save cursor position using row key (more stable than index)
             cursor_row_key = None
             try:
                 if table.cursor_row < table.row_count:
-                    cursor_coordinate = table.coordinate_to_cell_key((table.cursor_row, 0))
-                    cursor_row_key = cursor_coordinate.row_key
+                    cursor_coordinate = table.coordinate_to_cell_key(
+                        Coordinate(row=table.cursor_row, column=0)
+                    )
+                    cursor_row_key = cursor_coordinate.row_key.value
                     log.debug("Saved cursor position", row_key=cursor_row_key)
             except Exception:
                 pass
 
-            current_keys = set(table.rows.keys())
+            current_keys = {row_key.value for row_key in table_any.rows}
             incoming_keys = set(message.repo_states.keys())
 
             # Remove obsolete rows
@@ -148,17 +161,14 @@ class EventHandlerMixin:
                     rule_display=repr(rule_display),
                 )
 
-                # Format file statistics with color based on commit status
-                # Show loading indicator for repos that haven't been initialized yet
+                # Format total file count for display in the table
                 if (
                     state.total_files == 0
                     and not state.has_uncommitted_changes
                     and state.status == RepositoryStatus.IDLE
                 ):
-                    # Likely still loading
                     total_files_display = "[dim]...[/dim]"
                 elif state.total_files == 0:
-                    # Show a question mark for 0 files after loading is complete
                     total_files_display = "[bold red]?[/bold red]"
                 else:
                     total_files_display = str(state.total_files)
@@ -198,6 +208,7 @@ class EventHandlerMixin:
                     timer_display,
                     repository_display,
                     branch_display,
+                    total_files_display,
                     changed_files_display,
                     added_display,
                     deleted_display,
@@ -206,22 +217,22 @@ class EventHandlerMixin:
                     rule_display,
                 )
 
-                if repo_id_str in table.rows:
+                if repo_id_str in current_keys:
                     # Update existing row in-place to prevent counter resets and cursor jumps
                     try:
-                        row_index = table.get_row_index(repo_id_str)
-
                         # Try to update cells first, with improved error handling
                         cell_update_failed = False
+                        ordered_columns = table.ordered_columns
                         for col_index, cell_value in enumerate(row_data):
-                            if col_index < len(table.columns):
+                            if col_index < len(ordered_columns):
                                 try:
-                                    table.update_cell(row_index, col_index, cell_value)
+                                    column_key = ordered_columns[col_index].key
+                                    table.update_cell(repo_id_str, column_key, cell_value)
                                 except Exception as cell_err:
                                     log.debug(
                                         "Cell update failed, will need to remove/re-add row",
                                         repo_id=repo_id_str,
-                                        row_index=row_index,
+                                        column_key=str(column_key),
                                         col_index=col_index,
                                         error=str(cell_err),
                                     )
@@ -251,13 +262,14 @@ class EventHandlerMixin:
                     table.add_row(*row_data, key=repo_id_str)
 
             # Restore cursor position using row key
+            row_keys_after = {row_key.value for row_key in table.rows}
             if cursor_row_key is not None:
                 try:
                     # Find the row index for the saved row key
-                    if cursor_row_key in table.rows:
+                    if cursor_row_key in row_keys_after:
                         new_cursor_row = table.get_row_index(cursor_row_key)
                         if new_cursor_row != table.cursor_row:
-                            table.cursor_row = new_cursor_row
+                            table_any.cursor_row = new_cursor_row
                             log.debug(
                                 "Restored cursor position",
                                 new_row=new_cursor_row,
@@ -273,7 +285,7 @@ class EventHandlerMixin:
         """Handle log message updates."""
         try:
             # Try to find the log widget - it should be findable even inside a TabPane
-            log_widget = self.query_one("#event-log", TextualLog)
+            log_widget = cast(TextualLog, self.query_one("#event-log", TextualLog))
             # Format message with repo name if available
             formatted_message = (
                 f"[{message.repo_id}] {message.message}" if message.repo_id else message.message
@@ -301,7 +313,7 @@ class EventHandlerMixin:
     def on_repo_detail_update(self, message: RepoDetailUpdate) -> None:
         """Handle repository detail updates (simplified - log to main log)."""
         try:
-            log_widget = self.query_one("#event-log", TextualLog)
+            log_widget = cast(TextualLog, self.query_one("#event-log", TextualLog))
             commit_history = message.details.get("commit_history", [])
             if commit_history:
                 log_widget.write_line(f"[b]Recent commits for {message.repo_id}:[/b]")

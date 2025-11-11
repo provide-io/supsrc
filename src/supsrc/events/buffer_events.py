@@ -68,6 +68,7 @@ class BufferedFileChangeEvent(Event):
             "deleted": "-",  # MINUS SIGN
             "moved": "🔄",  # COUNTERCLOCKWISE ARROWS BUTTON
         }
+        emoji = emoji_map.get(self.primary_change_type, "?")
 
         # Special handling for move events - reconstruct the move chain
         if self.primary_change_type == "moved" and self.operation_history:

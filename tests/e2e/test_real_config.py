@@ -11,6 +11,7 @@ provide-io directory, testing real-world scenarios and workflows."""
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 
 import pytest
@@ -68,9 +69,9 @@ class TestRealConfigValidation:
 
             # Report findings - expect some repos to be missing in test environments
             if missing_repos:
-                print(f"Missing repositories (expected in test env): {missing_repos}")
+                logging.info("Missing repositories (expected in test env): %s", missing_repos)
             if non_git_repos:
-                print(f"Non-git repositories: {non_git_repos}")
+                logging.info("Non-git repositories: %s", non_git_repos)
 
             # Test passes if at least one repository exists and is valid
             valid_repos = len(config.repositories) - len(missing_repos) - len(non_git_repos)

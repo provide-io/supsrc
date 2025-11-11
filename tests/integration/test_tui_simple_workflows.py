@@ -15,9 +15,9 @@ from pathlib import Path
 import pytest
 from provide.testkit.mocking import Mock
 
-pytestmark = pytest.mark.skip(reason="TUI in active development")
-
 from supsrc.tui.app import SupsrcTuiApp
+
+pytestmark = pytest.mark.skip(reason="TUI in active development")
 
 
 @pytest.fixture

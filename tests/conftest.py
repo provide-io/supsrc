@@ -146,7 +146,7 @@ def subprocess_runner():
         """Run a supsrc CLI command and return the result."""
         import sys
 
-        full_args = [sys.executable, "-m", "supsrc.cli.main"] + args
+        full_args = [sys.executable, "-m", "supsrc.cli.main", *args]
 
         return foundation_run_command(
             full_args,

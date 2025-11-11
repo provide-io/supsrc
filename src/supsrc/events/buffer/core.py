@@ -64,6 +64,7 @@ class EventBuffer:
 
         # Streaming handler for smart mode
         self._streaming_handler: StreamingOperationHandler | None = None
+        self._fallback_loop: asyncio.AbstractEventLoop | None = None
 
         # Initialize smart mode if enabled
         if grouping_mode == GROUPING_MODE_SMART:
@@ -125,7 +126,7 @@ class EventBuffer:
             self._timers[repo_id].cancel()
 
         # Set new timer to flush after window
-        loop = asyncio.get_event_loop()
+        loop = self._get_loop()
         self._timers[repo_id] = loop.call_later(
             self.window_ms / 1000.0, self._flush_buffer, repo_id
         )
@@ -199,6 +200,15 @@ class EventBuffer:
             if repo_id in self._timers:
                 self._timers[repo_id].cancel()
             self._flush_buffer(repo_id)
+
+    def _get_loop(self) -> asyncio.AbstractEventLoop:
+        """Return the running event loop or create a fallback loop."""
+        try:
+            return asyncio.get_running_loop()
+        except RuntimeError:
+            if self._fallback_loop is None or self._fallback_loop.is_closed():
+                self._fallback_loop = asyncio.new_event_loop()
+            return self._fallback_loop
 
 
 # 🔼⚙️🔚

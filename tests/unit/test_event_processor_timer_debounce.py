@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from pathlib import Path
 
 import pytest
@@ -210,10 +211,8 @@ class TestEventProcessorTimerDebounce:
 
             # Clean up remaining task
             second_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await second_task
-            except asyncio.CancelledError:
-                pass
 
     @pytest.mark.asyncio
     async def test_multiple_repos_independent_debouncing(
@@ -312,7 +311,7 @@ class TestEventProcessorTimerDebounce:
 
         with patch.object(
             processor, "_check_repo_status_and_handle_timer", side_effect=long_running_timer_check
-        ) as mock_timer_check:
+        ):
             # Add event
             event = MonitoredEvent(repo_id, "modified", temp_git_repo / "test.py", False)
             await processor.event_queue.put(event)
@@ -376,10 +375,8 @@ class TestEventProcessorTimerDebounce:
 
             # Clean up pending tasks
             second_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await second_task
-            except asyncio.CancelledError:
-                pass
 
 
 # 🔼⚙️🔚

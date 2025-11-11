@@ -94,6 +94,7 @@ class EmojiMapper:
                 emoji = "🔄"
                 return EmojiMapper.ASCII_FALLBACKS.get(emoji, "[R]") if use_ascii else emoji
             elif event.operation_type == "batch_operation":
+                emoji = "📦"
                 return EmojiMapper.ASCII_FALLBACKS.get(emoji, "[M]") if use_ascii else emoji
 
         # Check for primary change type

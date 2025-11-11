@@ -14,12 +14,12 @@ import asyncio
 
 import pytest
 from provide.testkit.mocking import Mock
-
-pytestmark = pytest.mark.skip(reason="TUI in active development")
 from textual.widgets import DataTable
 
 from supsrc.tui.app import SupsrcTuiApp
 from tests.helpers.config_testing import real_config_path, with_parent_cwd
+
+pytestmark = pytest.mark.skip(reason="TUI in active development")
 
 
 class TestBottomRowSelectionBug:
