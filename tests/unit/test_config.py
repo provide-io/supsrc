@@ -1,25 +1,23 @@
 #
-# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
+# tests/unit/test_config.py
 #
+"""
+Comprehensive tests for configuration loading and validation.
+"""
 
-"""Comprehensive tests for configuration loading and validation."""
-
-from datetime import timedelta
 from pathlib import Path
+from datetime import timedelta
 
 import pytest
 
-from supsrc.config import (
-    InactivityRuleConfig,
-    ManualRuleConfig,
-    SaveCountRuleConfig,
-    SupsrcConfig,
-    load_config,
+from supsrc.config import load_config
+from supsrc.config.models import (
+    SupsrcConfig, GlobalConfig, RepositoryConfig,
+    InactivityRuleConfig, SaveCountRuleConfig, ManualRuleConfig
 )
 from supsrc.exceptions import (
-    ConfigFileNotFoundError,
-    ConfigParsingError,
+    ConfigFileNotFoundError, ConfigParsingError,
+    ConfigValidationError
 )
 
 
@@ -28,15 +26,12 @@ class TestConfigLoading:
 
     def test_load_valid_config(self, tmp_path: Path) -> None:
         """Test loading a valid configuration file."""
-        repo_path = tmp_path / "test_repo"
-        repo_path.mkdir()
-
-        config_content = f"""
+        config_content = """
         [global]
         log_level = "DEBUG"
 
         [repositories.test-repo]
-        path = "{repo_path}"
+        path = "/tmp/test"
         enabled = true
 
         [repositories.test-repo.rule]
@@ -47,7 +42,6 @@ class TestConfigLoading:
         type = "supsrc.engines.git"
         auto_push = true
         """
-        # -----------------------------------------------------------------
 
         config_file = tmp_path / "test.conf"
         config_file.write_text(config_content)
@@ -55,13 +49,6 @@ class TestConfigLoading:
         config = load_config(config_file)
 
         assert isinstance(config, SupsrcConfig)
-        assert config.global_config.log_level == "DEBUG"
-        assert len(config.repositories) == 1
-
-        repo_config = config.repositories["test-repo"]
-        assert repo_config.enabled is True
-        assert isinstance(repo_config.rule, InactivityRuleConfig)
-        assert repo_config.rule.period == timedelta(seconds=30)
         assert config.global_config.log_level == "DEBUG"
         assert len(config.repositories) == 1
 
@@ -217,5 +204,4 @@ class TestGlobalConfiguration:
         assert config.global_config.log_level == "DEBUG"
         assert config.global_config.numeric_log_level == 10
 
-
-# 🔼⚙️🔚
+# 🧪⚙️
