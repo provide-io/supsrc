@@ -315,14 +315,3 @@ $RECYCLE.BIN/
 
 # bfiles
 *.bf.txt
-
-# Supsrc local data (machine-specific, not shareable)
-.supsrc/local/
-.claude
-.supsrc/logs*
-
-# Synced theme files (source: provide-foundry/shared-theme/)
-docs/.shared-theme/
-
-# Extracted provide.io tooling artifacts
-.provide/

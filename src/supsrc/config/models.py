@@ -1,271 +1,101 @@
 #
-# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
+# config/models.py
 #
+"""
+Attrs-based data models for supsrc configuration structure.
+"""
 
-"""Supsrc configuration using Foundation's config system."""
-
-import logging
+import logging  # Still needed for level names
 from collections.abc import Mapping
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, TypeAlias
-
-# Foundation includes attrs as a dependency
-from attrs import define, field, mutable
-from attrs.validators import instance_of
-from provide.foundation.errors.config import ConfigurationError
-from provide.foundation.file import read_toml
-
-# Add Foundation parsing utilities
-from provide.foundation.utils import parse_duration
-
-from supsrc.config.defaults import (
-    DEFAULT_EVENT_BUFFER_ENABLED,
-    DEFAULT_EVENT_BUFFER_GROUPING_MODE,
-    DEFAULT_EVENT_BUFFER_GROUPING_MODE_HEADLESS,
-    DEFAULT_EVENT_BUFFER_GROUPING_MODE_TUI,
-    DEFAULT_EVENT_BUFFER_WINDOW_MS,
+from typing import (  # Added Mapping
+    Any,
+    TypeAlias,
 )
-from supsrc.utils.directories import SupsrcDirectories
 
+from attrs import define, field, mutable
+
+# --- Validators (can stay here or move to a validators module) ---
 
 def _validate_log_level(inst: Any, attr: Any, value: str) -> None:
     """Validator for standard logging level names."""
     valid = logging._nameToLevel.keys()
     if value.upper() not in valid:
+        # Note: Raising validation error here is fine, structlog logger isn't needed
         raise ValueError(f"Invalid log_level '{value}'. Must be one of {list(valid)}.")
-
 
 def _validate_positive_int(inst: Any, attr: Any, value: int) -> None:
     """Validator ensures integer is positive."""
     if not isinstance(value, int) or value <= 0:
         raise ValueError(f"Field '{attr.name}' must be positive integer, got {value}")
 
-
 # --- attrs Data Classes for Rules ---
-@define(slots=True)
-class InactivityRuleConfig:
-    """Configuration for the inactivity rule."""
+# Define the structure for different rule types.
+# The 'type' literal should match the key used for loading (e.g., built-in path or plugin key)
 
+@define(slots=True)
+class InactivityRuleConfig: # Renamed from InactivityTrigger for clarity as config object
+    """Configuration for the inactivity rule."""
+    # Type can be validated during plugin loading if needed, or assume correct here
+    # Use kw_only=True so 'type' isn't required during cattrs structuring if hook handles it
     type: str = field(default="supsrc.rules.inactivity", kw_only=True)
     period: timedelta = field()
 
-
 @define(slots=True)
-class SaveCountRuleConfig:
+class SaveCountRuleConfig: # Renamed from SaveCountTrigger
     """Configuration for the save count rule."""
-
     type: str = field(default="supsrc.rules.save_count", kw_only=True)
     count: int = field(validator=_validate_positive_int)
 
-
 @define(slots=True)
-class ManualRuleConfig:
+class ManualRuleConfig: # Renamed from ManualTrigger
     """Configuration for the manual rule."""
-
     type: str = field(default="supsrc.rules.manual", kw_only=True)
 
 
+# Type alias for the union of rule configuration types
+# cattrs will use this union to structure the 'rule' section based on 'type' using the registered hook
 RuleConfig: TypeAlias = InactivityRuleConfig | SaveCountRuleConfig | ManualRuleConfig
 
-
-# --- LLM Configuration Model ---
-@define(frozen=True, slots=True)
-class LLMConfig:
-    """Configuration for optional LLM features."""
-
-    enabled: bool = field(default=False)
-    provider: str = field(default="gemini")
-    model: str = field(default="gemini-1.5-flash")
-    api_key_env_var: str | None = field(default="GEMINI_API_KEY")
-
-    # Feature Flags
-    generate_commit_message: bool = field(default=True)
-    use_conventional_commit: bool = field(default=True)
-    review_changes: bool = field(default=True)
-    run_tests: bool = field(default=True)
-    analyze_test_failures: bool = field(default=True)
-    generate_change_fragment: bool = field(default=False)
-
-    # Configurable settings
-    test_command: str | None = field(default=None)
-    change_fragment_dir: str | None = field(default="changes")
-
-
 # --- Repository and Global Config Models ---
+
 @mutable(slots=True)
 class RepositoryConfig:
-    """Configuration for a repository. Mutable to allow disabling on load if path invalid."""
-
+    """
+    Configuration for a repository. Mutable to allow disabling on load if path invalid.
+    """
+    # Mandatory fields first
     path: Path = field()
-    rule: RuleConfig = field()
+    # This field will hold the structured rule config object (e.g., InactivityRuleConfig)
+    rule: RuleConfig = field() # Holds the specific structured rule config
+    # Holds the raw dictionary from the TOML [repositories.*.repository] section for the engine to parse.
     repository: Mapping[str, Any] = field(factory=dict)
+
+    # Optional fields after
     enabled: bool = field(default=True)
-    llm: LLMConfig | None = field(default=None)
+
+    # Internal state flag
     _path_valid: bool = field(default=True, repr=False, init=False)
 
 
 @define(frozen=True, slots=True)
 class GlobalConfig:
     """Global default settings for supsrc."""
-
     log_level: str = field(default="INFO", validator=_validate_log_level)
-
-    # Event buffering configuration
-    event_buffering_enabled: bool = field(default=DEFAULT_EVENT_BUFFER_ENABLED)
-    event_buffer_window_ms: int = field(
-        default=DEFAULT_EVENT_BUFFER_WINDOW_MS, validator=_validate_positive_int
-    )
-
-    # Mode-specific grouping modes (Foundation bugs fixed!)
-    event_grouping_mode_tui: str = field(
-        default=DEFAULT_EVENT_BUFFER_GROUPING_MODE_TUI, validator=instance_of(str)
-    )
-    event_grouping_mode_headless: str = field(
-        default=DEFAULT_EVENT_BUFFER_GROUPING_MODE_HEADLESS, validator=instance_of(str)
-    )
-
-    # Legacy fallback for backwards compatibility
-    event_grouping_mode: str = field(
-        default=DEFAULT_EVENT_BUFFER_GROUPING_MODE, validator=instance_of(str)
-    )
+    # Defaults removed - handled by env vars or engine defaults
 
     @property
     def numeric_log_level(self) -> int:
+        """Return the numeric logging level."""
         return logging.getLevelName(self.log_level.upper())
-
 
 @define(frozen=True, slots=True)
 class SupsrcConfig:
     """Root configuration object for the supsrc application."""
-
     repositories: dict[str, RepositoryConfig] = field(factory=dict)
-    global_config: GlobalConfig = field(factory=GlobalConfig)
+    global_config: GlobalConfig = field(
+        factory=GlobalConfig, metadata={"toml_name": "global"}
+    )
 
-
-def load_config(config_path: Path) -> SupsrcConfig:
-    """Load supsrc configuration using Foundation's error handling."""
-    import tomllib
-
-    from cattrs import Converter
-
-    from supsrc.exceptions import ConfigFileNotFoundError, ConfigParsingError
-
-    try:
-        # Use Foundation error handling but keep our TOML loading logic
-        if not config_path.is_file():
-            raise ConfigFileNotFoundError(f"Config file not found: {config_path}")
-
-        try:
-            with open(config_path, "rb") as f:
-                toml_data = tomllib.load(f)
-        except tomllib.TOMLDecodeError as e:
-            raise ConfigParsingError(f"Invalid TOML syntax in {config_path}: {e}") from e
-
-        if "global" in toml_data:
-            toml_data["global_config"] = toml_data.pop("global")
-
-        # Use the original converter logic
-        converter = Converter()
-
-        # Use Foundation's duration parser instead of custom implementation
-
-        def _structure_path_simple(path_str: str, type_hint: type[Path]) -> Path:
-            """Structure hook for Path."""
-            if not isinstance(path_str, str):
-                raise ValueError(f"Path must be string, got: {type(path_str).__name__}")
-            return Path(path_str).expanduser().resolve()
-
-        def structure_rule_hook(data: Mapping[str, Any], cl: type[RuleConfig]) -> RuleConfig:
-            """Structure the correct RuleConfig based on the 'type' field."""
-            if not isinstance(data, Mapping):
-                raise ValueError(f"Rule configuration must be a mapping, got {type(data).__name__}")
-
-            rule_type = data.get("type")
-            if not rule_type or not isinstance(rule_type, str):
-                raise ValueError("Rule configuration missing or invalid 'type' field.")
-
-            type_map: dict[str, type[RuleConfig]] = {
-                "supsrc.rules.inactivity": InactivityRuleConfig,
-                "supsrc.rules.save_count": SaveCountRuleConfig,
-                "supsrc.rules.manual": ManualRuleConfig,
-            }
-
-            target_class = type_map.get(rule_type)
-            if target_class is None:
-                raise ValueError(f"Unknown rule type specified: '{rule_type}'")
-
-            data_copy = dict(data)
-            if (
-                hasattr(target_class.__attrs_attrs__, "type")
-                and target_class.__attrs_attrs__.type.kw_only
-            ):
-                data_copy.pop("type", None)
-
-            return converter.structure(data_copy, target_class)
-
-        converter.register_structure_hook(Path, _structure_path_simple)
-        converter.register_structure_hook(
-            timedelta, lambda d, t: timedelta(seconds=parse_duration(d))
-        )
-        converter.register_structure_hook(RuleConfig, structure_rule_hook)
-
-        config_object = converter.structure(toml_data, SupsrcConfig)
-
-        # Validate paths and disable repos with invalid paths
-        for _repo_id, repo_config in config_object.repositories.items():
-            p = repo_config.path
-            path_valid = True
-            try:
-                if not p.exists() or not p.is_dir():
-                    path_valid = False
-            except OSError:
-                path_valid = False
-
-            if not path_valid:
-                repo_config.enabled = False
-                repo_config._path_valid = False
-
-        return config_object
-
-    except (ConfigFileNotFoundError, ConfigParsingError):
-        # Re-raise specific config exceptions as-is
-        raise
-    except Exception as e:
-        raise ConfigurationError(f"Failed to load config from {config_path}: {e}") from e
-
-
-def load_repository_config(repo_path: Path) -> dict[str, Any] | None:
-    """Load repository-specific config from .supsrc/config.toml if it exists.
-
-    Args:
-        repo_path: Path to the repository
-
-    Returns:
-        Dictionary of config values if file exists, None otherwise
-    """
-    config_file = SupsrcDirectories.get_config_file(repo_path)
-
-    if not config_file.exists():
-        return None
-
-    return read_toml(config_file, default=None)
-
-
-# Export all the models and functions that were in the original config package
-__all__ = [
-    "ConfigurationError",
-    "GlobalConfig",
-    "InactivityRuleConfig",
-    "LLMConfig",
-    "ManualRuleConfig",
-    "RepositoryConfig",
-    "RuleConfig",
-    "SaveCountRuleConfig",
-    "SupsrcConfig",
-    "load_config",
-    "load_repository_config",
-]
-
-# 🔼⚙️🔚
+# 🔼⚙️
