@@ -95,7 +95,7 @@ version = {file = "VERSION"}
 # Ruff Linter/Formatter Configuration                                         #
 # --------------------------------------------------------------------------- #
 [tool.ruff]
-line-length = 100
+line-length = 111
 target-version = "py311" # Match requires-python lower bound
 
 [tool.ruff.lint]
