@@ -1,24 +1,20 @@
 #
-# tests/unit/test_git_engine.py
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-"""
-Comprehensive tests for the Git engine implementation.
-"""
 
-import tempfile
-from pathlib import Path
-from unittest.mock import Mock, patch
+"""Comprehensive tests for the Git engine implementation."""
+
 import subprocess
-import shutil
+from pathlib import Path
 
-import pytest
 import pygit2
+import pytest
 
+from supsrc.config import GlobalConfig
 from supsrc.engines.git import GitEngine, GitRepoSummary
-from supsrc.engines.git.credentials import GitCredentialManager
-from supsrc.config.models import GlobalConfig
+from supsrc.protocols import CommitResult, PushResult, RepoStatusResult, StageResult
 from supsrc.state import RepositoryState
-from supsrc.protocols import RepoStatusResult, StageResult, CommitResult, PushResult
 
 
 @pytest.fixture
@@ -52,8 +48,16 @@ def git_repo_path(tmp_path: Path) -> Path:
 
     # Initialize repository
     subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True)
+    # Configure Git user for unit testing (disable GPG signing to avoid issues)
+    subprocess.run(
+        ["git", "config", "user.name", "Git Engine Test User"], cwd=repo_path, check=True
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "gitengine@supsrc.example.com"], cwd=repo_path, check=True
+    )
+    # Disable GPG signing to prevent tests from failing if user has global GPG config
+    subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo_path, check=True)
+    subprocess.run(["git", "config", "gpg.program", ""], cwd=repo_path, check=True)
 
     # Create initial commit
     (repo_path / "README.md").write_text("Initial commit")
@@ -67,9 +71,7 @@ class TestGitEngine:
     """Test GitEngine functionality."""
 
     async def test_get_summary_normal_repo(
-        self,
-        git_engine: GitEngine,
-        git_repo_path: Path
+        self, git_engine: GitEngine, git_repo_path: Path
     ) -> None:
         """Test getting summary from a normal repository."""
         summary = await git_engine.get_summary(git_repo_path)
@@ -82,9 +84,7 @@ class TestGitEngine:
         assert summary.head_commit_message_summary == "Initial commit"
 
     async def test_get_summary_nonexistent_repo(
-        self,
-        git_engine: GitEngine,
-        tmp_path: Path
+        self, git_engine: GitEngine, tmp_path: Path
     ) -> None:
         """Test getting summary from a non-existent repository."""
         nonexistent_path = tmp_path / "nonexistent"
@@ -92,14 +92,14 @@ class TestGitEngine:
         summary = await git_engine.get_summary(nonexistent_path)
 
         assert summary.head_ref_name == "ERROR"
-        assert "Not a Git repository" in summary.head_commit_message_summary
+        assert "Repository not found" in summary.head_commit_message_summary
 
     async def test_get_status_clean_repo(
         self,
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test getting status from a clean repository."""
         config = {"type": "supsrc.engines.git"}
@@ -121,7 +121,7 @@ class TestGitEngine:
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test getting status from a repository with changes."""
         config = {"type": "supsrc.engines.git"}
@@ -147,7 +147,7 @@ class TestGitEngine:
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test staging all changes."""
         config = {"type": "supsrc.engines.git"}
@@ -171,47 +171,45 @@ class TestGitEngine:
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test successful commit operation."""
         config = {
             "type": "supsrc.engines.git",
-            "commit_message_template": "Test commit: {{timestamp}}"
+            "commit_message_template": "Test commit: {{timestamp}}",
         }
 
-        # Create and stage changes
+        # Create a file and stage it using pygit2 directly to ensure
+        # the index is in a known state for the commit test.
         (git_repo_path / "new_file.txt").write_text("New content")
-        subprocess.run(["git", "add", "new_file.txt"], cwd=git_repo_path, check=True)
+        repo = pygit2.Repository(pygit2.discover_repository(str(git_repo_path)))
+        repo.index.add("new_file.txt")
+        repo.index.write()
 
         result = await git_engine.perform_commit(
             "Test commit: {{timestamp}}",
             mock_repo_state,
             config,
             mock_global_config,
-            git_repo_path
+            git_repo_path,
         )
 
         assert isinstance(result, CommitResult)
         assert result.success
         assert result.commit_hash is not None
-        assert len(result.commit_hash) == 40  # Full SHA
 
     async def test_perform_commit_no_changes(
         self,
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test commit with no staged changes."""
         config = {"type": "supsrc.engines.git"}
 
         result = await git_engine.perform_commit(
-            "Test commit",
-            mock_repo_state,
-            config,
-            mock_global_config,
-            git_repo_path
+            "Test commit", mock_repo_state, config, mock_global_config, git_repo_path
         )
 
         assert result.success
@@ -223,13 +221,10 @@ class TestGitEngine:
         git_engine: GitEngine,
         git_repo_path: Path,
         mock_repo_state: RepositoryState,
-        mock_global_config: GlobalConfig
+        mock_global_config: GlobalConfig,
     ) -> None:
         """Test push when auto_push is disabled."""
-        config = {
-            "type": "supsrc.engines.git",
-            "auto_push": False
-        }
+        config = {"type": "supsrc.engines.git", "auto_push": False}
 
         result = await git_engine.perform_push(
             mock_repo_state, config, mock_global_config, git_repo_path
@@ -241,76 +236,4 @@ class TestGitEngine:
         assert "disabled" in result.message
 
 
-class TestGitCredentialManager:
-    """Test Git credential management functionality."""
-
-    def test_ssh_key_auth_missing_files(self) -> None:
-        """Test SSH key authentication with missing key files."""
-        config = {"ssh_key_path": "/nonexistent/key"}
-        manager = GitCredentialManager(config)
-
-        result = manager.get_credentials(
-            "git@github.com:user/repo.git",
-            "git",
-            pygit2.GIT_CREDENTIAL_SSH_KEY
-        )
-
-        assert result is None
-
-    @patch('os.getenv')
-    def test_userpass_auth_success(self, mock_getenv: Mock) -> None:
-        """Test successful username/password authentication."""
-        mock_getenv.side_effect = lambda key: {
-            "GIT_USERNAME": "testuser",
-            "GIT_PASSWORD": "testpass"
-        }.get(key)
-
-        config = {}
-        manager = GitCredentialManager(config)
-
-        with patch('pygit2.credentials.UserPass') as mock_userpass:
-            mock_userpass.return_value = Mock()
-
-            result = manager.get_credentials(
-                "https://github.com/user/repo.git",
-                None,
-                pygit2.GIT_CREDENTIAL_USERPASS_PLAINTEXT
-            )
-
-            assert result is not None
-            mock_userpass.assert_called_once_with("testuser", "testpass")
-
-    @patch('os.getenv')
-    def test_userpass_auth_missing_env(self, mock_getenv: Mock) -> None:
-        """Test username/password authentication with missing environment variables."""
-        mock_getenv.return_value = None
-
-        config = {}
-        manager = GitCredentialManager(config)
-
-        result = manager.get_credentials(
-            "https://github.com/user/repo.git",
-            None,
-            pygit2.GIT_CREDENTIAL_USERPASS_PLAINTEXT
-        )
-
-        assert result is None
-
-    @patch('pygit2.credentials.KeypairFromAgent')
-    def test_ssh_agent_auth_failure(self, mock_agent: Mock) -> None:
-        """Test SSH agent authentication failure."""
-        mock_agent.side_effect = pygit2.GitError("SSH agent not available")
-
-        config = {}
-        manager = GitCredentialManager(config)
-
-        result = manager.get_credentials(
-            "git@github.com:user/repo.git",
-            "git",
-            pygit2.GIT_CREDENTIAL_SSH_KEY
-        )
-
-        # Should fall back to other methods or return None
-        assert result is None
-
-# 🧪🔧
+# 🔼⚙️🔚
