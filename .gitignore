@@ -326,3 +326,9 @@ docs/.shared-theme/
 
 # Extracted provide.io tooling artifacts
 .provide/
+
+# Terraform state (sensitive)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
