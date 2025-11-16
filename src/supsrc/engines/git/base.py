@@ -1,21 +1,25 @@
 #
-# engines/git/base.py
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-"""
-Implementation of the RepositoryEngine protocol using pygit2.
-"""
 
-import getpass  # For SSH agent username fallback
+"""Implementation of the RepositoryEngine protocol using pygit2."""
+
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pygit2
-import structlog
-from pygit2.credentials import CredentialType
+from provide.foundation.logger import get_logger
 
-from supsrc.config.models import GlobalConfig
+# Add Foundation resilience patterns for Git operations
+from provide.foundation.resilience import BackoffStrategy, RetryPolicy, retry
+
+from supsrc.config import GlobalConfig
+from supsrc.engines.git.auth import GitAuthHandler
 from supsrc.engines.git.info import GitRepoSummary
+from supsrc.engines.git.operations import GitOperationsHelper
 
 # Use absolute imports
 from supsrc.protocols import (
@@ -27,15 +31,7 @@ from supsrc.protocols import (
 )
 from supsrc.state import RepositoryState
 
-log = structlog.get_logger("engines.git.base")
-
-# --- Constants for Change Summary ---
-MAX_SUMMARY_FILES = 10
-SUMMARY_ADDED_PREFIX = "A "
-SUMMARY_MODIFIED_PREFIX = "M "
-SUMMARY_DELETED_PREFIX = "D "
-SUMMARY_RENAMED_PREFIX = "R " # R old -> new
-SUMMARY_TYPECHANGE_PREFIX = "T "
+log = get_logger(__name__)
 
 
 class GitEngine(RepositoryEngine):
@@ -44,446 +40,479 @@ class GitEngine(RepositoryEngine):
     def __init__(self) -> None:
         self._log = log.bind(engine_id=id(self))
         self._log.debug("GitEngine initialized")
-
-    def _get_repo(self, working_dir: Path) -> pygit2.Repository:
-        """Helper to get the pygit2 Repository object."""
-        try:
-            repo_path = pygit2.discover_repository(str(working_dir))
-            if not repo_path:
-                raise pygit2.GitError(f"Not a Git repository (or any of the parent directories): {working_dir}")
-            repo = pygit2.Repository(repo_path)
-            return repo
-        except pygit2.GitError as e:
-            self._log.error("Failed to open Git repository", path=str(working_dir), error=str(e))
-            raise
-
-    def _get_config_value(self, key: str, config: dict[str, Any], default: Any = None) -> Any:
-        """Safely gets a value from the engine-specific config dict."""
-        return config.get(key, default)
-
-    # --- Authentication Callback ---
-    def _credentials_callback(self, url: str, username_from_url: str | None, allowed_types: int) -> CredentialType | None:
-        """Provides credentials to pygit2, attempting SSH agent first."""
-        cred_log = self._log.bind(url=url, username_from_url=username_from_url, allowed_types=allowed_types)
-        cred_log.debug("Credentials callback invoked")
-
-        # 1. Try SSH Agent (KeypairFromAgent) if SSH key is allowed
-        if allowed_types & CredentialType.SSH_KEY:
-            try:
-                ssh_user = username_from_url or getpass.getuser()
-                cred_log.debug("Attempting SSH agent authentication", ssh_user=ssh_user)
-                credentials = pygit2.KeypairFromAgent(ssh_user)
-                cred_log.info("Using SSH agent credentials.")
-                return credentials
-            except pygit2.GitError as e:
-                cred_log.debug("SSH agent authentication failed or not available", error=str(e))
-            except Exception as e:
-                cred_log.error("Unexpected error during SSH agent auth attempt", error=str(e), exc_info=True)
-
-        # 2. TODO: Add HTTPS Token/UserPass from Environment Variables
-        # if allowed_types & CredentialType.USERPASS_PLAINTEXT:
-        #    git_user = os.getenv("GIT_USERNAME")
-        #    git_token = os.getenv("GIT_PASSWORD") # Treat as token
-        #    if git_user and git_token:
-        #        cred_log.info("Using User/Pass credentials from environment variables.")
-        #        return pygit2.UserPass(git_user, git_token)
-        #    else:
-        #        cred_log.debug("GIT_USERNAME or GIT_PASSWORD env vars not set for UserPass.")
-
-        cred_log.warning("No suitable credentials found or configured via callbacks.")
-        return None
-
+        self.operations = GitOperationsHelper()
+        self.auth_handler = GitAuthHandler()
+        self._credentials_callback = self.auth_handler.create_credentials_callback()
 
     async def get_summary(self, working_dir: Path) -> GitRepoSummary:
         """Gets a summary of the repository's HEAD state."""
-        # (Implementation remains the same)
-        try:
-            repo = self._get_repo(working_dir)
+
+        def _blocking_get_summary():
+            repo = self.operations.get_repo(working_dir)
             if repo.is_empty:
-                return GitRepoSummary(is_empty=True)
+                return {"is_empty": True}
             if repo.head_is_unborn:
-                return GitRepoSummary(head_ref_name="UNBORN")
+                return {"head_ref_name": "UNBORN"}
 
             head_ref = repo.head
             head_commit = head_ref.peel()
             commit_msg_summary = (head_commit.message or "").split("\n", 1)[0]
 
-            return GitRepoSummary(
-                head_ref_name=head_ref.shorthand,
-                head_commit_hash=str(head_commit.id),
-                head_commit_message_summary=commit_msg_summary
-            )
+            commit_timestamp = datetime.fromtimestamp(head_commit.commit_time, tz=UTC)
+
+            return {
+                "head_ref_name": head_ref.shorthand,
+                "head_commit_hash": str(head_commit.id),
+                "head_commit_message_summary": commit_msg_summary,
+                "head_commit_timestamp": commit_timestamp,
+            }
+
+        try:
+            summary_dict = await asyncio.to_thread(_blocking_get_summary)
+            return GitRepoSummary(**summary_dict)
         except pygit2.GitError as e:
             self._log.error("Failed to get Git summary", path=str(working_dir), error=str(e))
             return GitRepoSummary(head_ref_name="ERROR", head_commit_message_summary=str(e))
         except Exception as e:
             self._log.exception("Unexpected error getting Git summary", path=str(working_dir))
-            return GitRepoSummary(head_ref_name="ERROR", head_commit_message_summary=f"Unexpected: {e}")
-
+            return GitRepoSummary(
+                head_ref_name="ERROR", head_commit_message_summary=f"Unexpected: {e}"
+            )
 
     async def get_status(
-        self, state: RepositoryState, config: dict[str, Any], global_config: GlobalConfig, working_dir: Path
+        self,
+        state: RepositoryState,
+        config: dict[str, Any],
+        global_config: GlobalConfig,
+        working_dir: Path,
     ) -> RepoStatusResult:
-        # (Implementation remains the same)
-        status_log = self._log.bind(repo_id=state.repo_id, path=str(working_dir))
-        status_log.debug("Getting repository status...")
-        try:
-            repo = self._get_repo(working_dir)
+        def _blocking_get_status():
+            status_log = self._log.bind(repo_id=state.repo_id, path=str(working_dir))
+            repo = self.operations.get_repo(working_dir)
             current_branch = "UNBORN" if repo.head_is_unborn else repo.head.shorthand
 
             if repo.is_bare:
-                 status_log.warning("Cannot get status for bare repository.")
-                 return RepoStatusResult(success=False, message="Cannot get status for bare repository")
-
+                return {"success": False, "message": "Cannot get status for bare repository"}
             if repo.index.conflicts:
-                 status_log.warning("Repository has merge conflicts.")
-                 return RepoStatusResult(success=True, is_conflicted=True, current_branch=current_branch)
+                return {"success": True, "is_conflicted": True, "current_branch": current_branch}
 
             pygit2_status = repo.status()
-            if not pygit2_status and not repo.head_is_unborn:
-                 status_log.debug("Repository is clean.")
-                 return RepoStatusResult(success=True, is_clean=True, current_branch=current_branch)
-
             has_staged = any(
-                s & pygit2.GIT_STATUS_INDEX_NEW or
-                s & pygit2.GIT_STATUS_INDEX_MODIFIED or
-                s & pygit2.GIT_STATUS_INDEX_DELETED or
-                s & pygit2.GIT_STATUS_INDEX_RENAMED or
-                s & pygit2.GIT_STATUS_INDEX_TYPECHANGE
+                s & pygit2.GIT_STATUS_INDEX_NEW
+                or s & pygit2.GIT_STATUS_INDEX_MODIFIED
+                or s & pygit2.GIT_STATUS_INDEX_DELETED
+                or s & pygit2.GIT_STATUS_INDEX_RENAMED
+                or s & pygit2.GIT_STATUS_INDEX_TYPECHANGE
                 for s in pygit2_status.values()
             )
             has_unstaged = any(
-                s & pygit2.GIT_STATUS_WT_MODIFIED or
-                s & pygit2.GIT_STATUS_WT_DELETED or
-                s & pygit2.GIT_STATUS_WT_TYPECHANGE or
-                s & pygit2.GIT_STATUS_WT_RENAMED
+                s & pygit2.GIT_STATUS_WT_MODIFIED
+                or s & pygit2.GIT_STATUS_WT_DELETED
+                or s & pygit2.GIT_STATUS_WT_TYPECHANGE
+                or s & pygit2.GIT_STATUS_WT_RENAMED
                 for s in pygit2_status.values()
             )
             has_untracked = any(s & pygit2.GIT_STATUS_WT_NEW for s in pygit2_status.values())
-            is_clean = not (has_staged or has_unstaged or has_untracked)
+            is_clean = not (has_staged or has_unstaged or has_untracked) and not repo.head_is_unborn
 
-            status_log.debug("Repository status check", staged=has_staged, unstaged=has_unstaged, untracked=has_untracked, is_clean=is_clean, is_unborn=repo.head_is_unborn)
-            return RepoStatusResult(
-                success=True,
-                is_clean=is_clean,
-                is_unborn=repo.head_is_unborn,
-                has_staged_changes=has_staged,
-                has_unstaged_changes=has_unstaged,
-                has_untracked_changes=has_untracked,
-                current_branch=current_branch
-            )
+            added_files, deleted_files, modified_files = 0, 0, 0
+            if not is_clean:
+                for flags in pygit2_status.values():
+                    if (flags & pygit2.GIT_STATUS_WT_NEW) or (flags & pygit2.GIT_STATUS_INDEX_NEW):
+                        added_files += 1
+                    elif (flags & pygit2.GIT_STATUS_WT_DELETED) or (
+                        flags & pygit2.GIT_STATUS_INDEX_DELETED
+                    ):
+                        deleted_files += 1
+                    elif (
+                        (flags & pygit2.GIT_STATUS_WT_MODIFIED)
+                        or (flags & pygit2.GIT_STATUS_INDEX_MODIFIED)
+                        or (flags & pygit2.GIT_STATUS_WT_RENAMED)
+                        or (flags & pygit2.GIT_STATUS_INDEX_RENAMED)
+                        or (flags & pygit2.GIT_STATUS_WT_TYPECHANGE)
+                        or (flags & pygit2.GIT_STATUS_INDEX_TYPECHANGE)
+                    ):
+                        modified_files += 1
 
+            changed_files = added_files + deleted_files + modified_files
+            total_files = 0
+            try:
+                if not repo.is_empty and not repo.head_is_unborn:
+                    # Count only tracked files (exclude directories)
+                    for entry in repo.index:
+                        # Skip directories (GIT_FILEMODE_TREE = 0o040000)
+                        if entry.mode != pygit2.GIT_FILEMODE_TREE:
+                            total_files += 1
+            except Exception as e:
+                status_log.error(f"Error counting tracked files: {e}")
+
+            return {
+                "success": True,
+                "is_clean": is_clean,
+                "is_unborn": repo.head_is_unborn,
+                "has_staged_changes": has_staged,
+                "has_unstaged_changes": has_unstaged,
+                "has_untracked_changes": has_untracked,
+                "current_branch": current_branch,
+                "total_files": total_files,
+                "changed_files": changed_files,
+                "added_files": added_files,
+                "deleted_files": deleted_files,
+                "modified_files": modified_files,
+            }
+
+        try:
+            status_dict = await asyncio.to_thread(_blocking_get_status)
+            return RepoStatusResult(**status_dict)  # type: ignore[misc]
         except pygit2.GitError as e:
-            status_log.error("Failed to get Git status", error=str(e))
+            self._log.error("Failed to get Git status", error=str(e), repo_id=state.repo_id)
             return RepoStatusResult(success=False, message=f"Git status error: {e}")
         except Exception as e:
-            status_log.exception("Unexpected error getting Git status")
+            self._log.exception("Unexpected status error getting Git status", repo_id=state.repo_id)
             return RepoStatusResult(success=False, message=f"Unexpected status error: {e}")
 
-    async def stage_changes(
-        self, files: list[Path] | None, state: RepositoryState, config: dict[str, Any], global_config: GlobalConfig, working_dir: Path
-    ) -> StageResult:
-        # (Implementation remains the same)
-        stage_log = self._log.bind(repo_id=state.repo_id, path=str(working_dir))
-        stage_log.info("Staging changes...")
+    async def get_last_commit_stats(
+        self,
+        state: RepositoryState,
+        repository_config: dict[str, Any],
+        global_config: dict[str, Any],
+        repo_path: Path,
+    ) -> dict[str, Any]:
+        """Get statistics from the last commit for caching in state.
+
+        Returns:
+            Dict with success, commit_hash, added, deleted, modified
+        """
+
+        def _blocking_get_commit_stats() -> dict[str, Any]:
+            try:
+                repo = pygit2.Repository(str(repo_path))
+
+                if repo.is_empty or repo.head_is_unborn:
+                    return {
+                        "success": True,
+                        "commit_hash": None,
+                        "added": 0,
+                        "deleted": 0,
+                        "modified": 0,
+                    }
+
+                # Get the last commit
+                last_commit = repo.head.peel()
+                commit_hash = str(last_commit.id)
+
+                # Check if we need to update cached stats
+                if (
+                    state.cached_last_commit_stats_loaded
+                    and state.cached_last_commit_hash == commit_hash
+                ):
+                    self._log.debug("Using cached commit stats", commit_hash=commit_hash)
+                    return {
+                        "success": True,
+                        "commit_hash": commit_hash,
+                        "added": state.last_committed_added,
+                        "deleted": state.last_committed_deleted,
+                        "modified": state.last_committed_modified,
+                    }
+
+                # Get parent commit for diff
+                if len(last_commit.parents) == 0:
+                    # Initial commit - everything is added
+                    added_files = 0
+                    try:
+                        for entry in last_commit.tree:
+                            if entry.type != "tree":  # Skip directories
+                                added_files += 1
+                    except Exception:
+                        pass
+
+                    stats = {
+                        "success": True,
+                        "commit_hash": commit_hash,
+                        "added": added_files,
+                        "deleted": 0,
+                        "modified": 0,
+                    }
+                else:
+                    # Compare with parent commit
+                    parent_commit = last_commit.parents[0]
+                    diff = repo.diff(parent_commit.tree, last_commit.tree)
+
+                    added = 0
+                    deleted = 0
+                    modified = 0
+
+                    for delta in diff.deltas:
+                        if delta.status == pygit2.GIT_DELTA_ADDED:
+                            added += 1
+                        elif delta.status == pygit2.GIT_DELTA_DELETED:
+                            deleted += 1
+                        elif delta.status == pygit2.GIT_DELTA_MODIFIED:
+                            modified += 1
+
+                    stats = {
+                        "success": True,
+                        "commit_hash": commit_hash,
+                        "added": added,
+                        "deleted": deleted,
+                        "modified": modified,
+                    }
+
+                # Cache the stats in state
+                state.set_cached_commit_stats(
+                    commit_hash, stats["added"], stats["deleted"], stats["modified"]
+                )
+
+                self._log.debug(
+                    "Loaded commit stats from Git",
+                    commit_hash=commit_hash,
+                    added=stats["added"],
+                    deleted=stats["deleted"],
+                    modified=stats["modified"],
+                )
+
+                return stats
+
+            except Exception as e:
+                self._log.error(f"Unable to get last commit stats: {e}")
+                return {"success": False, "error": str(e)}
+
         try:
-            repo = self._get_repo(working_dir)
+            return await asyncio.to_thread(_blocking_get_commit_stats)
+        except Exception as e:
+            self._log.exception("Unexpected error getting commit stats", repo_id=state.repo_id)
+            return {"success": False, "error": str(e)}
+
+    @retry(
+        pygit2.GitError,
+        OSError,
+        policy=RetryPolicy(
+            max_attempts=3, backoff=BackoffStrategy.EXPONENTIAL, base_delay=0.5, max_delay=5.0
+        ),
+    )
+    async def stage_changes(
+        self,
+        files: list[Path] | None,
+        state: RepositoryState,
+        config: dict[str, Any],
+        global_config: GlobalConfig,
+        working_dir: Path,
+    ) -> StageResult:
+        def _blocking_stage_changes():
+            repo = self.operations.get_repo(working_dir)
             index = repo.index
             staged_list = []
 
             if files:
                 repo_root = Path(repo.workdir)
-                relative_files = []
                 for f in files:
                     try:
-                        rel_path = str(f.relative_to(repo_root))
-                        relative_files.append(rel_path)
+                        # Ensure f is a Path object if it's coming in as a string
+                        rel_path = str(Path(f).relative_to(repo_root))
                         index.add(rel_path)
                         staged_list.append(rel_path)
-                    except ValueError: stage_log.warning("File path not relative to repo root, cannot stage individually", file=str(f))
-                    except KeyError: stage_log.warning("File not found in repository index, skipping staging", file=str(f))
+                    except (ValueError, KeyError) as e:
+                        # Log a warning if a specific file fails to be staged.
+                        self._log.warning(
+                            "Could not stage specified file, it may not exist or be outside the repository.",
+                            file=str(f),
+                            error=str(e),
+                            repo_id=state.repo_id,
+                        )
             else:
-                status = repo.status()
-                files_to_add = []
-                files_to_remove = []
-                for filepath, flags in status.items():
-                    if flags & pygit2.GIT_STATUS_WT_DELETED or flags & pygit2.GIT_STATUS_INDEX_DELETED:
-                        files_to_remove.append(filepath)
-                    elif flags & pygit2.GIT_STATUS_WT_NEW or flags & pygit2.GIT_STATUS_INDEX_NEW \
-                      or flags & pygit2.GIT_STATUS_WT_MODIFIED or flags & pygit2.GIT_STATUS_INDEX_MODIFIED \
-                      or flags & pygit2.GIT_STATUS_WT_RENAMED or flags & pygit2.GIT_STATUS_INDEX_RENAMED \
-                      or flags & pygit2.GIT_STATUS_WT_TYPECHANGE or flags & pygit2.GIT_STATUS_INDEX_TYPECHANGE:
-                        if not repo.path_is_ignored(filepath):
-                             files_to_add.append(filepath)
-
-                if files_to_add:
-                     stage_log.debug("Adding files to index", files=files_to_add)
-                     index.add_all(files_to_add)
-                     staged_list.extend(files_to_add)
-                if files_to_remove:
-                     stage_log.debug("Removing files from index", files=files_to_remove)
-                     index.remove_all(files_to_remove)
+                index.add_all()
+                staged_list = [
+                    filepath
+                    for filepath, flags in repo.status().items()
+                    if flags != pygit2.GIT_STATUS_CURRENT
+                ]
 
             index.write()
-            stage_log.info("Staging successful", files_staged=len(staged_list))
-            return StageResult(success=True, message="Changes staged successfully.", files_staged=staged_list)
-
-        except pygit2.GitError as e:
-            stage_log.error("Failed to stage changes", error=str(e))
-            return StageResult(success=False, message=f"Git staging error: {e}")
-        except Exception as e:
-            stage_log.exception("Unexpected error staging changes")
-            return StageResult(success=False, message=f"Unexpected staging error: {e}")
-
-    def _generate_change_summary(self, diff: pygit2.Diff) -> str:
-        """Generates a summary string from a pygit2 Diff object."""
-        added, modified, deleted, renamed, typechanged = [], [], [], [], []
-        # --- FIX: Iterate over diff.deltas ---
-        for delta in diff.deltas:
-            path = delta.new_file.path if delta.status != pygit2.GIT_DELTA_DELETED else delta.old_file.path
-            if delta.status == pygit2.GIT_DELTA_ADDED: added.append(path)
-            elif delta.status == pygit2.GIT_DELTA_MODIFIED: modified.append(path)
-            elif delta.status == pygit2.GIT_DELTA_DELETED: deleted.append(path)
-            elif delta.status == pygit2.GIT_DELTA_RENAMED: renamed.append(f"{delta.old_file.path} -> {delta.new_file.path}")
-            elif delta.status == pygit2.GIT_DELTA_TYPECHANGE: typechanged.append(path)
-        # ------------------------------------
-
-        summary_lines = []
-        if added: summary_lines.append(f"Added ({len(added)}):")
-        summary_lines.extend([f"  {SUMMARY_ADDED_PREFIX}{f}" for f in added[:MAX_SUMMARY_FILES]])
-        if len(added) > MAX_SUMMARY_FILES: summary_lines.append(f"  ... ({len(added) - MAX_SUMMARY_FILES} more)")
-
-        if modified: summary_lines.append(f"Modified ({len(modified)}):")
-        summary_lines.extend([f"  {SUMMARY_MODIFIED_PREFIX}{f}" for f in modified[:MAX_SUMMARY_FILES]])
-        if len(modified) > MAX_SUMMARY_FILES: summary_lines.append(f"  ... ({len(modified) - MAX_SUMMARY_FILES} more)")
-
-        if deleted: summary_lines.append(f"Deleted ({len(deleted)}):")
-        summary_lines.extend([f"  {SUMMARY_DELETED_PREFIX}{f}" for f in deleted[:MAX_SUMMARY_FILES]])
-        if len(deleted) > MAX_SUMMARY_FILES: summary_lines.append(f"  ... ({len(deleted) - MAX_SUMMARY_FILES} more)")
-
-        if renamed: summary_lines.append(f"Renamed ({len(renamed)}):")
-        summary_lines.extend([f"  {SUMMARY_RENAMED_PREFIX}{f}" for f in renamed[:MAX_SUMMARY_FILES]])
-        if len(renamed) > MAX_SUMMARY_FILES: summary_lines.append(f"  ... ({len(renamed) - MAX_SUMMARY_FILES} more)")
-
-        if typechanged: summary_lines.append(f"Type Changed ({len(typechanged)}):")
-        summary_lines.extend([f"  {SUMMARY_TYPECHANGE_PREFIX}{f}" for f in typechanged[:MAX_SUMMARY_FILES]])
-        if len(typechanged) > MAX_SUMMARY_FILES: summary_lines.append(f"  ... ({len(typechanged) - MAX_SUMMARY_FILES} more)")
-
-        return "\n".join(summary_lines)
-
-
-    async def perform_commit(
-        self, message_template: str, state: RepositoryState, config: dict[str, Any], global_config: GlobalConfig, working_dir: Path
-    ) -> CommitResult:
-        commit_log = self._log.bind(repo_id=state.repo_id, path=str(working_dir))
-        commit_log.info("Performing commit...")
-        is_unborn = False # Will be set after repo object is obtained
+            return {
+                "success": True,
+                "files_staged": staged_list,
+                "message": f"Successfully staged {len(staged_list)} files",
+                "details": {"staged_files": staged_list},
+            }
 
         try:
-            repo = self._get_repo(working_dir)
-            index = repo.index
-            is_unborn = repo.head_is_unborn
-
-            # Determine if there are actual changes to commit
-            diff: pygit2.Diff | None = None
-            try:
-                 if is_unborn:
-                      commit_log.debug("Comparing index to empty tree (unborn HEAD for diff)")
-                      if not index.is_empty:
-                          diff = index.diff_to_tree(None)
-                      else:
-                          diff = None
-                 else:
-                      head_commit = repo.head.peel()
-                      commit_log.debug("Comparing index to HEAD tree", head_commit_oid=str(head_commit.id))
-                      diff = index.diff_to_tree(head_commit.tree)
-            except pygit2.GitError as diff_err:
-                 commit_log.warning("Could not diff index to HEAD tree, assuming changes exist for now", error=str(diff_err))
-
-            if diff is not None and not diff.deltas and not (is_unborn and not index.is_empty):
-                 commit_log.info("Commit skipped: No changes detected in diff.")
-                 return CommitResult(success=True, message="Commit skipped: No changes detected.", commit_hash=None)
-            elif diff is None and is_unborn and index.is_empty:
-                 commit_log.info("Commit skipped: Unborn HEAD and empty index.")
-                 return CommitResult(success=True, message="Commit skipped: Unborn HEAD and empty index.", commit_hash=None)
-
-            # Signature
-            try:
-                 signature = repo.default_signature
-            except pygit2.GitError:
-                 commit_log.warning("Git user name/email not configured, using fallback.")
-                 fallback_name = "Supsrc Automation"
-                 fallback_email = "supsrc@example.com"
-                 timestamp = int(datetime.now(UTC).timestamp())
-                 offset = 0 # UTC
-                 signature = pygit2.Signature(fallback_name, fallback_email, timestamp, offset)
-
-            # Commit message
-            change_summary_str = ""
-            if diff is not None:
-                 change_summary_str = self._generate_change_summary(diff)
-                 commit_log.debug("Generated change summary", summary_length=len(change_summary_str))
+            result_dict = await asyncio.to_thread(_blocking_stage_changes)
+            return StageResult(**result_dict)  # type: ignore[misc]
+        except OSError as e:
+            # Handle git lock collisions specifically
+            error_msg = str(e)
+            if "failed to lock file" in error_msg and ".lock" in error_msg:
+                self._log.warning(
+                    "Git lock collision during staging - another process is accessing the repository. "
+                    "The retry mechanism will handle this automatically.",
+                    error=error_msg,
+                    repo_id=state.repo_id,
+                    working_dir=str(working_dir),
+                )
+                # Re-raise to trigger retry mechanism
+                raise
             else:
-                 commit_log.debug("Skipping change summary generation as diff was not available/empty.")
+                # Other OSError - log and return failure
+                self._log.error("OS error during staging", error=error_msg, repo_id=state.repo_id)
+                return StageResult(success=False, message=f"OS error: {e}")
+        except pygit2.GitError as e:
+            self._log.error("Failed to stage changes", error=str(e), repo_id=state.repo_id)
+            return StageResult(success=False, message=f"Git staging error: {e}")
+        except Exception as e:
+            self._log.exception("Unexpected error staging changes", repo_id=state.repo_id)
+            return StageResult(success=False, message=f"Unexpected staging error: {e}")
 
-            commit_message_template_str = self._get_config_value(
+    @retry(
+        pygit2.GitError,
+        OSError,
+        policy=RetryPolicy(
+            max_attempts=5, backoff=BackoffStrategy.EXPONENTIAL, base_delay=0.5, max_delay=10.0
+        ),
+    )
+    async def perform_commit(
+        self,
+        message_template: str,
+        state: RepositoryState,
+        config: dict[str, Any],
+        global_config: GlobalConfig,
+        working_dir: Path,
+    ) -> CommitResult:
+        def _blocking_perform_commit():
+            repo = self.operations.get_repo(working_dir)
+            repo.index.read(force=True)  # Ensure index is fresh from disk
+
+            is_unborn = repo.head_is_unborn
+            diff = None
+
+            if is_unborn:
+                # For an unborn repo, any staged file is a change for the initial commit.
+                # We create a diff against an empty tree to represent this.
+                if len(repo.index) > 0:
+                    empty_tree_oid = repo.TreeBuilder().write()
+                    diff = repo.index.diff_to_tree(repo[empty_tree_oid])
+            else:
+                # For an existing repo, diff against the parent commit's tree.
+                parent_tree = repo.head.peel().tree
+                diff = repo.index.diff_to_tree(parent_tree)
+
+            if not diff:
+                return {"success": True, "commit_hash": None, "message": "No changes to commit."}
+
+            try:
+                signature = repo.default_signature
+            except pygit2.GitError:
+                self._log.warning("Git user name/email not configured, using fallback.")
+                fallback_name = "Supsrc Automation"
+                fallback_email = "supsrc@example.com"
+                timestamp = int(datetime.now(UTC).timestamp())
+                offset = 0  # UTC
+                signature = pygit2.Signature(fallback_name, fallback_email, timestamp, offset)
+
+            change_summary = self.operations.generate_change_summary(diff)
+            commit_message_template_str = message_template or self.operations.get_config_value(
                 "commit_message_template", config, "🔼⚙️ [skip ci] auto-commit\n\n{{change_summary}}"
             )
             timestamp_str = datetime.now(UTC).isoformat()
-            commit_message = commit_message_template_str.replace("{{timestamp}}", timestamp_str)
-            commit_message = commit_message.replace("{{repo_id}}", state.repo_id)
-            commit_message = commit_message.replace("{{save_count}}", str(state.save_count))
-            commit_message = commit_message.replace("{{change_summary}}", change_summary_str)
-            commit_message = commit_message.rstrip()
-
-            # Parents
-            parents = [] if is_unborn else [repo.head.target]
-
-            # Tree
-            tree_oid = index.write_tree()
-            commit_log.debug("Index tree written", tree_oid=str(tree_oid))
-
-            # Pre-create_commit diagnostic logging
-            commit_log.debug(
-                "Preparing for repo.create_commit",
-                author=f"{signature.name} <{signature.email}>",
-                committer=f"{signature.name} <{signature.email}>",
-                tree_oid_str=str(tree_oid),
-                parents_str=[str(p) for p in parents],
-                is_unborn_check=is_unborn
+            commit_message = (
+                commit_message_template_str.replace("{{timestamp}}", timestamp_str)
+                .replace("{{repo_id}}", state.repo_id)
+                .replace("{{save_count}}", str(state.save_count))
+                .replace("{{change_summary}}", change_summary)
+                .rstrip()
             )
-            if tree_oid is None:
-                commit_log.error("tree_oid is None before create_commit, this will fail.")
-                raise ValueError("Cannot create commit: tree_oid is None after index.write_tree().")
 
-            commit_hash: str
-            if is_unborn:
-                commit_log.info("Performing explicit initial commit sequence for unborn HEAD.")
-                commit_oid_obj = repo.create_commit(
-                    None, signature, signature, commit_message, tree_oid, parents
+            parents = [] if is_unborn else [repo.head.target]
+            tree = repo.index.write_tree()
+
+            commit_oid = repo.create_commit(
+                "HEAD", signature, signature, commit_message, tree, parents
+            )
+            return {"success": True, "commit_hash": str(commit_oid)}
+
+        try:
+            result_dict = await asyncio.to_thread(_blocking_perform_commit)
+            return CommitResult(**result_dict)  # type: ignore[misc]
+        except OSError as e:
+            # Handle git lock collisions specifically
+            error_msg = str(e)
+            if "failed to lock file" in error_msg and ".lock" in error_msg:
+                self._log.warning(
+                    "Git lock collision - another process is accessing the repository. "
+                    "This is typically caused by concurrent git operations. "
+                    "The retry mechanism will handle this automatically.",
+                    error=error_msg,
+                    repo_id=state.repo_id,
+                    working_dir=str(working_dir),
                 )
-                commit_hash = str(commit_oid_obj)
-                commit_log.debug(f"Initial commit object created: {commit_hash}")
-
-                target_branch_ref_name = repo.head.target
-                commit_log.debug(f"HEAD is symbolic; target branch for initial commit is: {target_branch_ref_name}")
-
-                repo.create_reference(target_branch_ref_name, commit_oid_obj)
-                commit_log.debug(f"Created reference {target_branch_ref_name} pointing to {commit_hash}")
-
-                repo.head.set_target(target_branch_ref_name)
-                commit_log.info(f"Initial commit successful. HEAD now points to {target_branch_ref_name} ({commit_hash[:7]})")
+                # Re-raise to trigger retry mechanism
+                raise
             else:
-                ref_to_update = "HEAD"
-                commit_log.info(f"Performing commit, updating reference: {ref_to_update}")
-                commit_oid_obj = repo.create_commit(
-                    ref_to_update, signature, signature, commit_message, tree_oid, parents
-                )
-                commit_hash = str(commit_oid_obj)
-                commit_log.info(f"Commit successful ({commit_hash[:7]})")
-
-            return CommitResult(success=True, message=f"Commit successful: {commit_hash[:7]}", commit_hash=commit_hash)
-
+                # Other OSError - log and return failure
+                self._log.error("OS error during commit", error=error_msg, repo_id=state.repo_id)
+                return CommitResult(success=False, message=f"OS error: {e}")
         except pygit2.GitError as e:
-            commit_log.error("Failed to perform commit due to GitError", error=str(e), is_unborn=is_unborn, exc_info=True)
+            self._log.error("Failed to perform commit", error=str(e), repo_id=state.repo_id)
             return CommitResult(success=False, message=f"Git commit error: {e}")
-        except ValueError as e:
-            commit_log.error("Failed to perform commit due to ValueError", error=str(e), is_unborn=is_unborn, exc_info=True)
-            return CommitResult(success=False, message=str(e))
         except Exception as e:
-            commit_log.exception("Unexpected error performing commit", is_unborn=is_unborn)
+            self._log.exception("Unexpected error performing commit", repo_id=state.repo_id)
             return CommitResult(success=False, message=f"Unexpected commit error: {e}")
 
+    @retry(
+        pygit2.GitError,
+        OSError,
+        ConnectionError,
+        TimeoutError,
+        policy=RetryPolicy(
+            max_attempts=5,  # More retries for network operations
+            backoff=BackoffStrategy.EXPONENTIAL,
+            base_delay=2.0,
+            max_delay=30.0,
+        ),
+    )
     async def perform_push(
-        self, state: RepositoryState, config: dict[str, Any], global_config: GlobalConfig, working_dir: Path
+        self,
+        state: RepositoryState,
+        config: dict[str, Any],
+        global_config: GlobalConfig,
+        working_dir: Path,
     ) -> PushResult:
-        # (Implementation remains the same as previous version)
-        push_log = self._log.bind(repo_id=state.repo_id, path=str(working_dir))
-
-        auto_push = self._get_config_value("auto_push", config, False)
+        auto_push = self.operations.get_config_value("auto_push", config, False)
         if not auto_push:
-            push_log.info("Push skipped (disabled by configuration).")
-            return PushResult(success=True, message="Push skipped (disabled).", skipped=True)
+            return PushResult(success=True, skipped=True, message="Push disabled by config.")
 
-        remote_name = self._get_config_value("remote", config, "origin")
-        branch_name = self._get_config_value("branch", config, None)
+        remote_name = self.operations.get_config_value("remote", config, "origin")
 
-        push_log.info(f"Performing push to remote '{remote_name}'...")
-        try:
-            repo = self._get_repo(working_dir)
-            if repo.head_is_unborn:
-                 push_log.warning("Cannot push unborn HEAD.")
-                 return PushResult(success=False, message="Cannot push unborn HEAD.", remote_name=remote_name)
+        def _blocking_perform_push():
+            repo = self.operations.get_repo(working_dir)
 
-            if not branch_name:
-                try:
-                     branch_name = repo.head.shorthand
-                     push_log.debug(f"Using current branch '{branch_name}' for push.")
-                except pygit2.GitError:
-                     push_log.error("Could not determine current branch name for push.")
-                     return PushResult(success=False, message="Could not determine current branch name.", remote_name=remote_name)
+            if remote_name not in repo.remotes:
+                raise ValueError(f"Remote '{remote_name}' not found in repository.")
 
+            branch_name = self.operations.get_config_value("branch", config) or repo.head.shorthand
             remote = repo.remotes[remote_name]
-            refspec = f"refs/heads/{branch_name}"
-
             callbacks = pygit2.RemoteCallbacks(credentials=self._credentials_callback)
-            push_log.debug("Attempting push with callbacks", remote=remote_name, refspec=refspec)
-            remote.push([refspec], callbacks=callbacks)
+            remote.push([f"refs/heads/{branch_name}"], callbacks=callbacks)
+            return {"success": True, "remote_name": remote_name, "branch_name": branch_name}
 
-            push_log.info(f"Push successful to {remote_name}/{branch_name}.")
-            return PushResult(success=True, message=f"Push successful to {remote_name}/{branch_name}.", remote_name=remote_name, branch_name=branch_name)
-
-        except KeyError:
-            push_log.error(f"Remote '{remote_name}' not found.")
-            return PushResult(success=False, message=f"Remote '{remote_name}' not found.", remote_name=remote_name)
-        except pygit2.GitError as e:
-            push_log.error("Failed to perform push", error=str(e))
-            if "authentication required" in str(e).lower():
-                 msg = "Git push error: Authentication failed (check SSH agent or credential config)."
-            elif "could not resolve host" in str(e).lower():
-                 msg = "Git push error: Network error or invalid remote."
-            elif "rejected" in str(e).lower():
-                 msg = "Git push error: Push rejected (likely non-fast-forward or permissions)."
-            else:
-                 msg = f"Git push error: {e}"
-            return PushResult(success=False, message=msg, remote_name=remote_name, branch_name=branch_name)
-        except Exception as e:
-            push_log.exception("Unexpected error performing push")
-            return PushResult(success=False, message=f"Unexpected push error: {e}", remote_name=remote_name, branch_name=branch_name)
-
-    def get_commit_history(self, working_dir: Path, limit: int = 10) -> list[str]:
-        """Retrieves the last N commit messages from the repository."""
-        history_log = self._log.bind(working_dir=str(working_dir), limit=limit)
-        history_log.debug("Fetching commit history")
         try:
-            repo = self._get_repo(working_dir)
-            if repo.is_empty or repo.head_is_unborn:
-                return ["Repository is empty or unborn."]
-
-            last_commits = []
-            for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):
-                if len(last_commits) >= limit:
-                    break
-                commit_time = datetime.fromtimestamp(commit.commit_time, tz=datetime.now(UTC).astimezone().tzinfo).strftime("%Y-%m-%d %H:%M:%S")
-                # Format: "hash_short - author - date - message_summary"
-                summary = (commit.message or "").split("\n", 1)[0]
-                if len(summary) > 60: # Truncate long summaries
-                    summary = summary[:57] + "..."
-
-                # Ensure commit.author is not None before accessing its properties
-                author_name = commit.author.name if commit.author else "Unknown Author"
-
-                last_commits.append(
-                    f"{str(commit.id)[:7]} - {author_name} - {commit_time} - {summary}"
-                )
-
-            history_log.debug(f"Retrieved {len(last_commits)} commit history items.")
-            return last_commits
+            result_dict = await asyncio.to_thread(_blocking_perform_push)
+            return PushResult(**result_dict)  # type: ignore[misc]
+        except (ValueError, KeyError):
+            message = f"Remote '{remote_name}' not found."
+            self._log.warning(
+                "Push failed: remote not found.", remote_name=remote_name, repo_id=state.repo_id
+            )
+            return PushResult(success=False, message=message)
         except pygit2.GitError as e:
-            history_log.error("Failed to get commit history", error=str(e))
-            return [f"Error fetching history: {e}"]
+            self._log.error("Failed to perform push", error=str(e), repo_id=state.repo_id)
+            return PushResult(success=False, message=f"Git push error: {e}")
         except Exception as e:
-            history_log.exception("Unexpected error getting commit history")
-            return [f"Unexpected error fetching history: {e}"]
+            self._log.exception("Unexpected error performing push", repo_id=state.repo_id)
+            return PushResult(success=False, message=f"Unexpected push error: {e}")
 
-# 🔼⚙️
+    async def get_commit_history(self, working_dir: Path, limit: int = 10) -> list[str]:
+        """Retrieves the last N commit messages from the repository asynchronously."""
+        return await self.operations.get_commit_history(working_dir, limit)
+
+
+# 🔼⚙️🔚

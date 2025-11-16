@@ -1,35 +1,41 @@
 #
-# config/__init__.py
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-"""
-Configuration handling sub-package for supsrc.
 
-Exports the loading function and core configuration model.
-"""
+"""Configuration module for supsrc.
 
-# Export the main loading function from the loader module
-from .loader import load_config
+Re-exports all configuration models and loading functions for backwards compatibility."""
 
-# Export the core configuration models from the models module
-from .models import (
+from __future__ import annotations
+
+# Re-export all config models and functions
+from supsrc.config.models import (
+    ConfigurationError,
     GlobalConfig,
-    InactivityRuleConfig,  # Export specific rule types if needed externally
+    InactivityRuleConfig,
+    LLMConfig,
     ManualRuleConfig,
     RepositoryConfig,
-    RuleConfig,  # Export the union type
+    RuleConfig,
     SaveCountRuleConfig,
     SupsrcConfig,
+    load_config,
+    load_repository_config,
 )
 
 __all__ = [
+    "ConfigurationError",
     "GlobalConfig",
     "InactivityRuleConfig",
+    "LLMConfig",
     "ManualRuleConfig",
     "RepositoryConfig",
     "RuleConfig",
     "SaveCountRuleConfig",
     "SupsrcConfig",
     "load_config",
+    "load_repository_config",
 ]
 
-# 🔼⚙️
+# 🔼⚙️🔚

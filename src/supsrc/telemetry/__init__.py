@@ -1,15 +1,14 @@
 #
-# supsrc/telemetry/__init__.py
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-"""
-Telemetry package for supsrc.
-"""
 
-from supsrc.telemetry.logger import StructLogger, setup_logging
+"""TODO: Add module docstring."""
 
-__all__ = [
-    "StructLogger",
-    "setup_logging"
-]
+from __future__ import annotations
 
-# 🔼⚙️
+from supsrc.telemetry.eventset import SUPSRC_EVENT_SET
+
+__all__ = ["SUPSRC_EVENT_SET"]
+
+# 🔼⚙️🔚

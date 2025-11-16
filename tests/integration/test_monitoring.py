@@ -1,20 +1,24 @@
 #
-# tests/integration/test_monitoring.py
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-"""
-Integration tests for the complete monitoring system.
-"""
+
+"""Integration tests for the complete monitoring system."""
 
 import asyncio
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 import pytest
+from provide.testkit.mocking import Mock
 
+# Correctly import dependencies for the test fix
 from supsrc.config import load_config
 from supsrc.monitor import MonitoredEvent, MonitoringService
 from supsrc.runtime.orchestrator import WatchOrchestrator
+from supsrc.runtime.tui_interface import TUIInterface  # Import the TUI interface
 from supsrc.state import RepositoryStatus
 
 
@@ -27,43 +31,68 @@ async def monitoring_setup(tmp_path: Path):
 
     # Initialize Git repository
     subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True)
+    # Configure Git user for integration testing (disable GPG signing to avoid issues)
+    subprocess.run(
+        ["git", "config", "user.name", "Integration Test User"], cwd=repo_path, check=True
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "integration@supsrc.example.com"], cwd=repo_path, check=True
+    )
+    # Disable GPG signing to prevent tests from failing if user has global GPG config
+    subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo_path, check=True)
+    subprocess.run(["git", "config", "gpg.program", ""], cwd=repo_path, check=True)
 
     # Create initial commit
     (repo_path / "README.md").write_text("Initial commit")
     subprocess.run(["git", "add", "README.md"], cwd=repo_path, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo_path, check=True)
 
+    # Add .gitignore file for testing
+    gitignore_content = """
+    *.log
+    temp/
+    """
+    (repo_path / ".gitignore").write_text(gitignore_content)
+    subprocess.run(["git", "add", ".gitignore"], cwd=repo_path, check=True)
+    subprocess.run(["git", "commit", "-m", "Add .gitignore"], cwd=repo_path, check=True)
+
+    # Create a separate temporary directory for the config file
+    config_dir = Path(tempfile.mkdtemp())
+    config_file = config_dir / "test.conf"
+
     # Create configuration
     config_content = f"""
     [global]
-    log_level = "DEBUG"
+    log_level = \"DEBUG\"
 
     [repositories.test-repo]
-    path = "{repo_path}"
+    path = \"{repo_path}\"
     enabled = true
 
     [repositories.test-repo.rule]
-    type = "supsrc.rules.save_count"
+    type = \"supsrc.rules.save_count\"
     count = 2
 
     [repositories.test-repo.repository]
-    type = "supsrc.engines.git"
+    type = \"supsrc.engines.git\"
     auto_push = false
     """
 
-    config_file = tmp_path / "test.conf"
     config_file.write_text(config_content)
 
     config = load_config(config_file)
 
-    return {
+    yield {
         "repo_path": repo_path,
         "config_file": config_file,
         "config": config,
-        "tmp_path": tmp_path
+        "tmp_path": tmp_path,  # This tmp_path is for the repo
+        "config_dir": config_dir,  # Add config_dir to cleanup
     }
+
+    # Teardown: Clean up the separate config directory
+    if config_dir.exists():
+        shutil.rmtree(config_dir)
 
 
 class TestMonitoringIntegration:
@@ -107,13 +136,7 @@ class TestMonitoringIntegration:
         """Test that .gitignore patterns are properly respected."""
         repo_path = monitoring_setup["repo_path"]
         config = monitoring_setup["config"]
-
-        # Create .gitignore file
-        gitignore_content = """
-        *.log
-        temp/
-        """
-        (repo_path / ".gitignore").write_text(gitignore_content)
+        # .gitignore file is now created in the monitoring_setup fixture
 
         # Create event queue and monitoring service
         event_queue = asyncio.Queue()
@@ -139,15 +162,18 @@ class TestMonitoringIntegration:
             # Wait for events
             events = []
             try:
-                while len(events) < 2:
+                # We expect at least one event (created) for the normal file
+                while True:
                     event = await asyncio.wait_for(event_queue.get(), timeout=2.0)
                     events.append(event)
             except TimeoutError:
-                pass  # Expected if ignored files don't generate events
+                pass  # Expected to timeout after receiving all events
 
-            # Should only receive event for normal file
-            assert len(events) == 1
-            assert events[0].src_path == normal_file
+            normal_file_events = [e for e in events if e.src_path == normal_file]
+            assert len(normal_file_events) > 0, "Did not receive event for non-ignored file"
+
+            ignored_file_events = [e for e in events if e.src_path == ignored_file]
+            assert len(ignored_file_events) == 0, "Received event for ignored file"
 
         finally:
             await monitoring_service.stop()
@@ -159,13 +185,22 @@ class TestMonitoringIntegration:
 
         shutdown_event = asyncio.Event()
         orchestrator = WatchOrchestrator(config_file, shutdown_event)
-
+        orchestrator.setup_config_watcher = Mock()  # Prevent config watcher from interfering
         # Start orchestrator in background
         orchestrator_task = asyncio.create_task(orchestrator.run())
 
         try:
-            # Give orchestrator time to initialize
-            await asyncio.sleep(1.0)
+            # Wait for the monitoring service to be running, which is more reliable than a fixed sleep.
+            timeout = 10.0
+            start_time = asyncio.get_event_loop().time()
+            while not (
+                orchestrator.monitoring_coordinator
+                and orchestrator.monitoring_coordinator.monitor_service
+                and orchestrator.monitoring_coordinator.monitor_service.is_running
+            ):
+                if asyncio.get_event_loop().time() - start_time > timeout:
+                    raise TimeoutError("Timed out waiting for monitoring service to start.")
+                await asyncio.sleep(0.1)
 
             # Verify repository state is initialized
             assert "test-repo" in orchestrator.repo_states
@@ -173,21 +208,45 @@ class TestMonitoringIntegration:
             assert repo_state.status == RepositoryStatus.IDLE
             assert repo_state.save_count == 0
 
-            # Create first file change
-            (repo_path / "change1.txt").write_text("First change")
-            await asyncio.sleep(0.5)  # Allow event processing
+            # Create first file change (one event)
+            change1_file = repo_path / "change1.txt"
+            change1_file.touch()
+
+            # Wait for save_count to become 1
+            timeout = 5.0
+            start_time = asyncio.get_event_loop().time()
+            while True:
+                current_repo_state = orchestrator.repo_states["test-repo"]
+                if current_repo_state.save_count >= 1:
+                    break
+                await asyncio.sleep(0.1)
+                if asyncio.get_event_loop().time() - start_time > timeout:
+                    raise TimeoutError(
+                        f"Timed out waiting for save_count to become 1. Current: {current_repo_state.save_count}"
+                    )
 
             # Verify state update
-            assert repo_state.save_count == 1
-            assert repo_state.status == RepositoryStatus.CHANGED
+            assert current_repo_state.save_count == 1
+            assert current_repo_state.status == RepositoryStatus.CHANGED
 
-            # Create second file change (should trigger save count rule)
-            (repo_path / "change2.txt").write_text("Second change")
-            await asyncio.sleep(2.0)  # Allow rule processing and actions
+            # Create second file change (another event, should trigger rule)
+            change1_file.write_text("Second change")
 
-            # Verify action was triggered
-            assert repo_state.save_count == 0  # Reset after action
-            assert repo_state.status == RepositoryStatus.IDLE
+            # Wait for action to complete and state to reset
+            timeout = 10.0
+            start_time = asyncio.get_event_loop().time()
+            while True:
+                current_repo_state = orchestrator.repo_states["test-repo"]
+                if (
+                    current_repo_state.save_count == 0
+                    and current_repo_state.status == RepositoryStatus.IDLE
+                ):
+                    break
+                await asyncio.sleep(0.1)
+                if asyncio.get_event_loop().time() - start_time > timeout:
+                    raise TimeoutError(
+                        "Timed out waiting for action to complete and state to reset."
+                    )
 
             # Verify Git commit was created
             result = subprocess.run(
@@ -195,9 +254,9 @@ class TestMonitoringIntegration:
                 cwd=repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
-            assert "🔼⚙️ [skip ci] auto-commit" in result.stdout or len(result.stdout.splitlines()) == 2
+            assert len(result.stdout.splitlines()) == 2
 
         finally:
             # Shutdown orchestrator
@@ -233,18 +292,27 @@ class TestErrorHandling:
         shutdown_event = asyncio.Event()
         orchestrator = WatchOrchestrator(config_file, shutdown_event)
 
+        # Manually load config and create a mock TUI interface to pass to the method
+        config = load_config(config_file)
+        orchestrator.config = config  # Set config on orchestrator for the assertion
+        mock_tui = TUIInterface(None)
+
         # Should handle invalid path gracefully
         try:
-            await asyncio.wait_for(
-                orchestrator._initialize_repositories(),
-                timeout=5.0
+            # Call the method with the required arguments
+            # Initialize repository manager and call the method through it
+            from supsrc.runtime.repository_manager import RepositoryManager
+
+            orchestrator.repository_manager = RepositoryManager(
+                orchestrator.repo_states, orchestrator.repo_engines
             )
-            # Should have no enabled repositories
-            enabled_repos = [
-                repo_id for repo_id, state in orchestrator.repo_states.items()
-                if orchestrator.config.repositories[repo_id].enabled
-            ]
-            assert len(enabled_repos) == 0
+            await asyncio.wait_for(
+                orchestrator.repository_manager.initialize_repositories(config, mock_tui),
+                timeout=5.0,
+            )
+
+            # The invalid repo should be skipped, leaving repo_states empty
+            assert len(orchestrator.repo_states) == 0
 
         except Exception as e:
             pytest.fail(f"Should handle invalid paths gracefully: {e}")
@@ -304,12 +372,28 @@ class TestConcurrency:
             repo_path.mkdir()
 
             subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True)
-            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True)
+            # Configure Git user for multi-repo testing (disable GPG signing to avoid issues)
+            subprocess.run(
+                ["git", "config", "user.name", f"Multi-Repo Test User {i}"],
+                cwd=repo_path,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.email", f"multirepo{i}@supsrc.example.com"],
+                cwd=repo_path,
+                check=True,
+            )
+            # Disable GPG signing to prevent tests from failing if user has global GPG config
+            subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo_path, check=True)
+            subprocess.run(["git", "config", "gpg.program", ""], cwd=repo_path, check=True)
 
             (repo_path / "README.md").write_text(f"Repo {i}")
             subprocess.run(["git", "add", "README.md"], cwd=repo_path, check=True)
-            subprocess.run(["git", "commit", "-m", f"Initial commit {i}"], cwd=repo_path, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", f"Initial commit {i}"],
+                cwd=repo_path,
+                check=True,
+            )
 
             repos[f"repo-{i}"] = repo_path
 
@@ -318,15 +402,15 @@ class TestConcurrency:
         for repo_id, repo_path in repos.items():
             config_content += f"""
             [repositories.{repo_id}]
-            path = "{repo_path}"
+            path = \"{repo_path}\"
             enabled = true
 
             [repositories.{repo_id}.rule]
-            type = "supsrc.rules.save_count"
+            type = \"supsrc.rules.save_count\"
             count = 1
 
             [repositories.{repo_id}.repository]
-            type = "supsrc.engines.git"
+            type = \"supsrc.engines.git\"
             auto_push = false
             """
 
@@ -341,13 +425,15 @@ class TestConcurrency:
 
         try:
             # Give orchestrator time to initialize
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(2.0)
 
             # Create concurrent changes in all repositories
             change_tasks = []
             for repo_id, repo_path in repos.items():
+
                 async def create_change(path: Path, name: str) -> None:
-                    (path / f"change_{name}.txt").write_text(f"Change in {name}")
+                    # Use touch() to generate a single event
+                    (path / f"change_{name}.txt").touch()
 
                 task = asyncio.create_task(create_change(repo_path, repo_id))
                 change_tasks.append(task)
@@ -355,14 +441,24 @@ class TestConcurrency:
             # Wait for all changes to complete
             await asyncio.gather(*change_tasks)
 
-            # Allow processing time
-            await asyncio.sleep(3.0)
+            # Poll until all repositories have been processed
+            timeout = 20.0
+            start_time = asyncio.get_event_loop().time()
+            while True:
+                all_done = all(
+                    orchestrator.repo_states[repo_id].save_count == 0
+                    and orchestrator.repo_states[repo_id].status == RepositoryStatus.IDLE
+                    for repo_id in repos
+                )
+                if all_done:
+                    break
+                await asyncio.sleep(0.5)
+                if asyncio.get_event_loop().time() - start_time > timeout:
+                    raise TimeoutError("Timed out waiting for all concurrent actions to complete.")
 
             # Verify all repositories were processed
             for repo_id in repos:
-                assert repo_id in orchestrator.repo_states
                 repo_state = orchestrator.repo_states[repo_id]
-                # Should have been reset after action
                 assert repo_state.save_count == 0
                 assert repo_state.status == RepositoryStatus.IDLE
 
@@ -374,4 +470,5 @@ class TestConcurrency:
                 orchestrator_task.cancel()
                 await asyncio.gather(orchestrator_task, return_exceptions=True)
 
-# 🧪🔗
+
+# 🔼⚙️🔚
