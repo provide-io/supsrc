@@ -1,16 +1,16 @@
 #
-# tests/unit/test_rules.py
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-"""
-Comprehensive tests for the rule engine.
-"""
+
+"""Comprehensive tests for the rule engine."""
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import Mock
 
 import pytest
+from provide.testkit.mocking import Mock
 
-from supsrc.config.models import (
+from supsrc.config import (
     InactivityRuleConfig,
     ManualRuleConfig,
     SaveCountRuleConfig,
@@ -167,13 +167,13 @@ class TestRuleEdgeCases:
     def test_negative_save_count_config(self) -> None:
         """Test that negative save counts are handled properly."""
         # This should be caught at config validation level
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="positive integer"):
             SaveCountRuleConfig(count=-1)
 
     def test_zero_save_count_config(self) -> None:
         """Test that zero save counts are handled properly."""
         # This should be caught at config validation level
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="positive integer"):
             SaveCountRuleConfig(count=0)
 
     def test_zero_inactivity_period(self) -> None:
@@ -212,4 +212,5 @@ class TestRuleEdgeCases:
 
         assert result is False
 
-# 🧪⚡
+
+# 🔼⚙️🔚

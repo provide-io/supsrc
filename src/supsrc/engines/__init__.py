@@ -1,13 +1,11 @@
 #
-# engines/__init__.py
+# SPDX-FileCopyrightText: Copyright (c) 2025 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
-"""
-Supsrc Engines Package.
+
+"""Supsrc Engines Package.
 
 This package contains implementations of the various engine protocols
-(e.g., RepositoryEngine) used by supsrc.
-"""
+(e.g., RepositoryEngine) used by supsrc."""
 
-# This file can remain empty or be used for common engine utilities if needed later.
-
-# 🔼⚙️
+# 🔼⚙️🔚
