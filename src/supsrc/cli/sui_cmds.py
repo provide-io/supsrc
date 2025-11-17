@@ -100,27 +100,29 @@ def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
                     "Error: The 'sui' command requires the 'textual' library, provided by the 'tui' extra.",
                     err=True,
                 )
-                click.echo(
-                    "Hint: pip install 'supsrc[tui]' or uv pip install 'supsrc[tui]'", err=True
-                )
+                click.echo("Hint: pip install 'supsrc[tui]' or uv pip install 'supsrc[tui]'", err=True)
                 ctx.exit(1)
                 return
 
-            # Set up file logging (logs still suppressed from stderr)
+            # Set up file-only logging to prevent TUI corruption
             from attrs import evolve
             from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
 
             try:
+                # Ensure log directory exists
+                log_file_path.parent.mkdir(parents=True, exist_ok=True)
+
                 base_config = TelemetryConfig.from_env()
                 telemetry_config = evolve(
                     base_config,
                     service_name="supsrc",
                     logging=LoggingConfig(
                         console_formatter="json",
-                        default_level="TRACE",
-                        das_emoji_prefix_enabled=True,
-                        logger_name_emoji_prefix_enabled=True,
+                        default_level="DEBUG",
+                        das_emoji_prefix_enabled=False,  # Disable emoji prefix for cleaner file logs
+                        logger_name_emoji_prefix_enabled=False,
                         log_file=log_file_path,
+                        foundation_log_output="/dev/null",  # Disable Foundation's console output
                     ),
                 )
                 hub = get_hub()
@@ -136,26 +138,79 @@ def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
                 except Exception:
                     pass
 
-                # Suppress all logging to prevent TUI flicker during initialization
-                # Set root logger to CRITICAL to suppress everything except critical errors
+                # CRITICAL: Configure logging to use FILE ONLY
+                # This ensures no logs go to console and corrupt the TUI
                 root_logger = logging.getLogger()
-                root_logger.setLevel(logging.CRITICAL)
 
-                # Also set all known loggers to CRITICAL
-                for name in list(logging.root.manager.loggerDict.keys()):
-                    logging.getLogger(name).setLevel(logging.CRITICAL)
+                # Remove ALL existing handlers first
+                root_logger.handlers.clear()
 
-                # Remove console handlers to prevent any output
-                for logger_obj in [root_logger] + [
-                    logging.getLogger(name) for name in logging.root.manager.loggerDict
-                ]:
-                    for handler in [
+                # Create file-only handler with JSON formatting for structured logs
+                file_handler = logging.FileHandler(str(log_file_path), encoding="utf-8", mode="a")
+                file_handler.setLevel(logging.DEBUG)
+
+                # Use JSON formatter for structured log analysis
+                import json
+
+                class TUIFileFormatter(logging.Formatter):
+                    """JSON formatter for TUI file logs."""
+
+                    def format(self, record: logging.LogRecord) -> str:
+                        log_data = {
+                            "timestamp": self.formatTime(record),
+                            "level": record.levelname,
+                            "logger": record.name,
+                            "message": record.getMessage(),
+                        }
+                        if hasattr(record, "extra") and record.extra:
+                            log_data["extra"] = record.extra
+                        if record.exc_info:
+                            log_data["exception"] = self.formatException(record.exc_info)
+                        return json.dumps(log_data)
+
+                file_handler.setFormatter(TUIFileFormatter())
+                root_logger.addHandler(file_handler)
+                root_logger.setLevel(logging.DEBUG)
+
+                # Prevent new loggers from getting console handlers
+                # by intercepting the logger creation process
+                original_get_logger = logging.getLogger
+
+                def _file_only_get_logger(name: str | None = None) -> logging.Logger:
+                    """Get logger that only writes to file, not console."""
+                    logger_obj = original_get_logger(name)
+                    # Remove any console handlers that might have been added
+                    handlers_to_remove = [
                         h
                         for h in logger_obj.handlers
-                        if isinstance(h, logging.StreamHandler)
-                        and not isinstance(h, logging.FileHandler)
-                    ]:
+                        if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+                    ]
+                    for handler in handlers_to_remove:
                         logger_obj.removeHandler(handler)
+                    return logger_obj
+
+                logging.getLogger = _file_only_get_logger  # type: ignore[assignment]
+
+                # Also configure structlog to use file-only output
+                import structlog
+
+                # Configure structlog to write to file only
+                structlog.configure(
+                    processors=[
+                        structlog.contextvars.merge_contextvars,
+                        structlog.stdlib.add_log_level,
+                        structlog.stdlib.add_logger_name,
+                        structlog.processors.TimeStamper(fmt="iso"),
+                        structlog.processors.StackInfoRenderer(),
+                        structlog.processors.format_exc_info,
+                        structlog.processors.UnicodeDecoder(),
+                        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+                    ],
+                    wrapper_class=structlog.stdlib.BoundLogger,
+                    context_class=dict,
+                    logger_factory=structlog.stdlib.LoggerFactory(),
+                    cache_logger_on_first_use=True,
+                )
 
             except Exception:
                 pass
