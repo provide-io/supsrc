@@ -978,4 +978,434 @@ class TestCircuitBreakerRequireManualAcknowledgment:
         assert triggered is True
 
 
+class TestCircuitBreakerEdgeCases:
+    """Tests for edge cases and boundary conditions."""
+
+    def test_metrics_accumulate_correctly(self):
+        """Test that metrics accumulate across multiple triggers."""
+        config = CircuitBreakerConfig(bulk_change_threshold=2)
+        service = CircuitBreakerService(config)
+
+        # Multiple trigger cycles
+        for cycle in range(3):
+            state = RepositoryState(repo_id=f"repo-{cycle}")
+            service.check_and_update_bulk_change(state, f"/path/file{cycle}a.txt")
+            service.check_and_update_bulk_change(state, f"/path/file{cycle}b.txt")
+
+        assert service.metrics.bulk_change_triggers == 3
+        assert service.metrics.triggers_in_last_hour == 3
+
+    def test_exception_with_empty_branch_name(self):
+        """Test BranchChangeError handles empty branch names."""
+        error = BranchChangeError("repo", "", "feature", 10)
+        assert error.old_branch == ""
+        assert "'' to 'feature'" in str(error)
+
+    def test_exception_with_long_branch_names(self):
+        """Test exceptions handle long branch names."""
+        long_name = "feature/" + "x" * 200
+        error = BranchChangeError("repo", "main", long_name, 5)
+        assert long_name in str(error)
+
+    def test_bulk_change_error_with_zero_threshold(self):
+        """Test BulkChangeError message with edge case values."""
+        error = BulkChangeError("repo", 100, 1, 1)
+        assert "100 files" in str(error)
+        assert "1ms" in str(error)
+        assert "threshold: 1" in str(error)
+
+    def test_multiple_repos_independent_auto_recovery(self):
+        """Test auto-recovery tasks are independent per repository."""
+        config = CircuitBreakerConfig(
+            bulk_change_threshold=2,
+            auto_resume_after_bulk_pause_seconds=30,
+        )
+        service = CircuitBreakerService(config)
+
+        # Trigger for two different repos
+        state1 = RepositoryState(repo_id="repo-1")
+        state2 = RepositoryState(repo_id="repo-2")
+
+        service.check_and_update_bulk_change(state1, "/path/file1.txt")
+        service.check_and_update_bulk_change(state1, "/path/file2.txt")
+
+        service.check_and_update_bulk_change(state2, "/path/file3.txt")
+        service.check_and_update_bulk_change(state2, "/path/file4.txt")
+
+        assert "repo-1" in service._auto_recovery_tasks
+        assert "repo-2" in service._auto_recovery_tasks
+        assert len(service._auto_recovery_tasks) == 2
+
+    def test_acknowledge_removes_only_specific_repo_recovery(self):
+        """Test acknowledging one repo doesn't affect another."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+
+        # Set up auto-recovery for two repos
+        service._auto_recovery_tasks["repo-1"] = datetime.now(UTC) + timedelta(seconds=60)
+        service._auto_recovery_tasks["repo-2"] = datetime.now(UTC) + timedelta(seconds=60)
+
+        state1 = RepositoryState(repo_id="repo-1")
+        state1.trigger_circuit_breaker("Test", RepositoryStatus.BULK_CHANGE_PAUSED)
+
+        service.acknowledge_circuit_breaker(state1)
+
+        assert "repo-1" not in service._auto_recovery_tasks
+        assert "repo-2" in service._auto_recovery_tasks
+
+    def test_metrics_to_dict_preserves_all_fields(self):
+        """Test that to_dict includes all expected fields."""
+        metrics = CircuitBreakerMetrics()
+        result = metrics.to_dict()
+
+        expected_keys = {
+            "bulk_change_triggers",
+            "branch_change_triggers",
+            "combined_triggers",
+            "auto_recoveries",
+            "manual_acknowledgments",
+            "total_events_blocked",
+            "total_events_processed",
+            "last_trigger_time",
+            "last_trigger_reason",
+            "last_trigger_type",
+            "triggers_in_last_hour",
+        }
+        assert set(result.keys()) == expected_keys
+
+    def test_hourly_reset_updates_timestamp(self):
+        """Test that hourly reset updates the timestamp."""
+        config = CircuitBreakerConfig(bulk_change_threshold=2)
+        service = CircuitBreakerService(config)
+
+        # Set old reset time
+        old_reset = datetime.now(UTC) - timedelta(hours=2)
+        service.metrics.last_hour_reset = old_reset
+
+        state = RepositoryState(repo_id="test-repo")
+        service.check_and_update_bulk_change(state, "/path/file1.txt")
+        service.check_and_update_bulk_change(state, "/path/file2.txt")
+
+        # Reset time should be updated
+        assert service.metrics.last_hour_reset > old_reset
+
+    def test_consecutive_triggers_same_repo(self):
+        """Test handling consecutive triggers for the same repo."""
+        config = CircuitBreakerConfig(bulk_change_threshold=2)
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        # First trigger
+        service.check_and_update_bulk_change(state, "/path/file1.txt")
+        service.check_and_update_bulk_change(state, "/path/file2.txt")
+
+        # Acknowledge and reset
+        service.acknowledge_circuit_breaker(state)
+
+        # Second trigger
+        service.check_and_update_bulk_change(state, "/path/file3.txt")
+        service.check_and_update_bulk_change(state, "/path/file4.txt")
+
+        assert service.metrics.bulk_change_triggers == 2
+        assert service.metrics.manual_acknowledgments == 1
+
+    def test_auto_recovery_summary_shows_zero_when_passed(self):
+        """Test summary shows 0 seconds when recovery time is past."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        # Schedule recovery in past
+        past_time = datetime.now(UTC) - timedelta(seconds=10)
+        service._auto_recovery_tasks["test-repo"] = past_time
+
+        summary = service.get_circuit_breaker_summary(state)
+        assert summary["auto_recovery_scheduled"] is True
+        assert summary["auto_recovery_in_seconds"] == 0
+
+
+class TestCircuitBreakerIntegrationScenarios:
+    """Tests for complex integration scenarios."""
+
+    def test_full_lifecycle_bulk_change_with_auto_recovery(self):
+        """Test complete lifecycle: trigger -> auto-recover -> trigger again."""
+        config = CircuitBreakerConfig(
+            bulk_change_threshold=2,
+            auto_resume_after_bulk_pause_seconds=1,
+        )
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        # Trigger circuit breaker
+        service.check_and_update_bulk_change(state, "/path/file1.txt")
+        service.check_and_update_bulk_change(state, "/path/file2.txt")
+
+        assert state.circuit_breaker_triggered is True
+        assert service.metrics.bulk_change_triggers == 1
+
+        # Simulate time passing and auto-recovery
+        service._auto_recovery_tasks["test-repo"] = datetime.now(UTC) - timedelta(seconds=1)
+        service.check_auto_recovery(state)
+
+        assert state.circuit_breaker_triggered is False
+        assert service.metrics.auto_recoveries == 1
+
+        # Trigger again
+        service.check_and_update_bulk_change(state, "/path/file3.txt")
+        service.check_and_update_bulk_change(state, "/path/file4.txt")
+
+        assert state.circuit_breaker_triggered is True
+        assert service.metrics.bulk_change_triggers == 2
+
+    def test_branch_change_during_bulk_change_window(self):
+        """Test branch change detected while bulk changes are accumulating."""
+        config = CircuitBreakerConfig(
+            bulk_change_threshold=100,
+            branch_with_bulk_change_error=True,
+            branch_with_bulk_change_threshold=5,
+        )
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.previous_branch = "main"
+
+        # Accumulate bulk changes
+        for i in range(10):
+            service.check_and_update_bulk_change(state, f"/path/file{i}.txt")
+
+        # Then branch changes
+        changed, triggered = service.check_branch_change(state, "feature")
+
+        assert changed is True
+        assert triggered is True
+        assert state.status == RepositoryStatus.BRANCH_CHANGE_ERROR
+        assert service.metrics.combined_triggers == 1
+
+    def test_metrics_consistency_across_operations(self):
+        """Test metrics remain consistent through various operations."""
+        config = CircuitBreakerConfig(bulk_change_threshold=2)
+        service = CircuitBreakerService(config)
+
+        # Process some events
+        state1 = RepositoryState(repo_id="repo-1")
+        service.check_and_update_bulk_change(state1, "/path/file1.txt")
+        assert service.metrics.total_events_processed == 1
+
+        # Trigger circuit breaker
+        service.check_and_update_bulk_change(state1, "/path/file2.txt")
+        assert service.metrics.bulk_change_triggers == 1
+
+        # Block events
+        service.should_process_event(state1)
+        assert service.metrics.total_events_blocked == 1
+
+        # Acknowledge
+        service.acknowledge_circuit_breaker(state1)
+        assert service.metrics.manual_acknowledgments == 1
+
+        # Reset and verify
+        old_metrics = service.get_metrics().to_dict()
+        service.reset_metrics()
+        new_metrics = service.get_metrics().to_dict()
+
+        assert old_metrics["bulk_change_triggers"] == 1
+        assert new_metrics["bulk_change_triggers"] == 0
+
+    def test_exception_after_trigger_preserves_state(self):
+        """Test that exception raising preserves circuit breaker state."""
+        config = CircuitBreakerConfig(
+            bulk_change_threshold=2,
+            require_manual_acknowledgment=True,
+        )
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        service.check_and_update_bulk_change(state, "/path/file1.txt")
+
+        with pytest.raises(BulkChangeError):
+            service.check_and_update_bulk_change(state, "/path/file2.txt")
+
+        # State should still be triggered
+        assert state.circuit_breaker_triggered is True
+        assert state.status == RepositoryStatus.BULK_CHANGE_PAUSED
+        # Metrics should be updated
+        assert service.metrics.bulk_change_triggers == 1
+
+    def test_should_process_event_with_warning_allows_processing(self):
+        """Test that warning state allows event processing but maintains warning."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.previous_branch = "main"
+
+        # Trigger warning
+        service.check_branch_change(state, "feature")
+        assert state.status == RepositoryStatus.BRANCH_CHANGE_WARNING
+
+        # Should allow processing
+        should_process = service.should_process_event(state)
+        assert should_process is True
+        assert service.metrics.total_events_processed == 1
+
+        # Warning should still be active
+        assert state.circuit_breaker_triggered is True
+
+    def test_window_expiry_resets_file_list(self):
+        """Test that window expiry clears the file list."""
+        config = CircuitBreakerConfig(
+            bulk_change_threshold=10,
+            bulk_change_window_ms=100,
+        )
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        # Add some files
+        for i in range(5):
+            service.check_and_update_bulk_change(state, f"/path/file{i}.txt")
+
+        assert len(state.bulk_change_files) == 5
+
+        # Expire window
+        state.bulk_change_window_start = datetime.now(UTC) - timedelta(milliseconds=200)
+
+        # New file should reset
+        service.check_and_update_bulk_change(state, "/path/newfile.txt")
+
+        assert len(state.bulk_change_files) == 1
+        assert state.bulk_change_count == 1
+
+
+class TestCircuitBreakerExceptionMessageFormatting:
+    """Tests for exception message formatting and readability."""
+
+    def test_bulk_change_error_message_is_actionable(self):
+        """Test that error message provides clear action guidance."""
+        error = BulkChangeError("my-repo", 50, 30, 5000)
+        message = str(error)
+
+        # Should contain key information
+        assert "my-repo" in message
+        assert "50 files" in message
+        assert "30" in message  # threshold
+        assert "5000ms" in message
+
+        # Should be actionable
+        assert "review" in message.lower() or "Review" in message
+
+    def test_branch_change_error_message_is_actionable(self):
+        """Test that error message provides clear action guidance."""
+        error = BranchChangeError("my-repo", "develop", "main", 15)
+        message = str(error)
+
+        # Should contain key information
+        assert "my-repo" in message
+        assert "develop" in message
+        assert "main" in message
+        assert "15" in message
+
+        # Should be actionable
+        assert "verify" in message.lower() or "Verify" in message
+
+    def test_exception_repo_id_accessible(self):
+        """Test that repo_id is easily accessible from exception."""
+        error = BulkChangeError("specific-repo", 10, 5, 1000)
+
+        with pytest.raises(CircuitBreakerError) as exc_info:
+            raise error
+
+        assert exc_info.value.repo_id == "specific-repo"
+        assert exc_info.value.trigger_type == "bulk_change"
+
+
+class TestCircuitBreakerMetricsEdgeCases:
+    """Tests for metrics edge cases."""
+
+    def test_metrics_last_hour_reset_on_initialization(self):
+        """Test that last_hour_reset is set on initialization."""
+        before = datetime.now(UTC)
+        metrics = CircuitBreakerMetrics()
+        after = datetime.now(UTC)
+
+        assert before <= metrics.last_hour_reset <= after
+
+    def test_metrics_to_dict_handles_none_timestamp(self):
+        """Test to_dict correctly handles None timestamp."""
+        metrics = CircuitBreakerMetrics(last_trigger_time=None)
+        result = metrics.to_dict()
+        assert result["last_trigger_time"] is None
+
+    def test_metrics_to_dict_formats_timestamp_correctly(self):
+        """Test to_dict formats timestamp as ISO format."""
+        specific_time = datetime(2025, 1, 15, 10, 30, 45, tzinfo=UTC)
+        metrics = CircuitBreakerMetrics(last_trigger_time=specific_time)
+        result = metrics.to_dict()
+
+        assert result["last_trigger_time"] == "2025-01-15T10:30:45+00:00"
+
+    def test_multiple_hourly_resets(self):
+        """Test multiple hourly resets work correctly."""
+        config = CircuitBreakerConfig(bulk_change_threshold=1)
+        service = CircuitBreakerService(config)
+
+        # First hour
+        service.metrics.last_hour_reset = datetime.now(UTC) - timedelta(hours=2)
+        state1 = RepositoryState(repo_id="repo-1")
+        service.check_and_update_bulk_change(state1, "/path/file1.txt")
+        assert service.metrics.triggers_in_last_hour == 1
+
+        # Simulate another hour passing
+        service.metrics.last_hour_reset = datetime.now(UTC) - timedelta(hours=1, minutes=1)
+        state2 = RepositoryState(repo_id="repo-2")
+        service.check_and_update_bulk_change(state2, "/path/file2.txt")
+
+        # Should have reset again
+        assert service.metrics.triggers_in_last_hour == 1  # Reset, then incremented
+
+
+class TestCircuitBreakerEventBlockingBehavior:
+    """Tests for event blocking behavior details."""
+
+    def test_already_triggered_blocks_bulk_change_count(self):
+        """Test that already triggered CB doesn't increment bulk change count."""
+        config = CircuitBreakerConfig(bulk_change_threshold=10)
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        # Manually trigger
+        state.circuit_breaker_triggered = True
+
+        # Try to record changes
+        triggered = service.check_and_update_bulk_change(state, "/path/file.txt")
+
+        assert triggered is True
+        assert state.bulk_change_count == 0
+        assert service.metrics.total_events_blocked == 1
+
+    def test_blocked_events_tracked_in_metrics(self):
+        """Test that multiple blocked events are tracked."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.circuit_breaker_triggered = True
+        state.update_status(RepositoryStatus.BRANCH_CHANGE_ERROR)
+
+        # Block multiple events
+        for _ in range(10):
+            service.should_process_event(state)
+
+        assert service.metrics.total_events_blocked == 10
+
+    def test_processed_events_in_warning_state(self):
+        """Test that events in warning state are counted as processed."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.circuit_breaker_triggered = True
+        state.update_status(RepositoryStatus.BRANCH_CHANGE_WARNING)
+
+        service.should_process_event(state)
+
+        assert service.metrics.total_events_processed == 1
+        assert service.metrics.total_events_blocked == 0
+
+
 # 🔼⚙️🔚
