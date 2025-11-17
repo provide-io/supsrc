@@ -10,7 +10,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from supsrc.config.models import CircuitBreakerConfig
-from supsrc.services.circuit_breaker import CircuitBreakerService
+from supsrc.services.circuit_breaker import (
+    BranchChangeError,
+    BulkChangeError,
+    CircuitBreakerError,
+    CircuitBreakerMetrics,
+    CircuitBreakerService,
+)
 from supsrc.state.runtime import RepositoryState, RepositoryStatus
 
 
@@ -147,9 +153,7 @@ class TestRepositoryStateCircuitBreaker:
     def test_trigger_circuit_breaker(self):
         """Test triggering a circuit breaker."""
         state = RepositoryState(repo_id="test-repo")
-        state.trigger_circuit_breaker(
-            "Test reason", RepositoryStatus.BULK_CHANGE_PAUSED
-        )
+        state.trigger_circuit_breaker("Test reason", RepositoryStatus.BULK_CHANGE_PAUSED)
 
         assert state.circuit_breaker_triggered is True
         assert state.circuit_breaker_reason == "Test reason"
@@ -158,9 +162,7 @@ class TestRepositoryStateCircuitBreaker:
     def test_reset_circuit_breaker(self):
         """Test resetting a circuit breaker."""
         state = RepositoryState(repo_id="test-repo")
-        state.trigger_circuit_breaker(
-            "Test reason", RepositoryStatus.BULK_CHANGE_PAUSED
-        )
+        state.trigger_circuit_breaker("Test reason", RepositoryStatus.BULK_CHANGE_PAUSED)
         state.bulk_change_count = 50
 
         state.reset_circuit_breaker()
@@ -489,6 +491,491 @@ class TestRepositoryStatusEmoji:
         from supsrc.state.runtime import STATUS_EMOJI_MAP
 
         assert STATUS_EMOJI_MAP[RepositoryStatus.BRANCH_CHANGE_ERROR] == "🚨"
+
+
+class TestCircuitBreakerMetrics:
+    """Tests for CircuitBreakerMetrics data class."""
+
+    def test_default_initialization(self):
+        """Test metrics initialize with default values."""
+        metrics = CircuitBreakerMetrics()
+        assert metrics.bulk_change_triggers == 0
+        assert metrics.branch_change_triggers == 0
+        assert metrics.combined_triggers == 0
+        assert metrics.auto_recoveries == 0
+        assert metrics.manual_acknowledgments == 0
+        assert metrics.total_events_blocked == 0
+        assert metrics.total_events_processed == 0
+        assert metrics.last_trigger_time is None
+        assert metrics.last_trigger_reason is None
+        assert metrics.last_trigger_type is None
+        assert metrics.triggers_in_last_hour == 0
+        assert metrics.last_hour_reset is not None
+
+    def test_to_dict_with_defaults(self):
+        """Test converting default metrics to dictionary."""
+        metrics = CircuitBreakerMetrics()
+        result = metrics.to_dict()
+
+        assert result["bulk_change_triggers"] == 0
+        assert result["branch_change_triggers"] == 0
+        assert result["combined_triggers"] == 0
+        assert result["auto_recoveries"] == 0
+        assert result["manual_acknowledgments"] == 0
+        assert result["total_events_blocked"] == 0
+        assert result["total_events_processed"] == 0
+        assert result["last_trigger_time"] is None
+        assert result["last_trigger_reason"] is None
+        assert result["last_trigger_type"] is None
+        assert result["triggers_in_last_hour"] == 0
+
+    def test_to_dict_with_values(self):
+        """Test converting populated metrics to dictionary."""
+        now = datetime.now(UTC)
+        metrics = CircuitBreakerMetrics(
+            bulk_change_triggers=5,
+            branch_change_triggers=2,
+            combined_triggers=1,
+            auto_recoveries=3,
+            manual_acknowledgments=4,
+            total_events_blocked=100,
+            total_events_processed=500,
+            last_trigger_time=now,
+            last_trigger_reason="Test reason",
+            last_trigger_type="bulk_change",
+            triggers_in_last_hour=8,
+        )
+        result = metrics.to_dict()
+
+        assert result["bulk_change_triggers"] == 5
+        assert result["branch_change_triggers"] == 2
+        assert result["combined_triggers"] == 1
+        assert result["auto_recoveries"] == 3
+        assert result["manual_acknowledgments"] == 4
+        assert result["total_events_blocked"] == 100
+        assert result["total_events_processed"] == 500
+        assert result["last_trigger_time"] == now.isoformat()
+        assert result["last_trigger_reason"] == "Test reason"
+        assert result["last_trigger_type"] == "bulk_change"
+        assert result["triggers_in_last_hour"] == 8
+
+
+class TestCircuitBreakerExceptions:
+    """Tests for circuit breaker exception classes."""
+
+    def test_circuit_breaker_error_base(self):
+        """Test base CircuitBreakerError exception."""
+        error = CircuitBreakerError("Test message", "test-repo", "test_type")
+        assert str(error) == "Test message"
+        assert error.repo_id == "test-repo"
+        assert error.trigger_type == "test_type"
+
+    def test_bulk_change_error(self):
+        """Test BulkChangeError with specific attributes."""
+        error = BulkChangeError("my-repo", 75, 50, 5000)
+        assert error.repo_id == "my-repo"
+        assert error.trigger_type == "bulk_change"
+        assert error.file_count == 75
+        assert error.threshold == 50
+        assert error.window_ms == 5000
+        assert "my-repo" in str(error)
+        assert "75 files" in str(error)
+        assert "5000ms" in str(error)
+        assert "threshold: 50" in str(error)
+
+    def test_bulk_change_error_inheritance(self):
+        """Test BulkChangeError inherits from CircuitBreakerError."""
+        error = BulkChangeError("test-repo", 100, 50, 5000)
+        assert isinstance(error, CircuitBreakerError)
+        assert isinstance(error, Exception)
+
+    def test_branch_change_error(self):
+        """Test BranchChangeError with specific attributes."""
+        error = BranchChangeError("my-repo", "main", "feature-branch", 25)
+        assert error.repo_id == "my-repo"
+        assert error.trigger_type == "branch_change_with_bulk"
+        assert error.old_branch == "main"
+        assert error.new_branch == "feature-branch"
+        assert error.file_count == 25
+        assert "my-repo" in str(error)
+        assert "main" in str(error)
+        assert "feature-branch" in str(error)
+        assert "25 file" in str(error)
+
+    def test_branch_change_error_inheritance(self):
+        """Test BranchChangeError inherits from CircuitBreakerError."""
+        error = BranchChangeError("test-repo", "old", "new", 10)
+        assert isinstance(error, CircuitBreakerError)
+        assert isinstance(error, Exception)
+
+
+class TestCircuitBreakerServiceMetrics:
+    """Tests for metrics collection in CircuitBreakerService."""
+
+    def test_service_initializes_with_metrics(self):
+        """Test service initializes with fresh metrics."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        assert service.metrics is not None
+        assert isinstance(service.metrics, CircuitBreakerMetrics)
+        assert service.metrics.bulk_change_triggers == 0
+
+    def test_get_metrics_returns_metrics_object(self):
+        """Test get_metrics returns the metrics instance."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        metrics = service.get_metrics()
+        assert metrics is service.metrics
+
+    def test_reset_metrics_clears_all_counters(self):
+        """Test reset_metrics creates fresh metrics."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+
+        # Populate metrics
+        service.metrics.bulk_change_triggers = 10
+        service.metrics.auto_recoveries = 5
+        service.metrics.total_events_processed = 1000
+
+        service.reset_metrics()
+
+        assert service.metrics.bulk_change_triggers == 0
+        assert service.metrics.auto_recoveries == 0
+        assert service.metrics.total_events_processed == 0
+
+    def test_bulk_change_trigger_records_metrics(self):
+        """Test that bulk change trigger updates metrics."""
+        config = CircuitBreakerConfig(bulk_change_threshold=3)
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        # Trigger the circuit breaker
+        for i in range(3):
+            service.check_and_update_bulk_change(state, f"/path/file{i}.txt")
+
+        assert service.metrics.bulk_change_triggers == 1
+        assert service.metrics.last_trigger_type == "bulk_change"
+        assert service.metrics.last_trigger_time is not None
+        assert "Bulk change detected" in service.metrics.last_trigger_reason
+
+    def test_branch_change_trigger_records_metrics(self):
+        """Test that branch change trigger updates metrics."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.previous_branch = "main"
+
+        service.check_branch_change(state, "feature")
+
+        assert service.metrics.branch_change_triggers == 1
+        assert service.metrics.last_trigger_type == "branch_change"
+
+    def test_combined_trigger_records_metrics(self):
+        """Test that combined branch+bulk trigger updates metrics."""
+        config = CircuitBreakerConfig(
+            branch_with_bulk_change_error=True,
+            branch_with_bulk_change_threshold=5,
+        )
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.previous_branch = "main"
+
+        # Add bulk files
+        for i in range(10):
+            state.bulk_change_files.append(f"/path/file{i}.txt")
+
+        service.check_branch_change(state, "feature")
+
+        assert service.metrics.combined_triggers == 1
+        assert service.metrics.last_trigger_type == "combined"
+
+    def test_events_blocked_counter_increments(self):
+        """Test that blocked events are counted."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.circuit_breaker_triggered = True
+        state.update_status(RepositoryStatus.BULK_CHANGE_PAUSED)
+
+        # Try to process events when circuit breaker is active
+        service.should_process_event(state)
+        service.should_process_event(state)
+
+        assert service.metrics.total_events_blocked == 2
+
+    def test_events_processed_counter_increments(self):
+        """Test that processed events are counted."""
+        config = CircuitBreakerConfig(bulk_change_threshold=100)
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        # Process events without triggering
+        for i in range(5):
+            service.check_and_update_bulk_change(state, f"/path/file{i}.txt")
+
+        assert service.metrics.total_events_processed == 5
+
+    def test_hourly_metrics_reset_after_one_hour(self):
+        """Test that hourly trigger count resets after one hour."""
+        config = CircuitBreakerConfig(bulk_change_threshold=2)
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        # First trigger
+        service.check_and_update_bulk_change(state, "/path/file1.txt")
+        service.check_and_update_bulk_change(state, "/path/file2.txt")
+        assert service.metrics.triggers_in_last_hour == 1
+
+        # Simulate time passing (more than 1 hour)
+        service.metrics.last_hour_reset = datetime.now(UTC) - timedelta(hours=1, minutes=1)
+
+        # Reset state and trigger again
+        state = RepositoryState(repo_id="test-repo-2")
+        service.check_and_update_bulk_change(state, "/path/file3.txt")
+        service.check_and_update_bulk_change(state, "/path/file4.txt")
+
+        # Should have reset hourly counter
+        assert service.metrics.triggers_in_last_hour == 1
+
+
+class TestCircuitBreakerAutoRecovery:
+    """Tests for auto-recovery functionality."""
+
+    def test_auto_recovery_task_scheduled(self):
+        """Test that auto-recovery is scheduled when configured."""
+        config = CircuitBreakerConfig(
+            bulk_change_threshold=2,
+            auto_resume_after_bulk_pause_seconds=60,
+        )
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        # Trigger circuit breaker
+        service.check_and_update_bulk_change(state, "/path/file1.txt")
+        service.check_and_update_bulk_change(state, "/path/file2.txt")
+
+        assert "test-repo" in service._auto_recovery_tasks
+        recovery_time = service._auto_recovery_tasks["test-repo"]
+        expected = datetime.now(UTC) + timedelta(seconds=60)
+        # Allow 1 second tolerance
+        assert abs((recovery_time - expected).total_seconds()) < 1
+
+    def test_auto_recovery_not_scheduled_when_disabled(self):
+        """Test that auto-recovery is not scheduled when seconds is 0."""
+        config = CircuitBreakerConfig(
+            bulk_change_threshold=2,
+            auto_resume_after_bulk_pause_seconds=0,
+        )
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        service.check_and_update_bulk_change(state, "/path/file1.txt")
+        service.check_and_update_bulk_change(state, "/path/file2.txt")
+
+        assert "test-repo" not in service._auto_recovery_tasks
+
+    def test_check_auto_recovery_not_due(self):
+        """Test check_auto_recovery returns False when not due."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.circuit_breaker_triggered = True
+
+        # Schedule recovery in future
+        future_time = datetime.now(UTC) + timedelta(seconds=60)
+        service._auto_recovery_tasks["test-repo"] = future_time
+
+        result = service.check_auto_recovery(state)
+        assert result is False
+        assert state.circuit_breaker_triggered is True
+
+    def test_check_auto_recovery_due(self):
+        """Test check_auto_recovery resets when due."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.trigger_circuit_breaker("Test", RepositoryStatus.BULK_CHANGE_PAUSED)
+
+        # Schedule recovery in past
+        past_time = datetime.now(UTC) - timedelta(seconds=1)
+        service._auto_recovery_tasks["test-repo"] = past_time
+
+        result = service.check_auto_recovery(state)
+        assert result is True
+        assert state.circuit_breaker_triggered is False
+        assert state.status == RepositoryStatus.IDLE
+        assert "test-repo" not in service._auto_recovery_tasks
+        assert service.metrics.auto_recoveries == 1
+
+    def test_check_auto_recovery_no_task(self):
+        """Test check_auto_recovery returns False when no task scheduled."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        result = service.check_auto_recovery(state)
+        assert result is False
+
+    def test_should_process_event_triggers_auto_recovery(self):
+        """Test should_process_event checks for auto-recovery."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.trigger_circuit_breaker("Test", RepositoryStatus.BULK_CHANGE_PAUSED)
+
+        # Schedule recovery in past
+        past_time = datetime.now(UTC) - timedelta(seconds=1)
+        service._auto_recovery_tasks["test-repo"] = past_time
+
+        # Should auto-recover and allow processing
+        result = service.should_process_event(state)
+        assert result is True
+        assert state.circuit_breaker_triggered is False
+
+    def test_get_circuit_breaker_summary_includes_auto_recovery(self):
+        """Test summary includes auto-recovery information."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        # Schedule recovery in future
+        future_time = datetime.now(UTC) + timedelta(seconds=30)
+        service._auto_recovery_tasks["test-repo"] = future_time
+
+        summary = service.get_circuit_breaker_summary(state)
+        assert summary["auto_recovery_scheduled"] is True
+        assert summary["auto_recovery_in_seconds"] > 0
+        assert summary["auto_recovery_in_seconds"] <= 30
+
+    def test_get_circuit_breaker_summary_no_auto_recovery(self):
+        """Test summary indicates no auto-recovery when not scheduled."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        summary = service.get_circuit_breaker_summary(state)
+        assert summary["auto_recovery_scheduled"] is False
+        assert "auto_recovery_in_seconds" not in summary
+
+
+class TestCircuitBreakerAcknowledgment:
+    """Tests for enhanced acknowledgment functionality."""
+
+    def test_manual_acknowledgment_increments_counter(self):
+        """Test that manual acknowledgment increments counter."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.trigger_circuit_breaker("Test", RepositoryStatus.BULK_CHANGE_PAUSED)
+
+        service.acknowledge_circuit_breaker(state, auto_recovery=False)
+
+        assert service.metrics.manual_acknowledgments == 1
+        assert service.metrics.auto_recoveries == 0
+
+    def test_auto_recovery_increments_counter(self):
+        """Test that auto-recovery increments counter."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.trigger_circuit_breaker("Test", RepositoryStatus.BULK_CHANGE_PAUSED)
+
+        service.acknowledge_circuit_breaker(state, auto_recovery=True)
+
+        assert service.metrics.auto_recoveries == 1
+        assert service.metrics.manual_acknowledgments == 0
+
+    def test_acknowledgment_cleans_up_auto_recovery_task(self):
+        """Test that acknowledgment removes scheduled auto-recovery."""
+        config = CircuitBreakerConfig()
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.trigger_circuit_breaker("Test", RepositoryStatus.BULK_CHANGE_PAUSED)
+
+        # Schedule recovery
+        service._auto_recovery_tasks["test-repo"] = datetime.now(UTC) + timedelta(seconds=60)
+
+        # Manual acknowledge
+        service.acknowledge_circuit_breaker(state, auto_recovery=False)
+
+        # Task should be cleaned up
+        assert "test-repo" not in service._auto_recovery_tasks
+
+
+class TestCircuitBreakerRequireManualAcknowledgment:
+    """Tests for require_manual_acknowledgment feature."""
+
+    def test_bulk_change_raises_exception_when_required(self):
+        """Test that BulkChangeError is raised when manual ack required."""
+        config = CircuitBreakerConfig(
+            bulk_change_threshold=2,
+            require_manual_acknowledgment=True,
+        )
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        service.check_and_update_bulk_change(state, "/path/file1.txt")
+
+        with pytest.raises(BulkChangeError) as exc_info:
+            service.check_and_update_bulk_change(state, "/path/file2.txt")
+
+        assert exc_info.value.repo_id == "test-repo"
+        assert exc_info.value.file_count == 2
+        assert exc_info.value.threshold == 2
+
+    def test_bulk_change_no_exception_when_not_required(self):
+        """Test no exception when manual ack not required."""
+        config = CircuitBreakerConfig(
+            bulk_change_threshold=2,
+            require_manual_acknowledgment=False,
+        )
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+
+        service.check_and_update_bulk_change(state, "/path/file1.txt")
+
+        # Should not raise
+        triggered = service.check_and_update_bulk_change(state, "/path/file2.txt")
+        assert triggered is True
+
+    def test_branch_change_with_bulk_raises_exception_when_required(self):
+        """Test BranchChangeError raised when manual ack required."""
+        config = CircuitBreakerConfig(
+            branch_with_bulk_change_error=True,
+            branch_with_bulk_change_threshold=2,
+            require_manual_acknowledgment=True,
+        )
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.previous_branch = "main"
+
+        # Add bulk files
+        state.bulk_change_files = ["/path/file1.txt", "/path/file2.txt", "/path/file3.txt"]
+
+        with pytest.raises(BranchChangeError) as exc_info:
+            service.check_branch_change(state, "feature")
+
+        assert exc_info.value.repo_id == "test-repo"
+        assert exc_info.value.old_branch == "main"
+        assert exc_info.value.new_branch == "feature"
+        assert exc_info.value.file_count == 3
+
+    def test_branch_change_no_exception_when_not_required(self):
+        """Test no exception when manual ack not required."""
+        config = CircuitBreakerConfig(
+            branch_with_bulk_change_error=True,
+            branch_with_bulk_change_threshold=2,
+            require_manual_acknowledgment=False,
+        )
+        service = CircuitBreakerService(config)
+        state = RepositoryState(repo_id="test-repo")
+        state.previous_branch = "main"
+        state.bulk_change_files = ["/path/file1.txt", "/path/file2.txt", "/path/file3.txt"]
+
+        # Should not raise
+        changed, triggered = service.check_branch_change(state, "feature")
+        assert changed is True
+        assert triggered is True
 
 
 # 🔼⚙️🔚
