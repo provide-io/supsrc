@@ -14,6 +14,7 @@ from provide.foundation.logger import get_logger
 from supsrc.events.system import (
     ConflictDetectedEvent,
     ExternalCommitEvent,
+    GitSpecialStateDetectedEvent,
     LLMVetoEvent,
     RepositoryFrozenEvent,
     TestFailureEvent,
@@ -91,12 +92,21 @@ class WorkflowSteps:
             repo_state.has_uncommitted_changes = not status_result.is_clean
             repo_state.current_branch = status_result.current_branch
 
+        # Check for special Git states (merge, rebase, cherry-pick, revert in progress)
+        if (
+            status_result.is_merge_in_progress
+            or status_result.is_rebase_in_progress
+            or status_result.is_cherry_pick_in_progress
+            or status_result.is_revert_in_progress
+        ):
+            await self._handle_special_git_state_detected(repo_id, repo_state, status_result)
+            self.tui.post_state_update(self.repo_states)
+            return False
+
         # Handle various failure/edge cases
         if not status_result.success or status_result.is_conflicted or status_result.is_clean:
             if not status_result.success:
-                await self._handle_status_check_failure(
-                    repo_id, repo_state, status_result, action_log
-                )
+                await self._handle_status_check_failure(repo_id, repo_state, status_result, action_log)
             elif status_result.is_conflicted:
                 await self._handle_conflict_detected(repo_id, repo_state)
             else:  # is_clean - likely external commit
@@ -130,9 +140,7 @@ class WorkflowSteps:
         )
 
         if not stage_result.success:
-            repo_state.update_status(
-                RepositoryStatus.ERROR, f"Staging failed: {stage_result.message}"
-            )
+            repo_state.update_status(RepositoryStatus.ERROR, f"Staging failed: {stage_result.message}")
             repo_state.action_description = "Staging failed."
 
             # Emit error event for staging failure
@@ -193,9 +201,7 @@ class WorkflowSteps:
         if llm_config.run_tests:
             repo_state.update_status(RepositoryStatus.TESTING)
             repo_state.action_description = "Running automated tests..."
-            exit_code, stdout, stderr = await TestRunner.run_tests(
-                llm_config.test_command, repo_config.path
-            )
+            exit_code, stdout, stderr = await TestRunner.run_tests(llm_config.test_command, repo_config.path)
             if exit_code != 0:
                 failure_output = f"STDOUT:\n{stdout}\n\nSTDERR:\n{stderr}"
                 analysis = "Test run failed."
@@ -230,18 +236,14 @@ class WorkflowSteps:
 
         return True, commit_message
 
-    async def _handle_status_check_failure(
-        self, repo_id: str, repo_state, status_result, action_log
-    ):
+    async def _handle_status_check_failure(self, repo_id: str, repo_state, status_result, action_log):
         """Handle status check failure."""
         action_log.warning(
             "Git status check failed during action",
             message=status_result.message,
             success=status_result.success,
         )
-        repo_state.update_status(
-            RepositoryStatus.ERROR, f"Status check failed: {status_result.message}"
-        )
+        repo_state.update_status(RepositoryStatus.ERROR, f"Status check failed: {status_result.message}")
         repo_state.action_description = "Status check failed."
 
         # Emit error event for status check failure
@@ -284,9 +286,7 @@ class WorkflowSteps:
         action_log.info("Repository is clean during action - external commit detected")
 
         # Update status to indicate external commit was detected
-        repo_state.update_status(
-            RepositoryStatus.EXTERNAL_COMMIT_DETECTED, "Changes committed externally"
-        )
+        repo_state.update_status(RepositoryStatus.EXTERNAL_COMMIT_DETECTED, "Changes committed externally")
         repo_state.action_description = "External commit detected"
 
         # Emit external commit event
@@ -296,6 +296,48 @@ class WorkflowSteps:
             commit_hash=None,  # Could be enhanced to get actual commit hash
         )
         self._emit_event(external_commit_event)
+
+    async def _handle_special_git_state_detected(self, repo_id: str, repo_state, status_result):
+        """Handle special Git state detection (merge, rebase, cherry-pick, revert)."""
+        # Determine which state is active
+        state_type = None
+        status_enum = None
+
+        if status_result.is_merge_in_progress:
+            state_type = "merge"
+            status_enum = RepositoryStatus.MERGE_IN_PROGRESS
+        elif status_result.is_rebase_in_progress:
+            state_type = "rebase"
+            status_enum = RepositoryStatus.REBASE_IN_PROGRESS
+        elif status_result.is_cherry_pick_in_progress:
+            state_type = "cherry-pick"
+            status_enum = RepositoryStatus.CHERRY_PICK_IN_PROGRESS
+        elif status_result.is_revert_in_progress:
+            state_type = "revert"
+            status_enum = RepositoryStatus.REVERT_IN_PROGRESS
+
+        if state_type and status_enum:
+            # Update repository state
+            repo_state.update_status(status_enum, f"{state_type.capitalize()} operation in progress")
+            repo_state.action_description = f"{state_type.capitalize()} in progress - auto-commit paused"
+            repo_state.is_frozen = True
+            repo_state.freeze_reason = f"{state_type.capitalize()} operation in progress"
+
+            # Emit special state detected event
+            special_state_event = GitSpecialStateDetectedEvent(
+                description=f"{state_type.capitalize()} operation detected in repository",
+                repo_id=repo_id,
+                state_type=state_type,
+            )
+            self._emit_event(special_state_event)
+
+            # Emit repository frozen event
+            frozen_event = RepositoryFrozenEvent(
+                description=f"Repository frozen due to {state_type} operation in progress",
+                repo_id=repo_id,
+                reason=f"{state_type.capitalize()} operation in progress",
+            )
+            self._emit_event(frozen_event)
 
 
 # 🔼⚙️🔚

@@ -57,6 +57,11 @@ class RepoStatusResult(PluginResultBase):
     added_files: int = 0
     deleted_files: int = 0
     modified_files: int = 0
+    # Special Git states (merge, rebase, cherry-pick, revert in progress)
+    is_merge_in_progress: bool = False
+    is_rebase_in_progress: bool = False
+    is_cherry_pick_in_progress: bool = False
+    is_revert_in_progress: bool = False
 
 
 @define(frozen=True, slots=True)
