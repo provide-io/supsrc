@@ -43,6 +43,35 @@ def _validate_positive_int(inst: Any, attr: Any, value: int) -> None:
         raise ValueError(f"Field '{attr.name}' must be positive integer, got {value}")
 
 
+def _validate_non_negative_int(inst: Any, attr: Any, value: int) -> None:
+    """Validator ensures integer is non-negative (zero allowed for disabling)."""
+    if not isinstance(value, int) or value < 0:
+        raise ValueError(f"Field '{attr.name}' must be non-negative integer, got {value}")
+
+
+# --- Circuit Breaker Configuration ---
+@define(frozen=True, slots=True)
+class CircuitBreakerConfig:
+    """Configuration for circuit breaker safety mechanisms."""
+
+    # Bulk file change detection - pause when too many files change at once
+    bulk_change_threshold: int = field(default=50, validator=_validate_non_negative_int)
+    bulk_change_window_ms: int = field(default=5000, validator=_validate_positive_int)
+    bulk_change_auto_pause: bool = field(default=True)
+
+    # Branch change detection
+    branch_change_detection_enabled: bool = field(default=True)
+    branch_change_warning_enabled: bool = field(default=True)
+
+    # Combined trigger: branch change + bulk files = error
+    branch_with_bulk_change_error: bool = field(default=True)
+    branch_with_bulk_change_threshold: int = field(default=20, validator=_validate_non_negative_int)
+
+    # Auto-recovery settings
+    auto_resume_after_bulk_pause_seconds: int = field(default=0)  # 0 = no auto-resume
+    require_manual_acknowledgment: bool = field(default=False)
+
+
 # --- attrs Data Classes for Rules ---
 @define(slots=True)
 class InactivityRuleConfig:
@@ -127,9 +156,10 @@ class GlobalConfig:
     )
 
     # Legacy fallback for backwards compatibility
-    event_grouping_mode: str = field(
-        default=DEFAULT_EVENT_BUFFER_GROUPING_MODE, validator=instance_of(str)
-    )
+    event_grouping_mode: str = field(default=DEFAULT_EVENT_BUFFER_GROUPING_MODE, validator=instance_of(str))
+
+    # Circuit breaker configuration for safety mechanisms
+    circuit_breaker: CircuitBreakerConfig = field(factory=CircuitBreakerConfig)
 
     @property
     def numeric_log_level(self) -> int:
@@ -197,18 +227,13 @@ def load_config(config_path: Path) -> SupsrcConfig:
                 raise ValueError(f"Unknown rule type specified: '{rule_type}'")
 
             data_copy = dict(data)
-            if (
-                hasattr(target_class.__attrs_attrs__, "type")
-                and target_class.__attrs_attrs__.type.kw_only
-            ):
+            if hasattr(target_class.__attrs_attrs__, "type") and target_class.__attrs_attrs__.type.kw_only:
                 data_copy.pop("type", None)
 
             return converter.structure(data_copy, target_class)
 
         converter.register_structure_hook(Path, _structure_path_simple)
-        converter.register_structure_hook(
-            timedelta, lambda d, t: timedelta(seconds=parse_duration(d))
-        )
+        converter.register_structure_hook(timedelta, lambda d, t: timedelta(seconds=parse_duration(d)))
         converter.register_structure_hook(RuleConfig, structure_rule_hook)
 
         config_object = converter.structure(toml_data, SupsrcConfig)
@@ -255,6 +280,7 @@ def load_repository_config(repo_path: Path) -> dict[str, Any] | None:
 
 # Export all the models and functions that were in the original config package
 __all__ = [
+    "CircuitBreakerConfig",
     "ConfigurationError",
     "GlobalConfig",
     "InactivityRuleConfig",
