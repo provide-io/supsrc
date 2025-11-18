@@ -53,6 +53,7 @@ class SupsrcTuiApp(TuiAppBase):
         ("S", "toggle_repo_stop", "Toggle Repo Stop"),
         ("shift+R", "refresh_repo_status", "Refresh Repo Status"),
         ("G", "resume_repo_monitoring", "Resume Repo Monitoring"),
+        ("a", "acknowledge_circuit_breaker", "Ack Circuit Breaker"),
         ("t", "test_log_messages", "Test Log Messages"),
     ]
 

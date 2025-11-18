@@ -165,5 +165,54 @@ class RepoActionHandlerMixin:
                 LogMessageUpdate(None, "ERROR", f"Failed to resume monitoring for '{repo_id}'.")
             )
 
+    async def action_acknowledge_circuit_breaker(self) -> None:
+        """Acknowledge and reset circuit breaker for the selected repository."""
+        repo_id = self._get_selected_repo_id()
+        if not repo_id or not self._orchestrator:
+            self.post_message(
+                LogMessageUpdate(
+                    None, "WARNING", "No repository selected or orchestrator not ready."
+                )
+            )
+            return
+
+        # Get the repository state
+        repo_state = self._orchestrator.repo_states.get(repo_id)
+        if not repo_state:
+            self.post_message(
+                LogMessageUpdate(None, "ERROR", f"Repository '{repo_id}' not found.")
+            )
+            return
+
+        # Check if circuit breaker is triggered
+        if not repo_state.circuit_breaker_triggered:
+            self.post_message(
+                LogMessageUpdate(
+                    None, "INFO", f"✅ Repository '{repo_id}' circuit breaker is not triggered."
+                )
+            )
+            return
+
+        # Get the reason before resetting
+        reason = repo_state.circuit_breaker_reason or "Unknown reason"
+
+        # Reset the circuit breaker
+        success = self._orchestrator.acknowledge_circuit_breaker(repo_id)
+
+        if success:
+            self.post_message(
+                LogMessageUpdate(
+                    None,
+                    "INFO",
+                    f"✅ Circuit breaker acknowledged for '{repo_id}'. Reason was: {reason[:50]}...",
+                )
+            )
+        else:
+            self.post_message(
+                LogMessageUpdate(
+                    None, "ERROR", f"❌ Failed to acknowledge circuit breaker for '{repo_id}'."
+                )
+            )
+
 
 # 🔼⚙️🔚

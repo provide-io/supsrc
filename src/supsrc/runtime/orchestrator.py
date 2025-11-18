@@ -291,6 +291,41 @@ class WatchOrchestrator:
             )
         return False
 
+    def acknowledge_circuit_breaker(self, repo_id: str) -> bool:
+        """Acknowledge and reset circuit breaker for a repository.
+
+        Args:
+            repo_id: Repository identifier
+
+        Returns:
+            True if circuit breaker was successfully acknowledged, False otherwise
+        """
+        if not self.repository_manager:
+            log.warning("Cannot acknowledge circuit breaker: repository manager not initialized")
+            return False
+
+        # Get the repository state
+        repo_state = self.repo_states.get(repo_id)
+        if not repo_state:
+            log.warning("Cannot acknowledge circuit breaker: repository not found", repo_id=repo_id)
+            return False
+
+        # Reset the circuit breaker via the circuit breaker service
+        if self.event_processor and hasattr(self.event_processor, "_circuit_breaker"):
+            self.event_processor._circuit_breaker.acknowledge_circuit_breaker(
+                repo_state, auto_recovery=False
+            )
+            log.info(
+                "Circuit breaker acknowledged",
+                repo_id=repo_id,
+                reason=repo_state.circuit_breaker_reason,
+            )
+            self._post_tui_state_update()
+            return True
+
+        log.warning("Cannot acknowledge circuit breaker: event processor not available")
+        return False
+
     def _post_tui_state_update(self):
         if self.app:
             tui = TUIInterface(self.app)
