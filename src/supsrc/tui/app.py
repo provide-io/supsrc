@@ -227,9 +227,7 @@ class SupsrcTuiApp(TuiAppBase):
                         id="repo-details-content",
                     )
                 with TabPane("About", id="about-tab"):
-                    yield Label(
-                        "Supsrc TUI v1.0\nMonitoring and auto-commit system", id="about-content"
-                    )
+                    yield Label("Supsrc TUI v1.0\nMonitoring and auto-commit system", id="about-content")
 
         yield Footer()
 
@@ -337,9 +335,7 @@ class SupsrcTuiApp(TuiAppBase):
         """Run the orchestrator with comprehensive error handling."""
         log.info("Orchestrator worker started.")
         try:
-            self._orchestrator = WatchOrchestrator(
-                self._config_path, self._shutdown_event, app=self
-            )
+            self._orchestrator = WatchOrchestrator(self._config_path, self._shutdown_event, app=self)
             await self._orchestrator.run()
         except asyncio.CancelledError:
             log.info("Orchestrator worker was cancelled gracefully.")
