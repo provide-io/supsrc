@@ -1,0 +1,201 @@
+Security Issues Report
+==================================================
+
+Issue #1:
+  File: ./src/supsrc/cli/sui_cmds.py:83
+  Test: hardcoded_tmp_directory (B108)
+  Severity: MEDIUM | Confidence: MEDIUM
+  Description: Probable insecure usage of temp file/directory.
+
+  Code:
+    82             # Determine log file path
+    83             log_file_path = Path("/tmp/supsrc_tui_debug.log")
+    84             try:
+
+Issue #2:
+  File: ./src/supsrc/cli/sui_cmds.py:92
+  Test: try_except_pass (B110)
+  Severity: LOW | Confidence: HIGH
+  Description: Try, Except, Pass detected.
+
+  Code:
+    91                         break
+    92             except Exception:
+    93                 pass
+    94 
+
+Issue #3:
+  File: ./src/supsrc/cli/sui_cmds.py:138
+  Test: try_except_pass (B110)
+  Severity: LOW | Confidence: HIGH
+  Description: Try, Except, Pass detected.
+
+  Code:
+    137                     register_event_set(SUPSRC_EVENT_SET)
+    138                 except Exception:
+    139                     pass
+    140 
+
+Issue #4:
+  File: ./src/supsrc/cli/sui_cmds.py:215
+  Test: try_except_pass (B110)
+  Severity: LOW | Confidence: HIGH
+  Description: Try, Except, Pass detected.
+
+  Code:
+    214 
+    215             except Exception:
+    216                 pass
+    217 
+
+Issue #5:
+  File: ./src/supsrc/cli/watch_cmds.py:235
+  Test: hardcoded_tmp_directory (B108)
+  Severity: MEDIUM | Confidence: MEDIUM
+  Description: Probable insecure usage of temp file/directory.
+
+  Code:
+    234                 # No repositories found, use temp directory
+    235                 event_log = Path("/tmp/supsrc_events.json")
+    236                 log.warning("No enabled repositories found, using temp directory for logs")
+
+Issue #6:
+  File: ./src/supsrc/cli/watch_cmds.py:239
+  Test: hardcoded_tmp_directory (B108)
+  Severity: MEDIUM | Confidence: MEDIUM
+  Description: Probable insecure usage of temp file/directory.
+
+  Code:
+    238             log.warning("Failed to determine log directory", error=str(e))
+    239             event_log = Path("/tmp/supsrc_events.json")
+    240 
+
+Issue #7:
+  File: ./src/supsrc/cli/watch_cmds.py:164
+  Test: hardcoded_tmp_directory (B108)
+  Severity: MEDIUM | Confidence: MEDIUM
+  Description: Probable insecure usage of temp file/directory.
+
+  Code:
+    163     type=click.Path(path_type=Path),
+    164     default=Path("/tmp/supsrc_app.log"),
+    165     show_default=True,
+
+Issue #8:
+  File: ./src/supsrc/engines/git/base.py:242
+  Test: try_except_pass (B110)
+  Severity: LOW | Confidence: HIGH
+  Description: Try, Except, Pass detected.
+
+  Code:
+    241                                 added_files += 1
+    242                     except Exception:
+    243                         pass
+    244 
+
+Issue #9:
+  File: ./src/supsrc/runtime/orchestrator.py:80
+  Test: hardcoded_tmp_directory (B108)
+  Severity: MEDIUM | Confidence: MEDIUM
+  Description: Probable insecure usage of temp file/directory.
+
+  Code:
+    79         self.verbose_format = verbose_format
+    80         self.app_log_path = app_log_path or Path("/tmp/supsrc_app.log")
+    81         self.event_queue: asyncio.Queue[MonitoredEvent] = asyncio.Queue()
+
+Issue #10:
+  File: ./src/supsrc/state/file.py:54
+  Test: hardcoded_tmp_directory (B108)
+  Severity: MEDIUM | Confidence: MEDIUM
+  Description: Probable insecure usage of temp file/directory.
+
+  Code:
+    53             # System-wide temporary state file for local data
+    54             temp_state = Path("/tmp") / "supsrc-global.state"
+    55             candidates.append(temp_state)
+
+Issue #11:
+  File: ./src/supsrc/state/file.py:84
+  Test: hardcoded_tmp_directory (B108)
+  Severity: MEDIUM | Confidence: MEDIUM
+  Description: Probable insecure usage of temp file/directory.
+
+  Code:
+    83         if local:
+    84             return Path("/tmp") / "supsrc-global.state"
+    85         else:
+
+Issue #12:
+  File: ./src/supsrc/state/file.py:212
+  Test: hardcoded_tmp_directory (B108)
+  Severity: MEDIUM | Confidence: MEDIUM
+  Description: Probable insecure usage of temp file/directory.
+
+  Code:
+    211             # Check common locations
+    212             search_paths.extend([Path.home() / ".config" / "supsrc", Path("/tmp")])
+    213 
+
+Issue #13:
+  File: ./src/supsrc/tui/handlers/actions.py:156
+  Test: try_except_pass (B110)
+  Severity: LOW | Confidence: HIGH
+  Description: Try, Except, Pass detected.
+
+  Code:
+    155                 return  # Let EventFeedTable handle Enter key
+    156         except Exception:
+    157             pass  # If we can't find tabs, continue with normal behavior
+    158 
+
+Issue #14:
+  File: ./src/supsrc/tui/handlers/events.py:101
+  Test: try_except_pass (B110)
+  Severity: LOW | Confidence: HIGH
+  Description: Try, Except, Pass detected.
+
+  Code:
+    100                     log.debug("Saved cursor position", row_key=cursor_row_key)
+    101             except Exception:
+    102                 pass
+    103 
+
+Issue #15:
+  File: ./src/supsrc/tui/handlers/events.py:111
+  Test: try_except_pass (B110)
+  Severity: LOW | Confidence: HIGH
+  Description: Try, Except, Pass detected.
+
+  Code:
+    110                     table.remove_row(key_to_remove)
+    111                 except Exception:
+    112                     # Row may have already been removed
+    113                     pass
+    114 
+
+Issue #16:
+  File: ./src/supsrc/tui/widgets/draggable_splitter.py:91
+  Test: try_except_pass (B110)
+  Severity: LOW | Confidence: HIGH
+  Description: Try, Except, Pass detected.
+
+  Code:
+    90 
+    91         except Exception:
+    92             # Silently ignore errors during dragging
+    93             pass
+    94 
+
+Issue #17:
+  File: ./src/supsrc/tui/widgets/draggable_splitter.py:112
+  Test: try_except_pass (B110)
+  Severity: LOW | Confidence: HIGH
+  Description: Try, Except, Pass detected.
+
+  Code:
+    111                 self._initial_log_height = float(log_height_str[:-1])
+    112         except Exception:
+    113             # Keep existing values if we can't read them
+    114             pass
+    115 
