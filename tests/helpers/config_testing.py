@@ -49,13 +49,13 @@ def real_config_path() -> Path:
         Path to the real configuration file
 
     Raises:
-        FileNotFoundError: If config file doesn't exist
+        pytest.skip: If config file doesn't exist (skips test instead of failing)
     """
     parent_dir = Path(__file__).parent.parent.parent.parent
     config_path = parent_dir / "supsrc.conf"
 
     if not config_path.exists():
-        raise FileNotFoundError(f"Real config file not found at {config_path}")
+        pytest.skip(f"Real config file not found at {config_path} - skipping test")
 
     return config_path
 
