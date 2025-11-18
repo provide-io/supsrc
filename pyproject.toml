@@ -1,0 +1,236 @@
+#
+# pyproject.toml
+#
+
+[project]
+name = "supsrc"
+dynamic = ["version"]
+description = "Automated Git commit/push utility based on filesystem events and rules."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [
+    { name = "Tim Perkins", email = "code@tim.life" },
+]
+maintainers = [
+    { name = "provide.io", email = "code@provide.io" },
+]
+keywords = ["git", "automation", "watchdog", "developer-tools", "vcs", "backup", "llm"]
+classifiers = [
+    "Development Status :: 3 - Alpha", # Adjust as appropriate
+    "Environment :: Console",
+    "Environment :: Console :: Curses", # For TUI
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Version Control",
+    "Topic :: System :: Filesystems",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+
+# --- Core Dependencies ---
+dependencies = [
+    "provide-foundation[all]",
+    "cattrs>=24.1.3",
+    "pygit2>=1.18.0",
+    "watchdog>=6.0.0",
+    "pathspec>=0.12.1", # Required for .gitignore handling
+    "sshconf>=0.2.7",
+    "rich>=14.0.0",
+    "aioconsole>=0.8.1",
+    "packaging>=24.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/provide-io/supsrc"
+Repository = "https://github.com/provide-io/supsrc"
+Issues = "https://github.com/provide-io/supsrc/issues"
+
+[dependency-groups]
+dev = [
+    "provide-testkit[standard,advanced-testing,build,utils]",
+    "supsrc[tui,llm]",
+]
+docs = [
+    "provide-testkit[docs]",
+]
+
+# --- Optional Features (Extras) ---
+[project.optional-dependencies]
+tui = [
+    "textual>=0.70.0", # Use a recent stable version
+]
+llm = [
+    "google-genai>=0.5.0",
+    "ollama>=0.2.0",
+]
+
+
+[project.scripts]
+supsrc = "supsrc.cli.main:cli"
+
+# --------------------------------------------------------------------------- #
+# Build System Configuration (Hatch)                                          #
+# --------------------------------------------------------------------------- #
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
+
+
+# --------------------------------------------------------------------------- #
+# Ruff Linter/Formatter Configuration                                         #
+# --------------------------------------------------------------------------- #
+[tool.ruff]
+line-length = 111
+target-version = "py311" # Match requires-python lower bound
+
+[tool.ruff.lint]
+# See https://docs.astral.sh/ruff/rules/ for rule codes
+select = [
+    "E",  # pycodestyle errors
+    "F",  # Pyflakes
+    "W",  # pycodestyle warnings
+    "I",  # isort
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "N",  # pep8-naming
+    "A",  # flake8-builtins
+    "SIM", # flake8-simplify
+    "TID", # flake8-tidy-imports
+    "T20", # flake8-print
+    "PT", # flake8-pytest-style
+    "Q", # flake8-quotes
+    "RUF", # Ruff-specific rules
+]
+ignore = [
+    "B008", # Function call argument default is mutable
+    "B905", # `zip()` without `strict=`
+    "E501",
+    "E701",
+    "E702",
+]
+# Example: ignore specific errors in specific files if necessary
+#[tool.ruff.lint.per-file-ignores]
+#"tests/*" = ["T201"] # Allow print in tests
+
+# Auto-fixable rules
+fixable = ["ALL"]
+unfixable = []
+
+exclude = [
+    ".bzr", ".direnv", ".eggs", ".git", ".hg", ".mypy_cache", ".nox", ".pants.d",
+    ".pyre", ".ruff_cache", ".svn", ".tox", ".venv", "__pypackages__", "_build",
+    "buck-out", "build", "dist", "node_modules", "venv",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+
+# --------------------------------------------------------------------------- #
+# Pyre Configuration                                                          #
+# --------------------------------------------------------------------------- #
+[tool.pyre]
+# Location of source code Pyre should analyze
+source_directories = ["src", "tests"]
+# Location of external libraries or stubs
+# search_path = ["stubs", "path/to/library"] # Add paths if needed
+# Can specify python version if different from environment
+# python_version = "3.11"
+# Ignore specific error codes if necessary
+# errors = [
+#     {"code": 16, "paths": ["path/to/specific_file.py"]}, # Example: Ignore Undefined attribute
+# ]
+# Optional: Specify binary location if not in PATH
+# binary = "/path/to/pyre.bin"
+# Optional: Specify typeshed location if custom needed
+# typeshed = "/path/to/typeshed"
+
+
+# --------------------------------------------------------------------------- #
+# Pytest Configuration                                                        #
+# --------------------------------------------------------------------------- #
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "DEBUG"
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --import-mode=importlib"
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+filterwarnings = [
+    "ignore::UserWarning:provide.foundation.*", # Allow Foundation testing helpers warnings
+    "ignore::DeprecationWarning:pygit2.*:", # Ignore specific deprecations if noisy
+    "ignore:Module already imported so cannot be rewritten.*:pytest.PytestAssertRewriteWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks integration tests",
+    "tui: marks tests related to the TUI feature",
+]
+asyncio_mode = "auto" # Required for pytest-asyncio
+asyncio_default_fixture_loop_scope = "function" # Prevent deprecation warning
+
+
+# --------------------------------------------------------------------------- #
+# Coverage Configuration                                                      #
+# --------------------------------------------------------------------------- #
+[tool.coverage.run]
+source = ["src/supsrc"]
+branch = true
+parallel = true
+# Omit files that are hard to test or not meant to be covered
+omit = [
+    "src/supsrc/__main__.py", # If you add one
+    "src/supsrc/tui/*",     # Example: Omit TUI until tested
+    "src/supsrc/_vendor/*", # Example: Exclude vendored code
+    "*/__init__.py",        # Often empty or just imports
+]
+
+[tool.coverage.report]
+fail_under = 85 # Target coverage percentage
+show_missing = true
+skip_covered = true
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    # Standard typing/protocol boilerplate
+    "if TYPE_CHECKING:",
+    "\\\\.\\.\\.\\.", # Ellipsis placeholder
+    "@(abc\\.)?abstractmethod",
+    "pass",
+    # Common debugging/error handling
+    "raise NotImplementedError",
+    "raise AssertionError",
+    # Main guard
+    "if __name__ == .__main__.:",
+    # Type checking blocks
+    "except ImportError:",
+]
+
+[tool.coverage.html]
+directory = "coverage_html_report"
+title = "Supsrc Coverage Report"
+
+[tool.coverage.xml]
+output = "coverage.xml"
