@@ -36,6 +36,10 @@ class RepositoryStatus(Enum):
     EXTERNAL_COMMIT_DETECTED = auto()
     CONFLICT_DETECTED = auto()
     FROZEN = auto()
+    # Circuit breaker states
+    BULK_CHANGE_PAUSED = auto()
+    BRANCH_CHANGE_WARNING = auto()
+    BRANCH_CHANGE_ERROR = auto()
 
 
 STATUS_EMOJI_MAP = {
@@ -55,6 +59,10 @@ STATUS_EMOJI_MAP = {
     RepositoryStatus.EXTERNAL_COMMIT_DETECTED: "🤔",
     RepositoryStatus.CONFLICT_DETECTED: "⚠️",
     RepositoryStatus.FROZEN: "🧊",
+    # Circuit breaker statuses
+    RepositoryStatus.BULK_CHANGE_PAUSED: "🛑",
+    RepositoryStatus.BRANCH_CHANGE_WARNING: "⚠️",
+    RepositoryStatus.BRANCH_CHANGE_ERROR: "🚨",
 }
 
 
@@ -105,6 +113,14 @@ class RepositoryState:
     # Cached commit stats from Git history to avoid repeated queries
     cached_last_commit_hash: str | None = field(default=None)
     cached_last_commit_stats_loaded: bool = field(default=False)
+
+    # Circuit breaker tracking
+    previous_branch: str | None = field(default=None)
+    bulk_change_count: int = field(default=0)
+    bulk_change_window_start: datetime | None = field(default=None)
+    circuit_breaker_triggered: bool = field(default=False)
+    circuit_breaker_reason: str | None = field(default=None)
+    bulk_change_files: list[str] = field(factory=list)
 
     _timer_total_seconds: int | None = field(default=None, init=False)
     _timer_start_time: float | None = field(default=None, init=False)
@@ -288,6 +304,87 @@ class RepositoryState:
             self.display_status_emoji = "🔄"
         else:
             self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "❓")
+
+    def record_bulk_change_event(self, file_path: str) -> None:
+        """Record a file change for bulk change detection within the current window."""
+        now_utc = datetime.now(UTC)
+
+        # Reset window if not started or expired (will be checked externally with window_ms)
+        if self.bulk_change_window_start is None:
+            self.bulk_change_window_start = now_utc
+            self.bulk_change_count = 0
+            self.bulk_change_files = []
+
+        self.bulk_change_count += 1
+        if file_path not in self.bulk_change_files:
+            self.bulk_change_files.append(file_path)
+
+        log.debug(
+            "Recorded bulk change event",
+            repo_id=self.repo_id,
+            file_path=file_path,
+            bulk_change_count=self.bulk_change_count,
+            unique_files=len(self.bulk_change_files),
+        )
+
+    def reset_bulk_change_window(self) -> None:
+        """Reset the bulk change tracking window."""
+        self.bulk_change_count = 0
+        self.bulk_change_window_start = None
+        self.bulk_change_files = []
+        log.debug("Reset bulk change window", repo_id=self.repo_id)
+
+    def trigger_circuit_breaker(self, reason: str, new_status: RepositoryStatus) -> None:
+        """Trigger the circuit breaker with a specific reason and status."""
+        self.circuit_breaker_triggered = True
+        self.circuit_breaker_reason = reason
+        self.update_status(new_status)
+        log.warning(
+            "Circuit breaker triggered",
+            repo_id=self.repo_id,
+            reason=reason,
+            new_status=new_status.name,
+            bulk_change_count=self.bulk_change_count,
+            unique_files=len(self.bulk_change_files),
+        )
+
+    def reset_circuit_breaker(self) -> None:
+        """Reset the circuit breaker state after acknowledgment or auto-recovery."""
+        if self.circuit_breaker_triggered:
+            log.info(
+                "Circuit breaker reset",
+                repo_id=self.repo_id,
+                previous_reason=self.circuit_breaker_reason,
+            )
+        self.circuit_breaker_triggered = False
+        self.circuit_breaker_reason = None
+        self.reset_bulk_change_window()
+
+    def check_branch_changed(self, current_branch: str) -> bool:
+        """Check if branch has changed from previous known branch."""
+        if self.previous_branch is None:
+            # First time seeing branch, store it
+            self.previous_branch = current_branch
+            return False
+
+        changed = self.previous_branch != current_branch
+        if changed:
+            log.info(
+                "Branch change detected",
+                repo_id=self.repo_id,
+                previous_branch=self.previous_branch,
+                current_branch=current_branch,
+            )
+        return changed
+
+    def update_branch(self, current_branch: str) -> None:
+        """Update the tracked branch after acknowledging change."""
+        self.previous_branch = current_branch
+        log.debug(
+            "Branch tracking updated",
+            repo_id=self.repo_id,
+            current_branch=current_branch,
+        )
 
 
 # 🔼⚙️🔚

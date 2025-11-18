@@ -16,6 +16,7 @@ from supsrc.config.defaults import DEFAULT_DEBOUNCE_DELAY
 from supsrc.events.buffer import EventBuffer
 from supsrc.monitor import MonitoredEvent
 from supsrc.rules import check_trigger_condition
+from supsrc.services.circuit_breaker import CircuitBreakerService
 from supsrc.state import RepositoryState, RepositoryStatus
 
 if TYPE_CHECKING:
@@ -57,6 +58,9 @@ class EventProcessor:
         # Initialize timer check debouncing to prevent constant timer resets
         self._pending_timer_checks: dict[str, asyncio.Task] = {}
         self._timer_check_delay = 0.5  # 500ms debounce delay for timer checks
+
+        # Initialize circuit breaker service
+        self._circuit_breaker = CircuitBreakerService(config.global_config.circuit_breaker)
 
         # Detect runtime mode (TUI vs headless) and select appropriate grouping
         global_config = config.global_config
@@ -104,12 +108,7 @@ class EventProcessor:
         emitted_to_global = False
 
         # Emit to TUI event collector if available
-        if (
-            self.tui
-            and hasattr(self.tui, "app")
-            and self.tui.app
-            and hasattr(self.tui.app, "event_collector")
-        ):
+        if self.tui and hasattr(self.tui, "app") and self.tui.app and hasattr(self.tui.app, "event_collector"):
             try:
                 self.tui.app.event_collector.emit(event)  # type: ignore[arg-type,union-attr]
                 emitted_to_tui = True
@@ -197,14 +196,33 @@ class EventProcessor:
                     log.debug("Repo is paused, event ignored", repo_id=event.repo_id)
                     continue
 
+                # Check circuit breaker before processing
+                if not self._circuit_breaker.should_process_event(repo_state):
+                    log.debug(
+                        "Event blocked by circuit breaker",
+                        repo_id=event.repo_id,
+                        status=repo_state.status.name,
+                    )
+                    self.tui.post_state_update(self.repo_states)
+                    continue
+
+                # Track bulk changes for circuit breaker (before recording)
+                file_path_str = str(event.src_path)
+                if self._circuit_breaker.check_and_update_bulk_change(repo_state, file_path_str):
+                    log.warning(
+                        "Bulk change circuit breaker triggered",
+                        repo_id=event.repo_id,
+                        file_path=file_path_str,
+                    )
+                    self.tui.post_state_update(self.repo_states)
+                    continue
+
                 # Deduplicate moved/deleted events
                 if event.event_type == "moved":
                     self._recent_moves.add(event.src_path)
                     loop.call_later(0.5, self._recent_moves.discard, event.src_path)
                 elif event.event_type == "deleted" and event.src_path in self._recent_moves:
-                    log.debug(
-                        "Ignoring duplicate delete event for a moved file", path=str(event.src_path)
-                    )
+                    log.debug("Ignoring duplicate delete event for a moved file", path=str(event.src_path))
                     continue
 
                 # Record the change and update UI
@@ -367,9 +385,7 @@ class EventProcessor:
         repo_engine = self.repo_engines.get(repo_id)
 
         if not all((repo_state, repo_config, repo_engine)):
-            log.debug(
-                "Cannot refresh statistics: missing state, config, or engine", repo_id=repo_id
-            )
+            log.debug("Cannot refresh statistics: missing state, config, or engine", repo_id=repo_id)
             return
 
         try:
@@ -383,6 +399,19 @@ class EventProcessor:
                 repo_state.deleted_files = status_result.deleted_files or 0
                 repo_state.modified_files = status_result.modified_files or 0
                 repo_state.has_uncommitted_changes = not status_result.is_clean
+
+                # Check for branch changes before updating current_branch
+                if status_result.current_branch:
+                    _branch_changed, breaker_triggered = self._circuit_breaker.check_branch_change(
+                        repo_state, status_result.current_branch
+                    )
+                    if breaker_triggered:
+                        log.warning(
+                            "Branch change circuit breaker triggered",
+                            repo_id=repo_id,
+                            current_branch=status_result.current_branch,
+                        )
+
                 repo_state.current_branch = status_result.current_branch
                 log.debug(
                     "Repository statistics refreshed",
