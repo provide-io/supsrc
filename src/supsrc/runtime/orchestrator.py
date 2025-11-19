@@ -98,9 +98,7 @@ class WatchOrchestrator:
         self.repository_manager: RepositoryManager | None = None
         self.monitoring_coordinator: MonitoringCoordinator | None = None
 
-    @resilient(
-        log_errors=True, context_provider=lambda: {"component": "orchestrator", "method": "run"}
-    )
+    @resilient(log_errors=True, context_provider=lambda: {"component": "orchestrator", "method": "run"})
     async def run(self) -> None:
         """Main execution method: setup, run, and cleanup."""
         orchestrator_starts.inc()
@@ -291,6 +289,39 @@ class WatchOrchestrator:
             )
         return False
 
+    def acknowledge_circuit_breaker(self, repo_id: str) -> bool:
+        """Acknowledge and reset circuit breaker for a repository.
+
+        Args:
+            repo_id: Repository identifier
+
+        Returns:
+            True if circuit breaker was successfully acknowledged, False otherwise
+        """
+        if not self.repository_manager:
+            log.warning("Cannot acknowledge circuit breaker: repository manager not initialized")
+            return False
+
+        # Get the repository state
+        repo_state = self.repo_states.get(repo_id)
+        if not repo_state:
+            log.warning("Cannot acknowledge circuit breaker: repository not found", repo_id=repo_id)
+            return False
+
+        # Reset the circuit breaker via the circuit breaker service
+        if self.event_processor and hasattr(self.event_processor, "_circuit_breaker"):
+            self.event_processor._circuit_breaker.acknowledge_circuit_breaker(repo_state, auto_recovery=False)
+            log.info(
+                "Circuit breaker acknowledged",
+                repo_id=repo_id,
+                reason=repo_state.circuit_breaker_reason,
+            )
+            self._post_tui_state_update()
+            return True
+
+        log.warning("Cannot acknowledge circuit breaker: event processor not available")
+        return False
+
     def _post_tui_state_update(self):
         if self.app:
             tui = TUIInterface(self.app)
@@ -303,12 +334,8 @@ class WatchOrchestrator:
 
         tui = TUIInterface(self.app)
 
-        def initialize_repositories_callback(
-            config: SupsrcConfig, tui_interface: TUIInterface
-        ) -> Any:
-            return asyncio.create_task(
-                self.repository_manager.initialize_repositories(config, tui_interface)
-            )
+        def initialize_repositories_callback(config: SupsrcConfig, tui_interface: TUIInterface) -> Any:
+            return asyncio.create_task(self.repository_manager.initialize_repositories(config, tui_interface))
 
         def cleanup_timers_callback() -> Any:
             return asyncio.create_task(self.repository_manager.cleanup_repository_timers())
@@ -367,16 +394,12 @@ class WatchOrchestrator:
     def set_repo_refreshing_status(self, repo_id: str, is_refreshing: bool) -> None:
         """Set the refreshing status for a repository."""
         if self.repository_manager:
-            self.repository_manager.set_repo_refreshing_status(
-                repo_id, is_refreshing, self.status_manager
-            )
+            self.repository_manager.set_repo_refreshing_status(repo_id, is_refreshing, self.status_manager)
 
     async def refresh_repository_status(self, repo_id: str) -> bool:
         """Refresh the status and statistics for a specific repository."""
         if self.repository_manager:
-            return await self.repository_manager.refresh_repository_status(
-                repo_id, self.status_manager
-            )
+            return await self.repository_manager.refresh_repository_status(repo_id, self.status_manager)
         return False
 
     async def _timer_update_loop(self) -> None:

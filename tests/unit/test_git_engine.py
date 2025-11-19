@@ -49,12 +49,8 @@ def git_repo_path(tmp_path: Path) -> Path:
     # Initialize repository
     subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
     # Configure Git user for unit testing (disable GPG signing to avoid issues)
-    subprocess.run(
-        ["git", "config", "user.name", "Git Engine Test User"], cwd=repo_path, check=True
-    )
-    subprocess.run(
-        ["git", "config", "user.email", "gitengine@supsrc.example.com"], cwd=repo_path, check=True
-    )
+    subprocess.run(["git", "config", "user.name", "Git Engine Test User"], cwd=repo_path, check=True)
+    subprocess.run(["git", "config", "user.email", "gitengine@supsrc.example.com"], cwd=repo_path, check=True)
     # Disable GPG signing to prevent tests from failing if user has global GPG config
     subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo_path, check=True)
     subprocess.run(["git", "config", "gpg.program", ""], cwd=repo_path, check=True)
@@ -70,9 +66,7 @@ def git_repo_path(tmp_path: Path) -> Path:
 class TestGitEngine:
     """Test GitEngine functionality."""
 
-    async def test_get_summary_normal_repo(
-        self, git_engine: GitEngine, git_repo_path: Path
-    ) -> None:
+    async def test_get_summary_normal_repo(self, git_engine: GitEngine, git_repo_path: Path) -> None:
         """Test getting summary from a normal repository."""
         summary = await git_engine.get_summary(git_repo_path)
 
@@ -83,9 +77,7 @@ class TestGitEngine:
         assert len(summary.head_commit_hash) == 40  # Full SHA
         assert summary.head_commit_message_summary == "Initial commit"
 
-    async def test_get_summary_nonexistent_repo(
-        self, git_engine: GitEngine, tmp_path: Path
-    ) -> None:
+    async def test_get_summary_nonexistent_repo(self, git_engine: GitEngine, tmp_path: Path) -> None:
         """Test getting summary from a non-existent repository."""
         nonexistent_path = tmp_path / "nonexistent"
 
@@ -104,9 +96,7 @@ class TestGitEngine:
         """Test getting status from a clean repository."""
         config = {"type": "supsrc.engines.git"}
 
-        result = await git_engine.get_status(
-            mock_repo_state, config, mock_global_config, git_repo_path
-        )
+        result = await git_engine.get_status(mock_repo_state, config, mock_global_config, git_repo_path)
 
         assert isinstance(result, RepoStatusResult)
         assert result.success
@@ -132,9 +122,7 @@ class TestGitEngine:
         # Modify existing file
         (git_repo_path / "README.md").write_text("Modified content")
 
-        result = await git_engine.get_status(
-            mock_repo_state, config, mock_global_config, git_repo_path
-        )
+        result = await git_engine.get_status(mock_repo_state, config, mock_global_config, git_repo_path)
 
         assert result.success
         assert not result.is_clean
@@ -226,14 +214,162 @@ class TestGitEngine:
         """Test push when auto_push is disabled."""
         config = {"type": "supsrc.engines.git", "auto_push": False}
 
-        result = await git_engine.perform_push(
-            mock_repo_state, config, mock_global_config, git_repo_path
-        )
+        result = await git_engine.perform_push(mock_repo_state, config, mock_global_config, git_repo_path)
 
         assert isinstance(result, PushResult)
         assert result.success
         assert result.skipped
         assert "disabled" in result.message
+
+    async def test_get_status_merge_in_progress(
+        self,
+        git_engine: GitEngine,
+        git_repo_path: Path,
+        mock_repo_state: RepositoryState,
+        mock_global_config: GlobalConfig,
+    ) -> None:
+        """Test status detection when merge is in progress."""
+        config = {"type": "supsrc.engines.git"}
+
+        # Simulate merge in progress by creating MERGE_HEAD file
+        git_dir = git_repo_path / ".git"
+        (git_dir / "MERGE_HEAD").write_text("0000000000000000000000000000000000000000")
+
+        result = await git_engine.get_status(mock_repo_state, config, mock_global_config, git_repo_path)
+
+        assert result.success
+        assert result.is_merge_in_progress
+        assert not result.is_rebase_in_progress
+        assert not result.is_cherry_pick_in_progress
+        assert not result.is_revert_in_progress
+
+        # Clean up
+        (git_dir / "MERGE_HEAD").unlink()
+
+    async def test_get_status_rebase_in_progress(
+        self,
+        git_engine: GitEngine,
+        git_repo_path: Path,
+        mock_repo_state: RepositoryState,
+        mock_global_config: GlobalConfig,
+    ) -> None:
+        """Test status detection when rebase is in progress."""
+        config = {"type": "supsrc.engines.git"}
+
+        # Simulate rebase in progress by creating REBASE_MERGE directory
+        git_dir = git_repo_path / ".git"
+        (git_dir / "REBASE_MERGE").mkdir()
+
+        result = await git_engine.get_status(mock_repo_state, config, mock_global_config, git_repo_path)
+
+        assert result.success
+        assert not result.is_merge_in_progress
+        assert result.is_rebase_in_progress
+        assert not result.is_cherry_pick_in_progress
+        assert not result.is_revert_in_progress
+
+        # Clean up
+        (git_dir / "REBASE_MERGE").rmdir()
+
+    async def test_get_status_rebase_apply_in_progress(
+        self,
+        git_engine: GitEngine,
+        git_repo_path: Path,
+        mock_repo_state: RepositoryState,
+        mock_global_config: GlobalConfig,
+    ) -> None:
+        """Test status detection when rebase-apply is in progress."""
+        config = {"type": "supsrc.engines.git"}
+
+        # Simulate rebase-apply in progress by creating rebase-apply directory
+        git_dir = git_repo_path / ".git"
+        (git_dir / "rebase-apply").mkdir()
+
+        result = await git_engine.get_status(mock_repo_state, config, mock_global_config, git_repo_path)
+
+        assert result.success
+        assert not result.is_merge_in_progress
+        assert result.is_rebase_in_progress
+        assert not result.is_cherry_pick_in_progress
+        assert not result.is_revert_in_progress
+
+        # Clean up
+        (git_dir / "rebase-apply").rmdir()
+
+    async def test_get_status_cherry_pick_in_progress(
+        self,
+        git_engine: GitEngine,
+        git_repo_path: Path,
+        mock_repo_state: RepositoryState,
+        mock_global_config: GlobalConfig,
+    ) -> None:
+        """Test status detection when cherry-pick is in progress."""
+        config = {"type": "supsrc.engines.git"}
+
+        # Simulate cherry-pick in progress by creating CHERRY_PICK_HEAD file
+        git_dir = git_repo_path / ".git"
+        (git_dir / "CHERRY_PICK_HEAD").write_text("0000000000000000000000000000000000000000")
+
+        result = await git_engine.get_status(mock_repo_state, config, mock_global_config, git_repo_path)
+
+        assert result.success
+        assert not result.is_merge_in_progress
+        assert not result.is_rebase_in_progress
+        assert result.is_cherry_pick_in_progress
+        assert not result.is_revert_in_progress
+
+        # Clean up
+        (git_dir / "CHERRY_PICK_HEAD").unlink()
+
+    async def test_get_status_revert_in_progress(
+        self,
+        git_engine: GitEngine,
+        git_repo_path: Path,
+        mock_repo_state: RepositoryState,
+        mock_global_config: GlobalConfig,
+    ) -> None:
+        """Test status detection when revert is in progress."""
+        config = {"type": "supsrc.engines.git"}
+
+        # Simulate revert in progress by creating REVERT_HEAD file
+        git_dir = git_repo_path / ".git"
+        (git_dir / "REVERT_HEAD").write_text("0000000000000000000000000000000000000000")
+
+        result = await git_engine.get_status(mock_repo_state, config, mock_global_config, git_repo_path)
+
+        assert result.success
+        assert not result.is_merge_in_progress
+        assert not result.is_rebase_in_progress
+        assert not result.is_cherry_pick_in_progress
+        assert result.is_revert_in_progress
+
+        # Clean up
+        (git_dir / "REVERT_HEAD").unlink()
+
+    async def test_get_status_multiple_special_states(
+        self,
+        git_engine: GitEngine,
+        git_repo_path: Path,
+        mock_repo_state: RepositoryState,
+        mock_global_config: GlobalConfig,
+    ) -> None:
+        """Test status detection when multiple special states exist (edge case)."""
+        config = {"type": "supsrc.engines.git"}
+
+        # Simulate both merge and cherry-pick in progress (unlikely but possible)
+        git_dir = git_repo_path / ".git"
+        (git_dir / "MERGE_HEAD").write_text("0000000000000000000000000000000000000000")
+        (git_dir / "CHERRY_PICK_HEAD").write_text("0000000000000000000000000000000000000000")
+
+        result = await git_engine.get_status(mock_repo_state, config, mock_global_config, git_repo_path)
+
+        assert result.success
+        assert result.is_merge_in_progress
+        assert result.is_cherry_pick_in_progress
+
+        # Clean up
+        (git_dir / "MERGE_HEAD").unlink()
+        (git_dir / "CHERRY_PICK_HEAD").unlink()
 
 
 # 🔼⚙️🔚

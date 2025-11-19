@@ -40,6 +40,11 @@ class RepositoryStatus(Enum):
     BULK_CHANGE_PAUSED = auto()
     BRANCH_CHANGE_WARNING = auto()
     BRANCH_CHANGE_ERROR = auto()
+    # Special Git states (operations in progress)
+    MERGE_IN_PROGRESS = auto()
+    REBASE_IN_PROGRESS = auto()
+    CHERRY_PICK_IN_PROGRESS = auto()
+    REVERT_IN_PROGRESS = auto()
 
 
 STATUS_EMOJI_MAP = {
@@ -63,6 +68,11 @@ STATUS_EMOJI_MAP = {
     RepositoryStatus.BULK_CHANGE_PAUSED: "🛑",
     RepositoryStatus.BRANCH_CHANGE_WARNING: "⚠️",
     RepositoryStatus.BRANCH_CHANGE_ERROR: "🚨",
+    # Special Git states
+    RepositoryStatus.MERGE_IN_PROGRESS: "🔀",
+    RepositoryStatus.REBASE_IN_PROGRESS: "🔄",
+    RepositoryStatus.CHERRY_PICK_IN_PROGRESS: "🍒",
+    RepositoryStatus.REVERT_IN_PROGRESS: "↩️",
 }
 
 

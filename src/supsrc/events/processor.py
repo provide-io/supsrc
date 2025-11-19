@@ -6,6 +6,7 @@
 """Consumes filesystem events, checks rules, manages timers, and triggers actions."""
 
 import asyncio
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -96,6 +97,70 @@ class EventProcessor:
             buffer_window_ms=global_config.event_buffer_window_ms,
             grouping_mode=grouping_mode,
             runtime_mode=mode_name,
+        )
+
+    def _notify_circuit_breaker_trigger(self, repo_state: RepositoryState) -> None:
+        """Print visible notification when circuit breaker triggers.
+
+        Args:
+            repo_state: Repository state with circuit breaker information
+        """
+        is_tui_mode = self.tui and hasattr(self.tui, "app") and self.tui.app is not None
+
+        # Get status emoji and information
+        status_emoji = repo_state.display_status_emoji
+        repo_id = repo_state.repo_id
+        reason = repo_state.circuit_breaker_reason or "Unknown reason"
+        file_count = len(repo_state.bulk_change_files)
+
+        # Format notification message
+        header = f"\n{status_emoji} CIRCUIT BREAKER TRIGGERED: {repo_id}"
+        reason_line = f"   Reason: {reason}"
+        files_line = f"   Files affected: {file_count}" if file_count > 0 else ""
+        action_line = f"   Action: supsrc cb ack {repo_id}"
+        footer = "   Events blocked until acknowledged.\n"
+
+        message_lines = [header, reason_line]
+        if files_line:
+            message_lines.append(files_line)
+        message_lines.extend([action_line, footer])
+        message = "\n".join(message_lines)
+
+        log.debug(
+            "Preparing circuit breaker notification",
+            repo_id=repo_id,
+            is_tui_mode=is_tui_mode,
+            file_count=file_count,
+        )
+
+        # Print to console in headless mode, post to TUI in TUI mode
+        if not is_tui_mode:
+            # Headless mode: print directly to stdout for visibility
+            print(message, file=sys.stdout, flush=True)
+            log.debug("Circuit breaker notification printed to console (headless mode)", repo_id=repo_id)
+        else:
+            # TUI mode: log and rely on status update (TUI will show the emoji/status)
+            # We can't print to stdout in TUI mode as it corrupts the display
+            log.warning(
+                "Circuit breaker triggered (TUI mode - check status display)",
+                repo_id=repo_id,
+                status=repo_state.status.name,
+                reason=reason,
+            )
+            log.debug(
+                "Circuit breaker notification sent to TUI status update",
+                repo_id=repo_id,
+                status_emoji=status_emoji,
+            )
+
+        # Always log warning for file-based logging (important event)
+        log.warning(
+            "Circuit breaker triggered",
+            repo_id=repo_id,
+            status=repo_state.status.name,
+            reason=reason,
+            file_count=file_count,
+            bulk_files_sample=list(repo_state.bulk_change_files)[:10] if file_count > 0 else [],
         )
 
     def _emit_event(self, event: Any) -> None:
@@ -209,11 +274,7 @@ class EventProcessor:
                 # Track bulk changes for circuit breaker (before recording)
                 file_path_str = str(event.src_path)
                 if self._circuit_breaker.check_and_update_bulk_change(repo_state, file_path_str):
-                    log.warning(
-                        "Bulk change circuit breaker triggered",
-                        repo_id=event.repo_id,
-                        file_path=file_path_str,
-                    )
+                    self._notify_circuit_breaker_trigger(repo_state)
                     self.tui.post_state_update(self.repo_states)
                     continue
 
@@ -406,11 +467,7 @@ class EventProcessor:
                         repo_state, status_result.current_branch
                     )
                     if breaker_triggered:
-                        log.warning(
-                            "Branch change circuit breaker triggered",
-                            repo_id=repo_id,
-                            current_branch=status_result.current_branch,
-                        )
+                        self._notify_circuit_breaker_trigger(repo_state)
 
                 repo_state.current_branch = status_result.current_branch
                 log.debug(
