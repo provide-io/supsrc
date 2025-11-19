@@ -49,9 +49,7 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
 
                 # Add file change counts if any
                 if state.has_uncommitted_changes:
-                    change_info = (
-                        f" (+{state.added_files}/-{state.deleted_files}/~{state.modified_files})"
-                    )
+                    change_info = f" (+{state.added_files}/-{state.deleted_files}/~{state.modified_files})"
                 else:
                     change_info = " (clean)"
 
@@ -67,8 +65,14 @@ async def _status_reporter(orchestrator: WatchOrchestrator) -> None:
                 elif state.is_paused:
                     pause_info = " [PAUSED]"
 
+                # Add circuit breaker indicator
+                cb_info = ""
+                if state.circuit_breaker_triggered:
+                    cb_reason = state.circuit_breaker_reason or "triggered"
+                    cb_info = f" [CB: {cb_reason[:40]}...]"  # Truncate long reasons
+
                 status_line = (
-                    f"{status_emoji} {repo_id}: {status_name}{change_info}{timer_info}{pause_info}"
+                    f"{status_emoji} {repo_id}: {status_name}{change_info}{timer_info}{pause_info}{cb_info}"
                 )
                 status_lines.append(status_line)
 
@@ -224,9 +228,7 @@ def watch_cli(
             for repo_id, repo_config in config.repositories.items():
                 if repo_config.enabled and repo_config._path_valid:
                     event_log = SupsrcDirectories.get_log_dir(repo_config.path) / "events.jsonl"
-                    log.info(
-                        "Using repository log directory", repo_id=repo_id, event_log=str(event_log)
-                    )
+                    log.info("Using repository log directory", repo_id=repo_id, event_log=str(event_log))
                     break
             else:
                 # No repositories found, use temp directory

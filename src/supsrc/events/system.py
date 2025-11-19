@@ -98,9 +98,7 @@ class ConflictDetectedEvent(BaseEvent):
         """Format conflict detected event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         file_count = len(self.conflict_files)
-        files_str = (
-            f" in {file_count} file{'s' if file_count != 1 else ''}" if file_count > 0 else ""
-        )
+        files_str = f" in {file_count} file{'s' if file_count != 1 else ''}" if file_count > 0 else ""
         return f"[{time_str}] ⚠️ [{self.repo_id}] Merge conflicts detected{files_str}"
 
 
@@ -145,6 +143,27 @@ class LLMVetoEvent(BaseEvent):
         """Format LLM veto event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         return f"[{time_str}] 🧠 [{self.repo_id}] LLM review blocked: {self.reason}"
+
+
+@attrs.define(frozen=True)
+class GitSpecialStateDetectedEvent(BaseEvent):
+    """Event emitted when a special Git state is detected (merge, rebase, cherry-pick, revert)."""
+
+    source: str = attrs.field(default="git", init=False)
+    repo_id: str = attrs.field(kw_only=True)
+    state_type: str = attrs.field(kw_only=True)  # "merge", "rebase", "cherry-pick", "revert"
+
+    def format(self) -> str:
+        """Format special state detected event for display."""
+        time_str = self.timestamp.strftime("%H:%M:%S")
+        emoji_map = {
+            "merge": "🔀",
+            "rebase": "🔄",
+            "cherry-pick": "🍒",
+            "revert": "↩️",
+        }
+        emoji = emoji_map.get(self.state_type, "⚠️")
+        return f"[{time_str}] {emoji} [{self.repo_id}] {self.state_type.capitalize()} in progress - auto-commit paused"
 
 
 # 🔼⚙️🔚
