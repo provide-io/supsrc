@@ -19,6 +19,7 @@ from provide.foundation.context import CLIContext
 from provide.foundation.logger import get_logger
 from structlog.typing import FilteringBoundLogger as StructLogger
 
+from supsrc.cli.circuit_breaker_cmds import circuit_breaker_cli
 from supsrc.cli.config_cmds import config_cli
 from supsrc.cli.sui_cmds import sui_cli
 from supsrc.cli.watch_cmds import watch_cli
@@ -165,6 +166,7 @@ def cli(
     )
 
 
+cli.add_command(circuit_breaker_cli)
 cli.add_command(config_cli)
 cli.add_command(sui_cli)
 cli.add_command(watch_cli)

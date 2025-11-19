@@ -75,9 +75,7 @@ class GitEngine(RepositoryEngine):
             return GitRepoSummary(head_ref_name="ERROR", head_commit_message_summary=str(e))
         except Exception as e:
             self._log.exception("Unexpected error getting Git summary", path=str(working_dir))
-            return GitRepoSummary(
-                head_ref_name="ERROR", head_commit_message_summary=f"Unexpected: {e}"
-            )
+            return GitRepoSummary(head_ref_name="ERROR", head_commit_message_summary=f"Unexpected: {e}")
 
     async def get_status(
         self,
@@ -95,6 +93,29 @@ class GitEngine(RepositoryEngine):
                 return {"success": False, "message": "Cannot get status for bare repository"}
             if repo.index.conflicts:
                 return {"success": True, "is_conflicted": True, "current_branch": current_branch}
+
+            # Check for special Git states (merge, rebase, cherry-pick, revert)
+            git_dir = Path(repo.path)
+            is_merge_in_progress = (git_dir / "MERGE_HEAD").exists()
+            is_rebase_in_progress = (git_dir / "REBASE_MERGE").exists() or (git_dir / "rebase-apply").exists()
+            is_cherry_pick_in_progress = (git_dir / "CHERRY_PICK_HEAD").exists()
+            is_revert_in_progress = (git_dir / "REVERT_HEAD").exists()
+
+            # If any special state is detected, return early to prevent auto-commits
+            if (
+                is_merge_in_progress
+                or is_rebase_in_progress
+                or is_cherry_pick_in_progress
+                or is_revert_in_progress
+            ):
+                return {
+                    "success": True,
+                    "current_branch": current_branch,
+                    "is_merge_in_progress": is_merge_in_progress,
+                    "is_rebase_in_progress": is_rebase_in_progress,
+                    "is_cherry_pick_in_progress": is_cherry_pick_in_progress,
+                    "is_revert_in_progress": is_revert_in_progress,
+                }
 
             pygit2_status = repo.status()
             has_staged = any(
@@ -120,9 +141,7 @@ class GitEngine(RepositoryEngine):
                 for flags in pygit2_status.values():
                     if (flags & pygit2.GIT_STATUS_WT_NEW) or (flags & pygit2.GIT_STATUS_INDEX_NEW):
                         added_files += 1
-                    elif (flags & pygit2.GIT_STATUS_WT_DELETED) or (
-                        flags & pygit2.GIT_STATUS_INDEX_DELETED
-                    ):
+                    elif (flags & pygit2.GIT_STATUS_WT_DELETED) or (flags & pygit2.GIT_STATUS_INDEX_DELETED):
                         deleted_files += 1
                     elif (
                         (flags & pygit2.GIT_STATUS_WT_MODIFIED)
@@ -202,10 +221,7 @@ class GitEngine(RepositoryEngine):
                 commit_hash = str(last_commit.id)
 
                 # Check if we need to update cached stats
-                if (
-                    state.cached_last_commit_stats_loaded
-                    and state.cached_last_commit_hash == commit_hash
-                ):
+                if state.cached_last_commit_stats_loaded and state.cached_last_commit_hash == commit_hash:
                     self._log.debug("Using cached commit stats", commit_hash=commit_hash)
                     return {
                         "success": True,
@@ -259,9 +275,7 @@ class GitEngine(RepositoryEngine):
                     }
 
                 # Cache the stats in state
-                state.set_cached_commit_stats(
-                    commit_hash, stats["added"], stats["deleted"], stats["modified"]
-                )
+                state.set_cached_commit_stats(commit_hash, stats["added"], stats["deleted"], stats["modified"])
 
                 self._log.debug(
                     "Loaded commit stats from Git",
@@ -286,9 +300,7 @@ class GitEngine(RepositoryEngine):
     @retry(
         pygit2.GitError,
         OSError,
-        policy=RetryPolicy(
-            max_attempts=3, backoff=BackoffStrategy.EXPONENTIAL, base_delay=0.5, max_delay=5.0
-        ),
+        policy=RetryPolicy(max_attempts=3, backoff=BackoffStrategy.EXPONENTIAL, base_delay=0.5, max_delay=5.0),
     )
     async def stage_changes(
         self,
@@ -322,9 +334,7 @@ class GitEngine(RepositoryEngine):
             else:
                 index.add_all()
                 staged_list = [
-                    filepath
-                    for filepath, flags in repo.status().items()
-                    if flags != pygit2.GIT_STATUS_CURRENT
+                    filepath for filepath, flags in repo.status().items() if flags != pygit2.GIT_STATUS_CURRENT
                 ]
 
             index.write()
@@ -424,9 +434,7 @@ class GitEngine(RepositoryEngine):
             parents = [] if is_unborn else [repo.head.target]
             tree = repo.index.write_tree()
 
-            commit_oid = repo.create_commit(
-                "HEAD", signature, signature, commit_message, tree, parents
-            )
+            commit_oid = repo.create_commit("HEAD", signature, signature, commit_message, tree, parents)
             return {"success": True, "commit_hash": str(commit_oid)}
 
         try:
@@ -499,9 +507,7 @@ class GitEngine(RepositoryEngine):
             return PushResult(**result_dict)  # type: ignore[misc]
         except (ValueError, KeyError):
             message = f"Remote '{remote_name}' not found."
-            self._log.warning(
-                "Push failed: remote not found.", remote_name=remote_name, repo_id=state.repo_id
-            )
+            self._log.warning("Push failed: remote not found.", remote_name=remote_name, repo_id=state.repo_id)
             return PushResult(success=False, message=message)
         except pygit2.GitError as e:
             self._log.error("Failed to perform push", error=str(e), repo_id=state.repo_id)

@@ -32,9 +32,7 @@ class RepoActionHandlerMixin:
 
             if self.selected_repo_id:
                 self.post_message(
-                    LogMessageUpdate(
-                        None, "INFO", f"📍 Selected repository: '{self.selected_repo_id}'"
-                    )
+                    LogMessageUpdate(None, "INFO", f"📍 Selected repository: '{self.selected_repo_id}'")
                 )
         except Exception as e:
             log.error("Error selecting repo", error=str(e))
@@ -62,9 +60,7 @@ class RepoActionHandlerMixin:
         repo_id = self._get_selected_repo_id()
         if not repo_id or not self._orchestrator:
             self.post_message(
-                LogMessageUpdate(
-                    None, "WARNING", "No repository selected or orchestrator not ready."
-                )
+                LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready.")
             )
             return
 
@@ -75,26 +71,18 @@ class RepoActionHandlerMixin:
 
             repo_state = self._orchestrator.repo_states.get(repo_id)
             if repo_state and repo_state.is_paused:
-                self.post_message(
-                    LogMessageUpdate(None, "INFO", f"⏸️ Repository '{repo_id}' paused.")
-                )
+                self.post_message(LogMessageUpdate(None, "INFO", f"⏸️ Repository '{repo_id}' paused."))
             else:
-                self.post_message(
-                    LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed.")
-                )
+                self.post_message(LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed."))
         else:
-            self.post_message(
-                LogMessageUpdate(None, "ERROR", f"Failed to toggle pause for '{repo_id}'.")
-            )
+            self.post_message(LogMessageUpdate(None, "ERROR", f"Failed to toggle pause for '{repo_id}'."))
 
     async def action_toggle_repo_stop(self) -> None:
         """Toggle stop state for the selected repository."""
         repo_id = self._get_selected_repo_id()
         if not repo_id or not self._orchestrator:
             self.post_message(
-                LogMessageUpdate(
-                    None, "WARNING", "No repository selected or orchestrator not ready."
-                )
+                LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready.")
             )
             return
 
@@ -103,51 +91,39 @@ class RepoActionHandlerMixin:
             repo_state = self._orchestrator.repo_states.get(repo_id)
             if repo_state and repo_state.is_stopped:
                 self.post_message(
-                    LogMessageUpdate(
-                        None, "INFO", f"⏹️ Repository '{repo_id}' stopped from monitoring."
-                    )
+                    LogMessageUpdate(None, "INFO", f"⏹️ Repository '{repo_id}' stopped from monitoring.")
                 )
             else:
                 self.post_message(
                     LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' resumed monitoring.")
                 )
         else:
-            self.post_message(
-                LogMessageUpdate(None, "ERROR", f"Failed to toggle stop for '{repo_id}'.")
-            )
+            self.post_message(LogMessageUpdate(None, "ERROR", f"Failed to toggle stop for '{repo_id}'."))
 
     async def action_refresh_repo_status(self) -> None:
         """Force refresh status for the selected repository."""
         repo_id = self._get_selected_repo_id()
         if not repo_id or not self._orchestrator:
             self.post_message(
-                LogMessageUpdate(
-                    None, "WARNING", "No repository selected or orchestrator not ready."
-                )
+                LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready.")
             )
             return
 
         self._orchestrator.set_repo_refreshing_status(repo_id, True)
-        self.post_message(
-            LogMessageUpdate(None, "INFO", f"🔄 Refreshing status for '{repo_id}'...")
-        )
+        self.post_message(LogMessageUpdate(None, "INFO", f"🔄 Refreshing status for '{repo_id}'..."))
         success = await self._orchestrator.refresh_repository_status(repo_id)
         self._orchestrator.set_repo_refreshing_status(repo_id, False)
         if success:
             self.post_message()
         else:
-            self.post_message(
-                LogMessageUpdate(None, "ERROR", f"❌ Failed to refresh status for '{repo_id}'.")
-            )
+            self.post_message(LogMessageUpdate(None, "ERROR", f"❌ Failed to refresh status for '{repo_id}'."))
 
     async def action_resume_repo_monitoring(self) -> None:
         """Resume monitoring for the selected repository (unpause/unstop)."""
         repo_id = self._get_selected_repo_id()
         if not repo_id or not self._orchestrator:
             self.post_message(
-                LogMessageUpdate(
-                    None, "WARNING", "No repository selected or orchestrator not ready."
-                )
+                LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready.")
             )
             return
 
@@ -157,12 +133,49 @@ class RepoActionHandlerMixin:
         stopped_success = await self._orchestrator.toggle_repository_stop(repo_id)
 
         if paused_success or stopped_success:
+            self.post_message(LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' monitoring resumed."))
+        else:
+            self.post_message(LogMessageUpdate(None, "ERROR", f"Failed to resume monitoring for '{repo_id}'."))
+
+    async def action_acknowledge_circuit_breaker(self) -> None:
+        """Acknowledge and reset circuit breaker for the selected repository."""
+        repo_id = self._get_selected_repo_id()
+        if not repo_id or not self._orchestrator:
             self.post_message(
-                LogMessageUpdate(None, "INFO", f"▶️ Repository '{repo_id}' monitoring resumed.")
+                LogMessageUpdate(None, "WARNING", "No repository selected or orchestrator not ready.")
+            )
+            return
+
+        # Get the repository state
+        repo_state = self._orchestrator.repo_states.get(repo_id)
+        if not repo_state:
+            self.post_message(LogMessageUpdate(None, "ERROR", f"Repository '{repo_id}' not found."))
+            return
+
+        # Check if circuit breaker is triggered
+        if not repo_state.circuit_breaker_triggered:
+            self.post_message(
+                LogMessageUpdate(None, "INFO", f"✅ Repository '{repo_id}' circuit breaker is not triggered.")
+            )
+            return
+
+        # Get the reason before resetting
+        reason = repo_state.circuit_breaker_reason or "Unknown reason"
+
+        # Reset the circuit breaker
+        success = self._orchestrator.acknowledge_circuit_breaker(repo_id)
+
+        if success:
+            self.post_message(
+                LogMessageUpdate(
+                    None,
+                    "INFO",
+                    f"✅ Circuit breaker acknowledged for '{repo_id}'. Reason was: {reason[:50]}...",
+                )
             )
         else:
             self.post_message(
-                LogMessageUpdate(None, "ERROR", f"Failed to resume monitoring for '{repo_id}'.")
+                LogMessageUpdate(None, "ERROR", f"❌ Failed to acknowledge circuit breaker for '{repo_id}'.")
             )
 
 
