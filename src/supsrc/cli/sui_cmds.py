@@ -12,6 +12,7 @@ import importlib
 import logging
 import signal
 import sys
+import tempfile
 from pathlib import Path
 from typing import Protocol, cast
 
@@ -80,7 +81,7 @@ def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
         try:
             config_path = Path(config_path)
             # Determine log file path
-            log_file_path = Path("/tmp/supsrc_tui_debug.log")
+            log_file_path = Path(tempfile.gettempdir()) / "supsrc_tui_debug.log"
             try:
                 supsrc_config = load_config(config_path)
                 for _repo_id, repo_config in supsrc_config.repositories.items():

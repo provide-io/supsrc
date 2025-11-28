@@ -9,6 +9,7 @@ Manages lifecycle of all runtime components."""
 from __future__ import annotations
 
 import asyncio
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias
 
@@ -77,7 +78,7 @@ class WatchOrchestrator:
         self.use_ascii = use_ascii
         self.verbose = verbose
         self.verbose_format = verbose_format
-        self.app_log_path = app_log_path or Path("/tmp/supsrc_app.log")
+        self.app_log_path = app_log_path or Path(tempfile.gettempdir()) / "supsrc_app.log"
         self.event_queue: asyncio.Queue[MonitoredEvent] = asyncio.Queue()
         self.repo_states: RepositoryStatesMap = {}
         self.repo_engines: dict[str, RepositoryEngine] = {}
