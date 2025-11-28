@@ -88,9 +88,7 @@ class RepositoryManager:
 
                 rule_type_str = getattr(repo_config.rule, "type", "default")
                 repo_state.rule_emoji = RULE_EMOJI_MAP.get(rule_type_str, RULE_EMOJI_MAP["default"])
-                repo_state.rule_dynamic_indicator = (
-                    rule_type_str.split(".")[-1].replace("_", " ").capitalize()
-                )
+                repo_state.rule_dynamic_indicator = rule_type_str.split(".")[-1].replace("_", " ").capitalize()
                 init_log.debug(
                     "Rule configuration set",
                     repo_id=repo_id,
@@ -106,14 +104,9 @@ class RepositoryManager:
                     if summary.head_commit_hash:
                         repo_state.last_commit_short_hash = summary.head_commit_hash[:7]
                         repo_state.last_commit_message_summary = summary.head_commit_message_summary
-                        if (
-                            hasattr(summary, "head_commit_timestamp")
-                            and summary.head_commit_timestamp
-                        ):
+                        if hasattr(summary, "head_commit_timestamp") and summary.head_commit_timestamp:
                             repo_state.last_commit_timestamp = summary.head_commit_timestamp
-                        msg = (
-                            f"HEAD at {summary.head_ref_name} ({repo_state.last_commit_short_hash})"
-                        )
+                        msg = f"HEAD at {summary.head_ref_name} ({repo_state.last_commit_short_hash})"
                         init_log.info(msg)
                         tui.post_log_update(repo_id, "INFO", msg)
                     elif summary.is_empty or summary.head_ref_name == "UNBORN":
@@ -129,9 +122,7 @@ class RepositoryManager:
                             f"Init failed: {summary.head_commit_message_summary}",
                         )
                     else:
-                        init_log.warning(
-                            "Could not determine initial HEAD commit.", summary_details=summary
-                        )
+                        init_log.warning("Could not determine initial HEAD commit.", summary_details=summary)
 
                 # Load initial repository statistics
                 init_log.debug("Loading initial repository statistics")
@@ -173,9 +164,7 @@ class RepositoryManager:
                             init_log.warning("Failed to load commit stats", error=str(e))
 
                     else:
-                        init_log.warning(
-                            "Failed to load initial statistics", error=status_result.message
-                        )
+                        init_log.warning("Failed to load initial statistics", error=status_result.message)
                 except Exception as stats_error:
                     init_log.warning("Error loading initial statistics", error=str(stats_error))
 
@@ -248,9 +237,7 @@ class RepositoryManager:
         """Toggle pause state for a specific repository."""
         repo_state = self.repo_states.get(repo_id)
         if not repo_state:
-            self._log.warning(
-                "Attempted to toggle pause on non-existent repo state", repo_id=repo_id
-            )
+            self._log.warning("Attempted to toggle pause on non-existent repo state", repo_id=repo_id)
             return False
 
         repo_state.is_paused = not repo_state.is_paused
@@ -265,9 +252,7 @@ class RepositoryManager:
             )
 
         repo_state._update_display_emoji()
-        self._log.info(
-            "Toggled repository pause state", repo_id=repo_id, paused=repo_state.is_paused
-        )
+        self._log.info("Toggled repository pause state", repo_id=repo_id, paused=repo_state.is_paused)
 
         # Trigger TUI update to reflect the change
         if self.tui_update_callback:
@@ -275,23 +260,17 @@ class RepositoryManager:
 
         return True
 
-    async def toggle_repository_stop(
-        self, repo_id: str, config: SupsrcConfig, monitor_service: Any
-    ) -> bool:
+    async def toggle_repository_stop(self, repo_id: str, config: SupsrcConfig, monitor_service: Any) -> bool:
         """Toggle stop state for a specific repository."""
         repo_config = config.repositories.get(repo_id) if config else None
         repo_state = self.repo_states.get(repo_id)
 
         if not repo_config:
-            self._log.warning(
-                "Attempted to toggle stop on non-existent repo config", repo_id=repo_id
-            )
+            self._log.warning("Attempted to toggle stop on non-existent repo config", repo_id=repo_id)
             return False
 
         if not repo_state:
-            self._log.warning(
-                "Attempted to toggle stop on non-existent repo state", repo_id=repo_id
-            )
+            self._log.warning("Attempted to toggle stop on non-existent repo state", repo_id=repo_id)
             return False
 
         repo_state.is_stopped = not repo_state.is_stopped
@@ -315,9 +294,7 @@ class RepositoryManager:
                         error=str(e),
                         exc_info=True,
                     )
-                    repo_state.update_status(
-                        RepositoryStatus.ERROR, f"Failed to resume monitoring: {e}"
-                    )
+                    repo_state.update_status(RepositoryStatus.ERROR, f"Failed to resume monitoring: {e}")
                     repo_state.is_stopped = True
 
                     # Emit error event for resume monitoring failure
@@ -374,9 +351,7 @@ class RepositoryManager:
                 history = await repo_engine.get_commit_history(repo_config.path, limit=20)
                 return {"commit_history": history}
             except Exception as e:
-                self._log.error(
-                    "Failed to get commit history from engine", repo_id=repo_id, error=str(e)
-                )
+                self._log.error("Failed to get commit history from engine", repo_id=repo_id, error=str(e))
                 return {"commit_history": [f"[bold red]Error fetching history: {e}[/]"]}
 
         return {"commit_history": ["Details not available for this engine type."]}
@@ -389,18 +364,12 @@ class RepositoryManager:
         for repo_id, repo_state in self.repo_states.items():
             try:
                 # Cancel any inactivity timers
-                if (
-                    repo_state.inactivity_timer_handle
-                    and not repo_state.inactivity_timer_handle.cancelled()
-                ):
+                if repo_state.inactivity_timer_handle and not repo_state.inactivity_timer_handle.cancelled():
                     repo_state.inactivity_timer_handle.cancel()
                     cleanup_count += 1
 
                 # Cancel any debounce timers
-                if (
-                    repo_state.debounce_timer_handle
-                    and not repo_state.debounce_timer_handle.cancelled()
-                ):
+                if repo_state.debounce_timer_handle and not repo_state.debounce_timer_handle.cancelled():
                     repo_state.debounce_timer_handle.cancel()
                     cleanup_count += 1
 
@@ -412,9 +381,7 @@ class RepositoryManager:
                 repo_state.timer_seconds_left = None
 
             except Exception as e:
-                self._log.warning(
-                    "Error cleaning up timers for repository", repo_id=repo_id, error=str(e)
-                )
+                self._log.warning("Error cleaning up timers for repository", repo_id=repo_id, error=str(e))
 
         self._log.info("Repository timer cleanup complete", timers_cancelled=cleanup_count)
 
@@ -425,9 +392,7 @@ class RepositoryManager:
             return await status_manager.refresh_repository_status(repo_id)
         return False
 
-    def set_repo_refreshing_status(
-        self, repo_id: str, is_refreshing: bool, status_manager: Any
-    ) -> None:
+    def set_repo_refreshing_status(self, repo_id: str, is_refreshing: bool, status_manager: Any) -> None:
         """Set the refreshing status for a repository."""
         if status_manager:
             status_manager.set_repo_refreshing_status(repo_id, is_refreshing)

@@ -173,9 +173,7 @@ class TestConsoleVerboseOutput:
         output_text = output.getvalue()
 
         # Should show multiple files
-        assert "5" in output_text or "Files" in output_text, (
-            "Verbose output should indicate multiple files"
-        )
+        assert "5" in output_text or "Files" in output_text, "Verbose output should indicate multiple files"
 
         # Should show file count
         assert any(f"file{i}.txt" in output_text for i in range(5)) or "..." in output_text, (
@@ -318,20 +316,14 @@ class TestConsoleVerboseOutput:
         assert "Sequence" in output_text, "Should show operation sequence"
 
         # Should show event count
-        assert "4" in output_text or "events" in output_text.lower(), (
-            "Should indicate 4 events in sequence"
-        )
+        assert "4" in output_text or "events" in output_text.lower(), "Should indicate 4 events in sequence"
 
         # Should show individual operations
-        assert "[created]" in output_text or "created" in output_text.lower(), (
-            "Should show created operation"
-        )
+        assert "[created]" in output_text or "created" in output_text.lower(), "Should show created operation"
         assert "[modified]" in output_text or "modified" in output_text.lower(), (
             "Should show modified operation"
         )
-        assert "[moved]" in output_text or "moved" in output_text.lower(), (
-            "Should show moved operation"
-        )
+        assert "[moved]" in output_text or "moved" in output_text.lower(), "Should show moved operation"
 
         # Should show final file (not temp file) in main event line
         assert "document.txt" in output_text, "Should show final file name"
@@ -411,9 +403,7 @@ class TestConsoleVerboseOutput:
         assert "app.log" in output_text, "Should show app log path"
 
         # Should have separators
-        assert "━" in output_text or "=" in output_text or "-" in output_text, (
-            "Should have visual separators"
-        )
+        assert "━" in output_text or "=" in output_text or "-" in output_text, "Should have visual separators"
 
 
 # 🔼⚙️🔚

@@ -223,9 +223,7 @@ class TestEventProcessorCircuitBreakerIntegration:
         processor, event_queue, shutdown_event, repo_state, _tui, repo_path = setup_processor
 
         # Pre-trigger circuit breaker
-        repo_state.trigger_circuit_breaker(
-            "Test trigger", RepositoryStatus.BULK_CHANGE_PAUSED
-        )
+        repo_state.trigger_circuit_breaker("Test trigger", RepositoryStatus.BULK_CHANGE_PAUSED)
 
         # Start processor
         processor_task = asyncio.create_task(processor.run())

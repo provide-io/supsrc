@@ -90,8 +90,9 @@ def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
                             SupsrcDirectories.get_log_dir(repo_config.path) / "supsrc_tui_debug.log"
                         )
                         break
-            except Exception:
-                pass
+            except Exception as e:
+                # Fallback to temp directory if config loading fails
+                log.debug("Failed to load config for log path determination", error=str(e))
 
             # Check for TUI dependencies
             if not TEXTUAL_AVAILABLE or SupsrcTuiApp is None:
@@ -136,8 +137,9 @@ def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
                     from supsrc.telemetry import SUPSRC_EVENT_SET
 
                     register_event_set(SUPSRC_EVENT_SET)
-                except Exception:
-                    pass
+                except Exception as e:
+                    # Event set registration is optional, continue without it
+                    log.debug("Failed to register event set", error=str(e))
 
                 # CRITICAL: Configure logging to use FILE ONLY
                 # This ensures no logs go to console and corrupt the TUI
@@ -213,8 +215,9 @@ def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
                     cache_logger_on_first_use=True,
                 )
 
-            except Exception:
-                pass
+            except Exception as e:
+                # Logging configuration failed, continue with default logging
+                log.warning("Failed to configure structlog", error=str(e))
 
             log.info("Initializing interactive dashboard...")
             log.debug("Launching interactive dashboard", config_path=str(config_path))

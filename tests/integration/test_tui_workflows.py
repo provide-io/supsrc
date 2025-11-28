@@ -164,10 +164,7 @@ class TestTuiUserWorkflows:
             await pilot.pause()
 
             # Should have emitted clear event
-            assert any(
-                call[0][0].action == "clear_feed"
-                for call in app.event_collector.emit.call_args_list
-            )
+            assert any(call[0][0].action == "clear_feed" for call in app.event_collector.emit.call_args_list)
 
     @pytest.mark.asyncio
     async def test_monitoring_control_workflow(
@@ -389,9 +386,7 @@ class TestTuiUserWorkflows:
             app.event_collector.emit.assert_called()
 
     @pytest.mark.asyncio
-    async def test_shutdown_workflow(
-        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
-    ) -> None:
+    async def test_shutdown_workflow(self, mock_config_path: Path, mock_shutdown_event: asyncio.Event) -> None:
         """Test proper application shutdown."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 

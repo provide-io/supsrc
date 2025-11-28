@@ -70,33 +70,25 @@ class GitOperationsHelper:
         summary_lines = []
         if added:
             summary_lines.append(f"Added ({len(added)}):")
-            summary_lines.extend(
-                [f"  {SUMMARY_ADDED_PREFIX}{f}" for f in added[:MAX_SUMMARY_FILES]]
-            )
+            summary_lines.extend([f"  {SUMMARY_ADDED_PREFIX}{f}" for f in added[:MAX_SUMMARY_FILES]])
             if len(added) > MAX_SUMMARY_FILES:
                 summary_lines.append(f"  ... ({len(added) - MAX_SUMMARY_FILES} more)")
 
         if modified:
             summary_lines.append(f"Modified ({len(modified)}):")
-            summary_lines.extend(
-                [f"  {SUMMARY_MODIFIED_PREFIX}{f}" for f in modified[:MAX_SUMMARY_FILES]]
-            )
+            summary_lines.extend([f"  {SUMMARY_MODIFIED_PREFIX}{f}" for f in modified[:MAX_SUMMARY_FILES]])
             if len(modified) > MAX_SUMMARY_FILES:
                 summary_lines.append(f"  ... ({len(modified) - MAX_SUMMARY_FILES} more)")
 
         if deleted:
             summary_lines.append(f"Deleted ({len(deleted)}):")
-            summary_lines.extend(
-                [f"  {SUMMARY_DELETED_PREFIX}{f}" for f in deleted[:MAX_SUMMARY_FILES]]
-            )
+            summary_lines.extend([f"  {SUMMARY_DELETED_PREFIX}{f}" for f in deleted[:MAX_SUMMARY_FILES]])
             if len(deleted) > MAX_SUMMARY_FILES:
                 summary_lines.append(f"  ... ({len(deleted) - MAX_SUMMARY_FILES} more)")
 
         if renamed:
             summary_lines.append(f"Renamed ({len(renamed)}):")
-            summary_lines.extend(
-                [f"  {SUMMARY_RENAMED_PREFIX}{f}" for f in renamed[:MAX_SUMMARY_FILES]]
-            )
+            summary_lines.extend([f"  {SUMMARY_RENAMED_PREFIX}{f}" for f in renamed[:MAX_SUMMARY_FILES]])
             if len(renamed) > MAX_SUMMARY_FILES:
                 summary_lines.append(f"  ... ({len(renamed) - MAX_SUMMARY_FILES} more)")
 
@@ -122,14 +114,10 @@ class GitOperationsHelper:
             for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):  # type: ignore[attr-defined]
                 if len(last_commits) >= limit:
                     break
-                commit_time = datetime.fromtimestamp(commit.commit_time, tz=UTC).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                commit_time = datetime.fromtimestamp(commit.commit_time, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
                 summary = (commit.message or "").split("\n", 1)[0][:60]
                 author_name = commit.author.name if commit.author else "Unknown"
-                last_commits.append(
-                    f"{str(commit.id)[:7]} - {author_name} - {commit_time} - {summary}"
-                )
+                last_commits.append(f"{str(commit.id)[:7]} - {author_name} - {commit_time} - {summary}")
             return last_commits
 
         try:

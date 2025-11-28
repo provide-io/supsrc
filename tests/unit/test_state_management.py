@@ -856,9 +856,7 @@ class TestStateManager:
         repo_state = RepositoryState(repo_id="test")
         manager._repo_states["test"] = repo_state
 
-        state_data = StateData(
-            repositories={"test": RepositoryStateOverride(paused=True)}
-        )
+        state_data = StateData(repositories={"test": RepositoryStateOverride(paused=True)})
         manager._apply_state_to_repositories("test", state_data)
 
         assert repo_state.is_paused is True
@@ -866,9 +864,7 @@ class TestStateManager:
     def test_apply_state_to_nonexistent_repo(self):
         """Test applying state to repository that doesn't exist."""
         manager = StateManager()
-        state_data = StateData(
-            repositories={"test": RepositoryStateOverride(paused=True)}
-        )
+        state_data = StateData(repositories={"test": RepositoryStateOverride(paused=True)})
         # Should not raise
         manager._apply_state_to_repositories("test", state_data)
 
@@ -1021,9 +1017,7 @@ class TestStateManager:
 
         state_data = StateData(
             repositories={
-                "repo": RepositoryStateOverride(
-                    paused=True, save_count_disabled=True, inactivity_seconds=60
-                )
+                "repo": RepositoryStateOverride(paused=True, save_count_disabled=True, inactivity_seconds=60)
             },
             updated_at=datetime.now(UTC),
         )
@@ -1045,9 +1039,7 @@ class TestStateManager:
             patch.object(manager, "pause", return_value=True) as mock_pause,
             patch.object(manager, "resume") as mock_resume,
         ):
-            with manager.pause_context(
-                repo_id="test", duration=60, reason="Testing", updated_by="user"
-            ):
+            with manager.pause_context(repo_id="test", duration=60, reason="Testing", updated_by="user"):
                 pass
 
             mock_pause.assert_called_once_with("test", 60, "Testing", "user")

@@ -74,9 +74,7 @@ class TestAtomicFileOperations:
             ),
         ]
 
-    def create_editor_save_events(
-        self, file_path: Path, repo_id: str = "test_repo"
-    ) -> list[FileChangeEvent]:
+    def create_editor_save_events(self, file_path: Path, repo_id: str = "test_repo") -> list[FileChangeEvent]:
         """Create events that simulate a text editor save operation (like vim)."""
         backup_file = file_path.with_suffix(file_path.suffix + "~")
 
@@ -403,9 +401,7 @@ class TestAtomicFileOperations:
             buffer.flush_all()
 
             # Should have emitted something
-            assert mock_callback.call_count >= 1, (
-                f"No events emitted for {original_file} / {temp_file}"
-            )
+            assert mock_callback.call_count >= 1, f"No events emitted for {original_file} / {temp_file}"
 
             # Verify the original file was included in emitted events
             all_emitted = [call[0][0] for call in mock_callback.call_args_list]

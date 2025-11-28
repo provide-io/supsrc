@@ -23,7 +23,6 @@ from tests.helpers.config_testing import real_config_path, with_parent_cwd
 class TestCLIConfigDiscovery:
     """Test CLI configuration discovery and loading."""
 
-    @pytest.mark.xfail(reason="Parent directory config discovery not implemented yet")
     def test_cli_finds_config_in_parent_dir(self):
         """Test that CLI finds config when run from parent directory."""
         with with_parent_cwd():

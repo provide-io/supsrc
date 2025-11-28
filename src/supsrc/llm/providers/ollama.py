@@ -90,16 +90,12 @@ class OllamaProvider:
             )
             return f"Error: LLM generation failed. Status: {e.status_code}"
         except Exception as e:
-            log.error(
-                "An unexpected error occurred with the Ollama provider", error=str(e), exc_info=True
-            )
+            log.error("An unexpected error occurred with the Ollama provider", error=str(e), exc_info=True)
             return f"Error: An unexpected error occurred. {e}"
 
     async def generate_commit_message(self, diff: str, conventional: bool) -> str:
         log.debug("Generating commit message with Ollama", conventional=conventional)
-        prompt_template = (
-            CONVENTIONAL_COMMIT_PROMPT_TEMPLATE if conventional else BASIC_COMMIT_PROMPT_TEMPLATE
-        )
+        prompt_template = CONVENTIONAL_COMMIT_PROMPT_TEMPLATE if conventional else BASIC_COMMIT_PROMPT_TEMPLATE
         prompt = prompt_template.format(diff=diff)
         raw_response = await self._generate(prompt)
         return _clean_llm_output(raw_response)

@@ -136,9 +136,7 @@ class TestWorkflowSteps:
         result = await workflow_steps.execute_status_check(repo_id)
 
         assert result is False
-        repo_state.update_status.assert_called_with(
-            RepositoryStatus.CONFLICT_DETECTED, "Repo has conflicts."
-        )
+        repo_state.update_status.assert_called_with(RepositoryStatus.CONFLICT_DETECTED, "Repo has conflicts.")
         assert repo_state.is_frozen is True
         assert repo_state.freeze_reason == "Merge conflicts detected"
         assert emit_event.call_count == 2  # ConflictDetectedEvent and RepositoryFrozenEvent
@@ -225,9 +223,7 @@ class TestWorkflowSteps:
         success, files = result
         assert success is False
         assert files is None
-        repo_state.update_status.assert_called_with(
-            RepositoryStatus.ERROR, "Staging failed: Staging failed"
-        )
+        repo_state.update_status.assert_called_with(RepositoryStatus.ERROR, "Staging failed: Staging failed")
         emit_event.assert_called_once()
 
     async def test_execute_llm_pipeline_review_veto(self, workflow_steps, mock_dependencies):
@@ -290,9 +286,7 @@ class TestWorkflowSteps:
 
         assert should_continue is False
         assert commit_message == ""
-        repo_state.update_status.assert_called_with(
-            RepositoryStatus.ERROR, "Tests Failed: Test run failed."
-        )
+        repo_state.update_status.assert_called_with(RepositoryStatus.ERROR, "Tests Failed: Test run failed.")
         emit_event.assert_called_once()
 
     async def test_execute_llm_pipeline_success_with_message_generation(

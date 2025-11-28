@@ -138,9 +138,7 @@ class TestWatchCommand:
         assert exit_code == 130
 
     @patch("supsrc.cli.watch_cmds._run_headless_orchestrator")
-    def test_watch_runner_raises_keyboard_interrupt(
-        self, mock_runner: Mock, tmp_path: Path
-    ) -> None:
+    def test_watch_runner_raises_keyboard_interrupt(self, mock_runner: Mock, tmp_path: Path) -> None:
         """Test that watch command handles KeyboardInterrupt from the runner."""
         mock_runner.side_effect = KeyboardInterrupt()
         config_file = tmp_path / "test.conf"

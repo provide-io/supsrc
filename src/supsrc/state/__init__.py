@@ -217,9 +217,7 @@ class PauseContext:
     def __enter__(self) -> None:
         """Enter the pause context."""
         if self.repo_path:
-            self._paused = pause_repository(
-                self.repo_path, self.duration, self.reason, self.updated_by
-            )
+            self._paused = pause_repository(self.repo_path, self.duration, self.reason, self.updated_by)
         else:
             self._paused = pause_global(self.duration, self.reason, self.updated_by)
 
