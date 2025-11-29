@@ -348,6 +348,8 @@ class SupsrcTuiApp(TuiAppBase):
 
     def _update_repo_details_tab(self, repo_id: str) -> None:
         """Update the repo details tab with information about the selected repository."""
+        from supsrc.tui.helpers import build_repo_details
+
         try:
             details_label = self.query_one("#repo-details-content", Label)
 
@@ -355,28 +357,24 @@ class SupsrcTuiApp(TuiAppBase):
             if self._orchestrator and hasattr(self._orchestrator, "repo_states"):
                 repo_state = self._orchestrator.repo_states.get(repo_id)
                 if repo_state:
-                    last_updated = getattr(repo_state, "last_updated", None)
-                    last_updated_display = (
-                        last_updated.strftime("%Y-%m-%d %H:%M:%S") if last_updated else "never"
-                    )
                     rule_name = getattr(repo_state, "rule_name", None) or "default"
-                    details_text = f"""📍 Repository: {repo_id}
-🌿 Branch: {repo_state.current_branch or "unknown"}
-📊 Status: {repo_state.display_status_emoji} {repo_state.status.name}
-📝 Changed files: {repo_state.changed_files}
-\u2795 Added: {repo_state.added_files}
-\u2796 Deleted: {repo_state.deleted_files}
-✏️ Modified: {repo_state.modified_files}
-⏱️ Timer: {repo_state.timer_seconds_left}s remaining
-🔄 Last updated: {last_updated_display}
-
-🎯 Rule: {rule_name}
-⏸️ Paused: {"Yes" if repo_state.is_paused else "No"}
-⏹️ Stopped: {"Yes" if repo_state.is_stopped else "No"}"""
+                    details_text = build_repo_details(repo_id, repo_state, rule_name)
                 else:
-                    details_text = f"📍 Repository: {repo_id}\n\n⚠️ No state information available"
+                    details_text = f"""📍 {repo_id}
+{"═" * 60}
+
+⚠️  No state information available
+
+The repository may still be initializing or the orchestrator
+has not yet collected state information for this repository."""
             else:
-                details_text = f"📍 Repository: {repo_id}\n\n⚠️ Orchestrator not ready"
+                details_text = f"""📍 {repo_id}
+{"═" * 60}
+
+⚠️  Orchestrator not ready
+
+The monitoring system is still starting up. Please wait a
+moment for the orchestrator to initialize."""
 
             details_label.update(details_text)
 
