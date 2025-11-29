@@ -32,9 +32,7 @@ class GitAuthHandler:
     ) -> Callable[[str, str | None, int], Any]:
         """Creates a credentials callback function for pygit2 operations."""
 
-        def credentials_callback(
-            url: str, username_from_url: str | None, allowed_types: int
-        ) -> Any:
+        def credentials_callback(url: str, username_from_url: str | None, allowed_types: int) -> Any:
             """Provides credentials to pygit2, attempting SSH agent first."""
             cred_log = self._log.bind(
                 url=url, username_from_url=username_from_url, allowed_types=allowed_types

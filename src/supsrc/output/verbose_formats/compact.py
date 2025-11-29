@@ -64,9 +64,7 @@ class CompactVerboseFormatter:
 
         return lines
 
-    def _build_key_value_pairs(
-        self, event: Event, event_type: str
-    ) -> dict[str, list[tuple[str, str]]]:
+    def _build_key_value_pairs(self, event: Event, event_type: str) -> dict[str, list[tuple[str, str]]]:
         """Build categorized key=value pairs.
 
         Args:
@@ -128,9 +126,7 @@ class CompactVerboseFormatter:
         """
         return " ".join(f"{k}={v}" for k, v in pairs)
 
-    def _format_buffered_event_compact(
-        self, event, pairs: dict[str, list[tuple[str, str]]]
-    ) -> list[str]:
+    def _format_buffered_event_compact(self, event, pairs: dict[str, list[tuple[str, str]]]) -> list[str]:
         """Format BufferedFileChangeEvent in compact style."""
         lines = []
 
