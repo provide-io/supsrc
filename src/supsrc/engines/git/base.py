@@ -239,8 +239,8 @@ class GitEngine(RepositoryEngine):
                         for entry in last_commit.tree:
                             if entry.type != "tree":  # Skip directories
                                 added_files += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        log.debug("Failed to count added files from commit tree", error=str(e))
 
                     stats = {
                         "success": True,

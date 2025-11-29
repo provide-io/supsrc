@@ -121,9 +121,7 @@ class TestSuiCommand:
     @patch("supsrc.cli.sui_cmds.log")
     @patch("supsrc.cli.sui_cmds.TEXTUAL_AVAILABLE", True)
     @patch("supsrc.cli.sui_cmds.SupsrcTuiApp")
-    def test_sui_logging_setup(
-        self, mock_tui_app_class: Mock, mock_log: Mock, tmp_path: Path
-    ) -> None:
+    def test_sui_logging_setup(self, mock_tui_app_class: Mock, mock_log: Mock, tmp_path: Path) -> None:
         """Test that sui command sets up logging correctly."""
         mock_app_instance = mock_tui_app_class.return_value
         mock_app_instance.run = Mock()
