@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -26,6 +27,29 @@ from supsrc.tui.managers import TimerManager
 from supsrc.tui.widgets import DraggableSplitter
 
 log = get_logger(__name__)
+
+
+def _cleanup_console_handlers() -> None:
+    """Remove all console/stream handlers from all loggers.
+
+    This prevents any logging output from corrupting the TUI display.
+    Called periodically to catch handlers added after initialization.
+    """
+    # Remove from root logger
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+            root_logger.removeHandler(handler)
+
+    # Remove from all named loggers
+    for logger_name in list(logging.Logger.manager.loggerDict.keys()):
+        try:
+            named_logger = logging.getLogger(logger_name)
+            for handler in named_logger.handlers[:]:
+                if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+                    named_logger.removeHandler(handler)
+        except Exception:
+            pass
 
 
 class SupsrcTuiApp(TuiAppBase):
@@ -250,7 +274,13 @@ class SupsrcTuiApp(TuiAppBase):
 
     def on_mount(self) -> None:
         """Initialize data table and start the orchestrator."""
-        # Foundation/structlog logging is already set up by the CLI
+        # CRITICAL: Clean up any console handlers that might corrupt the TUI
+        # This is a safety measure in case handlers were added after CLI setup
+        _cleanup_console_handlers()
+
+        # Set up periodic cleanup to catch handlers added during runtime
+        self.set_interval(5.0, _cleanup_console_handlers)
+
         log.info("TUI on_mount starting")
 
         try:
@@ -348,6 +378,8 @@ class SupsrcTuiApp(TuiAppBase):
 
     def _update_repo_details_tab(self, repo_id: str) -> None:
         """Update the repo details tab with information about the selected repository."""
+        from supsrc.tui.helpers import build_repo_details
+
         try:
             details_label = self.query_one("#repo-details-content", Label)
 
@@ -355,28 +387,24 @@ class SupsrcTuiApp(TuiAppBase):
             if self._orchestrator and hasattr(self._orchestrator, "repo_states"):
                 repo_state = self._orchestrator.repo_states.get(repo_id)
                 if repo_state:
-                    last_updated = getattr(repo_state, "last_updated", None)
-                    last_updated_display = (
-                        last_updated.strftime("%Y-%m-%d %H:%M:%S") if last_updated else "never"
-                    )
                     rule_name = getattr(repo_state, "rule_name", None) or "default"
-                    details_text = f"""📍 Repository: {repo_id}
-🌿 Branch: {repo_state.current_branch or "unknown"}
-📊 Status: {repo_state.display_status_emoji} {repo_state.status.name}
-📝 Changed files: {repo_state.changed_files}
-\u2795 Added: {repo_state.added_files}
-\u2796 Deleted: {repo_state.deleted_files}
-✏️ Modified: {repo_state.modified_files}
-⏱️ Timer: {repo_state.timer_seconds_left}s remaining
-🔄 Last updated: {last_updated_display}
-
-🎯 Rule: {rule_name}
-⏸️ Paused: {"Yes" if repo_state.is_paused else "No"}
-⏹️ Stopped: {"Yes" if repo_state.is_stopped else "No"}"""
+                    details_text = build_repo_details(repo_id, repo_state, rule_name)
                 else:
-                    details_text = f"📍 Repository: {repo_id}\n\n⚠️ No state information available"
+                    details_text = f"""📍 {repo_id}
+{"═" * 60}
+
+⚠️  No state information available
+
+The repository may still be initializing or the orchestrator
+has not yet collected state information for this repository."""
             else:
-                details_text = f"📍 Repository: {repo_id}\n\n⚠️ Orchestrator not ready"
+                details_text = f"""📍 {repo_id}
+{"═" * 60}
+
+⚠️  Orchestrator not ready
+
+The monitoring system is still starting up. Please wait a
+moment for the orchestrator to initialize."""
 
             details_label.update(details_text)
 
