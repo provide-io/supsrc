@@ -104,9 +104,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
                 self.logger.info("Loaded .gitignore patterns", path=str(gitignore_path))
                 return spec
             except Exception as e:
-                self.logger.error(
-                    "Failed to load or parse .gitignore", path=str(gitignore_path), error=str(e)
-                )
+                self.logger.error("Failed to load or parse .gitignore", path=str(gitignore_path), error=str(e))
         return None
 
     def _is_ignored(self, file_path: Path) -> bool:
@@ -125,9 +123,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
 
         # --- MODIFIED: Check both default spec and .gitignore spec ---
         if self.default_spec.match_file(str(relative_path)):
-            self.logger.debug(
-                "Ignoring event due to default supsrc ignore match", path=str(file_path)
-            )
+            self.logger.debug("Ignoring event due to default supsrc ignore match", path=str(file_path))
             return True
 
         if self.gitignore_spec and self.gitignore_spec.match_file(str(relative_path)):

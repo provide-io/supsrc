@@ -261,16 +261,13 @@ class TestEventBufferPatterns:
 
         # Look for atomic_rewrite operation type
         has_atomic = any(
-            hasattr(e, "operation_type") and e.operation_type == "atomic_rewrite"
-            for e in all_emitted
+            hasattr(e, "operation_type") and e.operation_type == "atomic_rewrite" for e in all_emitted
         )
 
         # If atomic detected, verify it contains the correct file
         if has_atomic:
             atomic_events = [
-                e
-                for e in all_emitted
-                if hasattr(e, "operation_type") and e.operation_type == "atomic_rewrite"
+                e for e in all_emitted if hasattr(e, "operation_type") and e.operation_type == "atomic_rewrite"
             ]
             atomic_event = atomic_events[0]
             assert base_path / "document.txt" in atomic_event.file_paths
@@ -470,9 +467,7 @@ class TestEventBufferPatterns:
                 all_file_paths.append(event.file_path)
 
         # Check that the key files are present
-        assert (
-            base_path / "file.py" in all_file_paths or base_path / "file.py.tmp" in all_file_paths
-        )
+        assert base_path / "file.py" in all_file_paths or base_path / "file.py.tmp" in all_file_paths
         assert base_path / "other.py" in all_file_paths
 
 

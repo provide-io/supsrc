@@ -58,9 +58,7 @@ type = "supsrc.engines.git"
         from supsrc.runtime.repository_manager import RepositoryManager
 
         orchestrator.repository_manager = MagicMock(spec=RepositoryManager)
-        orchestrator.repository_manager.initialize_repositories = AsyncMock(
-            return_value=["test", "test2"]
-        )
+        orchestrator.repository_manager.initialize_repositories = AsyncMock(return_value=["test", "test2"])
         orchestrator.repository_manager.cleanup_repository_timers = AsyncMock()
 
         orchestrator.monitoring_coordinator = MagicMock(spec=MonitoringCoordinator)

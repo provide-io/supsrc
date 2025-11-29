@@ -34,9 +34,7 @@ class EventHandlerMixin:
 
         def query_one(self, selector: str, widget_type: type[Any] | None = ...) -> Any: ...
 
-    def _format_change_display(
-        self, current: int, previous: int, color: str, has_changes: bool
-    ) -> str:
+    def _format_change_display(self, current: int, previous: int, color: str, has_changes: bool) -> str:
         """Format change display: bright current values when changes exist, dim previous values otherwise."""
         if has_changes and current > 0:
             return f"[bold {color}]{current}[/bold {color}]"
@@ -137,18 +135,12 @@ class EventHandlerMixin:
                 # Use relative time for recent changes, full date for older ones
                 # Get threshold from config if available
                 threshold = 3.0  # default
-                if (
-                    hasattr(self, "_orchestrator")
-                    and self._orchestrator
-                    and self._orchestrator.config
-                ):
+                if hasattr(self, "_orchestrator") and self._orchestrator and self._orchestrator.config:
                     threshold = getattr(
                         self._orchestrator.config.global_config, "last_change_threshold_hours", 3.0
                     )
                 # Use actual Git commit timestamp only (not file change time)
-                last_change_display = format_last_commit_time(
-                    state.last_commit_timestamp, threshold
-                )
+                last_change_display = format_last_commit_time(state.last_commit_timestamp, threshold)
 
                 rule_emoji = state.rule_emoji or ""
                 rule_indicator = state.rule_dynamic_indicator or "N/A"

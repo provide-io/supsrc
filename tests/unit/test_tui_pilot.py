@@ -106,9 +106,7 @@ class TestTuiPilotBasic:
             await pilot.pause()
 
     @pytest.mark.asyncio
-    async def test_help_action(
-        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
-    ) -> None:
+    async def test_help_action(self, mock_config_path: Path, mock_shutdown_event: asyncio.Event) -> None:
         """Test the help action."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
         app.event_collector = Mock()
@@ -181,9 +179,7 @@ class TestTuiPilotStateUpdates:
             assert event_feed is not None
 
     @pytest.mark.asyncio
-    async def test_clear_log_action(
-        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
-    ) -> None:
+    async def test_clear_log_action(self, mock_config_path: Path, mock_shutdown_event: asyncio.Event) -> None:
         """Test the clear log action using keyboard shortcut."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
         app.event_collector = Mock()
@@ -239,9 +235,7 @@ class TestTuiPilotRepositorySelection:
                 assert call_args.action == "select_repository"
 
     @pytest.mark.asyncio
-    async def test_hide_detail_pane(
-        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
-    ) -> None:
+    async def test_hide_detail_pane(self, mock_config_path: Path, mock_shutdown_event: asyncio.Event) -> None:
         """Test hiding the detail pane with Escape key."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
         app.event_collector = Mock()
@@ -396,9 +390,7 @@ class TestTuiPilotErrorHandling:
             assert not app.is_headless  # App should still be active in test mode
 
     @pytest.mark.asyncio
-    async def test_rapid_key_presses(
-        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
-    ) -> None:
+    async def test_rapid_key_presses(self, mock_config_path: Path, mock_shutdown_event: asyncio.Event) -> None:
         """Test handling of rapid key presses."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
         app.event_collector = Mock()
