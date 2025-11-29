@@ -34,9 +34,7 @@ class EventHandlerMixin:
 
         def query_one(self, selector: str, widget_type: type[Any] | None = ...) -> Any: ...
 
-    def _format_change_display(
-        self, current: int, previous: int, color: str, has_changes: bool
-    ) -> str:
+    def _format_change_display(self, current: int, previous: int, color: str, has_changes: bool) -> str:
         """Format change display: bright current values when changes exist, dim previous values otherwise."""
         if has_changes and current > 0:
             return f"[bold {color}]{current}[/bold {color}]"
@@ -58,6 +56,33 @@ class EventHandlerMixin:
                     self._cli_shutdown_event.set()
         except Exception as e:
             log.error("Error handling worker state change", error=str(e))
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Handle row selection in the repository table (triggered by click or Enter)."""
+        try:
+            # Only handle clicks on the repository table
+            if event.data_table.id != "repository_table":
+                return
+
+            # Get the row key (which is the repo_id)
+            repo_id = str(event.row_key.value)
+            log.debug("Repository row selected via click", repo_id=repo_id)
+
+            # Update selected repo and switch to details tab
+            self.selected_repo_id = repo_id  # type: ignore[attr-defined]
+            self._update_repo_details_tab(repo_id)  # type: ignore[attr-defined]
+
+            # Focus the details tab content
+            try:
+                # The tab is already switched by _update_repo_details_tab
+                # Now focus the content area
+                details_content = self.query_one("#repo-details-content")  # type: ignore[attr-defined]
+                details_content.focus()
+            except Exception as focus_err:
+                log.debug("Could not focus details content", error=str(focus_err))
+
+        except Exception as e:
+            log.error("Error handling row selection", error=str(e))
 
     def on_state_update(self, message: StateUpdate) -> None:
         """Handle repository state updates."""
@@ -137,18 +162,12 @@ class EventHandlerMixin:
                 # Use relative time for recent changes, full date for older ones
                 # Get threshold from config if available
                 threshold = 3.0  # default
-                if (
-                    hasattr(self, "_orchestrator")
-                    and self._orchestrator
-                    and self._orchestrator.config
-                ):
+                if hasattr(self, "_orchestrator") and self._orchestrator and self._orchestrator.config:
                     threshold = getattr(
                         self._orchestrator.config.global_config, "last_change_threshold_hours", 3.0
                     )
                 # Use actual Git commit timestamp only (not file change time)
-                last_change_display = format_last_commit_time(
-                    state.last_commit_timestamp, threshold
-                )
+                last_change_display = format_last_commit_time(state.last_commit_timestamp, threshold)
 
                 rule_emoji = state.rule_emoji or ""
                 rule_indicator = state.rule_dynamic_indicator or "N/A"

@@ -20,9 +20,6 @@ from provide.foundation.cli.decorators import logging_options
 from provide.foundation.logger import get_logger
 from structlog.typing import FilteringBoundLogger as StructLogger
 
-from supsrc.config import load_config
-from supsrc.utils.directories import SupsrcDirectories
-
 
 class SupsrcTuiAppProtocol(Protocol):
     def __init__(self, *, config_path: Path, cli_shutdown_event: asyncio.Event) -> None: ...
@@ -55,6 +52,17 @@ async def _handle_signal_async(sig: int):
         base_log.warning("Shutdown already requested, signal ignored.")
 
 
+def _get_tui_log_path() -> Path:
+    """Get the TUI log file path in ~/.supsrc/log/ directory.
+
+    Returns:
+        Path to the TUI log file at ~/.supsrc/log/tui.log
+    """
+    log_dir = Path.home() / ".supsrc" / "log"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir / "tui.log"
+
+
 @click.command(name="sui")
 @click.option(
     "-c",
@@ -79,18 +87,9 @@ def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
 
         try:
             config_path = Path(config_path)
-            # Determine log file path
-            log_file_path = Path("/tmp/supsrc_tui_debug.log")
-            try:
-                supsrc_config = load_config(config_path)
-                for _repo_id, repo_config in supsrc_config.repositories.items():
-                    if repo_config.enabled and repo_config._path_valid:
-                        log_file_path = (
-                            SupsrcDirectories.get_log_dir(repo_config.path) / "supsrc_tui_debug.log"
-                        )
-                        break
-            except Exception:
-                pass
+            # Use centralized log location in user's home directory
+            # This prevents logs from scrolling over the TUI
+            log_file_path = _get_tui_log_path()
 
             # Check for TUI dependencies
             if not TEXTUAL_AVAILABLE or SupsrcTuiApp is None:
