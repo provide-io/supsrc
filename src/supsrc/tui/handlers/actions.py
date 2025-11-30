@@ -171,8 +171,16 @@ class ActionHandlerMixin:
                     target=repo_id,
                 )
                 self.event_collector.emit(event)  # type: ignore[arg-type]
-                # Update the repo details tab content
+                # Update the repo details tab content (this also switches to the tab)
                 self._update_repo_details_tab(repo_id)
+
+                # Focus the details tab content for keyboard navigation
+                try:
+                    details_content = self.query_one("#repo-details-content")
+                    details_content.focus()
+                    log.debug("Focused repo details content")
+                except Exception as focus_err:
+                    log.debug("Could not focus details content", error=str(focus_err))
 
     def action_hide_detail_pane(self) -> None:
         """Hide the repository detail pane (legacy - now clears selection)."""

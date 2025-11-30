@@ -82,7 +82,9 @@ def group_events_simple(events: list[FileChangeEvent]) -> list[BufferedFileChang
                 )
             )
 
-    log.debug("Simple grouping complete", input_events=len(events), output_groups=len(grouped_events))
+    log.debug(
+        "Simple grouping complete", input_events=len(events), output_groups=len(grouped_events)
+    )
     return grouped_events
 
 

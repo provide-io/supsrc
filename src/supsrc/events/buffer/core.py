@@ -127,7 +127,9 @@ class EventBuffer:
 
         # Set new timer to flush after window
         loop = self._get_loop()
-        self._timers[repo_id] = loop.call_later(self.window_ms / 1000.0, self._flush_buffer, repo_id)
+        self._timers[repo_id] = loop.call_later(
+            self.window_ms / 1000.0, self._flush_buffer, repo_id
+        )
 
         log.debug(
             "Event added to buffer",
