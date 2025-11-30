@@ -9,6 +9,7 @@ import asyncio
 import contextlib
 import logging
 import sys
+import tempfile
 from pathlib import Path
 
 import click
@@ -161,7 +162,7 @@ def _run_headless_orchestrator(orchestrator: WatchOrchestrator) -> int:
 @click.option(
     "--app-log",
     type=click.Path(path_type=Path),
-    default=Path("/tmp/supsrc_app.log"),
+    default=Path(tempfile.gettempdir()) / "supsrc_app.log",
     show_default=True,
     help="Path to write application debug logs.",
 )
@@ -232,11 +233,11 @@ def watch_cli(
                     break
             else:
                 # No repositories found, use temp directory
-                event_log = Path("/tmp/supsrc_events.json")
+                event_log = Path(tempfile.gettempdir()) / "supsrc_events.json"
                 log.warning("No enabled repositories found, using temp directory for logs")
         except Exception as e:
             log.warning("Failed to determine log directory", error=str(e))
-            event_log = Path("/tmp/supsrc_events.json")
+            event_log = Path(tempfile.gettempdir()) / "supsrc_events.json"
 
     # Create Rich console for headless output
     from rich.console import Console

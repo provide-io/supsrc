@@ -214,9 +214,7 @@ class TestCLIIntegration:
         result = runner.invoke(cli, ["--invalid-option"])
         assert result.exit_code != 0
 
-        result = runner.invoke(
-            cli, ["config", "show", "--config-path", "/invalid/path/config.conf"]
-        )
+        result = runner.invoke(cli, ["config", "show", "--config-path", "/invalid/path/config.conf"])
         assert result.exit_code != 0
         assert "error" in result.output.lower()
 

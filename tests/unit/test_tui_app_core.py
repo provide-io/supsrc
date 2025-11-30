@@ -141,9 +141,7 @@ class TestSupsrcTuiApp:
         mock_log = Mock()
         tui_app.query_one = Mock(return_value=mock_log)
 
-        message = LogMessageUpdate(
-            None, "INFO", "[dim blue]test-repo[/] [green]INFO[/] Test message"
-        )
+        message = LogMessageUpdate(None, "INFO", "[dim blue]test-repo[/] [green]INFO[/] Test message")
 
         tui_app.on_log_message_update(message)
 

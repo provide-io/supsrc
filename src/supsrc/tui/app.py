@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -26,6 +27,29 @@ from supsrc.tui.managers import TimerManager
 from supsrc.tui.widgets import DraggableSplitter
 
 log = get_logger(__name__)
+
+
+def _cleanup_console_handlers() -> None:
+    """Remove all console/stream handlers from all loggers.
+
+    This prevents any logging output from corrupting the TUI display.
+    Called periodically to catch handlers added after initialization.
+    """
+    # Remove from root logger
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+            root_logger.removeHandler(handler)
+
+    # Remove from all named loggers
+    for logger_name in list(logging.Logger.manager.loggerDict.keys()):
+        try:
+            named_logger = logging.getLogger(logger_name)
+            for handler in named_logger.handlers[:]:
+                if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+                    named_logger.removeHandler(handler)
+        except Exception:
+            pass
 
 
 class SupsrcTuiApp(TuiAppBase):
@@ -250,7 +274,13 @@ class SupsrcTuiApp(TuiAppBase):
 
     def on_mount(self) -> None:
         """Initialize data table and start the orchestrator."""
-        # Foundation/structlog logging is already set up by the CLI
+        # CRITICAL: Clean up any console handlers that might corrupt the TUI
+        # This is a safety measure in case handlers were added after CLI setup
+        _cleanup_console_handlers()
+
+        # Set up periodic cleanup to catch handlers added during runtime
+        self.set_interval(5.0, _cleanup_console_handlers)
+
         log.info("TUI on_mount starting")
 
         try:

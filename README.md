@@ -336,4 +336,3 @@ This project is licensed under the **Apache License 2.0**. See the [LICENSE](LIC
 *   [`click`](https://click.palletsprojects.com/) for the command-line interface.
 *   [`textual`](https://github.com/Textualize/textual) for the optional TUI.
 *   [`pathspec`](https://github.com/cpburnz/python-path-specification) for `.gitignore` handling.
-test change

@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -51,7 +52,7 @@ class StateFile:
 
         if local:
             # System-wide temporary state file for local data
-            temp_state = Path("/tmp") / "supsrc-global.state"
+            temp_state = Path(tempfile.gettempdir()) / "supsrc-global.state"
             candidates.append(temp_state)
         else:
             # User-global state file for shared data
@@ -81,7 +82,7 @@ class StateFile:
         # Fall back to user config directory for shared data
         # or temp directory for local data
         if local:
-            return Path("/tmp") / "supsrc-global.state"
+            return Path(tempfile.gettempdir()) / "supsrc-global.state"
         else:
             from provide.foundation.file import ensure_dir
 
@@ -161,9 +162,7 @@ class StateFile:
             return False
 
     @classmethod
-    def delete(
-        cls, file_path: Path | None = None, repo_path: Path | None = None, local: bool = False
-    ) -> bool:
+    def delete(cls, file_path: Path | None = None, repo_path: Path | None = None, local: bool = False) -> bool:
         """Delete a state file.
 
         Args:
@@ -209,7 +208,7 @@ class StateFile:
             search_paths.extend(repo_paths)
         else:
             # Check common locations
-            search_paths.extend([Path.home() / ".config" / "supsrc", Path("/tmp")])
+            search_paths.extend([Path.home() / ".config" / "supsrc", Path(tempfile.gettempdir())])
 
         for search_path in search_paths:
             if not search_path.exists():

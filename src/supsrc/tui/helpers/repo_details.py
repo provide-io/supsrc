@@ -66,14 +66,50 @@ def _build_timer_bar(seconds_left: int | None, total_seconds: int | None, width:
     return "█" * filled + "░" * empty + f" {seconds_left}s"
 
 
+def build_status_banner(state: RepositoryState) -> str:
+    """Build an alert banner for special states (stopped, paused, circuit breaker)."""
+    banners = []
+
+    if state.is_stopped:
+        banners.append("⏹️  MONITORING STOPPED - Press [Shift+Space] or [S] to resume")
+    elif state.is_paused:
+        banners.append("⏸️  MONITORING PAUSED - Press [Space] or [P] to resume")
+
+    if state.circuit_breaker_triggered:
+        reason = state.circuit_breaker_reason or "Safety check triggered"
+        if len(reason) > 50:
+            reason = reason[:47] + "..."
+        banners.append(f"🛑 CIRCUIT BREAKER: {reason}")
+        banners.append("   Press [A] to acknowledge and resume")
+
+    if not banners:
+        return ""
+
+    # Build a prominent banner box
+    banner_content = "\n│  ".join(banners)
+    return f"""
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  {banner_content:<58}┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"""
+
+
 def build_header_section(repo_id: str, state: RepositoryState) -> str:
     """Build the header section with repo name, branch, and status."""
     status_name = state.status.name.replace("_", " ").title()
     branch = state.current_branch or "unknown"
-    return f"""{repo_id}
+
+    # Build header with status banner if needed
+    header = f"""{repo_id}
 {"═" * 60}
 
 {state.display_status_emoji} {status_name} on 🌿 {branch}"""
+
+    # Add status banner for special states
+    banner = build_status_banner(state)
+    if banner:
+        header += banner
+
+    return header
 
 
 def build_timer_section(state: RepositoryState) -> str:
