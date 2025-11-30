@@ -115,9 +115,7 @@ class MonitoringService:
     def start(self) -> None:
         """Starts the watchdog observer thread."""
         if not self._handlers:
-            self._logger.warning(
-                "No repositories configured or added for monitoring. Observer not started."
-            )
+            self._logger.warning("No repositories configured or added for monitoring. Observer not started.")
             return
         if self._is_running:
             self._logger.warning("Monitoring service already running.")
@@ -131,9 +129,7 @@ class MonitoringService:
             self._logger.info("Monitoring service started", num_handlers=len(self._handlers))
             log.debug("observer.start() finished")
         except Exception as e:
-            self._logger.critical(
-                "Failed to start monitoring observer", error=str(e), exc_info=True
-            )
+            self._logger.critical("Failed to start monitoring observer", error=str(e), exc_info=True)
             raise MonitoringError(f"Failed to start observer thread: {e}") from e
 
     async def stop(self) -> None:
@@ -164,9 +160,7 @@ class MonitoringService:
             await asyncio.to_thread(_blocking_shutdown)
             self._logger.info("Monitoring service shutdown complete.")
         except Exception as e:
-            self._logger.error(
-                "Error during monitoring service shutdown", error=str(e), exc_info=True
-            )
+            self._logger.error("Error during monitoring service shutdown", error=str(e), exc_info=True)
         finally:
             self._is_running = False
 

@@ -172,7 +172,7 @@ source_directories = ["src", "tests"]
 log_cli = true
 log_cli_level = "DEBUG"
 minversion = "7.0"
-addopts = "-ra -q --strict-markers --import-mode=importlib"
+addopts = "-ra -q --strict-markers --import-mode=importlib --dist load"
 testpaths = ["tests"]
 pythonpath = ["src", "."]
 python_files = "test_*.py"
