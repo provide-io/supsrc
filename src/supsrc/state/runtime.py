@@ -306,7 +306,10 @@ class RepositoryState:
 
     def _update_display_emoji(self) -> None:
         """Internal method to update the display_status_emoji based on current state."""
-        if self.is_stopped:
+        # Circuit breaker takes highest priority - user must acknowledge before anything else
+        if self.circuit_breaker_triggered:
+            self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "🛑")
+        elif self.is_stopped:
             self.display_status_emoji = "⏹️"
         elif self.is_paused:
             self.display_status_emoji = "⏸️"
@@ -369,6 +372,8 @@ class RepositoryState:
         self.circuit_breaker_triggered = False
         self.circuit_breaker_reason = None
         self.reset_bulk_change_window()
+        # Update status back to IDLE and refresh the display emoji
+        self.update_status(RepositoryStatus.IDLE)
 
     def check_branch_changed(self, current_branch: str) -> bool:
         """Check if branch has changed from previous known branch."""

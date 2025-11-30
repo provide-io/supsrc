@@ -136,7 +136,7 @@ class EventProcessor:
         # Print to console in headless mode, post to TUI in TUI mode
         if not is_tui_mode:
             # Headless mode: print directly to stdout for visibility
-            print(message, file=sys.stdout, flush=True)
+            print(message, file=sys.stdout, flush=True)  # noqa: T201 - Intentional user notification in headless mode
             log.debug("Circuit breaker notification printed to console (headless mode)", repo_id=repo_id)
         else:
             # TUI mode: log and rely on status update (TUI will show the emoji/status)

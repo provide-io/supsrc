@@ -22,9 +22,7 @@ class FileChangeEvent(BaseEvent):
     repo_id: str = attrs.field(kw_only=True)
     file_path: Path = attrs.field(kw_only=True)
     change_type: str = attrs.field(kw_only=True)  # 'created', 'modified', 'deleted', 'moved'
-    dest_path: Path | None = attrs.field(
-        kw_only=True, default=None
-    )  # Destination for 'moved' events
+    dest_path: Path | None = attrs.field(kw_only=True, default=None)  # Destination for 'moved' events
 
     def format(self) -> str:
         """Format file change event for display."""
