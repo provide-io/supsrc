@@ -26,7 +26,9 @@ class TimerManager:
         self._timers: dict[str, Timer] = {}
         self._logger = log.bind(component="TimerManager")
 
-    def create_timer(self, name: str, interval: float, callback: callable, repeat: bool = True) -> Timer:
+    def create_timer(
+        self, name: str, interval: float, callback: callable, repeat: bool = True
+    ) -> Timer:
         """Create a new timer with proper tracking."""
         if name in self._timers:
             self.stop_timer(name)
