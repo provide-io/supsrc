@@ -57,6 +57,33 @@ class EventHandlerMixin:
         except Exception as e:
             log.error("Error handling worker state change", error=str(e))
 
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Handle row selection in the repository table (triggered by click or Enter)."""
+        try:
+            # Only handle clicks on the repository table
+            if event.data_table.id != "repository_table":
+                return
+
+            # Get the row key (which is the repo_id)
+            repo_id = str(event.row_key.value)
+            log.debug("Repository row selected via click", repo_id=repo_id)
+
+            # Update selected repo and switch to details tab
+            self.selected_repo_id = repo_id  # type: ignore[attr-defined]
+            self._update_repo_details_tab(repo_id)  # type: ignore[attr-defined]
+
+            # Focus the details tab content
+            try:
+                # The tab is already switched by _update_repo_details_tab
+                # Now focus the content area
+                details_content = self.query_one("#repo-details-content")  # type: ignore[attr-defined]
+                details_content.focus()
+            except Exception as focus_err:
+                log.debug("Could not focus details content", error=str(focus_err))
+
+        except Exception as e:
+            log.error("Error handling row selection", error=str(e))
+
     def on_state_update(self, message: StateUpdate) -> None:
         """Handle repository state updates."""
         log.info(

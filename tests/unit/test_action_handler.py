@@ -72,9 +72,13 @@ class TestActionHandler:
         mock_repo_engine.perform_commit.assert_not_called()
         mock_repo_engine.perform_push.assert_not_called()
         # When repo is clean, status is EXTERNAL_COMMIT_DETECTED (not IDLE)
-        assert action_handler.repo_states[repo_id].status == RepositoryStatus.EXTERNAL_COMMIT_DETECTED
+        assert (
+            action_handler.repo_states[repo_id].status == RepositoryStatus.EXTERNAL_COMMIT_DETECTED
+        )
 
-    async def test_aborts_on_status_failure(self, action_handler: ActionHandler, mock_repo_engine: AsyncMock):
+    async def test_aborts_on_status_failure(
+        self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
+    ):
         """Verify workflow aborts if get_status fails."""
         mock_repo_engine.get_status.return_value = RepoStatusResult(success=False)
         repo_id = "test_repo_1"
@@ -85,9 +89,13 @@ class TestActionHandler:
         assert state.status == RepositoryStatus.ERROR
         mock_repo_engine.stage_changes.assert_not_called()
 
-    async def test_aborts_on_merge_conflict(self, action_handler: ActionHandler, mock_repo_engine: AsyncMock):
+    async def test_aborts_on_merge_conflict(
+        self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
+    ):
         """Verify workflow aborts and freezes the repo if conflicts are detected."""
-        mock_repo_engine.get_status.return_value = RepoStatusResult(success=True, is_conflicted=True)
+        mock_repo_engine.get_status.return_value = RepoStatusResult(
+            success=True, is_conflicted=True
+        )
         repo_id = "test_repo_1"
         state = action_handler.repo_states[repo_id]
 
@@ -105,7 +113,9 @@ class TestActionHandler:
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
         """Verify a commit failure sets ERROR state and prevents push."""
-        mock_repo_engine.perform_commit.return_value = CommitResult(success=False, message="Git error")
+        mock_repo_engine.perform_commit.return_value = CommitResult(
+            success=False, message="Git error"
+        )
         repo_id = "test_repo_1"
         state = action_handler.repo_states[repo_id]
 
@@ -118,7 +128,9 @@ class TestActionHandler:
         self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
     ):
         """Verify a push failure is logged but the state still resets."""
-        mock_repo_engine.perform_push.return_value = PushResult(success=False, message="Connection failed")
+        mock_repo_engine.perform_push.return_value = PushResult(
+            success=False, message="Connection failed"
+        )
         repo_id = "test_repo_1"
         state = action_handler.repo_states[repo_id]
 
@@ -131,7 +143,9 @@ class TestActionHandler:
             repo_id, "WARNING", "Push failed: Connection failed"
         )
 
-    async def test_handles_skipped_push(self, action_handler: ActionHandler, mock_repo_engine: AsyncMock):
+    async def test_handles_skipped_push(
+        self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
+    ):
         """Verify a skipped push is handled and state resets."""
         mock_repo_engine.perform_push.return_value = PushResult(success=True, skipped=True)
         repo_id = "test_repo_1"
@@ -140,9 +154,13 @@ class TestActionHandler:
         await action_handler.execute_action_sequence(repo_id)
 
         assert state.status == RepositoryStatus.IDLE
-        action_handler.tui.post_log_update.assert_any_call(repo_id, "INFO", "Push skipped by configuration.")
+        action_handler.tui.post_log_update.assert_any_call(
+            repo_id, "INFO", "Push skipped by configuration."
+        )
 
-    async def test_handles_skipped_commit(self, action_handler: ActionHandler, mock_repo_engine: AsyncMock):
+    async def test_handles_skipped_commit(
+        self, action_handler: ActionHandler, mock_repo_engine: AsyncMock
+    ):
         """Verify the workflow ends cleanly if commit is skipped (no changes)."""
         mock_repo_engine.perform_commit.return_value = CommitResult(success=True, commit_hash=None)
         repo_id = "test_repo_1"
