@@ -542,6 +542,24 @@ moment for the orchestrator to initialize."""
             tab_id: The tab to load (files-tab, history-tab, diff-tab)
             repo_id: The repository ID to load data for
         """
+        # Show loading indicator immediately
+        try:
+            loading_msg = "[dim]Loading...[/dim]"
+            if tab_id == "files-tab":
+                self.query_one("#files-tree-content", Static).update(
+                    f"[bold]📂 {repo_id}[/bold]\n\n{loading_msg}"
+                )
+            elif tab_id == "history-tab":
+                self.query_one("#history-content", Static).update(
+                    f"[bold]📜 {repo_id}[/bold]\n\n{loading_msg}"
+                )
+            elif tab_id == "diff-tab":
+                self.query_one("#diff-content", Static).update(
+                    f"[bold]📋 {repo_id}[/bold]\n\n{loading_msg}"
+                )
+        except Exception:
+            pass
+
         if not self._orchestrator:
             return
 
