@@ -24,7 +24,7 @@ from supsrc.events.feed_table import EventFeedTable
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.tui.base_app import TuiAppBase
 from supsrc.tui.managers import TimerManager
-from supsrc.tui.widgets import DraggableSplitter
+from supsrc.tui.widgets import DraggableSplitter, LogPanel, get_tui_log_handler
 
 log = get_logger(__name__)
 
@@ -62,6 +62,7 @@ class SupsrcTuiApp(TuiAppBase):
         ("q", "quit", "Quit Application"),
         ("ctrl+c", "quit", "Quit Application"),
         ("ctrl+l", "clear_log", "Clear Log"),
+        ("l", "show_logs", "Show Logs Tab"),
         ("enter", "select_repo_for_detail", "View Details"),
         ("escape", "hide_detail_pane", "Hide Details"),
         ("r", "refresh_details", "Refresh Details"),
@@ -157,6 +158,14 @@ class SupsrcTuiApp(TuiAppBase):
         padding: 1;
     }
 
+    #log-panel {
+        height: 1fr;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        scrollbar-gutter: stable;
+    }
+
     Footer {
         dock: bottom;
         height: 2;
@@ -226,6 +235,7 @@ class SupsrcTuiApp(TuiAppBase):
         self._is_suspended = False
         self.event_collector = EventCollector()
         self._event_feed: EventFeedTable | None = None
+        self._log_panel: LogPanel | None = None
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -278,6 +288,8 @@ class SupsrcTuiApp(TuiAppBase):
                         "Supsrc TUI v1.0\nMonitoring and auto-commit system",
                         id="about-content",
                     )
+                with TabPane("📋 Logs", id="logs-tab"):
+                    yield LogPanel(id="log-panel")
 
         yield Footer()
 
@@ -339,6 +351,23 @@ class SupsrcTuiApp(TuiAppBase):
                 log.info("Welcome event emitted to test event feed")
             except Exception as e:
                 log.error("Failed to initialize event feed widget", error=str(e), exc_info=True)
+
+            # Initialize the log panel and connect to the TUI log handler
+            try:
+                self._log_panel = self.query_one("#log-panel", LogPanel)
+                tui_handler = get_tui_log_handler()
+                tui_handler.set_app(self)
+                tui_handler.set_widget(self._log_panel)
+
+                # Install the handler on root logger to capture all logs
+                root_logger = logging.getLogger()
+                if tui_handler not in root_logger.handlers:
+                    tui_handler.setLevel(logging.DEBUG)
+                    root_logger.addHandler(tui_handler)
+
+                log.info("Log panel initialized - logs will appear in the Logs tab")
+            except Exception as e:
+                log.error("Failed to initialize log panel", error=str(e), exc_info=True)
 
             # Set up a timer to check for external shutdown every 500ms
             self.set_interval(0.5, self._check_external_shutdown)
