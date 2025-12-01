@@ -473,10 +473,17 @@ moment for the orchestrator to initialize."""
             self._set_tab_placeholder_content(repo_id, "Git engine not initialized")
             return
 
-        # Run updates as background workers
-        self.run_worker(self._update_files_tab(repo_id, repo_path, engine), thread=False)
-        self.run_worker(self._update_history_tab(repo_id, repo_path, engine), thread=False)
-        self.run_worker(self._update_diff_tab(repo_id, repo_path, engine), thread=False)
+        # Run all updates in a single worker to avoid "coroutine never awaited" warnings
+        async def _run_all_tab_updates() -> None:
+            """Run all tab updates concurrently."""
+            await asyncio.gather(
+                self._update_files_tab(repo_id, repo_path, engine),
+                self._update_history_tab(repo_id, repo_path, engine),
+                self._update_diff_tab(repo_id, repo_path, engine),
+                return_exceptions=True,
+            )
+
+        self.run_worker(_run_all_tab_updates(), thread=False, group="tab_updates")
 
     def _set_tab_placeholder_content(self, repo_id: str, reason: str) -> None:
         """Set placeholder content for all tabs when data isn't available."""
