@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any, ClassVar
@@ -248,8 +249,19 @@ class SupsrcTuiApp(TuiAppBase):
         self._tui_output_stream = get_tui_output_stream()
         self._original_stderr = sys.stderr
 
+        # Enable Foundation's stream redirect with logger cache disabled
+        # This is needed so that already-created loggers pick up the new stream
+        os.environ["FOUNDATION_FORCE_STREAM_REDIRECT"] = "true"
+
+        # Reset Foundation's stream config to pick up the new env var
+        try:
+            from provide.foundation.streams.config import reset_stream_config
+
+            reset_stream_config()
+        except Exception:
+            pass
+
         # Redirect Foundation's log stream to our TUI stream
-        # Note: should_allow_stream_redirect() returns True when not in Click testing
         try:
             from provide.foundation.streams import set_log_stream_for_testing
 
