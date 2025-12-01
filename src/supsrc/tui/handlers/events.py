@@ -90,11 +90,14 @@ class EventHandlerMixin:
         Only loads data for Files, History, and Diff tabs when they are activated,
         reducing unnecessary git operations when a repo is selected.
         """
-        tab_id = event.tab.id
+        # Textual prefixes tab IDs with "--content-tab-", so extract the pane ID
+        raw_tab_id = event.tab.id or ""
+        pane_id = raw_tab_id.replace("--content-tab-", "") if raw_tab_id else ""
+
         lazy_tabs = {"files-tab", "history-tab", "diff-tab"}
 
         # Only process lazy-loading tabs
-        if tab_id not in lazy_tabs:
+        if pane_id not in lazy_tabs:
             return
 
         # Only load if a repo is selected
@@ -102,13 +105,13 @@ class EventHandlerMixin:
         if not repo_id:
             return
 
-        log.debug("Lazy loading tab data", tab_id=tab_id, repo_id=repo_id)
+        log.debug("Lazy loading tab data", pane_id=pane_id, repo_id=repo_id)
 
         # Trigger lazy load for this tab
         try:
-            self._load_tab_for_repo(tab_id, repo_id)  # type: ignore[attr-defined]
+            self._load_tab_for_repo(pane_id, repo_id)  # type: ignore[attr-defined]
         except Exception as e:
-            log.error("Failed to lazy load tab", tab_id=tab_id, repo_id=repo_id, error=str(e))
+            log.error("Failed to lazy load tab", pane_id=pane_id, repo_id=repo_id, error=str(e))
 
     def on_state_update(self, message: StateUpdate) -> None:
         """Handle repository state updates."""
