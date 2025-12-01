@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from provide.foundation.logger import get_logger
 from textual.coordinate import Coordinate
-from textual.widgets import DataTable
+from textual.widgets import DataTable, TabbedContent
 from textual.widgets import Log as TextualLog
 from textual.worker import Worker, WorkerState
 
@@ -83,6 +83,32 @@ class EventHandlerMixin:
 
         except Exception as e:
             log.error("Error handling row selection", error=str(e))
+
+    def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
+        """Handle tab activation for lazy loading of tab content.
+
+        Only loads data for Files, History, and Diff tabs when they are activated,
+        reducing unnecessary git operations when a repo is selected.
+        """
+        tab_id = event.tab.id
+        lazy_tabs = {"files-tab", "history-tab", "diff-tab"}
+
+        # Only process lazy-loading tabs
+        if tab_id not in lazy_tabs:
+            return
+
+        # Only load if a repo is selected
+        repo_id = getattr(self, "selected_repo_id", None)
+        if not repo_id:
+            return
+
+        log.debug("Lazy loading tab data", tab_id=tab_id, repo_id=repo_id)
+
+        # Trigger lazy load for this tab
+        try:
+            self._load_tab_for_repo(tab_id, repo_id)  # type: ignore[attr-defined]
+        except Exception as e:
+            log.error("Failed to lazy load tab", tab_id=tab_id, repo_id=repo_id, error=str(e))
 
     def on_state_update(self, message: StateUpdate) -> None:
         """Handle repository state updates."""

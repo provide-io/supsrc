@@ -512,16 +512,36 @@ moment for the orchestrator to initialize."""
                 tabbed_content = self.query_one("TabbedContent", TabbedContent)
                 tabbed_content.active = "details-tab"
 
-            # Also trigger async updates for other tabs
-            self._trigger_repo_tab_updates(repo_id)
+            # Set placeholder content for other tabs - they load lazily when activated
+            self._set_tab_lazy_placeholders(repo_id)
 
         except Exception as e:
             log.error("Failed to update repo details tab", error=str(e), repo_id=repo_id)
 
-    def _trigger_repo_tab_updates(self, repo_id: str) -> None:
-        """Trigger async updates for files, history, and diff tabs."""
+    def _set_tab_lazy_placeholders(self, repo_id: str) -> None:
+        """Set placeholder content for tabs that will load lazily."""
+        try:
+            placeholder = "[dim]Switch to this tab to load data...[/dim]"
+
+            files_widget = self.query_one("#files-tree-content", Static)
+            files_widget.update(f"[bold]📂 {repo_id}[/bold]\n\n{placeholder}")
+
+            history_widget = self.query_one("#history-content", Static)
+            history_widget.update(f"[bold]📜 {repo_id}[/bold]\n\n{placeholder}")
+
+            diff_widget = self.query_one("#diff-content", Static)
+            diff_widget.update(f"[bold]📋 {repo_id}[/bold]\n\n{placeholder}")
+        except Exception:
+            pass
+
+    def _load_tab_for_repo(self, tab_id: str, repo_id: str) -> None:
+        """Load data for a specific tab lazily.
+
+        Args:
+            tab_id: The tab to load (files-tab, history-tab, diff-tab)
+            repo_id: The repository ID to load data for
+        """
         if not self._orchestrator:
-            self._set_tab_placeholder_content(repo_id, "Orchestrator not ready")
             return
 
         # Get repo config and path
@@ -530,7 +550,6 @@ moment for the orchestrator to initialize."""
             repo_config = self._orchestrator.config.repositories.get(repo_id)
 
         if not repo_config or not repo_config.path:
-            self._set_tab_placeholder_content(repo_id, "Repository configuration not found")
             return
 
         repo_path = repo_config.path
@@ -538,20 +557,27 @@ moment for the orchestrator to initialize."""
         # Get the git engine for this repo
         engine = self._orchestrator.repo_engines.get(repo_id)
         if not engine or not hasattr(engine, "operations"):
-            self._set_tab_placeholder_content(repo_id, "Git engine not initialized")
             return
 
-        # Run all updates in a single worker to avoid "coroutine never awaited" warnings
-        async def _run_all_tab_updates() -> None:
-            """Run all tab updates concurrently."""
-            await asyncio.gather(
+        # Load only the requested tab
+        if tab_id == "files-tab":
+            self.run_worker(
                 self._update_files_tab(repo_id, repo_path, engine),
-                self._update_history_tab(repo_id, repo_path, engine),
-                self._update_diff_tab(repo_id, repo_path, engine),
-                return_exceptions=True,
+                thread=False,
+                group="tab_updates",
             )
-
-        self.run_worker(_run_all_tab_updates(), thread=False, group="tab_updates")
+        elif tab_id == "history-tab":
+            self.run_worker(
+                self._update_history_tab(repo_id, repo_path, engine),
+                thread=False,
+                group="tab_updates",
+            )
+        elif tab_id == "diff-tab":
+            self.run_worker(
+                self._update_diff_tab(repo_id, repo_path, engine),
+                thread=False,
+                group="tab_updates",
+            )
 
     def _set_tab_placeholder_content(self, repo_id: str, reason: str) -> None:
         """Set placeholder content for all tabs when data isn't available."""
