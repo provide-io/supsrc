@@ -237,6 +237,16 @@ class SupsrcTuiApp(TuiAppBase):
         self._event_feed: EventFeedTable | None = None
         self._log_panel: LogPanel | None = None
 
+        # Install TUI log handler early to capture all startup logs
+        # Messages are buffered until the widget is ready
+        self._tui_log_handler = get_tui_log_handler()
+        self._tui_log_handler.set_app(self)
+        root_logger = logging.getLogger()
+        if self._tui_log_handler not in root_logger.handlers:
+            self._tui_log_handler.setLevel(logging.DEBUG)
+            root_logger.addHandler(self._tui_log_handler)
+        log.info("TUI app initializing - logs will be captured")
+
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
@@ -352,22 +362,14 @@ class SupsrcTuiApp(TuiAppBase):
             except Exception as e:
                 log.error("Failed to initialize event feed widget", error=str(e), exc_info=True)
 
-            # Initialize the log panel and connect to the TUI log handler
+            # Connect the log panel widget to the already-installed handler
+            # This flushes any buffered messages from startup
             try:
                 self._log_panel = self.query_one("#log-panel", LogPanel)
-                tui_handler = get_tui_log_handler()
-                tui_handler.set_app(self)
-                tui_handler.set_widget(self._log_panel)
-
-                # Install the handler on root logger to capture all logs
-                root_logger = logging.getLogger()
-                if tui_handler not in root_logger.handlers:
-                    tui_handler.setLevel(logging.DEBUG)
-                    root_logger.addHandler(tui_handler)
-
-                log.info("Log panel initialized - logs will appear in the Logs tab")
+                self._tui_log_handler.set_widget(self._log_panel)
+                log.info("Log panel connected - buffered logs flushed")
             except Exception as e:
-                log.error("Failed to initialize log panel", error=str(e), exc_info=True)
+                log.error("Failed to connect log panel", error=str(e), exc_info=True)
 
             # Set up a timer to check for external shutdown every 500ms
             self.set_interval(0.5, self._check_external_shutdown)
