@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sys
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -24,7 +25,12 @@ from supsrc.events.feed_table import EventFeedTable
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.tui.base_app import TuiAppBase
 from supsrc.tui.managers import TimerManager
-from supsrc.tui.widgets import DraggableSplitter, LogPanel, get_tui_log_handler
+from supsrc.tui.widgets import (
+    DraggableSplitter,
+    LogPanel,
+    get_tui_log_handler,
+    get_tui_output_stream,
+)
 
 log = get_logger(__name__)
 
@@ -237,6 +243,23 @@ class SupsrcTuiApp(TuiAppBase):
         self._event_feed: EventFeedTable | None = None
         self._log_panel: LogPanel | None = None
 
+        # CRITICAL: Redirect stderr and Foundation logs BEFORE any logging happens
+        # This prevents log output from corrupting the TUI display
+        self._tui_output_stream = get_tui_output_stream()
+        self._original_stderr = sys.stderr
+
+        # Redirect Foundation's log stream to our TUI stream
+        # Note: should_allow_stream_redirect() returns True when not in Click testing
+        try:
+            from provide.foundation.streams import set_log_stream_for_testing
+
+            set_log_stream_for_testing(self._tui_output_stream)
+        except Exception:
+            pass  # Foundation redirect failed, fall back to stderr capture
+
+        # Redirect sys.stderr to capture any direct writes
+        sys.stderr = self._tui_output_stream  # type: ignore[assignment]
+
         # Install TUI log handler early to capture all startup logs
         # Messages are buffered until the widget is ready
         self._tui_log_handler = get_tui_log_handler()
@@ -377,6 +400,10 @@ class SupsrcTuiApp(TuiAppBase):
             try:
                 self._log_panel = self.query_one("#log-panel", LogPanel)
                 self._tui_log_handler.set_widget(self._log_panel)
+
+                # Also connect the TUI output stream to capture Foundation logs
+                self._tui_output_stream.set_panel(self._log_panel)
+
                 log.info("Log panel connected - buffered logs flushed")
             except Exception as e:
                 log.error("Failed to connect log panel", error=str(e), exc_info=True)

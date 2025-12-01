@@ -9,16 +9,24 @@ from supsrc.tui.widgets.draggable_splitter import DraggableSplitter
 from supsrc.tui.widgets.log_panel import (
     LogPanel,
     TuiLogHandler,
+    TuiOutputStream,
     get_tui_log_handler,
+    get_tui_output_stream,
     install_tui_log_handler,
+    redirect_foundation_to_tui,
+    restore_stderr,
 )
 
 __all__ = [
     "DraggableSplitter",
     "LogPanel",
     "TuiLogHandler",
+    "TuiOutputStream",
     "get_tui_log_handler",
+    "get_tui_output_stream",
     "install_tui_log_handler",
+    "redirect_foundation_to_tui",
+    "restore_stderr",
 ]
 
 # 🔼⚙️🔚
