@@ -71,16 +71,16 @@ def build_status_banner(state: RepositoryState) -> str:
     banners = []
 
     if state.is_stopped:
-        banners.append("[bold yellow]⏹️  MONITORING STOPPED[/bold yellow] - Press [bold]\\[S][/bold] to resume")
+        banners.append("[bold yellow]⏹️  MONITORING STOPPED[/bold yellow] - Press [bold]S[/bold] to resume")
     elif state.is_paused:
-        banners.append("[bold cyan]⏸️  MONITORING PAUSED[/bold cyan] - Press [bold]\\[Space][/bold] to resume")
+        banners.append("[bold cyan]⏸️  MONITORING PAUSED[/bold cyan] - Press [bold]Space[/bold] to resume")
 
     if state.circuit_breaker_triggered:
         reason = state.circuit_breaker_reason or "Safety check triggered"
         if len(reason) > 50:
             reason = reason[:47] + "..."
         banners.append(f"[bold red]🛑 CIRCUIT BREAKER:[/bold red] {reason}")
-        banners.append("   Press [bold]\\[A][/bold] to acknowledge and resume")
+        banners.append("   Press [bold]A[/bold] to acknowledge and resume")
 
     if not banners:
         return ""
@@ -102,7 +102,7 @@ def build_header_section(repo_id: str, state: RepositoryState) -> str:
     elif score >= 70:
         health_color = "yellow"
     elif score >= 50:
-        health_color = "dark_orange"
+        health_color = "orange3"
     else:
         health_color = "red"
 
@@ -118,7 +118,7 @@ def build_header_section(repo_id: str, state: RepositoryState) -> str:
 
     # Build header with Rich markup
     header = f"""[bold]{repo_id}[/bold]  {grade} [{health_color}]Health: {score}%[/{health_color}]
-[dim]{'─' * 60}[/dim]
+[dim]{"─" * 60}[/dim]
 
 {state.display_status_emoji} [bold]{status_name}[/bold] on [cyan]🌿 {branch}[/cyan]{sync_status}"""
 
@@ -141,7 +141,7 @@ def build_health_section(state: RepositoryState) -> str:
     if score >= 70:
         bar_color = "yellow"
     elif score >= 50:
-        bar_color = "dark_orange"
+        bar_color = "orange3"
     else:
         bar_color = "red"
 
