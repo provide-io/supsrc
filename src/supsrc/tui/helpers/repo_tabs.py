@@ -215,24 +215,70 @@ def build_history_content(commits: list[dict[str, Any]], repo_id: str) -> str:
 
 
 def build_diff_content(diff_text: str, repo_id: str) -> str:
-    """Build the diff tab content.
+    """Build the diff tab content with enhanced formatting.
 
     Args:
         diff_text: Raw diff text from get_working_diff()
         repo_id: Repository identifier
 
     Returns:
-        Formatted string for display
+        Formatted string for display with diff highlighting
     """
     if not diff_text or diff_text == "No changes detected.":
-        return f"📋 {repo_id}\n\nNo uncommitted changes to show."
+        return f"""📋 {repo_id}
+{"═" * 60}
 
+✨ No uncommitted changes to show.
+
+Working directory is clean."""
+
+    # Parse and enhance diff output
     lines = [
         f"📋 {repo_id} - Working Directory Diff",
         "═" * 60,
         "",
-        diff_text,
     ]
+
+    # Count statistics
+    additions = 0
+    deletions = 0
+    current_file = ""
+
+    for line in diff_text.split("\n"):
+        # File header
+        if line.startswith("diff --git"):
+            if current_file:
+                lines.append("")  # Separator between files
+            parts = line.split()
+            if len(parts) >= 4:
+                current_file = parts[3].lstrip("b/")
+                lines.append(f"📄 {current_file}")
+                lines.append("─" * 50)
+        # Removed lines
+        elif line.startswith("-") and not line.startswith("---"):
+            lines.append(f"  ❌ {line}")
+            deletions += 1
+        # Added lines
+        elif line.startswith("+") and not line.startswith("+++"):
+            lines.append(f"  ✅ {line}")
+            additions += 1
+        # Context lines
+        elif line.startswith("@@"):
+            # Extract line numbers
+            lines.append(f"  📍 {line}")
+        elif line.startswith("---") or line.startswith("+++"):
+            continue  # Skip file headers
+        else:
+            lines.append(f"     {line}")
+
+    # Add summary at the end
+    lines.extend(
+        [
+            "",
+            "─" * 60,
+            f"📊 Summary: +{additions} additions, -{deletions} deletions",
+        ]
+    )
 
     return "\n".join(lines)
 

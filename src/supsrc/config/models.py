@@ -89,6 +89,22 @@ class BranchProtectionConfig:
     warn_only: bool = field(default=False)  # Just warn, don't block
 
 
+# --- Notification Configuration ---
+@define(frozen=True, slots=True)
+class NotificationConfig:
+    """Configuration for desktop notifications."""
+
+    # Enable/disable notifications globally
+    enabled: bool = field(default=False)  # Disabled by default
+
+    # Which events to notify on
+    on_commit: bool = field(default=True)
+    on_push: bool = field(default=True)
+    on_error: bool = field(default=True)
+    on_circuit_breaker: bool = field(default=True)
+    on_conflict: bool = field(default=True)
+
+
 # --- attrs Data Classes for Rules ---
 @define(slots=True)
 class InactivityRuleConfig:
@@ -182,6 +198,9 @@ class GlobalConfig:
 
     # Circuit breaker configuration for safety mechanisms
     circuit_breaker: CircuitBreakerConfig = field(factory=CircuitBreakerConfig)
+
+    # Desktop notification configuration
+    notifications: NotificationConfig = field(factory=NotificationConfig)
 
     @property
     def numeric_log_level(self) -> int:

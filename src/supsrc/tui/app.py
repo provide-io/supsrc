@@ -14,7 +14,7 @@ from typing import Any, ClassVar
 
 from provide.foundation.logger import get_logger
 from textual.app import ComposeResult
-from textual.containers import Container, Vertical
+from textual.containers import Container, Vertical, VerticalScroll
 from textual.reactive import var
 from textual.widgets import DataTable, Footer, Header, Label, TabbedContent, TabPane
 from textual.worker import Worker
@@ -143,8 +143,15 @@ class SupsrcTuiApp(TuiAppBase):
         scrollbar-gutter: stable;
     }
 
-    #repo-details-content, #about-content {
+    #repo-details-scroll, #files-tree-scroll, #history-scroll, #diff-scroll, #about-scroll {
         height: 1fr;
+        margin: 0;
+        padding: 0;
+        scrollbar-gutter: stable;
+    }
+
+    #repo-details-content, #files-tree-content, #history-content, #diff-content, #about-content {
+        height: auto;
         margin: 0;
         padding: 1;
     }
@@ -245,28 +252,31 @@ class SupsrcTuiApp(TuiAppBase):
             ):
                 with TabPane("Events", id="events-tab"):
                     yield EventFeedTable(id="event-feed")
-                with TabPane("Repo Details", id="details-tab"):
+                with TabPane("Repo Details", id="details-tab"), VerticalScroll(id="repo-details-scroll"):
                     yield Label(
                         "Repository details will appear here when selected",
                         id="repo-details-content",
                     )
-                with TabPane("📂 Files", id="files-tab"):
+                with TabPane("📂 Files", id="files-tab"), VerticalScroll(id="files-tree-scroll"):
                     yield Label(
                         "Select a repository to view changed files",
                         id="files-tree-content",
                     )
-                with TabPane("📜 History", id="history-tab"):
+                with TabPane("📜 History", id="history-tab"), VerticalScroll(id="history-scroll"):
                     yield Label(
                         "Select a repository to view commit history",
                         id="history-content",
                     )
-                with TabPane("📋 Diff", id="diff-tab"):
+                with TabPane("📋 Diff", id="diff-tab"), VerticalScroll(id="diff-scroll"):
                     yield Label(
                         "Select a repository to view diff",
                         id="diff-content",
                     )
-                with TabPane("About", id="about-tab"):
-                    yield Label("Supsrc TUI v1.0\nMonitoring and auto-commit system", id="about-content")
+                with TabPane("About", id="about-tab"), VerticalScroll(id="about-scroll"):
+                    yield Label(
+                        "Supsrc TUI v1.0\nMonitoring and auto-commit system",
+                        id="about-content",
+                    )
 
         yield Footer()
 
