@@ -116,16 +116,15 @@ Working directory is clean."""
     lines.append("")
     lines.append("─" * 60)
 
-    # Status icons with colors
+    # Status icons with colors (open tag, close tag)
     status_colors = {
-        "added": "[green]",
-        "modified": "[blue]",
-        "deleted": "[red]",
-        "renamed": "[yellow]",
-        "untracked": "[dim]",
-        "changed": "[cyan]",
+        "added": ("[green]", "[/green]"),
+        "modified": ("[blue]", "[/blue]"),
+        "deleted": ("[red]", "[/red]"),
+        "renamed": ("[yellow]", "[/yellow]"),
+        "untracked": ("[dim]", "[/dim]"),
+        "changed": ("[cyan]", "[/cyan]"),
     }
-    status_end = "[/]"
 
     # Display files by directory
     for directory in sorted(tree.keys()):
@@ -143,11 +142,10 @@ Working directory is clean."""
             size_str = _format_file_size(f["size"])
             staged_mark = "●" if f.get("is_staged") else "○"
 
-            color = status_colors.get(status, "")
-            end = status_end if color else ""
+            color_open, color_close = status_colors.get(status, ("", ""))
 
             # Build file line with warnings
-            file_line = f"{indent}{staged_mark} {color}{icon} {filename}{end}"
+            file_line = f"{indent}{staged_mark} {color_open}{icon} {filename}{color_close}"
 
             extras = []
             if f.get("is_binary"):

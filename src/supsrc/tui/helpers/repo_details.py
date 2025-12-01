@@ -16,6 +16,11 @@ if TYPE_CHECKING:
     from supsrc.state import RepositoryState
 
 
+def _escape_rich_markup(text: str) -> str:
+    """Escape brackets in text to prevent Rich markup interpretation."""
+    return text.replace("[", "\\[")
+
+
 def _format_relative_time(dt: datetime | None) -> str:
     """Format a datetime as a relative time string."""
     if dt is None:
@@ -76,7 +81,7 @@ def build_status_banner(state: RepositoryState) -> str:
         banners.append("[bold cyan]⏸️  MONITORING PAUSED[/bold cyan] - Press [bold]Space[/bold] to resume")
 
     if state.circuit_breaker_triggered:
-        reason = state.circuit_breaker_reason or "Safety check triggered"
+        reason = _escape_rich_markup(state.circuit_breaker_reason or "Safety check triggered")
         if len(reason) > 50:
             reason = reason[:47] + "..."
         banners.append(f"[bold red]🛑 CIRCUIT BREAKER:[/bold red] {reason}")
@@ -159,7 +164,7 @@ def build_health_section(state: RepositoryState) -> str:
     if issues:
         lines.append("\n[bold yellow]Issues:[/bold yellow]")
         for issue in issues[:4]:
-            lines.append(f"  [yellow]⚠[/yellow]  {issue}")
+            lines.append(f"  [yellow]⚠[/yellow]  {_escape_rich_markup(issue)}")
         if len(issues) > 4:
             lines.append(f"  [dim]... and {len(issues) - 4} more issue(s)[/dim]")
 
@@ -191,7 +196,7 @@ def build_changes_section(state: RepositoryState) -> str:
 def build_last_commit_section(state: RepositoryState) -> str:
     """Build the last commit info section using Rich markup."""
     commit_hash = state.last_commit_short_hash or "-------"
-    commit_msg = state.last_commit_message_summary or "No commit message"
+    commit_msg = _escape_rich_markup(state.last_commit_message_summary or "No commit message")
     commit_time = _format_relative_time(state.last_commit_timestamp)
 
     # Truncate message if too long
@@ -290,13 +295,13 @@ def build_error_section(state: RepositoryState) -> str:
     if state.status != RepositoryStatus.ERROR:
         return ""
 
-    error_msg = state.error_message or "Unknown error"
+    error_msg = _escape_rich_markup(state.error_message or "Unknown error")
 
     return f"""
 [bold red]⚠️  Error Details[/bold red]
   [red]{error_msg}[/red]
 
-  🔧 Actions: [bold]\\[R][/bold] Retry  [bold]\\[A][/bold] Acknowledge  [bold]\\[I][/bold] Ignore"""
+  🔧 Actions: [bold]R[/bold] Retry  [bold]A[/bold] Acknowledge  [bold]I[/bold] Ignore"""
 
 
 def build_circuit_breaker_section(state: RepositoryState) -> str:
@@ -304,7 +309,7 @@ def build_circuit_breaker_section(state: RepositoryState) -> str:
     if not state.circuit_breaker_triggered:
         return ""
 
-    reason = state.circuit_breaker_reason or "Bulk changes detected"
+    reason = _escape_rich_markup(state.circuit_breaker_reason or "Bulk changes detected")
 
     # Check for file warnings (large/binary files)
     if state.file_warnings:
@@ -313,8 +318,8 @@ def build_circuit_breaker_section(state: RepositoryState) -> str:
     # Standard bulk change circuit breaker
     file_count = len(state.bulk_change_files)
 
-    # Show first few files
-    files_preview = ", ".join(state.bulk_change_files[:3])
+    # Show first few files (escape file paths)
+    files_preview = ", ".join(_escape_rich_markup(f) for f in state.bulk_change_files[:3])
     if len(files_preview) > 50:
         files_preview = files_preview[:47] + "..."
     if file_count > 3:
@@ -326,11 +331,14 @@ def build_circuit_breaker_section(state: RepositoryState) -> str:
   [yellow]Files affected:[/yellow] {file_count}
   [dim]{files_preview}[/dim]
 
-  [bold]\\[A][/bold] Acknowledge & Resume   [bold]\\[S][/bold] Stay Paused"""
+  [bold]A[/bold] Acknowledge & Resume   [bold]S[/bold] Stay Paused"""
 
 
 def _build_file_warnings_circuit_breaker(state: RepositoryState, reason: str) -> str:
-    """Build circuit breaker section with file warnings using Rich markup."""
+    """Build circuit breaker section with file warnings using Rich markup.
+
+    Note: reason is already escaped when passed in.
+    """
     warnings = state.file_warnings
     large_files = [w for w in warnings if w.get("type") == "large_file"]
     binary_files = [w for w in warnings if w.get("type") == "binary_file"]
@@ -344,7 +352,7 @@ def _build_file_warnings_circuit_breaker(state: RepositoryState, reason: str) ->
     if large_files:
         lines.append("\n[bold]📦 Large Files[/bold]")
         for lf in large_files[:3]:
-            path = lf.get("path", "unknown")
+            path = _escape_rich_markup(lf.get("path", "unknown"))
             size_mb = lf.get("size", 0) / 1_000_000
             path_display = path if len(path) <= 45 else "..." + path[-42:]
             lines.append(f"  [cyan]{path_display}[/cyan] [dim]({size_mb:.2f} MB)[/dim]")
@@ -355,14 +363,14 @@ def _build_file_warnings_circuit_breaker(state: RepositoryState, reason: str) ->
     if binary_files:
         lines.append("\n[bold]🔒 Binary Files[/bold]")
         for bf in binary_files[:3]:
-            path = bf.get("path", "unknown")
+            path = _escape_rich_markup(bf.get("path", "unknown"))
             size_kb = bf.get("size", 0) / 1000
             path_display = path if len(path) <= 45 else "..." + path[-42:]
             lines.append(f"  [cyan]{path_display}[/cyan] [dim]({size_kb:.1f} KB)[/dim]")
         if len(binary_files) > 3:
             lines.append(f"  [dim]... and {len(binary_files) - 3} more binary file(s)[/dim]")
 
-    lines.append("\n  [bold]\\[A][/bold] Acknowledge & Commit   [bold]\\[S][/bold] Skip These Files")
+    lines.append("\n  [bold]A[/bold] Acknowledge & Commit   [bold]S[/bold] Skip These Files")
 
     return "\n".join(lines)
 
@@ -371,7 +379,7 @@ def build_keyboard_hints() -> str:
     """Build the keyboard shortcuts hint section using Rich markup."""
     return """
 [dim]─────────────────────────────────────────────────────────────[/dim]
-[bold]\\[Space][/bold] Pause  [bold]\\[S][/bold] Stop  [bold]\\[R][/bold] Refresh  [bold]\\[A][/bold] Ack  [bold]\\[Esc][/bold] Back"""
+[bold]Space[/bold] Pause  [bold]S[/bold] Stop  [bold]R[/bold] Refresh  [bold]A[/bold] Ack  [bold]Esc[/bold] Back"""
 
 
 def build_repo_details(repo_id: str, state: RepositoryState, rule_name: str | None) -> str:
