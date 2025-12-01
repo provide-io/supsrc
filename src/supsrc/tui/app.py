@@ -250,6 +250,21 @@ class SupsrcTuiApp(TuiAppBase):
                         "Repository details will appear here when selected",
                         id="repo-details-content",
                     )
+                with TabPane("📂 Files", id="files-tab"):
+                    yield Label(
+                        "Select a repository to view changed files",
+                        id="files-tree-content",
+                    )
+                with TabPane("📜 History", id="history-tab"):
+                    yield Label(
+                        "Select a repository to view commit history",
+                        id="history-content",
+                    )
+                with TabPane("📋 Diff", id="diff-tab"):
+                    yield Label(
+                        "Select a repository to view diff",
+                        id="diff-content",
+                    )
                 with TabPane("About", id="about-tab"):
                     yield Label("Supsrc TUI v1.0\nMonitoring and auto-commit system", id="about-content")
 
@@ -412,8 +427,94 @@ moment for the orchestrator to initialize."""
             tabbed_content = self.query_one("TabbedContent", TabbedContent)
             tabbed_content.active = "details-tab"
 
+            # Also trigger async updates for other tabs
+            self._trigger_repo_tab_updates(repo_id)
+
         except Exception as e:
             log.error("Failed to update repo details tab", error=str(e), repo_id=repo_id)
+
+    def _trigger_repo_tab_updates(self, repo_id: str) -> None:
+        """Trigger async updates for files, history, and diff tabs."""
+        if not self._orchestrator:
+            return
+
+        # Get repo config and path
+        repo_config = None
+        if self._orchestrator.config:
+            repo_config = self._orchestrator.config.repositories.get(repo_id)
+
+        if not repo_config or not repo_config.path:
+            return
+
+        repo_path = repo_config.path
+
+        # Get the git engine for this repo
+        engine = self._orchestrator.repo_engines.get(repo_id)
+        if not engine or not hasattr(engine, "operations"):
+            return
+
+        # Run updates as background workers
+        self.run_worker(self._update_files_tab(repo_id, repo_path, engine), thread=False)
+        self.run_worker(self._update_history_tab(repo_id, repo_path, engine), thread=False)
+        self.run_worker(self._update_diff_tab(repo_id, repo_path, engine), thread=False)
+
+    async def _update_files_tab(self, repo_id: str, repo_path: Path, engine: Any) -> None:
+        """Update the files tree tab asynchronously."""
+        from supsrc.tui.helpers import build_conflict_warning, build_files_tree_content
+
+        try:
+            files_label = self.query_one("#files-tree-content", Label)
+
+            # Get changed files
+            files = await engine.operations.get_changed_files_tree(repo_path)
+
+            # Check for conflicts
+            conflict_info = await engine.operations.check_upstream_conflicts(repo_path)
+            conflict_warning = build_conflict_warning(conflict_info, repo_id)
+
+            # Build content
+            content = build_files_tree_content(files, repo_id)
+            if conflict_warning:
+                content = conflict_warning + "\n" + content
+
+            files_label.update(content)
+
+        except Exception as e:
+            log.error("Failed to update files tab", error=str(e), repo_id=repo_id)
+
+    async def _update_history_tab(self, repo_id: str, repo_path: Path, engine: Any) -> None:
+        """Update the commit history tab asynchronously."""
+        from supsrc.tui.helpers import build_history_content
+
+        try:
+            history_label = self.query_one("#history-content", Label)
+
+            # Get commit history
+            commits = await engine.operations.get_detailed_commit_history(repo_path, limit=20)
+
+            # Build content
+            content = build_history_content(commits, repo_id)
+            history_label.update(content)
+
+        except Exception as e:
+            log.error("Failed to update history tab", error=str(e), repo_id=repo_id)
+
+    async def _update_diff_tab(self, repo_id: str, repo_path: Path, engine: Any) -> None:
+        """Update the diff preview tab asynchronously."""
+        from supsrc.tui.helpers import build_diff_content
+
+        try:
+            diff_label = self.query_one("#diff-content", Label)
+
+            # Get working diff
+            diff_text = await engine.operations.get_working_diff(repo_path, max_lines=500)
+
+            # Build content
+            content = build_diff_content(diff_text, repo_id)
+            diff_label.update(content)
+
+        except Exception as e:
+            log.error("Failed to update diff tab", error=str(e), repo_id=repo_id)
 
     def watch_show_detail_pane(self, show_detail: bool) -> None:
         """Watch for changes to the show_detail_pane reactive variable."""
