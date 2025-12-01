@@ -21,7 +21,12 @@ def mock_dependencies():
     """Provide mocked dependencies for WorkflowSteps."""
     config = MagicMock(spec=SupsrcConfig)
     repo_states = {"test_repo": MagicMock(spec=RepositoryState)}
-    repo_engines = {"test_repo": AsyncMock()}
+    repo_engine = AsyncMock()
+    # Configure operations as a regular MagicMock to avoid coroutine issues
+    repo_engine.operations = MagicMock()
+    # Default: no file warnings (empty list)
+    repo_engine.operations.analyze_files_for_warnings.return_value = []
+    repo_engines = {"test_repo": repo_engine}
     tui = MagicMock()
     emit_event_callback = MagicMock()
 

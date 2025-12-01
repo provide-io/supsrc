@@ -130,6 +130,50 @@ class WorkflowSteps:
         repo_config = self.config.repositories[repo_id]
         repo_engine = self.repo_engines[repo_id]
 
+        # Check for large/binary file warnings BEFORE staging
+        if hasattr(repo_engine, "operations"):
+            warnings = repo_engine.operations.analyze_files_for_warnings(
+                repo_config.path,
+                large_threshold=self.config.global_config.large_file_threshold_bytes
+                if hasattr(self.config.global_config, "large_file_threshold_bytes")
+                else 1_000_000,
+                binary_warn=True,
+            )
+            if warnings:
+                # Trigger circuit breaker for file warnings
+                large_files = [w for w in warnings if w["type"] == "large_file"]
+                binary_files = [w for w in warnings if w["type"] == "binary_file"]
+
+                warning_messages = []
+                if large_files:
+                    warning_messages.append(f"{len(large_files)} large file(s) detected")
+                if binary_files:
+                    warning_messages.append(f"{len(binary_files)} binary file(s) detected")
+
+                reason = f"File warnings: {', '.join(warning_messages)}"
+                repo_state.trigger_circuit_breaker(reason, RepositoryStatus.BULK_CHANGE_PAUSED)
+                repo_state.action_description = reason
+
+                # Store warnings in state for TUI display
+                repo_state.file_warnings = warnings
+
+                # Emit warning event
+                from supsrc.events.system import ErrorEvent
+
+                warning_event = ErrorEvent(
+                    description=reason,
+                    source="file_analysis",
+                    error_type="FileWarning",
+                    repo_id=repo_id,
+                )
+                self._emit_event(warning_event)
+
+                self.tui.post_state_update(self.repo_states)
+                self.tui.post_log_update(
+                    repo_id, "WARNING", f"Circuit breaker triggered: {reason}. Press [A] to acknowledge."
+                )
+                return False, None
+
         # Update status
         repo_state.update_status(RepositoryStatus.STAGING)
         repo_state.action_description = "Staging changes..."
