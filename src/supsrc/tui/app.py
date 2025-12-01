@@ -245,6 +245,16 @@ class SupsrcTuiApp(TuiAppBase):
         if self._tui_log_handler not in root_logger.handlers:
             self._tui_log_handler.setLevel(logging.DEBUG)
             root_logger.addHandler(self._tui_log_handler)
+
+        # Reduce noise from Foundation's file operation detection
+        # These loggers emit frequent DEBUG/INFO messages about temp file handling
+        # that can clutter the Logs tab. Set them to WARNING to only see issues.
+        for noisy_logger in [
+            "provide.foundation.file.operations.detectors.orchestrator",
+            "provide.foundation.file.operations.detectors.auto_flush",
+        ]:
+            logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+
         log.info("TUI app initializing - logs will be captured")
 
     def compose(self) -> ComposeResult:
