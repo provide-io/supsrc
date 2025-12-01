@@ -8,6 +8,7 @@
 import asyncio
 from datetime import UTC, datetime
 from enum import Enum, auto
+from typing import Any
 
 import structlog
 from attrs import field, mutable
@@ -131,6 +132,7 @@ class RepositoryState:
     circuit_breaker_triggered: bool = field(default=False)
     circuit_breaker_reason: str | None = field(default=None)
     bulk_change_files: list[str] = field(factory=list)
+    file_warnings: list[dict[str, Any]] = field(factory=list)
 
     _timer_total_seconds: int | None = field(default=None, init=False)
     _timer_start_time: float | None = field(default=None, init=False)

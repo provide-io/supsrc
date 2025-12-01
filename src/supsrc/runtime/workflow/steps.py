@@ -132,12 +132,11 @@ class WorkflowSteps:
 
         # Check for large/binary file warnings BEFORE staging
         if hasattr(repo_engine, "operations"):
+            global_config = self.config.global_config
             warnings = repo_engine.operations.analyze_files_for_warnings(
                 repo_config.path,
-                large_threshold=self.config.global_config.large_file_threshold_bytes
-                if hasattr(self.config.global_config, "large_file_threshold_bytes")
-                else 1_000_000,
-                binary_warn=True,
+                large_threshold=global_config.large_file_threshold_bytes,
+                binary_warn=global_config.binary_file_warning_enabled,
             )
             if warnings:
                 # Trigger circuit breaker for file warnings

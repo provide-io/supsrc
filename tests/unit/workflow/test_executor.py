@@ -284,5 +284,91 @@ class TestRuntimeWorkflow:
         assert repo_state.status == RepositoryStatus.ERROR
         assert "LLM provider failed" in repo_state.error_message
 
+    @pytest.mark.asyncio
+    async def test_push_blocked_on_merge_conflict_detection(
+        self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
+    ):
+        """Test push is blocked when merge conflicts are detected with upstream."""
+        repo_id = "test_repo_1"
+
+        # Configure conflict detection to return conflicts
+        mock_repo_engine.operations.check_upstream_conflicts = AsyncMock(
+            return_value={
+                "has_conflicts": True,
+                "conflict_files": ["src/main.py", "src/utils.py"],
+                "diverged": False,
+            }
+        )
+
+        await runtime_workflow.execute_action_sequence(repo_id)
+
+        # Commit should have succeeded
+        mock_repo_engine.perform_commit.assert_called_once()
+
+        # Push should NOT have been called (blocked by conflict detection)
+        mock_repo_engine.perform_push.assert_not_called()
+
+        # Verify circuit breaker was triggered (status may be reset but flag persists)
+        repo_state = runtime_workflow.repo_states[repo_id]
+        assert repo_state.circuit_breaker_triggered is True
+        assert "conflict" in repo_state.circuit_breaker_reason.lower()
+
+    @pytest.mark.asyncio
+    async def test_push_blocked_on_branch_divergence(
+        self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
+    ):
+        """Test push is blocked when branch has diverged from upstream."""
+        repo_id = "test_repo_1"
+
+        # Configure conflict detection to return divergence
+        mock_repo_engine.operations.check_upstream_conflicts = AsyncMock(
+            return_value={
+                "has_conflicts": False,
+                "diverged": True,
+                "ahead": 3,
+                "behind": 5,
+            }
+        )
+
+        await runtime_workflow.execute_action_sequence(repo_id)
+
+        # Commit should have succeeded
+        mock_repo_engine.perform_commit.assert_called_once()
+
+        # Push should NOT have been called (blocked by divergence)
+        mock_repo_engine.perform_push.assert_not_called()
+
+        # Verify circuit breaker was triggered (status may be reset but flag persists)
+        repo_state = runtime_workflow.repo_states[repo_id]
+        assert repo_state.circuit_breaker_triggered is True
+        assert "diverged" in repo_state.circuit_breaker_reason.lower()
+
+    @pytest.mark.asyncio
+    async def test_push_proceeds_when_no_conflicts(
+        self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
+    ):
+        """Test push proceeds normally when no conflicts or divergence detected."""
+        repo_id = "test_repo_1"
+
+        # Configure conflict detection to return no issues
+        mock_repo_engine.operations.check_upstream_conflicts = AsyncMock(
+            return_value={
+                "has_conflicts": False,
+                "diverged": False,
+                "ahead": 1,
+                "behind": 0,
+            }
+        )
+
+        await runtime_workflow.execute_action_sequence(repo_id)
+
+        # Both commit and push should have been called
+        mock_repo_engine.perform_commit.assert_called_once()
+        mock_repo_engine.perform_push.assert_called_once()
+
+        # Verify no circuit breaker
+        repo_state = runtime_workflow.repo_states[repo_id]
+        assert repo_state.circuit_breaker_triggered is False
+
 
 # 🔼⚙️🔚

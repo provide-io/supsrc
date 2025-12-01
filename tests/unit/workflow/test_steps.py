@@ -329,5 +329,117 @@ class TestWorkflowSteps:
         repo_state.update_status.assert_called_with(RepositoryStatus.GENERATING_COMMIT)
         llm_provider.generate_commit_message.assert_called_once_with(staged_diff, True)
 
+    async def test_execute_staging_blocks_on_large_file_warning(
+        self, workflow_steps, mock_dependencies
+    ):
+        """Test staging is blocked when large file warnings are detected."""
+        _, repo_states, repo_engines, tui, emit_event = mock_dependencies
+        repo_id = "test_repo"
+
+        # Setup mocks
+        repo_state = repo_states[repo_id]
+        repo_config = MagicMock(spec=RepositoryConfig)
+        repo_engine = repo_engines[repo_id]
+
+        workflow_steps.config.repositories = {repo_id: repo_config}
+        workflow_steps.config.global_config = MagicMock()
+        workflow_steps.config.global_config.large_file_threshold_bytes = 1_000_000
+
+        # Mock large file warning
+        repo_engine.operations.analyze_files_for_warnings.return_value = [
+            {"path": "large_model.bin", "type": "large_file", "size": 5_000_000}
+        ]
+
+        result = await workflow_steps.execute_staging(repo_id)
+
+        # Should block staging and trigger circuit breaker
+        success, files = result
+        assert success is False
+        assert files is None
+
+        # Verify circuit breaker was triggered
+        repo_state.trigger_circuit_breaker.assert_called_once()
+        call_args = repo_state.trigger_circuit_breaker.call_args
+        assert "large file" in call_args[0][0].lower()  # reason mentions large file
+        assert call_args[0][1] == RepositoryStatus.BULK_CHANGE_PAUSED
+
+        # Verify event was emitted
+        emit_event.assert_called_once()
+
+        # Verify stage_changes was NOT called
+        repo_engine.stage_changes.assert_not_called()
+
+    async def test_execute_staging_blocks_on_binary_file_warning(
+        self, workflow_steps, mock_dependencies
+    ):
+        """Test staging is blocked when binary file warnings are detected."""
+        _, repo_states, repo_engines, tui, emit_event = mock_dependencies
+        repo_id = "test_repo"
+
+        # Setup mocks
+        repo_state = repo_states[repo_id]
+        repo_config = MagicMock(spec=RepositoryConfig)
+        repo_engine = repo_engines[repo_id]
+
+        workflow_steps.config.repositories = {repo_id: repo_config}
+        workflow_steps.config.global_config = MagicMock()
+        workflow_steps.config.global_config.large_file_threshold_bytes = 1_000_000
+
+        # Mock binary file warning
+        repo_engine.operations.analyze_files_for_warnings.return_value = [
+            {"path": "image.png", "type": "binary_file", "size": 50_000}
+        ]
+
+        result = await workflow_steps.execute_staging(repo_id)
+
+        # Should block staging and trigger circuit breaker
+        success, files = result
+        assert success is False
+        assert files is None
+
+        # Verify circuit breaker was triggered
+        repo_state.trigger_circuit_breaker.assert_called_once()
+        call_args = repo_state.trigger_circuit_breaker.call_args
+        assert "binary file" in call_args[0][0].lower()  # reason mentions binary file
+        assert call_args[0][1] == RepositoryStatus.BULK_CHANGE_PAUSED
+
+        # Verify stage_changes was NOT called
+        repo_engine.stage_changes.assert_not_called()
+
+    async def test_execute_staging_blocks_on_multiple_warnings(
+        self, workflow_steps, mock_dependencies
+    ):
+        """Test staging is blocked when multiple file warnings are detected."""
+        _, repo_states, repo_engines, tui, emit_event = mock_dependencies
+        repo_id = "test_repo"
+
+        # Setup mocks
+        repo_state = repo_states[repo_id]
+        repo_config = MagicMock(spec=RepositoryConfig)
+        repo_engine = repo_engines[repo_id]
+
+        workflow_steps.config.repositories = {repo_id: repo_config}
+        workflow_steps.config.global_config = MagicMock()
+        workflow_steps.config.global_config.large_file_threshold_bytes = 1_000_000
+
+        # Mock multiple warnings
+        repo_engine.operations.analyze_files_for_warnings.return_value = [
+            {"path": "large_model.bin", "type": "large_file", "size": 5_000_000},
+            {"path": "image.png", "type": "binary_file", "size": 50_000},
+        ]
+
+        result = await workflow_steps.execute_staging(repo_id)
+
+        # Should block staging
+        success, files = result
+        assert success is False
+
+        # Verify circuit breaker was triggered with both warning types
+        repo_state.trigger_circuit_breaker.assert_called_once()
+        call_args = repo_state.trigger_circuit_breaker.call_args
+        reason = call_args[0][0].lower()
+        assert "large file" in reason
+        assert "binary file" in reason
+
 
 # 🔼⚙️🔚
