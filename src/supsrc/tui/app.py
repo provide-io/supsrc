@@ -401,8 +401,13 @@ class SupsrcTuiApp(TuiAppBase):
         finally:
             log.info("Orchestrator worker finished.")
 
-    def _update_repo_details_tab(self, repo_id: str) -> None:
-        """Update the repo details tab with information about the selected repository."""
+    def _update_repo_details_tab(self, repo_id: str, switch_tab: bool = True) -> None:
+        """Update the repo details tab with information about the selected repository.
+
+        Args:
+            repo_id: The repository ID to show details for.
+            switch_tab: If True, switch to the details tab. If False, only update content.
+        """
         from supsrc.tui.helpers import build_repo_details
 
         try:
@@ -433,9 +438,10 @@ moment for the orchestrator to initialize."""
 
             details_label.update(details_text)
 
-            # Switch to the repo details tab
-            tabbed_content = self.query_one("TabbedContent", TabbedContent)
-            tabbed_content.active = "details-tab"
+            # Only switch to the repo details tab if requested
+            if switch_tab:
+                tabbed_content = self.query_one("TabbedContent", TabbedContent)
+                tabbed_content.active = "details-tab"
 
             # Also trigger async updates for other tabs
             self._trigger_repo_tab_updates(repo_id)

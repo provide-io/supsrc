@@ -303,8 +303,8 @@ class EventHandlerMixin:
                 and self.selected_repo_id
                 and self.selected_repo_id in message.repo_states
             ):
-                # Refresh the repo details with updated state
-                self._update_repo_details_tab(self.selected_repo_id)  # type: ignore[attr-defined]
+                # Refresh the repo details with updated state (don't switch tabs)
+                self._update_repo_details_tab(self.selected_repo_id, switch_tab=False)  # type: ignore[attr-defined]
 
         except Exception as e:
             log.error("Failed to update TUI table", error=str(e))
