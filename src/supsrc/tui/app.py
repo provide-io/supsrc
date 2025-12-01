@@ -512,8 +512,9 @@ moment for the orchestrator to initialize."""
                 tabbed_content = self.query_one("TabbedContent", TabbedContent)
                 tabbed_content.active = "details-tab"
 
-            # Set placeholder content for other tabs - they load lazily when activated
-            self._set_tab_lazy_placeholders(repo_id)
+                # Only set lazy placeholders when switching to a NEW repo
+                # Don't reset on periodic state updates (switch_tab=False)
+                self._set_tab_lazy_placeholders(repo_id)
 
         except Exception as e:
             log.error("Failed to update repo details tab", error=str(e), repo_id=repo_id)
