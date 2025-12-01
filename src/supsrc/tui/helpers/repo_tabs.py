@@ -253,10 +253,11 @@ Working directory is clean."""
 
     # Handle error messages
     if diff_text.startswith("Error getting diff:") or diff_text.startswith("Repository is empty"):
+        escaped_diff = _escape_rich_markup(diff_text)
         return f"""[bold]📋 {repo_id}[/bold]
 [dim]{"═" * 60}[/dim]
 
-[yellow]⚠️ {diff_text}[/yellow]"""
+[yellow]⚠️ {escaped_diff}[/yellow]"""
 
     # The diff_text from get_working_diff() is already formatted with Rich markup
     # Just add a header and return

@@ -158,7 +158,7 @@ def build_health_section(state: RepositoryState) -> str:
 
     lines = [
         "[bold]Repository Health[/bold]",
-        f"  {grade} Score: {score}%  [{bar}]",
+        f"  {grade} Score: {score}%  \\[{bar}\\]",
     ]
 
     if issues:
@@ -190,7 +190,7 @@ def build_changes_section(state: RepositoryState) -> str:
   📁 [bold]{state.changed_files}[/bold] files changed
      [green]➕ Added:    {state.added_files}[/green]
      [blue]✏️  Modified: {state.modified_files}[/blue]
-     [red]➖ Deleted:  {state.deleted_files}[/red]"""
+     [red]➖ Deleted:  {state.deleted_files}[/red]"""  # noqa: RUF001
 
 
 def build_last_commit_section(state: RepositoryState) -> str:
