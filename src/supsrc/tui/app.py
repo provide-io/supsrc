@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import sys
 from pathlib import Path
 from typing import Any, ClassVar
@@ -249,23 +248,37 @@ class SupsrcTuiApp(TuiAppBase):
         self._tui_output_stream = get_tui_output_stream()
         self._original_stderr = sys.stderr
 
-        # Enable Foundation's stream redirect with logger cache disabled
-        # This is needed so that already-created loggers pick up the new stream
-        os.environ["FOUNDATION_FORCE_STREAM_REDIRECT"] = "true"
-
-        # Reset Foundation's stream config to pick up the new env var
-        try:
-            from provide.foundation.streams.config import reset_stream_config
-
-            reset_stream_config()
-        except Exception:
-            pass
-
         # Redirect Foundation's log stream to our TUI stream
+        # Loggers are created at import time with the original stderr.
+        # We monkeypatch PrintLogger.msg to always use our stream.
         try:
             from provide.foundation.streams import set_log_stream_for_testing
 
             set_log_stream_for_testing(self._tui_output_stream)
+
+            # Reconfigure structlog for any future loggers
+            import structlog
+
+            current_config = structlog.get_config()
+            if current_config:
+                new_config = {**current_config}
+                new_config["logger_factory"] = structlog.PrintLoggerFactory(
+                    file=self._tui_output_stream
+                )
+                new_config["cache_logger_on_first_use"] = False
+                structlog.configure(**new_config)
+
+            # Monkeypatch PrintLogger to use our stream for ALL instances
+            # This captures logs from loggers created before the TUI started
+            from structlog._output import PrintLogger
+
+            tui_stream = self._tui_output_stream
+
+            def patched_msg(self_logger: PrintLogger, message: str) -> None:
+                with self_logger._lock:
+                    print(message, file=tui_stream, flush=True)
+
+            PrintLogger.msg = patched_msg  # type: ignore[method-assign]
         except Exception:
             pass  # Foundation redirect failed, fall back to stderr capture
 
