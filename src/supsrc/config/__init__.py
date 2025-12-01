@@ -11,6 +11,7 @@ from __future__ import annotations
 
 # Re-export all config models and functions
 from supsrc.config.models import (
+    BranchProtectionConfig,
     ConfigurationError,
     GlobalConfig,
     InactivityRuleConfig,
@@ -25,6 +26,7 @@ from supsrc.config.models import (
 )
 
 __all__ = [
+    "BranchProtectionConfig",
     "ConfigurationError",
     "GlobalConfig",
     "InactivityRuleConfig",
