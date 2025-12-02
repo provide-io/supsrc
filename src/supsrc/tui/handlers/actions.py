@@ -50,7 +50,7 @@ class ActionHandlerMixin:
             description="Event feed and log panel cleared",
             action="clear_feed",
         )
-        self.event_collector.emit(event)  # type: ignore[arg-type]
+        self.event_collector.emit(event)
 
     def action_pause_monitoring(self) -> None:
         """Pause/resume monitoring for all repositories."""
@@ -68,7 +68,7 @@ class ActionHandlerMixin:
                     action="pause_monitoring",
                 )
 
-            self.event_collector.emit(event)  # type: ignore[arg-type]
+            self.event_collector.emit(event)
 
     def action_suspend_monitoring(self) -> None:
         """Suspend/resume monitoring (stronger than pause)."""
@@ -86,7 +86,7 @@ class ActionHandlerMixin:
                     action="suspend_monitoring",
                 )
 
-            self.event_collector.emit(event)  # type: ignore[arg-type]
+            self.event_collector.emit(event)
 
     async def action_reload_config(self) -> None:
         """Reload configuration from file."""
@@ -97,7 +97,7 @@ class ActionHandlerMixin:
             description="Configuration reload initiated",
             action="reload_config_start",
         )
-        self.event_collector.emit(start_event)  # type: ignore[arg-type]
+        self.event_collector.emit(start_event)
 
         async def _reload():
             if self._orchestrator:
@@ -114,14 +114,14 @@ class ActionHandlerMixin:
                             source="config",
                             error_type="ReloadError",
                         )
-                    self.event_collector.emit(event)  # type: ignore[arg-type]
+                    self.event_collector.emit(event)
                 except Exception as e:
                     event = ErrorEvent(
                         description=f"Error during configuration reload: {e}",
                         source="config",
                         error_type="ReloadException",
                     )
-                    self.event_collector.emit(event)  # type: ignore[arg-type]
+                    self.event_collector.emit(event)
 
         self.run_worker(_reload)
 
@@ -153,7 +153,7 @@ class ActionHandlerMixin:
             description=help_text,
             action="show_help",
         )
-        self.event_collector.emit(event)  # type: ignore[arg-type]
+        self.event_collector.emit(event)
 
     def action_select_repo_for_detail(self) -> None:
         """Select a repository for detailed view."""
@@ -179,7 +179,7 @@ class ActionHandlerMixin:
                     action="select_repository",
                     target=repo_id,
                 )
-                self.event_collector.emit(event)  # type: ignore[arg-type]
+                self.event_collector.emit(event)
                 # Update the repo details tab content (this also switches to the tab)
                 self._update_repo_details_tab(repo_id)
 
@@ -201,7 +201,7 @@ class ActionHandlerMixin:
             description="Repository selection cleared",
             action="clear_selection",
         )
-        self.event_collector.emit(event)  # type: ignore[arg-type]
+        self.event_collector.emit(event)
         # Focus back to the repository table
         self.query_one(DataTable).focus()
 
@@ -214,7 +214,7 @@ class ActionHandlerMixin:
                 action="refresh_details",
                 target=self.selected_repo_id,
             )
-            self.event_collector.emit(event)  # type: ignore[arg-type]
+            self.event_collector.emit(event)
             self._update_repo_details_tab(self.selected_repo_id)
         else:
             # Emit warning event
@@ -222,7 +222,7 @@ class ActionHandlerMixin:
                 description="No repository selected to refresh",
                 action="refresh_details_failed",
             )
-            self.event_collector.emit(event)  # type: ignore[arg-type]
+            self.event_collector.emit(event)
 
     def action_focus_next(self) -> None:
         """Focus the next panel in the interface."""
