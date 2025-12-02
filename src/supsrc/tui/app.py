@@ -16,7 +16,7 @@ from provide.foundation.logger import get_logger
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical, VerticalScroll
 from textual.reactive import var
-from textual.widgets import DataTable, Footer, Header, Label, TabbedContent, TabPane
+from textual.widgets import DataTable, Footer, Header, Label, Static, TabbedContent, TabPane
 from textual.worker import Worker
 
 from supsrc.events.collector import EventCollector
@@ -152,6 +152,7 @@ class SupsrcTuiApp(TuiAppBase):
 
     #repo-details-content, #files-tree-content, #history-content, #diff-content, #about-content {
         height: auto;
+        width: 100%;
         margin: 0;
         padding: 1;
     }
@@ -253,27 +254,27 @@ class SupsrcTuiApp(TuiAppBase):
                 with TabPane("Events", id="events-tab"):
                     yield EventFeedTable(id="event-feed")
                 with TabPane("Repo Details", id="details-tab"), VerticalScroll(id="repo-details-scroll"):
-                    yield Label(
+                    yield Static(
                         "Repository details will appear here when selected",
                         id="repo-details-content",
                     )
                 with TabPane("📂 Files", id="files-tab"), VerticalScroll(id="files-tree-scroll"):
-                    yield Label(
+                    yield Static(
                         "Select a repository to view changed files",
                         id="files-tree-content",
                     )
                 with TabPane("📜 History", id="history-tab"), VerticalScroll(id="history-scroll"):
-                    yield Label(
+                    yield Static(
                         "Select a repository to view commit history",
                         id="history-content",
                     )
                 with TabPane("📋 Diff", id="diff-tab"), VerticalScroll(id="diff-scroll"):
-                    yield Label(
+                    yield Static(
                         "Select a repository to view diff",
                         id="diff-content",
                     )
                 with TabPane("About", id="about-tab"), VerticalScroll(id="about-scroll"):
-                    yield Label(
+                    yield Static(
                         "Supsrc TUI v1.0\nMonitoring and auto-commit system",
                         id="about-content",
                     )
@@ -411,7 +412,7 @@ class SupsrcTuiApp(TuiAppBase):
         from supsrc.tui.helpers import build_repo_details
 
         try:
-            details_label = self.query_one("#repo-details-content", Label)
+            details_widget = self.query_one("#repo-details-content", Static)
 
             # Get repository information if orchestrator is available
             if self._orchestrator and hasattr(self._orchestrator, "repo_states"):
@@ -436,7 +437,7 @@ has not yet collected state information for this repository."""
 The monitoring system is still starting up. Please wait a
 moment for the orchestrator to initialize."""
 
-            details_label.update(details_text)
+            details_widget.update(details_text)
 
             # Only switch to the repo details tab if requested
             if switch_tab:
@@ -479,7 +480,7 @@ moment for the orchestrator to initialize."""
         from supsrc.tui.helpers import build_conflict_warning, build_files_tree_content
 
         try:
-            files_label = self.query_one("#files-tree-content", Label)
+            files_widget = self.query_one("#files-tree-content", Static)
 
             # Get changed files
             files = await engine.operations.get_changed_files_tree(repo_path)
@@ -493,44 +494,59 @@ moment for the orchestrator to initialize."""
             if conflict_warning:
                 content = conflict_warning + "\n" + content
 
-            files_label.update(content)
+            files_widget.update(content)
 
         except Exception as e:
             log.error("Failed to update files tab", error=str(e), repo_id=repo_id)
+            try:
+                files_widget = self.query_one("#files-tree-content", Static)
+                files_widget.update(f"[red]Error loading files:[/red] {e}")
+            except Exception:
+                pass
 
     async def _update_history_tab(self, repo_id: str, repo_path: Path, engine: Any) -> None:
         """Update the commit history tab asynchronously."""
         from supsrc.tui.helpers import build_history_content
 
         try:
-            history_label = self.query_one("#history-content", Label)
+            history_widget = self.query_one("#history-content", Static)
 
             # Get commit history
             commits = await engine.operations.get_detailed_commit_history(repo_path, limit=20)
 
             # Build content
             content = build_history_content(commits, repo_id)
-            history_label.update(content)
+            history_widget.update(content)
 
         except Exception as e:
             log.error("Failed to update history tab", error=str(e), repo_id=repo_id)
+            try:
+                history_widget = self.query_one("#history-content", Static)
+                history_widget.update(f"[red]Error loading history:[/red] {e}")
+            except Exception:
+                pass
 
     async def _update_diff_tab(self, repo_id: str, repo_path: Path, engine: Any) -> None:
         """Update the diff preview tab asynchronously."""
         from supsrc.tui.helpers import build_diff_content
 
         try:
-            diff_label = self.query_one("#diff-content", Label)
+            diff_widget = self.query_one("#diff-content", Static)
 
             # Get working diff
             diff_text = await engine.operations.get_working_diff(repo_path, max_lines=500)
 
             # Build content
             content = build_diff_content(diff_text, repo_id)
-            diff_label.update(content)
+            diff_widget.update(content)
 
         except Exception as e:
             log.error("Failed to update diff tab", error=str(e), repo_id=repo_id)
+            try:
+                diff_widget = self.query_one("#diff-content", Static)
+                diff_widget.update(f"[red]Error loading diff:[/red] {e}")
+            except Exception:
+                pass
 
     def watch_show_detail_pane(self, show_detail: bool) -> None:
         """Watch for changes to the show_detail_pane reactive variable.
