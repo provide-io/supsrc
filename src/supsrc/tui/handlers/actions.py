@@ -31,14 +31,23 @@ class ActionHandlerMixin:
         log.debug("Theme toggled", theme=new_mode)
 
     def action_clear_log(self) -> None:
-        """Clear the event feed."""
-        from supsrc.events.feed_table import EventFeedTable
+        """Clear the event feed and log panel."""
+        import contextlib
 
-        self.query_one("#event-feed", EventFeedTable).clear()
+        from supsrc.events.feed_table import EventFeedTable
+        from supsrc.tui.widgets import LogPanel
+
+        # Clear event feed
+        with contextlib.suppress(Exception):
+            self.query_one("#event-feed", EventFeedTable).clear()
+
+        # Clear log panel
+        with contextlib.suppress(Exception):
+            self.query_one("#log-panel", LogPanel).clear_logs()
 
         # Emit event instead of log message
         event = UserActionEvent(
-            description="Event feed cleared",
+            description="Event feed and log panel cleared",
             action="clear_feed",
         )
         self.event_collector.emit(event)  # type: ignore[arg-type]
@@ -260,6 +269,15 @@ class ActionHandlerMixin:
             log.debug("All timers stopped during quit")
 
         self.exit()
+
+    def action_show_logs(self) -> None:
+        """Switch to the Logs tab."""
+        try:
+            tabbed_content = self.query_one(TabbedContent)
+            tabbed_content.active = "logs-tab"
+            log.debug("Switched to logs tab")
+        except Exception as e:
+            log.error("Failed to switch to logs tab", error=str(e))
 
 
 # 🔼⚙️🔚

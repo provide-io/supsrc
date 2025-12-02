@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sys
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -24,7 +25,12 @@ from supsrc.events.feed_table import EventFeedTable
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.tui.base_app import TuiAppBase
 from supsrc.tui.managers import TimerManager
-from supsrc.tui.widgets import DraggableSplitter
+from supsrc.tui.widgets import (
+    DraggableSplitter,
+    LogPanel,
+    get_tui_log_handler,
+    get_tui_output_stream,
+)
 
 log = get_logger(__name__)
 
@@ -62,6 +68,7 @@ class SupsrcTuiApp(TuiAppBase):
         ("q", "quit", "Quit Application"),
         ("ctrl+c", "quit", "Quit Application"),
         ("ctrl+l", "clear_log", "Clear Log"),
+        ("l", "show_logs", "Show Logs Tab"),
         ("enter", "select_repo_for_detail", "View Details"),
         ("escape", "hide_detail_pane", "Hide Details"),
         ("r", "refresh_details", "Refresh Details"),
@@ -157,6 +164,14 @@ class SupsrcTuiApp(TuiAppBase):
         padding: 1;
     }
 
+    #log-panel {
+        height: 1fr;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        scrollbar-gutter: stable;
+    }
+
     Footer {
         dock: bottom;
         height: 2;
@@ -226,6 +241,44 @@ class SupsrcTuiApp(TuiAppBase):
         self._is_suspended = False
         self.event_collector = EventCollector()
         self._event_feed: EventFeedTable | None = None
+        self._log_panel: LogPanel | None = None
+
+        # CRITICAL: Redirect stderr and Foundation logs BEFORE any logging happens
+        # This prevents log output from corrupting the TUI display
+        self._tui_output_stream = get_tui_output_stream()
+        self._original_stderr = sys.stderr
+
+        # Redirect Foundation's log stream to our TUI stream
+        # Note: should_allow_stream_redirect() returns True when not in Click testing
+        try:
+            from provide.foundation.streams import set_log_stream_for_testing
+
+            set_log_stream_for_testing(self._tui_output_stream)
+        except Exception:
+            pass  # Foundation redirect failed, fall back to stderr capture
+
+        # Redirect sys.stderr to capture any direct writes
+        sys.stderr = self._tui_output_stream  # type: ignore[assignment]
+
+        # Install TUI log handler early to capture all startup logs
+        # Messages are buffered until the widget is ready
+        self._tui_log_handler = get_tui_log_handler()
+        self._tui_log_handler.set_app(self)
+        root_logger = logging.getLogger()
+        if self._tui_log_handler not in root_logger.handlers:
+            self._tui_log_handler.setLevel(logging.DEBUG)
+            root_logger.addHandler(self._tui_log_handler)
+
+        # Reduce noise from Foundation's file operation detection
+        # These loggers emit frequent DEBUG/INFO messages about temp file handling
+        # that can clutter the Logs tab. Set them to WARNING to only see issues.
+        for noisy_logger in [
+            "provide.foundation.file.operations.detectors.orchestrator",
+            "provide.foundation.file.operations.detectors.auto_flush",
+        ]:
+            logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+
+        log.info("TUI app initializing - logs will be captured")
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -278,6 +331,8 @@ class SupsrcTuiApp(TuiAppBase):
                         "Supsrc TUI v1.0\nMonitoring and auto-commit system",
                         id="about-content",
                     )
+                with TabPane("📋 Logs", id="logs-tab"):
+                    yield LogPanel(id="log-panel")
 
         yield Footer()
 
@@ -339,6 +394,19 @@ class SupsrcTuiApp(TuiAppBase):
                 log.info("Welcome event emitted to test event feed")
             except Exception as e:
                 log.error("Failed to initialize event feed widget", error=str(e), exc_info=True)
+
+            # Connect the log panel widget to the already-installed handler
+            # This flushes any buffered messages from startup
+            try:
+                self._log_panel = self.query_one("#log-panel", LogPanel)
+                self._tui_log_handler.set_widget(self._log_panel)
+
+                # Also connect the TUI output stream to capture Foundation logs
+                self._tui_output_stream.set_panel(self._log_panel)
+
+                log.info("Log panel connected - buffered logs flushed")
+            except Exception as e:
+                log.error("Failed to connect log panel", error=str(e), exc_info=True)
 
             # Set up a timer to check for external shutdown every 500ms
             self.set_interval(0.5, self._check_external_shutdown)
@@ -444,16 +512,55 @@ moment for the orchestrator to initialize."""
                 tabbed_content = self.query_one("TabbedContent", TabbedContent)
                 tabbed_content.active = "details-tab"
 
-            # Also trigger async updates for other tabs
-            self._trigger_repo_tab_updates(repo_id)
+                # Only set lazy placeholders when switching to a NEW repo
+                # Don't reset on periodic state updates (switch_tab=False)
+                self._set_tab_lazy_placeholders(repo_id)
 
         except Exception as e:
             log.error("Failed to update repo details tab", error=str(e), repo_id=repo_id)
 
-    def _trigger_repo_tab_updates(self, repo_id: str) -> None:
-        """Trigger async updates for files, history, and diff tabs."""
+    def _set_tab_lazy_placeholders(self, repo_id: str) -> None:
+        """Set placeholder content for tabs that will load lazily."""
+        try:
+            placeholder = "[dim]Switch to this tab to load data...[/dim]"
+
+            files_widget = self.query_one("#files-tree-content", Static)
+            files_widget.update(f"[bold]📂 {repo_id}[/bold]\n\n{placeholder}")
+
+            history_widget = self.query_one("#history-content", Static)
+            history_widget.update(f"[bold]📜 {repo_id}[/bold]\n\n{placeholder}")
+
+            diff_widget = self.query_one("#diff-content", Static)
+            diff_widget.update(f"[bold]📋 {repo_id}[/bold]\n\n{placeholder}")
+        except Exception:
+            pass
+
+    def _load_tab_for_repo(self, tab_id: str, repo_id: str) -> None:
+        """Load data for a specific tab lazily.
+
+        Args:
+            tab_id: The tab to load (files-tab, history-tab, diff-tab)
+            repo_id: The repository ID to load data for
+        """
+        # Show loading indicator immediately
+        try:
+            loading_msg = "[dim]Loading...[/dim]"
+            if tab_id == "files-tab":
+                self.query_one("#files-tree-content", Static).update(
+                    f"[bold]📂 {repo_id}[/bold]\n\n{loading_msg}"
+                )
+            elif tab_id == "history-tab":
+                self.query_one("#history-content", Static).update(
+                    f"[bold]📜 {repo_id}[/bold]\n\n{loading_msg}"
+                )
+            elif tab_id == "diff-tab":
+                self.query_one("#diff-content", Static).update(
+                    f"[bold]📋 {repo_id}[/bold]\n\n{loading_msg}"
+                )
+        except Exception:
+            pass
+
         if not self._orchestrator:
-            self._set_tab_placeholder_content(repo_id, "Orchestrator not ready")
             return
 
         # Get repo config and path
@@ -462,7 +569,6 @@ moment for the orchestrator to initialize."""
             repo_config = self._orchestrator.config.repositories.get(repo_id)
 
         if not repo_config or not repo_config.path:
-            self._set_tab_placeholder_content(repo_id, "Repository configuration not found")
             return
 
         repo_path = repo_config.path
@@ -470,13 +576,27 @@ moment for the orchestrator to initialize."""
         # Get the git engine for this repo
         engine = self._orchestrator.repo_engines.get(repo_id)
         if not engine or not hasattr(engine, "operations"):
-            self._set_tab_placeholder_content(repo_id, "Git engine not initialized")
             return
 
-        # Run updates as background workers
-        self.run_worker(self._update_files_tab(repo_id, repo_path, engine), thread=False)
-        self.run_worker(self._update_history_tab(repo_id, repo_path, engine), thread=False)
-        self.run_worker(self._update_diff_tab(repo_id, repo_path, engine), thread=False)
+        # Load only the requested tab
+        if tab_id == "files-tab":
+            self.run_worker(
+                self._update_files_tab(repo_id, repo_path, engine),
+                thread=False,
+                group="tab_updates",
+            )
+        elif tab_id == "history-tab":
+            self.run_worker(
+                self._update_history_tab(repo_id, repo_path, engine),
+                thread=False,
+                group="tab_updates",
+            )
+        elif tab_id == "diff-tab":
+            self.run_worker(
+                self._update_diff_tab(repo_id, repo_path, engine),
+                thread=False,
+                group="tab_updates",
+            )
 
     def _set_tab_placeholder_content(self, repo_id: str, reason: str) -> None:
         """Set placeholder content for all tabs when data isn't available."""
