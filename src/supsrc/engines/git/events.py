@@ -25,7 +25,9 @@ class GitCommitEvent(BaseEvent):
     def format(self) -> str:
         """Format commit event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
-        return f"[{time_str}] 📝 Committed {self.files_changed} files [{self.commit_hash[:7]}] on {self.branch}"
+        return (
+            f"[{time_str}] 📝 Committed {self.files_changed} files [{self.commit_hash[:7]}] on {self.branch}"
+        )
 
 
 @attrs.define(frozen=True)
@@ -41,9 +43,7 @@ class GitPushEvent(BaseEvent):
     def format(self) -> str:
         """Format push event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
-        return (
-            f"[{time_str}] 🚀 Pushed {self.commits_pushed} commits to {self.remote}/{self.branch}"
-        )
+        return f"[{time_str}] 🚀 Pushed {self.commits_pushed} commits to {self.remote}/{self.branch}"
 
 
 @attrs.define(frozen=True)

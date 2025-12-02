@@ -161,9 +161,7 @@ class StateFile:
             return False
 
     @classmethod
-    def delete(
-        cls, file_path: Path | None = None, repo_path: Path | None = None, local: bool = False
-    ) -> bool:
+    def delete(cls, file_path: Path | None = None, repo_path: Path | None = None, local: bool = False) -> bool:
         """Delete a state file.
 
         Args:

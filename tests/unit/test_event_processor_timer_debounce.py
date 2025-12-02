@@ -148,9 +148,7 @@ class TestEventProcessorTimerDebounce:
             timer_check_calls.append(repo_id_arg)
 
         # Mock the actual timer check method
-        with patch.object(
-            processor, "_check_repo_status_and_handle_timer", side_effect=mock_timer_check
-        ):
+        with patch.object(processor, "_check_repo_status_and_handle_timer", side_effect=mock_timer_check):
             # Call the scheduler multiple times rapidly
             processor._schedule_debounced_timer_check(repo_id)
             assert repo_id in processor._pending_timer_checks
@@ -189,9 +187,7 @@ class TestEventProcessorTimerDebounce:
             await asyncio.sleep(2)  # Long enough to be cancelled
 
         # Mock the actual timer check method
-        with patch.object(
-            processor, "_check_repo_status_and_handle_timer", side_effect=slow_timer_check
-        ):
+        with patch.object(processor, "_check_repo_status_and_handle_timer", side_effect=slow_timer_check):
             # Schedule first timer check
             processor._schedule_debounced_timer_check(repo_id)
             assert repo_id in processor._pending_timer_checks
@@ -339,9 +335,7 @@ class TestEventProcessorTimerDebounce:
             await asyncio.gather(run_task, return_exceptions=True)
 
     @pytest.mark.asyncio
-    async def test_schedule_debounced_timer_check_method(
-        self, event_processor_with_timer: EventProcessor
-    ):
+    async def test_schedule_debounced_timer_check_method(self, event_processor_with_timer: EventProcessor):
         """Test the _schedule_debounced_timer_check method directly."""
         processor = event_processor_with_timer
         repo_id = "test_repo"

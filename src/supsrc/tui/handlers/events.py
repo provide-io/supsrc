@@ -380,9 +380,7 @@ class EventHandlerMixin:
                 for entry in commit_history[:3]:
                     log_panel.add_log_entry("INFO", f"  {entry}", "")
                 if len(commit_history) > 3:
-                    log_panel.add_log_entry(
-                        "INFO", f"  ... and {len(commit_history) - 3} more commits", ""
-                    )
+                    log_panel.add_log_entry("INFO", f"  ... and {len(commit_history) - 3} more commits", "")
         except Exception as e:
             # Check if this is a "widget not found" error (expected during initialization)
             error_msg = str(e)

@@ -84,9 +84,7 @@ class TestVSCodeAtomicSaveIntegration:
         buffer.flush_all()
 
         # Verify callback was called
-        assert mock_callback.call_count >= 1, (
-            f"Expected at least 1 callback, got {mock_callback.call_count}"
-        )
+        assert mock_callback.call_count >= 1, f"Expected at least 1 callback, got {mock_callback.call_count}"
 
         # Find the emitted event(s) and verify the file path
         all_emitted = [call[0][0] for call in mock_callback.call_args_list]
@@ -99,9 +97,7 @@ class TestVSCodeAtomicSaveIntegration:
             elif hasattr(event, "file_path"):
                 emitted_files.append(event.file_path)
 
-        assert final_file in emitted_files, (
-            f"Expected '{final_file}' in emitted files, got {emitted_files}"
-        )
+        assert final_file in emitted_files, f"Expected '{final_file}' in emitted files, got {emitted_files}"
 
         # Verify the temp file is NOT in the emitted events
         assert temp_file not in emitted_files, (

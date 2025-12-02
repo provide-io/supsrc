@@ -23,9 +23,7 @@ class BufferedFileChangeEvent(Event):
     source: str = attrs.field(default="buffer", init=False)
     repo_id: str = attrs.field(kw_only=True)
     file_paths: list[Path] = attrs.field(kw_only=True)
-    operation_type: str = attrs.field(
-        kw_only=True
-    )  # "single_file", "atomic_rewrite", "batch_operation"
+    operation_type: str = attrs.field(kw_only=True)  # "single_file", "atomic_rewrite", "batch_operation"
     event_count: int = attrs.field(kw_only=True)
     primary_change_type: str = attrs.field(kw_only=True, default="modified")
     operation_history: list[dict[str, Any]] = attrs.field(kw_only=True, factory=list)
@@ -41,7 +39,9 @@ class BufferedFileChangeEvent(Event):
         elif self.operation_type == "batch_operation":
             desc = f"Batch operation on {len(self.file_paths)} files"
         else:
-            desc = f"File {self.primary_change_type}: {self.file_paths[0].name if self.file_paths else 'unknown'}"
+            desc = (
+                f"File {self.primary_change_type}: {self.file_paths[0].name if self.file_paths else 'unknown'}"
+            )
 
         object.__setattr__(self, "description", desc)
 
@@ -131,13 +131,9 @@ class BufferedFileChangeEvent(Event):
         moves = []
         for entry in self.operation_history:
             if entry.get("change_type") == "moved" and entry.get("dest_path"):
-                src_name = (
-                    entry["path"].name if hasattr(entry["path"], "name") else str(entry["path"])
-                )
+                src_name = entry["path"].name if hasattr(entry["path"], "name") else str(entry["path"])
                 dest_name = (
-                    entry["dest_path"].name
-                    if hasattr(entry["dest_path"], "name")
-                    else str(entry["dest_path"])
+                    entry["dest_path"].name if hasattr(entry["dest_path"], "name") else str(entry["dest_path"])
                 )
                 moves.append((src_name, dest_name))
 

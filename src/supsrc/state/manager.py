@@ -269,11 +269,7 @@ class StateManager:
             state_data.updated_by = "state_manager"
 
             # If no active state remains, delete the file
-            if (
-                not state_data.paused
-                and not state_data.repositories
-                and not state_data.pause_reason
-            ):
+            if not state_data.paused and not state_data.repositories and not state_data.pause_reason:
                 success = StateFile.delete(repo_path=repo_path)
             else:
                 success = StateFile.save(state_data, repo_path=repo_path)
@@ -336,12 +332,8 @@ class StateManager:
 
         info = {
             "state_file_exists": True,
-            "paused": state_data.paused
-            if not repo_id
-            else state_data.is_repo_paused(repo_id or ""),
-            "paused_until": state_data.paused_until.isoformat()
-            if state_data.paused_until
-            else None,
+            "paused": state_data.paused if not repo_id else state_data.is_repo_paused(repo_id or ""),
+            "paused_until": state_data.paused_until.isoformat() if state_data.paused_until else None,
             "pause_reason": state_data.pause_reason,
             "updated_by": state_data.updated_by,
             "updated_at": state_data.updated_at.isoformat(),

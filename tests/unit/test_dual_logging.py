@@ -140,9 +140,7 @@ class TestDualLogging:
         collector.subscribe(json_logger.log_event)
 
         # Create event with Path object in metadata
-        test_event = DummyEvent(
-            description="Test with path", metadata={"file_path": Path("/tmp/test.txt")}
-        )
+        test_event = DummyEvent(description="Test with path", metadata={"file_path": Path("/tmp/test.txt")})
         collector.emit(test_event)
 
         json_logger.close()

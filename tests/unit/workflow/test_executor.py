@@ -31,7 +31,9 @@ def mock_repo_engine() -> AsyncMock:
     # Default: no file warnings (sync method)
     engine.operations.analyze_files_for_warnings.return_value = []
     # Default: no conflicts (async method)
-    engine.operations.check_upstream_conflicts = AsyncMock(return_value={"has_conflicts": False, "diverged": False})
+    engine.operations.check_upstream_conflicts = AsyncMock(
+        return_value={"has_conflicts": False, "diverged": False}
+    )
     return engine
 
 
@@ -131,9 +133,7 @@ class TestRuntimeWorkflow:
         repo_id = "test_repo_1"
 
         # Mock staging failure
-        mock_repo_engine.stage_changes.return_value = StageResult(
-            success=False, message="Staging error"
-        )
+        mock_repo_engine.stage_changes.return_value = StageResult(success=False, message="Staging error")
 
         await runtime_workflow.execute_action_sequence(repo_id)
 
@@ -153,9 +153,7 @@ class TestRuntimeWorkflow:
         repo_id = "test_repo_1"
 
         # Mock commit failure
-        mock_repo_engine.perform_commit.return_value = CommitResult(
-            success=False, message="Commit error"
-        )
+        mock_repo_engine.perform_commit.return_value = CommitResult(success=False, message="Commit error")
 
         await runtime_workflow.execute_action_sequence(repo_id)
 

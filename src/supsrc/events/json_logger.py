@@ -144,9 +144,7 @@ class JSONEventLogger:
             self._file_handle.write(json_line + "\n")
             self._file_handle.flush()
 
-            log.debug(
-                "Event logged to JSON file", source=event.source, description=event.description
-            )
+            log.debug("Event logged to JSON file", source=event.source, description=event.description)
 
         except Exception as e:
             log.error("Failed to log event to JSON file", source=event.source, error=str(e))

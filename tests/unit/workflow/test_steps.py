@@ -141,9 +141,7 @@ class TestWorkflowSteps:
         result = await workflow_steps.execute_status_check(repo_id)
 
         assert result is False
-        repo_state.update_status.assert_called_with(
-            RepositoryStatus.CONFLICT_DETECTED, "Repo has conflicts."
-        )
+        repo_state.update_status.assert_called_with(RepositoryStatus.CONFLICT_DETECTED, "Repo has conflicts.")
         assert repo_state.is_frozen is True
         assert repo_state.freeze_reason == "Merge conflicts detected"
         assert emit_event.call_count == 2  # ConflictDetectedEvent and RepositoryFrozenEvent
@@ -230,9 +228,7 @@ class TestWorkflowSteps:
         success, files = result
         assert success is False
         assert files is None
-        repo_state.update_status.assert_called_with(
-            RepositoryStatus.ERROR, "Staging failed: Staging failed"
-        )
+        repo_state.update_status.assert_called_with(RepositoryStatus.ERROR, "Staging failed: Staging failed")
         emit_event.assert_called_once()
 
     async def test_execute_llm_pipeline_review_veto(self, workflow_steps, mock_dependencies):
@@ -295,9 +291,7 @@ class TestWorkflowSteps:
 
         assert should_continue is False
         assert commit_message == ""
-        repo_state.update_status.assert_called_with(
-            RepositoryStatus.ERROR, "Tests Failed: Test run failed."
-        )
+        repo_state.update_status.assert_called_with(RepositoryStatus.ERROR, "Tests Failed: Test run failed.")
         emit_event.assert_called_once()
 
     async def test_execute_llm_pipeline_success_with_message_generation(
@@ -329,9 +323,7 @@ class TestWorkflowSteps:
         repo_state.update_status.assert_called_with(RepositoryStatus.GENERATING_COMMIT)
         llm_provider.generate_commit_message.assert_called_once_with(staged_diff, True)
 
-    async def test_execute_staging_blocks_on_large_file_warning(
-        self, workflow_steps, mock_dependencies
-    ):
+    async def test_execute_staging_blocks_on_large_file_warning(self, workflow_steps, mock_dependencies):
         """Test staging is blocked when large file warnings are detected."""
         _, repo_states, repo_engines, _tui, emit_event = mock_dependencies
         repo_id = "test_repo"
@@ -369,9 +361,7 @@ class TestWorkflowSteps:
         # Verify stage_changes was NOT called
         repo_engine.stage_changes.assert_not_called()
 
-    async def test_execute_staging_blocks_on_binary_file_warning(
-        self, workflow_steps, mock_dependencies
-    ):
+    async def test_execute_staging_blocks_on_binary_file_warning(self, workflow_steps, mock_dependencies):
         """Test staging is blocked when binary file warnings are detected."""
         _, repo_states, repo_engines, _tui, _emit_event = mock_dependencies
         repo_id = "test_repo"
@@ -406,9 +396,7 @@ class TestWorkflowSteps:
         # Verify stage_changes was NOT called
         repo_engine.stage_changes.assert_not_called()
 
-    async def test_execute_staging_blocks_on_multiple_warnings(
-        self, workflow_steps, mock_dependencies
-    ):
+    async def test_execute_staging_blocks_on_multiple_warnings(self, workflow_steps, mock_dependencies):
         """Test staging is blocked when multiple file warnings are detected."""
         _, repo_states, repo_engines, _tui, _emit_event = mock_dependencies
         repo_id = "test_repo"
@@ -441,9 +429,7 @@ class TestWorkflowSteps:
         assert "large file" in reason
         assert "binary file" in reason
 
-    async def test_execute_status_check_blocks_on_protected_branch(
-        self, workflow_steps, mock_dependencies
-    ):
+    async def test_execute_status_check_blocks_on_protected_branch(self, workflow_steps, mock_dependencies):
         """Test status check blocks commits to protected branches."""
         _, repo_states, repo_engines, _tui, _emit_event = mock_dependencies
         repo_id = "test_repo"
@@ -483,9 +469,7 @@ class TestWorkflowSteps:
         assert "main" in call_args[0][0]  # reason contains branch name
         assert "protected" in call_args[0][0].lower()
 
-    async def test_execute_status_check_allows_unprotected_branch(
-        self, workflow_steps, mock_dependencies
-    ):
+    async def test_execute_status_check_allows_unprotected_branch(self, workflow_steps, mock_dependencies):
         """Test status check allows commits to unprotected branches."""
         _, repo_states, repo_engines, _tui, _ = mock_dependencies
         repo_id = "test_repo"
@@ -522,9 +506,7 @@ class TestWorkflowSteps:
         # Circuit breaker should NOT be triggered
         repo_state.trigger_circuit_breaker.assert_not_called()
 
-    async def test_execute_status_check_warn_only_on_protected_branch(
-        self, workflow_steps, mock_dependencies
-    ):
+    async def test_execute_status_check_warn_only_on_protected_branch(self, workflow_steps, mock_dependencies):
         """Test status check warns but allows commits when warn_only is True."""
         _, repo_states, repo_engines, tui, _ = mock_dependencies
         repo_id = "test_repo"
