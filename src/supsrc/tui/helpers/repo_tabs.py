@@ -50,7 +50,7 @@ def _format_relative_time(dt: datetime | None) -> str:
 
 
 def build_files_tree_content(files: list[dict[str, Any]], repo_id: str) -> str:
-    """Build the files tree tab content.
+    """Build the files tree tab content using Rich markup.
 
     Args:
         files: List of file dictionaries from get_changed_files_tree()
@@ -60,7 +60,11 @@ def build_files_tree_content(files: list[dict[str, Any]], repo_id: str) -> str:
         Formatted string for display
     """
     if not files:
-        return f"📂 {repo_id}\n\nNo changed files detected."
+        return f"""[bold]📂 {repo_id}[/bold]
+
+[green]✨ No changed files detected.[/green]
+
+Working directory is clean."""
 
     # Group files by directory
     tree: dict[str, list[dict[str, Any]]] = {}
@@ -80,8 +84,8 @@ def build_files_tree_content(files: list[dict[str, Any]], repo_id: str) -> str:
 
     # Build output
     lines = [
-        f"📂 {repo_id}",
-        "═" * 60,
+        f"[bold]📂 {repo_id}[/bold]",
+        "[dim]" + "─" * 60 + "[/dim]",
         "",
     ]
 
@@ -215,72 +219,49 @@ def build_history_content(commits: list[dict[str, Any]], repo_id: str) -> str:
 
 
 def build_diff_content(diff_text: str, repo_id: str) -> str:
-    """Build the diff tab content with enhanced formatting.
+    """Build the diff tab content with Rich markup.
+
+    The diff_text is already formatted by get_working_diff() with Rich markup,
+    so we just add a header and pass through the content.
 
     Args:
-        diff_text: Raw diff text from get_working_diff()
+        diff_text: Formatted diff text from get_working_diff() with Rich markup
         repo_id: Repository identifier
 
     Returns:
         Formatted string for display with diff highlighting
     """
-    if not diff_text or diff_text == "No changes detected.":
-        return f"""📋 {repo_id}
-{"═" * 60}
+    # Handle empty/no changes cases
+    if not diff_text:
+        return f"""[bold]📋 {repo_id}[/bold]
+[dim]{"═" * 60}[/dim]
 
-✨ No uncommitted changes to show.
+[green]✨ No uncommitted changes to show.[/green]
 
 Working directory is clean."""
 
-    # Parse and enhance diff output
-    lines = [
-        f"📋 {repo_id} - Working Directory Diff",
-        "═" * 60,
-        "",
-    ]
+    if diff_text == "No changes detected.":
+        return f"""[bold]📋 {repo_id}[/bold]
+[dim]{"═" * 60}[/dim]
 
-    # Count statistics
-    additions = 0
-    deletions = 0
-    current_file = ""
+[green]✨ No uncommitted changes to show.[/green]
 
-    for line in diff_text.split("\n"):
-        # File header
-        if line.startswith("diff --git"):
-            if current_file:
-                lines.append("")  # Separator between files
-            parts = line.split()
-            if len(parts) >= 4:
-                current_file = parts[3].lstrip("b/")
-                lines.append(f"📄 {current_file}")
-                lines.append("─" * 50)
-        # Removed lines
-        elif line.startswith("-") and not line.startswith("---"):
-            lines.append(f"  ❌ {line}")
-            deletions += 1
-        # Added lines
-        elif line.startswith("+") and not line.startswith("+++"):
-            lines.append(f"  ✅ {line}")
-            additions += 1
-        # Context lines
-        elif line.startswith("@@"):
-            # Extract line numbers
-            lines.append(f"  📍 {line}")
-        elif line.startswith("---") or line.startswith("+++"):
-            continue  # Skip file headers
-        else:
-            lines.append(f"     {line}")
+Working directory is clean."""
 
-    # Add summary at the end
-    lines.extend(
-        [
-            "",
-            "─" * 60,
-            f"📊 Summary: +{additions} additions, -{deletions} deletions",
-        ]
-    )
+    # Handle error messages
+    if diff_text.startswith("Error getting diff:") or diff_text.startswith("Repository is empty"):
+        return f"""[bold]📋 {repo_id}[/bold]
+[dim]{"═" * 60}[/dim]
 
-    return "\n".join(lines)
+[yellow]⚠️ {diff_text}[/yellow]"""
+
+    # The diff_text from get_working_diff() is already formatted with Rich markup
+    # Just add a header and return
+    header = f"""[bold]📋 {repo_id} - Working Directory Diff[/bold]
+[dim]{"═" * 60}[/dim]
+"""
+
+    return header + diff_text
 
 
 def build_conflict_warning(conflict_info: dict[str, Any], repo_id: str) -> str:
