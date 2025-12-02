@@ -53,18 +53,18 @@ class GitOperationsHelper:
         for delta in diff.deltas:
             path = (
                 delta.new_file.path
-                if delta.status != pygit2.GIT_DELTA_DELETED  # type: ignore[attr-defined]
+                if delta.status != pygit2.GIT_DELTA_DELETED
                 else delta.old_file.path
             )
-            if delta.status == pygit2.GIT_DELTA_ADDED:  # type: ignore[attr-defined]
+            if delta.status == pygit2.GIT_DELTA_ADDED:
                 added.append(path)
-            elif delta.status == pygit2.GIT_DELTA_MODIFIED:  # type: ignore[attr-defined]
+            elif delta.status == pygit2.GIT_DELTA_MODIFIED:
                 modified.append(path)
-            elif delta.status == pygit2.GIT_DELTA_DELETED:  # type: ignore[attr-defined]
+            elif delta.status == pygit2.GIT_DELTA_DELETED:
                 deleted.append(path)
-            elif delta.status == pygit2.GIT_DELTA_RENAMED:  # type: ignore[attr-defined]
+            elif delta.status == pygit2.GIT_DELTA_RENAMED:
                 renamed.append(f"{delta.old_file.path} -> {delta.new_file.path}")
-            elif delta.status == pygit2.GIT_DELTA_TYPECHANGE:  # type: ignore[attr-defined]
+            elif delta.status == pygit2.GIT_DELTA_TYPECHANGE:
                 typechanged.append(path)
 
         summary_lines = []
@@ -111,7 +111,7 @@ class GitOperationsHelper:
                 return ["Repository is empty or unborn."]
 
             last_commits: list[str] = []
-            for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):  # type: ignore[attr-defined]
+            for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):
                 if len(last_commits) >= limit:
                     break
                 commit_time = datetime.fromtimestamp(commit.commit_time, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
@@ -138,7 +138,7 @@ class GitOperationsHelper:
                 return []
 
             commits: list[dict[str, Any]] = []
-            for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):  # type: ignore[attr-defined]
+            for commit in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME):
                 if len(commits) >= limit:
                     break
 
