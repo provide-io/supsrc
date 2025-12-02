@@ -129,7 +129,9 @@ def real_repo_context() -> Generator[dict[str, Path], None, None]:
 
     # Filter to only existing repositories
     existing_repos = {
-        name: path for name, path in repo_paths.items() if path.exists() and (path / ".git").exists()
+        name: path
+        for name, path in repo_paths.items()
+        if path.exists() and (path / ".git").exists()
     }
 
     yield existing_repos

@@ -32,7 +32,11 @@ class EventFeed(RichLog):
     def on_mount(self) -> None:
         """Initialize the EventFeed widget when mounted."""
         # Add an initial message to show the widget is ready
-        self.write(Text.from_markup("[bold yellow]📋 EventFeed Ready - Events will appear here[/bold yellow]"))
+        self.write(
+            Text.from_markup(
+                "[bold yellow]📋 EventFeed Ready - Events will appear here[/bold yellow]"
+            )
+        )
         self.write(Text.from_markup("[dim]📅 Widget mounted at startup[/dim]"))
 
         # Ensure the widget scrolls to show new content

@@ -89,7 +89,9 @@ class TableVerboseFormatter:
 
         return lines
 
-    def _build_sections(self, event: Event, event_type: str) -> list[tuple[str, list[tuple[str, str]]]]:
+    def _build_sections(
+        self, event: Event, event_type: str
+    ) -> list[tuple[str, list[tuple[str, str]]]]:
         """Build sections based on event type.
 
         Args:
@@ -142,7 +144,9 @@ class TableVerboseFormatter:
         ]
 
         if hasattr(event, "event_count"):
-            operation_fields.append(("Aggregation", f"{event.event_count} raw events → 1 buffered event"))
+            operation_fields.append(
+                ("Aggregation", f"{event.event_count} raw events → 1 buffered event")
+            )
 
         sections.append(("Operation", operation_fields))
 
@@ -174,9 +178,13 @@ class TableVerboseFormatter:
                     sequence_list.append(("", f"{i}. [{change_type}] {src_name}"))
 
             if len(event.operation_history) > 15:
-                sequence_list.append(("", f"... and {len(event.operation_history) - 15} more operations"))
+                sequence_list.append(
+                    ("", f"... and {len(event.operation_history) - 15} more operations")
+                )
 
-            sections.append((f"Operation Sequence ({len(event.operation_history)} events)", sequence_list))
+            sections.append(
+                (f"Operation Sequence ({len(event.operation_history)} events)", sequence_list)
+            )
 
         return sections
 
@@ -238,7 +246,9 @@ class TableVerboseFormatter:
 
             # Calculate percentage if both values available
             if hasattr(event, "seconds_remaining"):
-                percentage = (event.total_seconds - event.seconds_remaining) / event.total_seconds * 100
+                percentage = (
+                    (event.total_seconds - event.seconds_remaining) / event.total_seconds * 100
+                )
                 fields.append(("Progress", f"{percentage:.1f}%"))
 
         if hasattr(event, "rule_name") and event.rule_name:
@@ -333,7 +343,9 @@ class TableVerboseFormatter:
 
             # Truncate if needed
             truncated_name = field_name[:label_width].ljust(label_width)
-            truncated_value = field_value[:value_width] if len(field_value) > value_width else field_value
+            truncated_value = (
+                field_value[:value_width] if len(field_value) > value_width else field_value
+            )
 
             # Pad to full width
             content = f"{truncated_name}: {truncated_value}"
