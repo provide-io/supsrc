@@ -517,10 +517,26 @@ moment for the orchestrator to initialize."""
             log.error("Failed to update diff tab", error=str(e), repo_id=repo_id)
 
     def watch_show_detail_pane(self, show_detail: bool) -> None:
-        """Watch for changes to the show_detail_pane reactive variable."""
-        # This method would typically update CSS or widget visibility
-        # For now, it's a placeholder to satisfy test expectations
-        pass
+        """Watch for changes to the show_detail_pane reactive variable.
+
+        Updates CSS classes and widget visibility when toggling the detail pane.
+        """
+        try:
+            # Find the detail pane containers
+            detail_container = self.query_one("#detail-pane-container")
+
+            if show_detail:
+                detail_container.remove_class("hidden")
+                detail_container.add_class("visible")
+                log.debug("Detail pane shown")
+            else:
+                detail_container.add_class("hidden")
+                detail_container.remove_class("visible")
+                log.debug("Detail pane hidden")
+
+        except Exception as e:
+            # Widget may not be ready during initialization
+            log.debug("Could not toggle detail pane visibility", error=str(e))
 
     def action_test_log_messages(self) -> None:
         """Test action to manually trigger events."""

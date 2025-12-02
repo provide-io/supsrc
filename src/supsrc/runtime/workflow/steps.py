@@ -115,7 +115,8 @@ class WorkflowSteps:
             self.tui.post_state_update(self.repo_states)
             return False
 
-        return True
+        # Check branch protection AFTER we know the current branch
+        return await self._check_branch_protection(repo_id, repo_state, repo_config)
 
     async def execute_staging(self, repo_id: str) -> tuple[bool, list[str] | None]:
         """Execute the staging workflow step.
@@ -381,6 +382,81 @@ class WorkflowSteps:
                 reason=f"{state_type.capitalize()} operation in progress",
             )
             self._emit_event(frozen_event)
+
+    async def _check_branch_protection(self, repo_id: str, repo_state, repo_config) -> bool:
+        """Check if current branch is protected and handle accordingly.
+
+        Args:
+            repo_id: Repository identifier
+            repo_state: Repository state object
+            repo_config: Repository configuration
+
+        Returns:
+            True if commit should proceed, False if blocked/warned
+        """
+        branch_protection = repo_config.branch_protection
+        if not branch_protection.enabled:
+            return True
+
+        current_branch = repo_state.current_branch
+        if not current_branch:
+            return True  # Can't check if we don't know the branch
+
+        # Check if current branch matches any protected pattern
+        if not _is_branch_protected(current_branch, branch_protection.protected_branches):
+            return True
+
+        # Branch is protected
+        reason = f"Branch '{current_branch}' is protected"
+
+        if branch_protection.warn_only:
+            # Just log a warning but allow commit
+            self.tui.post_log_update(repo_id, "WARNING", f"{reason} - proceeding with caution")
+            return True
+
+        if branch_protection.block_commits:
+            # Block the commit with circuit breaker
+            repo_state.trigger_circuit_breaker(reason, RepositoryStatus.BULK_CHANGE_PAUSED)
+            repo_state.action_description = reason
+
+            # Emit branch protection event
+            from supsrc.events.system import ErrorEvent
+
+            protection_event = ErrorEvent(
+                description=reason,
+                source="branch_protection",
+                error_type="ProtectedBranch",
+                repo_id=repo_id,
+            )
+            self._emit_event(protection_event)
+
+            self.tui.post_state_update(self.repo_states)
+            self.tui.post_log_update(
+                repo_id, "WARNING", f"Circuit breaker triggered: {reason}. Press [A] to acknowledge."
+            )
+            return False
+
+        return True
+
+
+def _is_branch_protected(branch: str, patterns: tuple[str, ...]) -> bool:
+    """Check if a branch matches any protected pattern.
+
+    Supports simple wildcard patterns:
+    - "main" matches exactly "main"
+    - "release/*" matches "release/1.0", "release/2.0", etc.
+    - "*" at the end matches any suffix
+
+    Args:
+        branch: Current branch name
+        patterns: Tuple of protected branch patterns
+
+    Returns:
+        True if branch matches any pattern
+    """
+    import fnmatch
+
+    return any(fnmatch.fnmatch(branch, pattern) for pattern in patterns)
 
 
 # 🔼⚙️🔚
