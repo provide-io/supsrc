@@ -11,6 +11,11 @@ from datetime import datetime
 from typing import Any
 
 
+def _escape_rich_markup(text: str) -> str:
+    """Escape brackets in text to prevent Rich markup interpretation."""
+    return text.replace("[", "\\[")
+
+
 def _format_file_size(size: int) -> str:
     """Format file size in human-readable format."""
     if size < 1024:
@@ -125,7 +130,7 @@ Working directory is clean."""
     # Display files by directory
     for directory in sorted(tree.keys()):
         if directory != ".":
-            lines.append(f"\n📁 {directory}/")
+            lines.append(f"\n📁 {_escape_rich_markup(directory)}/")
             indent = "   "
         else:
             lines.append("\n📁 (root)")
@@ -134,7 +139,7 @@ Working directory is clean."""
         for f in sorted(tree[directory], key=lambda x: x["filename"]):
             icon = f["icon"]
             status = f["status"]
-            filename = f["filename"]
+            filename = _escape_rich_markup(f["filename"])
             size_str = _format_file_size(f["size"])
             staged_mark = "●" if f.get("is_staged") else "○"
 
@@ -194,7 +199,7 @@ def build_history_content(commits: list[dict[str, Any]], repo_id: str) -> str:
         author = commit.get("author", "Unknown")
 
         lines.append(f"[bold cyan]{hash_str}[/bold cyan] - {time_str}")
-        lines.append(f"   Author: {author}")
+        lines.append(f"   Author: {_escape_rich_markup(author)}")
 
         # Stats
         added = commit.get("added", 0)
@@ -211,8 +216,8 @@ def build_history_content(commits: list[dict[str, Any]], repo_id: str) -> str:
                 stats.append(f"[blue]~{modified}[/blue]")
             lines.append(f"   Files: {' '.join(stats)}")
 
-        # Message
-        message = commit.get("message", "No message")
+        # Message (escape to prevent Rich markup interpretation)
+        message = _escape_rich_markup(commit.get("message", "No message"))
         lines.append(f"   {message}")
 
     return "\n".join(lines)
