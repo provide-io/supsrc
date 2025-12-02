@@ -6,8 +6,6 @@
 """Integration tests for circuit breaker functionality with real components."""
 
 import asyncio
-import sys
-import tempfile
 from io import StringIO
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
@@ -24,7 +22,6 @@ from supsrc.config.models import (
 )
 from supsrc.events.processor import EventProcessor
 from supsrc.monitor import MonitoredEvent
-from supsrc.state.file import StateFile
 from supsrc.state.runtime import RepositoryState, RepositoryStatus
 
 
@@ -701,9 +698,8 @@ class TestCircuitBreakerVisibilityTUI:
 
         # Capture stdout to verify NO console output in TUI mode
         captured_output = StringIO()
-        with patch("sys.stdout", captured_output):
-            with caplog.at_level("DEBUG"):
-                processor._notify_circuit_breaker_trigger(mock_repo_state)
+        with patch("sys.stdout", captured_output), caplog.at_level("DEBUG"):
+            processor._notify_circuit_breaker_trigger(mock_repo_state)
 
         # Verify NO console output (would corrupt TUI)
         output = captured_output.getvalue()

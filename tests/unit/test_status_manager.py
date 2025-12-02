@@ -6,8 +6,7 @@
 """Unit tests for StatusManager to improve runtime module coverage."""
 
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
