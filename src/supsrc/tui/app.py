@@ -16,7 +16,7 @@ from provide.foundation.logger import get_logger
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical, VerticalScroll
 from textual.reactive import var
-from textual.widgets import DataTable, Footer, Header, Label, Static, TabbedContent, TabPane
+from textual.widgets import DataTable, Footer, Header, Static, TabbedContent, TabPane
 from textual.worker import Worker
 
 from supsrc.events.collector import EventCollector
@@ -453,6 +453,7 @@ moment for the orchestrator to initialize."""
     def _trigger_repo_tab_updates(self, repo_id: str) -> None:
         """Trigger async updates for files, history, and diff tabs."""
         if not self._orchestrator:
+            self._set_tab_placeholder_content(repo_id, "Orchestrator not ready")
             return
 
         # Get repo config and path
@@ -461,6 +462,7 @@ moment for the orchestrator to initialize."""
             repo_config = self._orchestrator.config.repositories.get(repo_id)
 
         if not repo_config or not repo_config.path:
+            self._set_tab_placeholder_content(repo_id, "Repository configuration not found")
             return
 
         repo_path = repo_config.path
@@ -468,12 +470,29 @@ moment for the orchestrator to initialize."""
         # Get the git engine for this repo
         engine = self._orchestrator.repo_engines.get(repo_id)
         if not engine or not hasattr(engine, "operations"):
+            self._set_tab_placeholder_content(repo_id, "Git engine not initialized")
             return
 
         # Run updates as background workers
         self.run_worker(self._update_files_tab(repo_id, repo_path, engine), thread=False)
         self.run_worker(self._update_history_tab(repo_id, repo_path, engine), thread=False)
         self.run_worker(self._update_diff_tab(repo_id, repo_path, engine), thread=False)
+
+    def _set_tab_placeholder_content(self, repo_id: str, reason: str) -> None:
+        """Set placeholder content for all tabs when data isn't available."""
+        try:
+            placeholder = f"[yellow]⚠️ {reason}[/yellow]\n\nSelect a repository to view details."
+
+            files_widget = self.query_one("#files-tree-content", Static)
+            files_widget.update(f"[bold]📂 {repo_id}[/bold]\n\n{placeholder}")
+
+            history_widget = self.query_one("#history-content", Static)
+            history_widget.update(f"[bold]📜 {repo_id}[/bold]\n\n{placeholder}")
+
+            diff_widget = self.query_one("#diff-content", Static)
+            diff_widget.update(f"[bold]📋 {repo_id}[/bold]\n\n{placeholder}")
+        except Exception:
+            pass
 
     async def _update_files_tab(self, repo_id: str, repo_path: Path, engine: Any) -> None:
         """Update the files tree tab asynchronously."""
@@ -541,10 +560,17 @@ moment for the orchestrator to initialize."""
             diff_widget.update(content)
 
         except Exception as e:
-            log.error("Failed to update diff tab", error=str(e), repo_id=repo_id)
+            log.error("Failed to update diff tab", error=str(e), repo_id=repo_id, exc_info=True)
             try:
                 diff_widget = self.query_one("#diff-content", Static)
-                diff_widget.update(f"[red]Error loading diff:[/red] {e}")
+                error_content = f"""[bold]📋 {repo_id}[/bold]
+[dim]{"═" * 60}[/dim]
+
+[red]Error loading diff:[/red]
+{e}
+
+[dim]Check the log for more details.[/dim]"""
+                diff_widget.update(error_content)
             except Exception:
                 pass
 
