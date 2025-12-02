@@ -84,9 +84,7 @@ class MonitoringCoordinator:
             except MonitoringSetupError as e:
                 self._log.error("Failed to add repo to monitor", repo_id=repo_id, error=str(e))
                 if self.repo_states.get(repo_id):
-                    self.repo_states[repo_id].update_status(
-                        RepositoryStatus.ERROR, "Monitor setup failed"
-                    )
+                    self.repo_states[repo_id].update_status(RepositoryStatus.ERROR, "Monitor setup failed")
                     tui.post_log_update(repo_id, "ERROR", f"Monitoring setup failed: {e}")
 
                     # Emit error event for monitor setup failure
@@ -122,9 +120,7 @@ class MonitoringCoordinator:
                         src_path=self._coordinator.config_path,
                         is_directory=False,
                     )
-                    loop.call_soon_threadsafe(
-                        self._coordinator.event_queue.put_nowait, monitored_event
-                    )
+                    loop.call_soon_threadsafe(self._coordinator.event_queue.put_nowait, monitored_event)
 
         try:
             self.config_observer = Observer()
@@ -134,9 +130,7 @@ class MonitoringCoordinator:
             self._log.info("Configuration file watcher scheduled", path=watch_dir)
             tui.post_log_update(None, "DEBUG", f"Watching config in: {watch_dir}")
         except Exception as e:
-            self._log.error(
-                "Failed to set up configuration file watcher", error=str(e), exc_info=True
-            )
+            self._log.error("Failed to set up configuration file watcher", error=str(e), exc_info=True)
             self.config_observer = None
 
     def pause_monitoring(self) -> None:
@@ -164,9 +158,7 @@ class MonitoringCoordinator:
         if config and self.monitor_service and not self.monitor_service.is_running:
             self._log.info("Restarting suspended monitoring service...")
             enabled_repos = [
-                repo_id
-                for repo_id, repo in config.repositories.items()
-                if repo.enabled and repo._path_valid
+                repo_id for repo_id, repo in config.repositories.items() if repo.enabled and repo._path_valid
             ]
             self.monitor_service = self.setup_monitoring(config, enabled_repos, tui)
             if self.monitor_service:
@@ -211,9 +203,7 @@ class MonitoringCoordinator:
 
             if not enabled_repos:
                 self._log.warning("No enabled repositories after reload.")
-                tui.post_log_update(
-                    None, "WARNING", "Config reloaded, but no repositories are enabled."
-                )
+                tui.post_log_update(None, "WARNING", "Config reloaded, but no repositories are enabled.")
                 return True
 
             self.monitor_service = self.setup_monitoring(new_config, enabled_repos, tui)
@@ -237,9 +227,7 @@ class MonitoringCoordinator:
                 self.monitor_service.start()
                 if not self.monitor_service.is_running:
                     self._log.error("Monitoring service for repositories failed to start silently.")
-                    tui.post_log_update(
-                        None, "ERROR", "Filesystem monitoring service failed to start."
-                    )
+                    tui.post_log_update(None, "ERROR", "Filesystem monitoring service failed to start.")
                     return False
             except Exception as e:
                 self._log.critical(
@@ -252,9 +240,7 @@ class MonitoringCoordinator:
             try:
                 self.config_observer.start()
             except Exception as e:
-                self._log.critical(
-                    "Failed to start configuration file watcher", error=str(e), exc_info=True
-                )
+                self._log.critical("Failed to start configuration file watcher", error=str(e), exc_info=True)
                 tui.post_log_update(None, "CRITICAL", f"FATAL: Config watcher failed to start: {e}")
                 return False
 

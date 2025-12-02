@@ -165,6 +165,22 @@ class GitEngine(RepositoryEngine):
             except Exception as e:
                 status_log.error(f"Error counting tracked files: {e}")
 
+            # Get ahead/behind counts relative to upstream
+            commits_ahead, commits_behind = 0, 0
+            has_upstream = False
+            upstream_branch = None
+            try:
+                if not repo.head_is_unborn and not repo.head_is_detached:
+                    local_branch = repo.branches.get(current_branch)
+                    if local_branch and local_branch.upstream:
+                        has_upstream = True
+                        upstream_branch = local_branch.upstream.shorthand
+                        ahead, behind = repo.ahead_behind(local_branch.target, local_branch.upstream.target)
+                        commits_ahead = ahead
+                        commits_behind = behind
+            except Exception as e:
+                status_log.debug(f"Could not get ahead/behind counts: {e}")
+
             return {
                 "success": True,
                 "is_clean": is_clean,
@@ -178,6 +194,10 @@ class GitEngine(RepositoryEngine):
                 "added_files": added_files,
                 "deleted_files": deleted_files,
                 "modified_files": modified_files,
+                "commits_ahead": commits_ahead,
+                "commits_behind": commits_behind,
+                "has_upstream": has_upstream,
+                "upstream_branch": upstream_branch,
             }
 
         try:

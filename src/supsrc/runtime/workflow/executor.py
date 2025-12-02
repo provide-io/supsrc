@@ -54,9 +54,7 @@ class RuntimeWorkflow:
         self.tui = tui
         self.event_collector = event_collector
         self._llm_manager = LLMProviderManager()
-        self._workflow_steps = WorkflowSteps(
-            config, repo_states, repo_engines, tui, self._emit_event
-        )
+        self._workflow_steps = WorkflowSteps(config, repo_states, repo_engines, tui, self._emit_event)
         self._background_tasks: set[asyncio.Task[None]] = set()
         log.debug("RuntimeWorkflow initialized.")
 
@@ -64,9 +62,7 @@ class RuntimeWorkflow:
         """Emit event to available event collector (TUI or standalone)."""
         # Try standalone event collector first (headless mode)
         if self.event_collector:
-            log.debug(
-                "Emitting event via workflow event collector", event_type=type(event).__name__
-            )
+            log.debug("Emitting event via workflow event collector", event_type=type(event).__name__)
             self.event_collector.emit(event)
             return
 
@@ -107,9 +103,7 @@ class RuntimeWorkflow:
 
         if repo_state is None or repo_config is None or repo_engine is None:
             action_log.error("Action failed: Missing state, config, or engine.")
-            self.tui.post_log_update(
-                repo_id, "ERROR", "Action failed: Missing state/config/engine."
-            )
+            self.tui.post_log_update(repo_id, "ERROR", "Action failed: Missing state/config/engine.")
             return
 
         action_log.info("Executing action sequence...")
@@ -121,9 +115,7 @@ class RuntimeWorkflow:
                 # Handle special case of external commit detection
                 if repo_state.status == RepositoryStatus.EXTERNAL_COMMIT_DETECTED:
                     # Reset after brief pause to show the status
-                    reset_task = asyncio.create_task(
-                        self._delayed_reset_after_external_commit(repo_state)
-                    )
+                    reset_task = asyncio.create_task(self._delayed_reset_after_external_commit(repo_state))
                     self._background_tasks.add(reset_task)
                     reset_task.add_done_callback(self._background_tasks.discard)
                 return
@@ -256,12 +248,7 @@ class RuntimeWorkflow:
 
         # Generate change fragment if configured
         llm_config = repo_config.llm
-        if (
-            llm_config
-            and llm_config.enabled
-            and llm_config.generate_change_fragment
-            and LLM_AVAILABLE
-        ):
+        if llm_config and llm_config.enabled and llm_config.generate_change_fragment and LLM_AVAILABLE:
             await self._generate_change_fragment(
                 repo_id, repo_config, repo_engine, llm_config, commit_result.commit_hash
             )
@@ -281,6 +268,9 @@ class RuntimeWorkflow:
         )
         self._emit_event(commit_event)
 
+        # Record session statistics
+        repo_state.record_session_commit(files_count)
+
         # Execute Push
         await self._execute_push_step(repo_id, repo_state, repo_config, repo_engine, action_log)
 
@@ -288,13 +278,9 @@ class RuntimeWorkflow:
         repo_state.reset_after_action()
 
         # Refresh repository statistics
-        await self._refresh_repository_statistics(
-            repo_id, repo_state, repo_config, repo_engine, action_log
-        )
+        await self._refresh_repository_statistics(repo_id, repo_state, repo_config, repo_engine, action_log)
 
-    async def _execute_push_step(
-        self, repo_id: str, repo_state, repo_config, repo_engine, action_log
-    ) -> None:
+    async def _execute_push_step(self, repo_id: str, repo_state, repo_config, repo_engine, action_log) -> None:
         """Execute the push workflow step."""
         action_log.info("Commit successful", commit_hash=repo_state.last_commit_short_hash)
 
@@ -374,6 +360,9 @@ class RuntimeWorkflow:
             )
             self._emit_event(push_event)
 
+            # Record session push statistics
+            repo_state.record_session_push()
+
     async def _generate_change_fragment(
         self, repo_id: str, repo_config, repo_engine, llm_config, commit_hash: str
     ) -> None:
@@ -409,12 +398,15 @@ class RuntimeWorkflow:
                 repo_state.modified_files = status_result.modified_files or 0
                 repo_state.has_uncommitted_changes = not status_result.is_clean
                 repo_state.current_branch = status_result.current_branch
+                # Update remote sync status
+                repo_state.commits_ahead = status_result.commits_ahead
+                repo_state.commits_behind = status_result.commits_behind
+                repo_state.has_upstream = status_result.has_upstream
+                repo_state.upstream_branch = status_result.upstream_branch
         except Exception as e:
             action_log.warning("Failed to refresh repository statistics after commit", error=str(e))
 
-    async def _handle_unexpected_error(
-        self, repo_id: str, repo_state, action_log, error: Exception
-    ) -> None:
+    async def _handle_unexpected_error(self, repo_id: str, repo_state, action_log, error: Exception) -> None:
         """Handle unexpected errors during workflow execution."""
         action_log.critical("Unexpected error in action sequence", error=str(error), exc_info=True)
         if repo_state:

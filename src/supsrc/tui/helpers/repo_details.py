@@ -101,11 +101,21 @@ def build_header_section(repo_id: str, state: RepositoryState) -> str:
     # Get health score
     score, grade, _ = state.get_health_score()
 
+    # Build sync status indicator
+    sync_status = ""
+    if state.has_upstream:
+        parts = []
+        if state.commits_ahead > 0:
+            parts.append(f"↑{state.commits_ahead}")
+        if state.commits_behind > 0:
+            parts.append(f"↓{state.commits_behind}")
+        sync_status = f" ({', '.join(parts)})" if parts else " (synced)"
+
     # Build header with status banner if needed
     header = f"""{repo_id}  {grade} Health: {score}%
 {"═" * 60}
 
-{state.display_status_emoji} {status_name} on 🌿 {branch}"""
+{state.display_status_emoji} {status_name} on 🌿 {branch}{sync_status}"""
 
     # Add status banner for special states
     banner = build_status_banner(state)
@@ -218,6 +228,63 @@ def build_controls_section(state: RepositoryState) -> str:
     return f"""
 ┌─ Controls ──────────────────────────────────────────────────┐
 │  ⏸️  Paused: {paused:<8}  ⏹️  Stopped: {stopped:<8}  🧊 Frozen: {frozen:<6} │
+└─────────────────────────────────────────────────────────────┘"""
+
+
+def build_session_stats_section(state: RepositoryState) -> str:
+    """Build the session statistics section."""
+    duration = state.get_session_duration()
+    commits = state.session_commits_count
+    files = state.session_files_committed
+    pushes = state.session_pushes_count
+    events = state.session_events_count
+
+    # Calculate average commits per hour
+    if state.session_start_time:
+        hours = (datetime.now(UTC) - state.session_start_time).total_seconds() / 3600
+        avg_commits = commits / hours if hours > 0 else 0
+        avg_commits_str = f"{avg_commits:.1f}/hr"
+    else:
+        avg_commits_str = "N/A"
+
+    return f"""
+┌─ 📊 Session Statistics ────────────────────────────────────┐
+│  ⏱️  Duration: {duration:<10}    📤 Commits: {commits:<5}  ({avg_commits_str:<6}) │
+│  📁 Files Committed: {files:<5}   🚀 Pushes: {pushes:<5}  📝 Events: {events:<4} │
+└─────────────────────────────────────────────────────────────┘"""
+
+
+def build_remote_sync_section(state: RepositoryState) -> str:
+    """Build the remote sync status section."""
+    if not state.has_upstream:
+        return """
+┌─ 🌐 Remote Status ──────────────────────────────────────────┐
+│  ⚠️  No upstream tracking branch configured                  │
+└─────────────────────────────────────────────────────────────┘"""
+
+    upstream = state.upstream_branch or "origin/unknown"
+    ahead = state.commits_ahead
+    behind = state.commits_behind
+
+    # Build sync status
+    if ahead == 0 and behind == 0:
+        sync_status = "✅ In sync with remote"
+        sync_indicator = "═" * 40
+    elif ahead > 0 and behind == 0:
+        sync_status = f"↑ {ahead} commit(s) ahead"
+        sync_indicator = "▶" * min(ahead, 40)
+    elif behind > 0 and ahead == 0:
+        sync_status = f"↓ {behind} commit(s) behind"
+        sync_indicator = "◀" * min(behind, 40)
+    else:
+        sync_status = f"↕️  {ahead} ahead, {behind} behind (diverged)"
+        sync_indicator = "▶" * min(ahead, 20) + "│" + "◀" * min(behind, 19)
+
+    return f"""
+┌─ 🌐 Remote Status ──────────────────────────────────────────┐
+│  Tracking: {upstream:<48} │
+│  {sync_status:<57} │
+│  [{sync_indicator:<40}] │
 └─────────────────────────────────────────────────────────────┘"""
 
 
@@ -354,6 +421,8 @@ def build_repo_details(repo_id: str, state: RepositoryState, rule_name: str | No
     sections.extend(
         [
             build_changes_section(state),
+            build_remote_sync_section(state),
+            build_session_stats_section(state),
             build_last_commit_section(state),
             build_rule_section(state, rule_name),
             build_controls_section(state),

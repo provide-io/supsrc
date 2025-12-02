@@ -114,6 +114,11 @@ class RepositoryState:
     deleted_files: int = field(default=0)
     modified_files: int = field(default=0)
     has_uncommitted_changes: bool = field(default=False)
+    # Remote sync status
+    commits_ahead: int = field(default=0)
+    commits_behind: int = field(default=0)
+    has_upstream: bool = field(default=False)
+    upstream_branch: str | None = field(default=None)
 
     # Previous commit statistics for TUI display of faded previous values
     last_committed_changed: int = field(default=0)
@@ -134,12 +139,23 @@ class RepositoryState:
     bulk_change_files: list[str] = field(factory=list)
     file_warnings: list[dict[str, Any]] = field(factory=list)
 
+    # Session statistics (accumulated during the monitoring session)
+    session_start_time: datetime | None = field(default=None)
+    session_commits_count: int = field(default=0)
+    session_files_committed: int = field(default=0)
+    session_pushes_count: int = field(default=0)
+    session_events_count: int = field(default=0)
+    session_last_commit_time: datetime | None = field(default=None)
+
     _timer_total_seconds: int | None = field(default=None, init=False)
     _timer_start_time: float | None = field(default=None, init=False)
 
     def __attrs_post_init__(self):
         """Log the initial state upon creation and set initial emoji."""
         self._update_display_emoji()
+        # Initialize session start time
+        if self.session_start_time is None:
+            self.session_start_time = datetime.now(UTC)
         log.debug(
             "Initialized repository state",
             repo_id=self.repo_id,
@@ -193,6 +209,43 @@ class RepositoryState:
             current_status=self.status.name,
         )
         self.cancel_inactivity_timer()
+        # Update session events count
+        self.session_events_count += 1
+
+    def record_session_commit(self, files_committed: int = 0) -> None:
+        """Record a commit for session statistics."""
+        self.session_commits_count += 1
+        self.session_files_committed += files_committed
+        self.session_last_commit_time = datetime.now(UTC)
+        log.debug(
+            "Session commit recorded",
+            repo_id=self.repo_id,
+            total_commits=self.session_commits_count,
+            total_files=self.session_files_committed,
+        )
+
+    def record_session_push(self) -> None:
+        """Record a push for session statistics."""
+        self.session_pushes_count += 1
+        log.debug(
+            "Session push recorded",
+            repo_id=self.repo_id,
+            total_pushes=self.session_pushes_count,
+        )
+
+    def get_session_duration(self) -> str:
+        """Get human-readable session duration."""
+        if not self.session_start_time:
+            return "Unknown"
+        diff = datetime.now(UTC) - self.session_start_time
+        hours, remainder = divmod(int(diff.total_seconds()), 3600)
+        minutes, seconds = divmod(remainder, 60)
+        if hours > 0:
+            return f"{hours}h {minutes}m"
+        elif minutes > 0:
+            return f"{minutes}m {seconds}s"
+        else:
+            return f"{seconds}s"
 
     def reset_after_action(self) -> None:
         """Resets state fields typically after a successful commit/push sequence."""
