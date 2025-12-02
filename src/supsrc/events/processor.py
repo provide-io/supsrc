@@ -6,7 +6,6 @@
 """Consumes filesystem events, checks rules, manages timers, and triggers actions."""
 
 import asyncio
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -124,7 +123,7 @@ class EventProcessor:
         if files_line:
             message_lines.append(files_line)
         message_lines.extend([action_line, footer])
-        message = "\n".join(message_lines)
+        full_message = "\n".join(message_lines)
 
         log.debug(
             "Preparing circuit breaker notification",
@@ -136,7 +135,7 @@ class EventProcessor:
         # Print to console in headless mode, post to TUI in TUI mode
         if not is_tui_mode:
             # Headless mode: print directly to stdout for visibility
-            print(message, file=sys.stdout, flush=True)  # noqa: T201 - Intentional user notification in headless mode
+            print(full_message)
             log.debug("Circuit breaker notification printed to console (headless mode)", repo_id=repo_id)
         else:
             # TUI mode: log and rely on status update (TUI will show the emoji/status)

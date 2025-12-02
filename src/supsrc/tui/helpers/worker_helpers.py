@@ -50,7 +50,9 @@ class WorkerHelperMixin:
                 repo_id=repo_id,
                 error=str(e),
             )
-            error_details = {"commit_history": [f"[bold red]Error loading details: {e}[/]"]}
+            # Escape error message to prevent Rich markup issues
+            error_str = str(e).replace("[", "\\[")
+            error_details = {"commit_history": [f"[bold red]Error loading details: {error_str}[/bold red]"]}
             self.post_message(RepoDetailUpdate(repo_id, error_details))
 
 

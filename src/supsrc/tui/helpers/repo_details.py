@@ -16,6 +16,11 @@ if TYPE_CHECKING:
     from supsrc.state import RepositoryState
 
 
+def _escape_rich_markup(text: str) -> str:
+    """Escape brackets in text to prevent Rich markup interpretation."""
+    return text.replace("[", "\\[")
+
+
 def _format_relative_time(dt: datetime | None) -> str:
     """Format a datetime as a relative time string."""
     if dt is None:
@@ -67,42 +72,60 @@ def _build_timer_bar(seconds_left: int | None, total_seconds: int | None, width:
 
 
 def build_status_banner(state: RepositoryState) -> str:
-    """Build an alert banner for special states (stopped, paused, circuit breaker)."""
+    """Build an alert banner for special states using Rich markup."""
     banners = []
 
     if state.is_stopped:
-        banners.append("⏹️  MONITORING STOPPED - Press [Shift+Space] or [S] to resume")
+        banners.append("[bold yellow]⏹️  MONITORING STOPPED[/bold yellow] - Press [bold]S[/bold] to resume")
     elif state.is_paused:
-        banners.append("⏸️  MONITORING PAUSED - Press [Space] or [P] to resume")
+        banners.append("[bold cyan]⏸️  MONITORING PAUSED[/bold cyan] - Press [bold]Space[/bold] to resume")
 
     if state.circuit_breaker_triggered:
-        reason = state.circuit_breaker_reason or "Safety check triggered"
+        reason = _escape_rich_markup(state.circuit_breaker_reason or "Safety check triggered")
         if len(reason) > 50:
             reason = reason[:47] + "..."
-        banners.append(f"🛑 CIRCUIT BREAKER: {reason}")
-        banners.append("   Press [A] to acknowledge and resume")
+        banners.append(f"[bold red]🛑 CIRCUIT BREAKER:[/bold red] {reason}")
+        banners.append("   Press [bold]A[/bold] to acknowledge and resume")
 
     if not banners:
         return ""
 
-    # Build a prominent banner box
-    banner_content = "\n│  ".join(banners)
-    return f"""
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  {banner_content:<58}┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"""
+    return "\n\n" + "\n".join(banners)
 
 
 def build_header_section(repo_id: str, state: RepositoryState) -> str:
-    """Build the header section with repo name, branch, and status."""
+    """Build the header section with repo name, branch, and status using Rich markup."""
     status_name = state.status.name.replace("_", " ").title()
     branch = state.current_branch or "unknown"
 
-    # Build header with status banner if needed
-    header = f"""{repo_id}
-{"═" * 60}
+    # Get health score
+    score, grade, _ = state.get_health_score()
 
-{state.display_status_emoji} {status_name} on 🌿 {branch}"""
+    # Health color based on score
+    if score >= 90:
+        health_color = "green"
+    elif score >= 70:
+        health_color = "yellow"
+    elif score >= 50:
+        health_color = "orange3"
+    else:
+        health_color = "red"
+
+    # Build sync status indicator
+    sync_status = ""
+    if state.has_upstream:
+        parts = []
+        if state.commits_ahead > 0:
+            parts.append(f"[green]↑{state.commits_ahead}[/green]")
+        if state.commits_behind > 0:
+            parts.append(f"[red]↓{state.commits_behind}[/red]")
+        sync_status = f" ({', '.join(parts)})" if parts else " [dim](synced)[/dim]"
+
+    # Build header with Rich markup
+    header = f"""[bold]{repo_id}[/bold]  {grade} [{health_color}]Health: {score}%[/{health_color}]
+[dim]{"─" * 60}[/dim]
+
+{state.display_status_emoji} [bold]{status_name}[/bold] on [cyan]🌿 {branch}[/cyan]{sync_status}"""
 
     # Add status banner for special states
     banner = build_status_banner(state)
@@ -112,140 +135,251 @@ def build_header_section(repo_id: str, state: RepositoryState) -> str:
     return header
 
 
+def build_health_section(state: RepositoryState) -> str:
+    """Build the health score section with issues using Rich markup."""
+    score, grade, issues = state.get_health_score()
+
+    if score >= 90 and not issues:
+        return ""  # Don't show health section if everything is good
+
+    # Health color
+    if score >= 70:
+        bar_color = "yellow"
+    elif score >= 50:
+        bar_color = "orange3"
+    else:
+        bar_color = "red"
+
+    # Build health bar
+    bar_width = 40
+    filled = int(bar_width * score / 100)
+    empty = bar_width - filled
+    bar = f"[{bar_color}]{'█' * filled}[/{bar_color}][dim]{'░' * empty}[/dim]"
+
+    lines = [
+        "[bold]Repository Health[/bold]",
+        f"  {grade} Score: {score}%  \\[{bar}\\]",
+    ]
+
+    if issues:
+        lines.append("\n[bold yellow]Issues:[/bold yellow]")
+        for issue in issues[:4]:
+            lines.append(f"  [yellow]⚠[/yellow]  {_escape_rich_markup(issue)}")
+        if len(issues) > 4:
+            lines.append(f"  [dim]... and {len(issues) - 4} more issue(s)[/dim]")
+
+    return "\n".join(lines)
+
+
 def build_timer_section(state: RepositoryState) -> str:
     """Build the timer progress bar section."""
     total_seconds = getattr(state, "_timer_total_seconds", None)
     timer_bar = _build_timer_bar(state.timer_seconds_left, total_seconds)
-    return f"""
-⏱️  {timer_bar}"""
+    return f"\n⏱️  {timer_bar}"
 
 
 def build_changes_section(state: RepositoryState) -> str:
-    """Build the file changes section."""
+    """Build the file changes section using Rich markup."""
     if state.changed_files == 0 and not state.has_uncommitted_changes:
         return """
-┌─ Workspace ─────────────────────────────────────────────────┐
-│  ✨ Clean - no uncommitted changes                          │
-└─────────────────────────────────────────────────────────────┘"""
+[bold]Workspace[/bold]
+  [green]✨ Clean - no uncommitted changes[/green]"""
 
     return f"""
-┌─ Pending Changes ───────────────────────────────────────────┐
-│  📁 {state.changed_files:3d} files changed                                       │
-│     ➕ Added:    {state.added_files:3d}                                          │
-│     ✏️  Modified: {state.modified_files:3d}                                          │
-│     ➖ Deleted:  {state.deleted_files:3d}                                          │
-└─────────────────────────────────────────────────────────────┘"""  # noqa: RUF001
+[bold]Pending Changes[/bold]
+  📁 [bold]{state.changed_files}[/bold] files changed
+     [green]➕ Added:    {state.added_files}[/green]
+     [blue]✏️  Modified: {state.modified_files}[/blue]
+     [red]➖ Deleted:  {state.deleted_files}[/red]"""  # noqa: RUF001
 
 
 def build_last_commit_section(state: RepositoryState) -> str:
-    """Build the last commit info section."""
+    """Build the last commit info section using Rich markup."""
     commit_hash = state.last_commit_short_hash or "-------"
-    commit_msg = state.last_commit_message_summary or "No commit message"
+    commit_msg = _escape_rich_markup(state.last_commit_message_summary or "No commit message")
     commit_time = _format_relative_time(state.last_commit_timestamp)
 
     # Truncate message if too long
-    if len(commit_msg) > 45:
-        commit_msg = commit_msg[:42] + "..."
+    if len(commit_msg) > 50:
+        commit_msg = commit_msg[:47] + "..."
 
     # Build stats from last committed values
     stats_parts = []
     if state.last_committed_added > 0:
-        stats_parts.append(f"+{state.last_committed_added}")
+        stats_parts.append(f"[green]+{state.last_committed_added}[/green]")
     if state.last_committed_deleted > 0:
-        stats_parts.append(f"-{state.last_committed_deleted}")
-    stats = " ".join(stats_parts) if stats_parts else ""
+        stats_parts.append(f"[red]-{state.last_committed_deleted}[/red]")
+    stats = " ".join(stats_parts) if stats_parts else "[dim]no stats[/dim]"
 
     return f"""
-┌─ Last Commit ───────────────────────────────────────────────┐
-│  {commit_hash}  {commit_msg:<45} │
-│  {commit_time:<12} {stats:<46} │
-└─────────────────────────────────────────────────────────────┘"""
+[bold]Last Commit[/bold]
+  [cyan]{commit_hash}[/cyan]  {commit_msg}
+  [dim]{commit_time}[/dim]  {stats}"""
 
 
 def build_rule_section(state: RepositoryState, rule_name: str | None) -> str:
-    """Build the rule configuration section."""
+    """Build the rule configuration section using Rich markup."""
     rule_emoji = state.rule_emoji or "📋"
     rule_indicator = state.rule_dynamic_indicator or "waiting"
     rule_display = rule_name or "default"
 
     return f"""
-┌─ Rule ──────────────────────────────────────────────────────┐
-│  {rule_emoji} {rule_display:<20}  {rule_indicator:<30} │
-│  Saves: {state.save_count:<5}                                              │
-└─────────────────────────────────────────────────────────────┘"""
+[bold]Rule[/bold]
+  {rule_emoji} [bold]{rule_display}[/bold]  [dim]{rule_indicator}[/dim]
+  Saves: [bold]{state.save_count}[/bold]"""
 
 
 def build_controls_section(state: RepositoryState) -> str:
-    """Build the controls/state section."""
-    paused = "✅ Yes" if state.is_paused else "❌ No"
-    stopped = "✅ Yes" if state.is_stopped else "❌ No"
-    frozen = "✅ Yes" if state.is_frozen else "❌ No"
+    """Build the controls/state section using Rich markup."""
+    paused = "[green]Yes[/green]" if state.is_paused else "[dim]No[/dim]"
+    stopped = "[green]Yes[/green]" if state.is_stopped else "[dim]No[/dim]"
+    frozen = "[green]Yes[/green]" if state.is_frozen else "[dim]No[/dim]"
 
     return f"""
-┌─ Controls ──────────────────────────────────────────────────┐
-│  ⏸️  Paused: {paused:<8}  ⏹️  Stopped: {stopped:<8}  🧊 Frozen: {frozen:<6} │
-└─────────────────────────────────────────────────────────────┘"""
+[bold]Controls[/bold]
+  ⏸️  Paused: {paused}   ⏹️  Stopped: {stopped}   🧊 Frozen: {frozen}"""
+
+
+def build_session_stats_section(state: RepositoryState) -> str:
+    """Build the session statistics section using Rich markup."""
+    duration = state.get_session_duration()
+    commits = state.session_commits_count
+    files = state.session_files_committed
+    pushes = state.session_pushes_count
+    events = state.session_events_count
+
+    # Calculate average commits per hour
+    if state.session_start_time:
+        hours = (datetime.now(UTC) - state.session_start_time).total_seconds() / 3600
+        avg_commits = commits / hours if hours > 0 else 0
+        avg_commits_str = f"[dim]({avg_commits:.1f}/hr)[/dim]"
+    else:
+        avg_commits_str = ""
+
+    return f"""
+[bold]📊 Session Statistics[/bold]
+  ⏱️  Duration: [bold]{duration}[/bold]
+  📤 Commits: [bold]{commits}[/bold] {avg_commits_str}   🚀 Pushes: [bold]{pushes}[/bold]
+  📁 Files: [bold]{files}[/bold]   📝 Events: [bold]{events}[/bold]"""
+
+
+def build_remote_sync_section(state: RepositoryState) -> str:
+    """Build the remote sync status section using Rich markup."""
+    if not state.has_upstream:
+        return """
+[bold]🌐 Remote Status[/bold]
+  [yellow]⚠ No upstream tracking branch configured[/yellow]"""
+
+    upstream = state.upstream_branch or "origin/unknown"
+    ahead = state.commits_ahead
+    behind = state.commits_behind
+
+    # Build sync status with colors
+    if ahead == 0 and behind == 0:
+        sync_status = "[green]✅ In sync with remote[/green]"
+    elif ahead > 0 and behind == 0:
+        sync_status = f"[green]↑ {ahead} commit(s) ahead[/green] - ready to push"
+    elif behind > 0 and ahead == 0:
+        sync_status = f"[yellow]↓ {behind} commit(s) behind[/yellow] - consider pulling"
+    else:
+        sync_status = f"[red]↕️  {ahead} ahead, {behind} behind (diverged)[/red]"
+
+    return f"""
+[bold]🌐 Remote Status[/bold]
+  Tracking: [cyan]{upstream}[/cyan]
+  {sync_status}"""
 
 
 def build_error_section(state: RepositoryState) -> str:
-    """Build the error details section (only for ERROR status)."""
+    """Build the error details section using Rich markup (only for ERROR status)."""
     if state.status != RepositoryStatus.ERROR:
         return ""
 
-    error_msg = state.error_message or "Unknown error"
-    # Word wrap error message
-    wrapped_lines = []
-    words = error_msg.split()
-    current_line = ""
-    for word in words:
-        if len(current_line) + len(word) + 1 <= 55:
-            current_line += (" " if current_line else "") + word
-        else:
-            wrapped_lines.append(current_line)
-            current_line = word
-    if current_line:
-        wrapped_lines.append(current_line)
-
-    error_content = "\n│  ".join(wrapped_lines[:3])  # Max 3 lines
+    error_msg = _escape_rich_markup(state.error_message or "Unknown error")
 
     return f"""
-┌─ ⚠️  Error Details ─────────────────────────────────────────┐
-│  {error_content:<57} │
-├─────────────────────────────────────────────────────────────┤
-│  🔧 Actions: [R] Retry  [A] Acknowledge  [I] Ignore         │
-└─────────────────────────────────────────────────────────────┘"""
+[bold red]⚠️  Error Details[/bold red]
+  [red]{error_msg}[/red]
+
+  🔧 Actions: [bold]R[/bold] Retry  [bold]A[/bold] Acknowledge  [bold]I[/bold] Ignore"""
 
 
 def build_circuit_breaker_section(state: RepositoryState) -> str:
-    """Build the circuit breaker section (only when triggered)."""
+    """Build the circuit breaker section using Rich markup (only when triggered)."""
     if not state.circuit_breaker_triggered:
         return ""
 
-    reason = state.circuit_breaker_reason or "Bulk changes detected"
+    reason = _escape_rich_markup(state.circuit_breaker_reason or "Bulk changes detected")
+
+    # Check for file warnings (large/binary files)
+    if state.file_warnings:
+        return _build_file_warnings_circuit_breaker(state, reason)
+
+    # Standard bulk change circuit breaker
     file_count = len(state.bulk_change_files)
 
-    # Show first few files
-    files_preview = ", ".join(state.bulk_change_files[:3])
+    # Show first few files (escape file paths)
+    files_preview = ", ".join(_escape_rich_markup(f) for f in state.bulk_change_files[:3])
     if len(files_preview) > 50:
         files_preview = files_preview[:47] + "..."
     if file_count > 3:
         files_preview += f" +{file_count - 3} more"
 
     return f"""
-┌─ 🛑 Circuit Breaker Activated ──────────────────────────────┐
-│  Reason: {reason:<50} │
-│  Files affected: {file_count:<42} │
-│  {files_preview:<57} │
-├─────────────────────────────────────────────────────────────┤
-│  [A] Acknowledge & Resume   [S] Stay Paused                 │
-└─────────────────────────────────────────────────────────────┘"""
+[bold red]🛑 Circuit Breaker Activated[/bold red]
+  [yellow]Reason:[/yellow] {reason}
+  [yellow]Files affected:[/yellow] {file_count}
+  [dim]{files_preview}[/dim]
+
+  [bold]A[/bold] Acknowledge & Resume   [bold]S[/bold] Stay Paused"""
+
+
+def _build_file_warnings_circuit_breaker(state: RepositoryState, reason: str) -> str:
+    """Build circuit breaker section with file warnings using Rich markup.
+
+    Note: reason is already escaped when passed in.
+    """
+    warnings = state.file_warnings
+    large_files = [w for w in warnings if w.get("type") == "large_file"]
+    binary_files = [w for w in warnings if w.get("type") == "binary_file"]
+
+    lines = [
+        "[bold red]🛑 Circuit Breaker: File Warnings[/bold red]",
+        f"  [yellow]Reason:[/yellow] {reason}",
+    ]
+
+    # Large files section
+    if large_files:
+        lines.append("\n[bold]📦 Large Files[/bold]")
+        for lf in large_files[:3]:
+            path = _escape_rich_markup(lf.get("path", "unknown"))
+            size_mb = lf.get("size", 0) / 1_000_000
+            path_display = path if len(path) <= 45 else "..." + path[-42:]
+            lines.append(f"  [cyan]{path_display}[/cyan] [dim]({size_mb:.2f} MB)[/dim]")
+        if len(large_files) > 3:
+            lines.append(f"  [dim]... and {len(large_files) - 3} more large file(s)[/dim]")
+
+    # Binary files section
+    if binary_files:
+        lines.append("\n[bold]🔒 Binary Files[/bold]")
+        for bf in binary_files[:3]:
+            path = _escape_rich_markup(bf.get("path", "unknown"))
+            size_kb = bf.get("size", 0) / 1000
+            path_display = path if len(path) <= 45 else "..." + path[-42:]
+            lines.append(f"  [cyan]{path_display}[/cyan] [dim]({size_kb:.1f} KB)[/dim]")
+        if len(binary_files) > 3:
+            lines.append(f"  [dim]... and {len(binary_files) - 3} more binary file(s)[/dim]")
+
+    lines.append("\n  [bold]A[/bold] Acknowledge & Commit   [bold]S[/bold] Skip These Files")
+
+    return "\n".join(lines)
 
 
 def build_keyboard_hints() -> str:
-    """Build the keyboard shortcuts hint section."""
+    """Build the keyboard shortcuts hint section using Rich markup."""
     return """
-───────────────────────────────────────────────────────────────
-[Space] Pause Repo  [S] Stop  [R] Refresh  [A] Ack  [Esc] Back"""
+[dim]─────────────────────────────────────────────────────────────[/dim]
+[bold]Space[/bold] Pause  [bold]S[/bold] Stop  [bold]R[/bold] Refresh  [bold]A[/bold] Ack  [bold]Esc[/bold] Back"""
 
 
 def build_repo_details(repo_id: str, state: RepositoryState, rule_name: str | None) -> str:
@@ -261,10 +395,17 @@ def build_repo_details(repo_id: str, state: RepositoryState, rule_name: str | No
     elif state.circuit_breaker_triggered:
         sections.append(build_circuit_breaker_section(state))
 
+    # Health section (shows only if issues exist)
+    health_section = build_health_section(state)
+    if health_section:
+        sections.append(health_section)
+
     # Standard sections
     sections.extend(
         [
             build_changes_section(state),
+            build_remote_sync_section(state),
+            build_session_stats_section(state),
             build_last_commit_section(state),
             build_rule_section(state, rule_name),
             build_controls_section(state),

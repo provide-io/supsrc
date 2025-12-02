@@ -243,4 +243,143 @@ class TestRepositoryStatePreviousStatistics:
         assert state.last_committed_modified == 1
 
 
+class TestRepositoryStateHealthScore:
+    """Test repository health score functionality."""
+
+    def test_perfect_health_score(self) -> None:
+        """Test that a healthy repository has 100% health score."""
+        state = RepositoryState(repo_id="test-repo")
+
+        score, grade, issues = state.get_health_score()
+
+        assert score == 100
+        assert grade == "💚"
+        assert issues == []
+
+    def test_circuit_breaker_reduces_score(self) -> None:
+        """Test that circuit breaker triggered reduces health score."""
+        state = RepositoryState(repo_id="test-repo")
+        state.trigger_circuit_breaker("Test reason", RepositoryStatus.BULK_CHANGE_PAUSED)
+
+        score, grade, issues = state.get_health_score()
+
+        assert score == 60  # 100 - 40
+        assert grade == "🧡"
+        assert any("circuit breaker" in issue.lower() for issue in issues)
+
+    def test_error_status_reduces_score(self) -> None:
+        """Test that error status reduces health score."""
+        state = RepositoryState(repo_id="test-repo")
+        state.update_status(RepositoryStatus.ERROR, "Test error message")
+
+        score, grade, issues = state.get_health_score()
+
+        assert score == 70  # 100 - 30
+        assert grade == "💛"
+        assert any("error" in issue.lower() for issue in issues)
+
+    def test_frozen_repository_reduces_score(self) -> None:
+        """Test that frozen repository reduces health score."""
+        state = RepositoryState(repo_id="test-repo")
+        state.is_frozen = True
+        state.freeze_reason = "Manual freeze"
+
+        score, grade, issues = state.get_health_score()
+
+        assert score == 75  # 100 - 25
+        assert grade == "💛"
+        assert any("frozen" in issue.lower() for issue in issues)
+
+    def test_stopped_repository_reduces_score(self) -> None:
+        """Test that stopped repository reduces health score."""
+        state = RepositoryState(repo_id="test-repo")
+        state.is_stopped = True
+
+        score, grade, issues = state.get_health_score()
+
+        assert score == 80  # 100 - 20
+        assert grade == "💛"
+        assert any("stopped" in issue.lower() for issue in issues)
+
+    def test_many_uncommitted_files_reduces_score(self) -> None:
+        """Test that many uncommitted files reduces health score."""
+        state = RepositoryState(repo_id="test-repo")
+        state.changed_files = 25
+
+        score, _grade, issues = state.get_health_score()
+
+        assert score == 90  # 100 - 10
+        assert any("uncommitted" in issue.lower() for issue in issues)
+
+    def test_file_warnings_reduce_score(self) -> None:
+        """Test that file warnings reduce health score."""
+        state = RepositoryState(repo_id="test-repo")
+        state.file_warnings = [
+            {"type": "large_file", "path": "big.bin", "size": 100_000_000},
+            {"type": "binary_file", "path": "image.png"},
+        ]
+
+        score, _grade, issues = state.get_health_score()
+
+        assert score == 85  # 100 - 15
+        assert any("large" in issue.lower() or "binary" in issue.lower() for issue in issues)
+
+    def test_multiple_issues_compound(self) -> None:
+        """Test that multiple issues compound their effects."""
+        state = RepositoryState(repo_id="test-repo")
+        state.trigger_circuit_breaker("Test", RepositoryStatus.BULK_CHANGE_PAUSED)
+        state.is_frozen = True
+        state.is_stopped = True
+
+        score, grade, issues = state.get_health_score()
+
+        # 100 - 40 (circuit) - 25 (frozen) - 20 (stopped) = 15
+        assert score == 15
+        assert grade == "❤️"
+        assert len(issues) >= 3
+
+    def test_score_floors_at_zero(self) -> None:
+        """Test that health score never goes below 0."""
+        state = RepositoryState(repo_id="test-repo")
+        state.trigger_circuit_breaker("Test", RepositoryStatus.BULK_CHANGE_PAUSED)
+        state.update_status(RepositoryStatus.ERROR, "Test error")
+        state.is_frozen = True
+        state.is_stopped = True
+        state.changed_files = 30
+        state.file_warnings = [{"type": "large_file", "path": "x.bin", "size": 999}]
+
+        score, grade, _issues = state.get_health_score()
+
+        # Should not go below 0
+        assert score >= 0
+        assert grade == "❤️"
+
+    def test_grade_thresholds(self) -> None:
+        """Test that grade emojis match score thresholds."""
+        state = RepositoryState(repo_id="test-repo")
+
+        # 90+ = 💚
+        score, grade, _ = state.get_health_score()
+        assert grade == "💚"
+
+        # 70-89 = 💛
+        state.is_stopped = True
+        state.changed_files = 15  # -5 points, total -25
+        score, grade, _ = state.get_health_score()
+        assert score == 75
+        assert grade == "💛"
+
+        # 50-69 = 🧡
+        state.is_frozen = True  # -25 more = -50 total = 50
+        score, grade, _ = state.get_health_score()
+        assert score == 50
+        assert grade == "🧡"
+
+        # <50 = ❤️
+        state.update_status(RepositoryStatus.ERROR, "error")  # -30 more = 20
+        score, grade, _ = state.get_health_score()
+        assert score == 20
+        assert grade == "❤️"
+
+
 # 🔼⚙️🔚

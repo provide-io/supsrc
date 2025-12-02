@@ -138,6 +138,11 @@ class RepositoryManager:
                         repo_state.modified_files = status_result.modified_files or 0
                         repo_state.has_uncommitted_changes = not status_result.is_clean
                         repo_state.current_branch = status_result.current_branch
+                        # Update remote sync status
+                        repo_state.commits_ahead = status_result.commits_ahead
+                        repo_state.commits_behind = status_result.commits_behind
+                        repo_state.has_upstream = status_result.has_upstream
+                        repo_state.upstream_branch = status_result.upstream_branch
                         init_log.debug(
                             "Repository statistics loaded",
                             total_files=repo_state.total_files,

@@ -62,6 +62,11 @@ class RepoStatusResult(PluginResultBase):
     is_rebase_in_progress: bool = False
     is_cherry_pick_in_progress: bool = False
     is_revert_in_progress: bool = False
+    # Remote sync status
+    commits_ahead: int = 0
+    commits_behind: int = 0
+    has_upstream: bool = False
+    upstream_branch: str | None = None
 
 
 @define(frozen=True, slots=True)

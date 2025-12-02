@@ -31,14 +31,23 @@ class ActionHandlerMixin:
         log.debug("Theme toggled", theme=new_mode)
 
     def action_clear_log(self) -> None:
-        """Clear the event feed."""
-        from supsrc.events.feed_table import EventFeedTable
+        """Clear the event feed and log panel."""
+        import contextlib
 
-        self.query_one("#event-feed", EventFeedTable).clear()
+        from supsrc.events.feed_table import EventFeedTable
+        from supsrc.tui.widgets import LogPanel
+
+        # Clear event feed
+        with contextlib.suppress(Exception):
+            self.query_one("#event-feed", EventFeedTable).clear()
+
+        # Clear log panel
+        with contextlib.suppress(Exception):
+            self.query_one("#log-panel", LogPanel).clear_logs()
 
         # Emit event instead of log message
         event = UserActionEvent(
-            description="Event feed cleared",
+            description="Event feed and log panel cleared",
             action="clear_feed",
         )
         self.event_collector.emit(event)  # type: ignore[arg-type]
@@ -120,24 +129,24 @@ class ActionHandlerMixin:
         """Show help information."""
         help_text = (
             "🔑 Keyboard Shortcuts:\\n"
-            "• [bold]d[/] - Toggle dark mode\\n"
-            "• [bold]q[/] - Quit application\\n"
-            "• [bold]^l[/] - Clear event log\\n"
-            "• [bold]p[/] - Pause/resume monitoring\\n"
-            "• [bold]s[/] - Suspend/resume monitoring\\n"
-            "• [bold]c[/] - Reload configuration\\n"
-            "• [bold]h[/] - Show this help\\n"
-            "• [bold]Enter[/] - View repository details\\n"
-            "• [bold]Escape[/] - Hide detail pane\\n"
+            "• [bold]d[/bold] - Toggle dark mode\\n"
+            "• [bold]q[/bold] - Quit application\\n"
+            "• [bold]^l[/bold] - Clear event log\\n"
+            "• [bold]p[/bold] - Pause/resume monitoring\\n"
+            "• [bold]s[/bold] - Suspend/resume monitoring\\n"
+            "• [bold]c[/bold] - Reload configuration\\n"
+            "• [bold]h[/bold] - Show this help\\n"
+            "• [bold]Enter[/bold] - View repository details\\n"
+            "• [bold]Escape[/bold] - Hide detail pane\\n"
             "\\n"
             "🖱️  Repository Actions (select repo first):\\n"
-            "• [bold]Space/P[/] - Toggle repository pause\\n"
-            "• [bold]Shift+Space/S[/] - Toggle repository stop\\n"
-            "• [bold]Shift+R[/] - Refresh repository status\\n"
-            "• [bold]G[/] - Resume repository monitoring\\n"
-            "• [bold red]a[/] - Acknowledge circuit breaker (🛑)\\n"
+            "• [bold]Space/P[/bold] - Toggle repository pause\\n"
+            "• [bold]Shift+Space/S[/bold] - Toggle repository stop\\n"
+            "• [bold]Shift+R[/bold] - Refresh repository status\\n"
+            "• [bold]G[/bold] - Resume repository monitoring\\n"
+            "• [bold red]a[/bold red] - Acknowledge circuit breaker (🛑)\\n"
             "\\n"
-            "🛑 Circuit Breaker: When triggered, select the repo and press [bold]a[/] to acknowledge."
+            "🛑 Circuit Breaker: When triggered, select the repo and press [bold]a[/bold] to acknowledge."
         )
         # Emit help event instead of log message
         event = UserActionEvent(
@@ -260,6 +269,15 @@ class ActionHandlerMixin:
             log.debug("All timers stopped during quit")
 
         self.exit()
+
+    def action_show_logs(self) -> None:
+        """Switch to the Logs tab."""
+        try:
+            tabbed_content = self.query_one(TabbedContent)
+            tabbed_content.active = "logs-tab"
+            log.debug("Switched to logs tab")
+        except Exception as e:
+            log.error("Failed to switch to logs tab", error=str(e))
 
 
 # 🔼⚙️🔚

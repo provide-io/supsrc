@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-"""TODO: Add module docstring."""
 
 from __future__ import annotations
 
@@ -268,6 +267,9 @@ class RuntimeWorkflow:
         )
         self._emit_event(commit_event)
 
+        # Record session statistics
+        repo_state.record_session_commit(files_count)
+
         # Execute Push
         await self._execute_push_step(repo_id, repo_state, repo_config, repo_engine, action_log)
 
@@ -280,6 +282,59 @@ class RuntimeWorkflow:
     async def _execute_push_step(self, repo_id: str, repo_state, repo_config, repo_engine, action_log) -> None:
         """Execute the push workflow step."""
         action_log.info("Commit successful", commit_hash=repo_state.last_commit_short_hash)
+
+        # Check for upstream conflicts BEFORE pushing
+        if hasattr(repo_engine, "operations"):
+            conflict_info = await repo_engine.operations.check_upstream_conflicts(repo_config.path)
+
+            # Block push if merge conflicts detected
+            if conflict_info.get("has_conflicts"):
+                conflict_files = conflict_info.get("conflict_files", [])
+                reason = f"Merge conflicts detected in {len(conflict_files)} file(s)"
+                repo_state.trigger_circuit_breaker(reason, RepositoryStatus.CONFLICT_DETECTED)
+                repo_state.action_description = reason
+
+                # Emit conflict detected event
+                from supsrc.events.system import ConflictDetectedEvent
+
+                conflict_event = ConflictDetectedEvent(
+                    description=reason,
+                    repo_id=repo_id,
+                    conflict_files=conflict_files,
+                )
+                self._emit_event(conflict_event)
+
+                self.tui.post_state_update(self.repo_states)
+                self.tui.post_log_update(
+                    repo_id, "WARNING", f"Circuit breaker triggered: {reason}. Press [A] to acknowledge."
+                )
+                return
+
+            # Block push if branch has diverged (both ahead and behind)
+            if conflict_info.get("diverged"):
+                ahead = conflict_info.get("ahead", 0)
+                behind = conflict_info.get("behind", 0)
+                reason = f"Branch diverged: {ahead} ahead, {behind} behind upstream"
+                repo_state.trigger_circuit_breaker(reason, RepositoryStatus.BULK_CHANGE_PAUSED)
+                repo_state.action_description = reason
+
+                # Emit warning event
+                from supsrc.events.system import ErrorEvent
+
+                divergence_event = ErrorEvent(
+                    description=reason,
+                    source="git",
+                    error_type="BranchDiverged",
+                    repo_id=repo_id,
+                )
+                self._emit_event(divergence_event)
+
+                self.tui.post_state_update(self.repo_states)
+                self.tui.post_log_update(
+                    repo_id, "WARNING", f"Circuit breaker triggered: {reason}. Press [A] to acknowledge."
+                )
+                return
+
         repo_state.update_status(RepositoryStatus.PUSHING)
         repo_state.action_description = "Pushing to remote..."
         push_result = await repo_engine.perform_push(
@@ -303,6 +358,9 @@ class RuntimeWorkflow:
                 commits_pushed=1,
             )
             self._emit_event(push_event)
+
+            # Record session push statistics
+            repo_state.record_session_push()
 
     async def _generate_change_fragment(
         self, repo_id: str, repo_config, repo_engine, llm_config, commit_hash: str
@@ -339,6 +397,11 @@ class RuntimeWorkflow:
                 repo_state.modified_files = status_result.modified_files or 0
                 repo_state.has_uncommitted_changes = not status_result.is_clean
                 repo_state.current_branch = status_result.current_branch
+                # Update remote sync status
+                repo_state.commits_ahead = status_result.commits_ahead
+                repo_state.commits_behind = status_result.commits_behind
+                repo_state.has_upstream = status_result.has_upstream
+                repo_state.upstream_branch = status_result.upstream_branch
         except Exception as e:
             action_log.warning("Failed to refresh repository statistics after commit", error=str(e))
 

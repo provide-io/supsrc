@@ -926,13 +926,13 @@ class TestStateManager:
     async def test_start_initializes_monitor(self):
         """Test that start initializes monitor."""
         manager = StateManager()
-        with patch("supsrc.state.monitor.StateMonitor") as mock_monitor:
+        with patch("supsrc.state.monitor.StateMonitor") as mock_monitor_cls:
             mock_instance = AsyncMock()
-            mock_monitor.return_value = mock_instance
+            mock_monitor_cls.return_value = mock_instance
 
             await manager.start()
 
-            mock_monitor.assert_called_once()
+            mock_monitor_cls.assert_called_once()
             mock_instance.register_callback.assert_called_once()
             mock_instance.start.assert_called_once()
             assert manager._monitor is mock_instance

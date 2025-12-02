@@ -13,8 +13,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from provide.foundation.logger import get_logger
 from textual.coordinate import Coordinate
-from textual.widgets import DataTable
-from textual.widgets import Log as TextualLog
+from textual.widgets import DataTable, TabbedContent
 from textual.worker import Worker, WorkerState
 
 from supsrc.state import RepositoryStatus
@@ -83,6 +82,35 @@ class EventHandlerMixin:
 
         except Exception as e:
             log.error("Error handling row selection", error=str(e))
+
+    def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
+        """Handle tab activation for lazy loading of tab content.
+
+        Only loads data for Files, History, and Diff tabs when they are activated,
+        reducing unnecessary git operations when a repo is selected.
+        """
+        # Textual prefixes tab IDs with "--content-tab-", so extract the pane ID
+        raw_tab_id = event.tab.id or ""
+        pane_id = raw_tab_id.replace("--content-tab-", "") if raw_tab_id else ""
+
+        lazy_tabs = {"files-tab", "history-tab", "diff-tab"}
+
+        # Only process lazy-loading tabs
+        if pane_id not in lazy_tabs:
+            return
+
+        # Only load if a repo is selected
+        repo_id = getattr(self, "selected_repo_id", None)
+        if not repo_id:
+            return
+
+        log.debug("Lazy loading tab data", pane_id=pane_id, repo_id=repo_id)
+
+        # Trigger lazy load for this tab
+        try:
+            self._load_tab_for_repo(pane_id, repo_id)  # type: ignore[attr-defined]
+        except Exception as e:
+            log.error("Failed to lazy load tab", pane_id=pane_id, repo_id=repo_id, error=str(e))
 
     def on_state_update(self, message: StateUpdate) -> None:
         """Handle repository state updates."""
@@ -297,57 +325,69 @@ class EventHandlerMixin:
                 except Exception as e:
                     log.debug("Failed to restore cursor position", error=str(e))
 
+            # Update repo details pane if currently viewing a repo
+            if (
+                hasattr(self, "selected_repo_id")
+                and self.selected_repo_id
+                and self.selected_repo_id in message.repo_states
+            ):
+                # Refresh the repo details with updated state (don't switch tabs)
+                self._update_repo_details_tab(self.selected_repo_id, switch_tab=False)  # type: ignore[attr-defined]
+
         except Exception as e:
             log.error("Failed to update TUI table", error=str(e))
 
     def on_log_message_update(self, message: LogMessageUpdate) -> None:
-        """Handle log message updates."""
+        """Handle log message updates by routing to the Logs tab."""
         try:
-            # Try to find the log widget - it should be findable even inside a TabPane
-            log_widget = cast(TextualLog, self.query_one("#event-log", TextualLog))
+            from supsrc.tui.widgets import LogPanel
+
+            log_panel = self.query_one("#log-panel", LogPanel)
             # Format message with repo name if available
             formatted_message = (
                 f"[{message.repo_id}] {message.message}" if message.repo_id else message.message
             )
-            log_widget.write_line(formatted_message)
+            log_panel.add_log_entry(message.level, formatted_message, "")
         except Exception as e:
             # Check if this is a "widget not found" error (expected during initialization)
             error_msg = str(e)
             if "No nodes match" in error_msg:
                 # Widget not ready yet - expected during initialization
                 log.debug(
-                    "TUI log widget not yet available",
+                    "TUI log panel not yet available",
                     error=error_msg,
                     message_level=message.level,
                 )
             else:
                 # Unexpected error - log as error
                 log.error(
-                    "Failed to write to TUI log widget",
+                    "Failed to write to TUI log panel",
                     error=error_msg,
                     message_level=message.level,
                     message_content=message.message,
                 )
 
     def on_repo_detail_update(self, message: RepoDetailUpdate) -> None:
-        """Handle repository detail updates (simplified - log to main log)."""
+        """Handle repository detail updates by routing to Logs tab."""
         try:
-            log_widget = cast(TextualLog, self.query_one("#event-log", TextualLog))
+            from supsrc.tui.widgets import LogPanel
+
+            log_panel = self.query_one("#log-panel", LogPanel)
             commit_history = message.details.get("commit_history", [])
             if commit_history:
-                log_widget.write_line(f"[b]Recent commits for {message.repo_id}:[/b]")
+                log_panel.add_log_entry("INFO", f"Recent commits for {message.repo_id}:", "")
                 # Show only the first few commits to avoid flooding the log
                 for entry in commit_history[:3]:
-                    log_widget.write_line(f"  {entry}")
+                    log_panel.add_log_entry("INFO", f"  {entry}", "")
                 if len(commit_history) > 3:
-                    log_widget.write_line(f"  ... and {len(commit_history) - 3} more commits")
+                    log_panel.add_log_entry("INFO", f"  ... and {len(commit_history) - 3} more commits", "")
         except Exception as e:
             # Check if this is a "widget not found" error (expected during initialization)
             error_msg = str(e)
             if "No nodes match" in error_msg:
                 # Widget not ready yet - expected during initialization
                 log.debug(
-                    "TUI log widget not yet available for repo details",
+                    "TUI log panel not yet available for repo details",
                     repo_id=message.repo_id,
                     error=error_msg,
                 )
