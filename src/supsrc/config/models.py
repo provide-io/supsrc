@@ -72,6 +72,23 @@ class CircuitBreakerConfig:
     require_manual_acknowledgment: bool = field(default=False)
 
 
+# --- Branch Protection Configuration ---
+@define(frozen=True, slots=True)
+class BranchProtectionConfig:
+    """Configuration for branch protection rules."""
+
+    # Enable/disable branch protection
+    enabled: bool = field(default=False)  # Disabled by default - users must opt-in
+
+    # Protected branch patterns (supports wildcards: main, master, release/*, hotfix/*)
+    # Empty by default - users configure which branches to protect
+    protected_branches: tuple[str, ...] = field(factory=tuple)
+
+    # Action when committing to protected branch
+    block_commits: bool = field(default=True)  # Block commits to protected branches
+    warn_only: bool = field(default=False)  # Just warn, don't block
+
+
 # --- attrs Data Classes for Rules ---
 @define(slots=True)
 class InactivityRuleConfig:
@@ -132,6 +149,7 @@ class RepositoryConfig:
     repository: Mapping[str, Any] = field(factory=dict)
     enabled: bool = field(default=True)
     llm: LLMConfig | None = field(default=None)
+    branch_protection: BranchProtectionConfig = field(factory=BranchProtectionConfig)
     _path_valid: bool = field(default=True, repr=False, init=False)
 
 

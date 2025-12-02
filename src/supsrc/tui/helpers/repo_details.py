@@ -98,8 +98,11 @@ def build_header_section(repo_id: str, state: RepositoryState) -> str:
     status_name = state.status.name.replace("_", " ").title()
     branch = state.current_branch or "unknown"
 
+    # Get health score
+    score, grade, _ = state.get_health_score()
+
     # Build header with status banner if needed
-    header = f"""{repo_id}
+    header = f"""{repo_id}  {grade} Health: {score}%
 {"═" * 60}
 
 {state.display_status_emoji} {status_name} on 🌿 {branch}"""
@@ -110,6 +113,37 @@ def build_header_section(repo_id: str, state: RepositoryState) -> str:
         header += banner
 
     return header
+
+
+def build_health_section(state: RepositoryState) -> str:
+    """Build the health score section with issues."""
+    score, grade, issues = state.get_health_score()
+
+    if score >= 90 and not issues:
+        return ""  # Don't show health section if everything is good
+
+    # Build health bar
+    bar_width = 40
+    filled = int(bar_width * score / 100)
+    empty = bar_width - filled
+    bar = "█" * filled + "░" * empty
+
+    lines = [
+        "┌─ Repository Health ─────────────────────────────────────────┐",
+        f"│  {grade} Score: {score:3d}%  [{bar}] │",
+    ]
+
+    if issues:
+        lines.append("├─ Issues ────────────────────────────────────────────────────┤")
+        for issue in issues[:4]:  # Show max 4 issues
+            issue_display = issue if len(issue) <= 53 else issue[:50] + "..."
+            lines.append(f"│  ⚠️  {issue_display:<53} │")
+        if len(issues) > 4:
+            lines.append(f"│  ... and {len(issues) - 4} more issue(s){' ' * 36}│")
+
+    lines.append("└─────────────────────────────────────────────────────────────┘")
+
+    return "\n".join(lines)
 
 
 def build_timer_section(state: RepositoryState) -> str:
@@ -310,6 +344,11 @@ def build_repo_details(repo_id: str, state: RepositoryState, rule_name: str | No
         sections.append(build_error_section(state))
     elif state.circuit_breaker_triggered:
         sections.append(build_circuit_breaker_section(state))
+
+    # Health section (shows only if issues exist)
+    health_section = build_health_section(state)
+    if health_section:
+        sections.append(health_section)
 
     # Standard sections
     sections.extend(
