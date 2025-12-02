@@ -174,7 +174,7 @@ class EventProcessor:
         # Emit to TUI event collector if available
         if self.tui and hasattr(self.tui, "app") and self.tui.app and hasattr(self.tui.app, "event_collector"):
             try:
-                self.tui.app.event_collector.emit(event)  # type: ignore[arg-type,union-attr]
+                self.tui.app.event_collector.emit(event)
                 emitted_to_tui = True
                 log.debug(
                     "Event emitted to TUI event collector",
@@ -200,7 +200,7 @@ class EventProcessor:
 
             if not is_same_collector:
                 try:
-                    self.event_collector.emit(event)  # type: ignore[arg-type]
+                    self.event_collector.emit(event)
                     emitted_to_global = True
                     log.debug(
                         "Event emitted to global event collector",

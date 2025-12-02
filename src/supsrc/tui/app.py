@@ -294,8 +294,8 @@ class SupsrcTuiApp(TuiAppBase):
 
         # Redirect both sys.stdout and sys.stderr to capture any direct writes
         # Some libraries or exception handlers write directly to these streams
-        sys.stdout = self._tui_output_stream  # type: ignore[assignment]
-        sys.stderr = self._tui_output_stream  # type: ignore[assignment]
+        sys.stdout = self._tui_output_stream
+        sys.stderr = self._tui_output_stream
 
         # Install TUI log handler early to capture all startup logs
         # Messages are buffered until the widget is ready

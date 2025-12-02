@@ -217,7 +217,7 @@ def _setup_tui_logging(log_file_path: Path) -> logging.FileHandler:
                 logger_obj.removeHandler(h)
         return logger_obj
 
-    logging.getLogger = _file_only_get_logger  # type: ignore[assignment]
+    logging.getLogger = _file_only_get_logger
 
     # Configure structlog to use file-only output via stdlib
     structlog.configure(
