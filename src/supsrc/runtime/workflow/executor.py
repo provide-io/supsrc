@@ -297,6 +297,59 @@ class RuntimeWorkflow:
     ) -> None:
         """Execute the push workflow step."""
         action_log.info("Commit successful", commit_hash=repo_state.last_commit_short_hash)
+
+        # Check for upstream conflicts BEFORE pushing
+        if hasattr(repo_engine, "operations"):
+            conflict_info = await repo_engine.operations.check_upstream_conflicts(repo_config.path)
+
+            # Block push if merge conflicts detected
+            if conflict_info.get("has_conflicts"):
+                conflict_files = conflict_info.get("conflict_files", [])
+                reason = f"Merge conflicts detected in {len(conflict_files)} file(s)"
+                repo_state.trigger_circuit_breaker(reason, RepositoryStatus.CONFLICT_DETECTED)
+                repo_state.action_description = reason
+
+                # Emit conflict detected event
+                from supsrc.events.system import ConflictDetectedEvent
+
+                conflict_event = ConflictDetectedEvent(
+                    description=reason,
+                    repo_id=repo_id,
+                    conflict_files=conflict_files,
+                )
+                self._emit_event(conflict_event)
+
+                self.tui.post_state_update(self.repo_states)
+                self.tui.post_log_update(
+                    repo_id, "WARNING", f"Circuit breaker triggered: {reason}. Press [A] to acknowledge."
+                )
+                return
+
+            # Block push if branch has diverged (both ahead and behind)
+            if conflict_info.get("diverged"):
+                ahead = conflict_info.get("ahead", 0)
+                behind = conflict_info.get("behind", 0)
+                reason = f"Branch diverged: {ahead} ahead, {behind} behind upstream"
+                repo_state.trigger_circuit_breaker(reason, RepositoryStatus.BULK_CHANGE_PAUSED)
+                repo_state.action_description = reason
+
+                # Emit warning event
+                from supsrc.events.system import ErrorEvent
+
+                divergence_event = ErrorEvent(
+                    description=reason,
+                    source="git",
+                    error_type="BranchDiverged",
+                    repo_id=repo_id,
+                )
+                self._emit_event(divergence_event)
+
+                self.tui.post_state_update(self.repo_states)
+                self.tui.post_log_update(
+                    repo_id, "WARNING", f"Circuit breaker triggered: {reason}. Press [A] to acknowledge."
+                )
+                return
+
         repo_state.update_status(RepositoryStatus.PUSHING)
         repo_state.action_description = "Pushing to remote..."
         push_result = await repo_engine.perform_push(

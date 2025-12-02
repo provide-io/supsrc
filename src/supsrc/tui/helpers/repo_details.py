@@ -222,6 +222,12 @@ def build_circuit_breaker_section(state: RepositoryState) -> str:
         return ""
 
     reason = state.circuit_breaker_reason or "Bulk changes detected"
+
+    # Check for file warnings (large/binary files)
+    if state.file_warnings:
+        return _build_file_warnings_circuit_breaker(state, reason)
+
+    # Standard bulk change circuit breaker
     file_count = len(state.bulk_change_files)
 
     # Show first few files
@@ -239,6 +245,50 @@ def build_circuit_breaker_section(state: RepositoryState) -> str:
 ├─────────────────────────────────────────────────────────────┤
 │  [A] Acknowledge & Resume   [S] Stay Paused                 │
 └─────────────────────────────────────────────────────────────┘"""
+
+
+def _build_file_warnings_circuit_breaker(state: RepositoryState, reason: str) -> str:
+    """Build circuit breaker section with file warnings (large/binary files)."""
+    warnings = state.file_warnings
+    large_files = [w for w in warnings if w.get("type") == "large_file"]
+    binary_files = [w for w in warnings if w.get("type") == "binary_file"]
+
+    lines = [
+        "┌─ 🛑 Circuit Breaker: File Warnings ────────────────────────┐",
+        f"│  Reason: {reason:<50} │",
+    ]
+
+    # Large files section
+    if large_files:
+        lines.append("├─ 📦 Large Files ─────────────────────────────────────────────┤")
+        for lf in large_files[:3]:
+            path = lf.get("path", "unknown")
+            size_mb = lf.get("size", 0) / 1_000_000
+            path_display = path if len(path) <= 40 else "..." + path[-37:]
+            lines.append(f"│  {path_display:<40} ({size_mb:>6.2f} MB) │")
+        if len(large_files) > 3:
+            lines.append(f"│  ... and {len(large_files) - 3} more large file(s){' ' * 27}│")
+
+    # Binary files section
+    if binary_files:
+        lines.append("├─ 🔒 Binary Files ────────────────────────────────────────────┤")
+        for bf in binary_files[:3]:
+            path = bf.get("path", "unknown")
+            size_kb = bf.get("size", 0) / 1000
+            path_display = path if len(path) <= 40 else "..." + path[-37:]
+            lines.append(f"│  {path_display:<40} ({size_kb:>6.1f} KB) │")
+        if len(binary_files) > 3:
+            lines.append(f"│  ... and {len(binary_files) - 3} more binary file(s){' ' * 26}│")
+
+    lines.extend(
+        [
+            "├─────────────────────────────────────────────────────────────┤",
+            "│  [A] Acknowledge & Commit   [S] Skip These Files           │",
+            "└─────────────────────────────────────────────────────────────┘",
+        ]
+    )
+
+    return "\n".join(lines)
 
 
 def build_keyboard_hints() -> str:

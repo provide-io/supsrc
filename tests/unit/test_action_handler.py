@@ -23,6 +23,12 @@ def mock_repo_engine() -> AsyncMock:
     engine.stage_changes.return_value = StageResult(success=True, files_staged=["file.txt"])
     engine.perform_commit.return_value = CommitResult(success=True, commit_hash="abc1234")
     engine.perform_push.return_value = PushResult(success=True)
+    # Configure operations as a MagicMock with async method for conflict checking
+    engine.operations = MagicMock()
+    # Default: no file warnings (sync method)
+    engine.operations.analyze_files_for_warnings.return_value = []
+    # Default: no conflicts (async method)
+    engine.operations.check_upstream_conflicts = AsyncMock(return_value={"has_conflicts": False, "diverged": False})
     return engine
 
 
