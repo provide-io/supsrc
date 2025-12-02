@@ -243,9 +243,10 @@ class SupsrcTuiApp(TuiAppBase):
         self._event_feed: EventFeedTable | None = None
         self._log_panel: LogPanel | None = None
 
-        # CRITICAL: Redirect stderr and Foundation logs BEFORE any logging happens
+        # CRITICAL: Redirect stdout/stderr and Foundation logs BEFORE any logging happens
         # This prevents log output from corrupting the TUI display
         self._tui_output_stream = get_tui_output_stream()
+        self._original_stdout = sys.stdout
         self._original_stderr = sys.stderr
 
         # Redirect Foundation's log stream to our TUI stream
@@ -256,17 +257,26 @@ class SupsrcTuiApp(TuiAppBase):
 
             set_log_stream_for_testing(self._tui_output_stream)
 
-            # Reconfigure structlog for any future loggers
+            # Completely reconfigure structlog with PrintLoggerFactory
+            # The CLI setup uses stdlib.LoggerFactory with processors that don't work
+            # well with PrintLogger. We need to use the correct processors.
             import structlog
 
-            current_config = structlog.get_config()
-            if current_config:
-                new_config = {**current_config}
-                new_config["logger_factory"] = structlog.PrintLoggerFactory(
-                    file=self._tui_output_stream
-                )
-                new_config["cache_logger_on_first_use"] = False
-                structlog.configure(**new_config)
+            structlog.configure(
+                processors=[
+                    structlog.contextvars.merge_contextvars,
+                    structlog.processors.add_log_level,
+                    structlog.processors.TimeStamper(fmt="iso"),
+                    structlog.processors.StackInfoRenderer(),
+                    structlog.processors.format_exc_info,
+                    structlog.processors.UnicodeDecoder(),
+                    structlog.dev.ConsoleRenderer(),  # Use ConsoleRenderer for PrintLogger
+                ],
+                wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+                context_class=dict,
+                logger_factory=structlog.PrintLoggerFactory(file=self._tui_output_stream),
+                cache_logger_on_first_use=False,  # Don't cache - we need fresh loggers
+            )
 
             # Monkeypatch PrintLogger to use our stream for ALL instances
             # This captures logs from loggers created before the TUI started
@@ -280,9 +290,11 @@ class SupsrcTuiApp(TuiAppBase):
 
             PrintLogger.msg = patched_msg  # type: ignore[method-assign]
         except Exception:
-            pass  # Foundation redirect failed, fall back to stderr capture
+            pass  # Foundation redirect failed, fall back to stream capture
 
-        # Redirect sys.stderr to capture any direct writes
+        # Redirect both sys.stdout and sys.stderr to capture any direct writes
+        # Some libraries or exception handlers write directly to these streams
+        sys.stdout = self._tui_output_stream  # type: ignore[assignment]
         sys.stderr = self._tui_output_stream  # type: ignore[assignment]
 
         # Install TUI log handler early to capture all startup logs
@@ -579,9 +591,7 @@ moment for the orchestrator to initialize."""
                     f"[bold]📜 {repo_id}[/bold]\n\n{loading_msg}"
                 )
             elif tab_id == "diff-tab":
-                self.query_one("#diff-content", Static).update(
-                    f"[bold]📋 {repo_id}[/bold]\n\n{loading_msg}"
-                )
+                self.query_one("#diff-content", Static).update(f"[bold]📋 {repo_id}[/bold]\n\n{loading_msg}")
         except Exception:
             pass
 

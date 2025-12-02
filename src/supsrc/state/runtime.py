@@ -363,7 +363,7 @@ class RepositoryState:
         """Internal method to update the display_status_emoji based on current state."""
         # Circuit breaker takes highest priority - user must acknowledge before anything else
         if self.circuit_breaker_triggered:
-            self.display_status_emoji = STATUS_EMOJI_MAP.get(self.status, "🛑")
+            self.display_status_emoji = "🛑"  # Always show stop sign when circuit breaker is active
         elif self.is_stopped:
             self.display_status_emoji = "⏹️"
         elif self.is_paused:
