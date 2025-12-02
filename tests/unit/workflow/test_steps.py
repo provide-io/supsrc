@@ -441,5 +441,130 @@ class TestWorkflowSteps:
         assert "large file" in reason
         assert "binary file" in reason
 
+    async def test_execute_status_check_blocks_on_protected_branch(
+        self, workflow_steps, mock_dependencies
+    ):
+        """Test status check blocks commits to protected branches."""
+        _, repo_states, repo_engines, tui, emit_event = mock_dependencies
+        repo_id = "test_repo"
+
+        # Setup mocks
+        repo_state = repo_states[repo_id]
+        repo_config = MagicMock(spec=RepositoryConfig)
+        repo_engine = repo_engines[repo_id]
+
+        # Configure branch protection
+        from supsrc.config import BranchProtectionConfig
+
+        repo_config.branch_protection = BranchProtectionConfig(
+            enabled=True, protected_branches=("main", "master"), block_commits=True
+        )
+
+        workflow_steps.config.repositories = {repo_id: repo_config}
+        workflow_steps.config.global_config = MagicMock()
+
+        # Mock successful status result on protected branch
+        status_result = RepoStatusResult(
+            success=True,
+            is_clean=False,
+            is_conflicted=False,
+            current_branch="main",
+        )
+        repo_engine.get_status.return_value = status_result
+
+        result = await workflow_steps.execute_status_check(repo_id)
+
+        # Should block due to protected branch
+        assert result is False
+
+        # Verify circuit breaker was triggered
+        repo_state.trigger_circuit_breaker.assert_called_once()
+        call_args = repo_state.trigger_circuit_breaker.call_args
+        assert "main" in call_args[0][0]  # reason contains branch name
+        assert "protected" in call_args[0][0].lower()
+
+    async def test_execute_status_check_allows_unprotected_branch(
+        self, workflow_steps, mock_dependencies
+    ):
+        """Test status check allows commits to unprotected branches."""
+        _, repo_states, repo_engines, tui, _ = mock_dependencies
+        repo_id = "test_repo"
+
+        # Setup mocks
+        repo_state = repo_states[repo_id]
+        repo_config = MagicMock(spec=RepositoryConfig)
+        repo_engine = repo_engines[repo_id]
+
+        # Configure branch protection
+        from supsrc.config import BranchProtectionConfig
+
+        repo_config.branch_protection = BranchProtectionConfig(
+            enabled=True, protected_branches=("main", "master"), block_commits=True
+        )
+
+        workflow_steps.config.repositories = {repo_id: repo_config}
+        workflow_steps.config.global_config = MagicMock()
+
+        # Mock successful status result on feature branch
+        status_result = RepoStatusResult(
+            success=True,
+            is_clean=False,
+            is_conflicted=False,
+            current_branch="feature/my-feature",
+        )
+        repo_engine.get_status.return_value = status_result
+
+        result = await workflow_steps.execute_status_check(repo_id)
+
+        # Should allow commit on feature branch
+        assert result is True
+
+        # Circuit breaker should NOT be triggered
+        repo_state.trigger_circuit_breaker.assert_not_called()
+
+    async def test_execute_status_check_warn_only_on_protected_branch(
+        self, workflow_steps, mock_dependencies
+    ):
+        """Test status check warns but allows commits when warn_only is True."""
+        _, repo_states, repo_engines, tui, _ = mock_dependencies
+        repo_id = "test_repo"
+
+        # Setup mocks
+        repo_state = repo_states[repo_id]
+        repo_config = MagicMock(spec=RepositoryConfig)
+        repo_engine = repo_engines[repo_id]
+
+        # Configure branch protection with warn_only
+        from supsrc.config import BranchProtectionConfig
+
+        repo_config.branch_protection = BranchProtectionConfig(
+            enabled=True, protected_branches=("main",), block_commits=True, warn_only=True
+        )
+
+        workflow_steps.config.repositories = {repo_id: repo_config}
+        workflow_steps.config.global_config = MagicMock()
+
+        # Mock successful status result on protected branch
+        status_result = RepoStatusResult(
+            success=True,
+            is_clean=False,
+            is_conflicted=False,
+            current_branch="main",
+        )
+        repo_engine.get_status.return_value = status_result
+
+        result = await workflow_steps.execute_status_check(repo_id)
+
+        # Should allow commit with warning
+        assert result is True
+
+        # Circuit breaker should NOT be triggered
+        repo_state.trigger_circuit_breaker.assert_not_called()
+
+        # Warning should have been posted
+        tui.post_log_update.assert_called()
+        call_args = tui.post_log_update.call_args
+        assert call_args[0][1] == "WARNING"
+
 
 # 🔼⚙️🔚

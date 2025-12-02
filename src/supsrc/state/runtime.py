@@ -403,5 +403,69 @@ class RepositoryState:
             current_branch=current_branch,
         )
 
+    def get_health_score(self) -> tuple[int, str, list[str]]:
+        """Calculate repository health score based on current state.
+
+        Returns:
+            Tuple of (score 0-100, grade emoji, list of issues)
+        """
+        score = 100
+        issues: list[str] = []
+
+        # Circuit breaker triggered (-40 points)
+        if self.circuit_breaker_triggered:
+            score -= 40
+            issues.append(f"Circuit breaker: {self.circuit_breaker_reason or 'triggered'}")
+
+        # Error status (-30 points)
+        if self.status == RepositoryStatus.ERROR:
+            score -= 30
+            issues.append(f"Error: {self.error_message or 'unknown'}")
+
+        # Frozen repository (-25 points)
+        if self.is_frozen:
+            score -= 25
+            issues.append(f"Frozen: {self.freeze_reason or 'unknown reason'}")
+
+        # Stopped repository (-20 points)
+        if self.is_stopped:
+            score -= 20
+            issues.append("Repository monitoring stopped")
+
+        # Many uncommitted changes (-10 points for >20 files)
+        if self.changed_files > 20:
+            score -= 10
+            issues.append(f"{self.changed_files} uncommitted files")
+        elif self.changed_files > 10:
+            score -= 5
+            issues.append(f"{self.changed_files} uncommitted files")
+
+        # File warnings present (-15 points)
+        if self.file_warnings:
+            large_count = sum(1 for w in self.file_warnings if w.get("type") == "large_file")
+            binary_count = sum(1 for w in self.file_warnings if w.get("type") == "binary_file")
+            score -= 15
+            if large_count:
+                issues.append(f"{large_count} large file(s)")
+            if binary_count:
+                issues.append(f"{binary_count} binary file(s)")
+
+        # Stale - no recent commits (>7 days would be -5 points, but we don't have that info easily)
+
+        # Ensure score is within bounds
+        score = max(0, min(100, score))
+
+        # Determine grade emoji
+        if score >= 90:
+            grade = "💚"  # Excellent
+        elif score >= 70:
+            grade = "💛"  # Good
+        elif score >= 50:
+            grade = "🧡"  # Warning
+        else:
+            grade = "❤️"  # Critical
+
+        return score, grade, issues
+
 
 # 🔼⚙️🔚
