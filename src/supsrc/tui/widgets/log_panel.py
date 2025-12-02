@@ -157,21 +157,31 @@ def redirect_foundation_to_tui() -> None:
 
         set_log_stream_for_testing(stream)
     except Exception:
-        # If Foundation redirect fails, at least capture stderr
+        # If Foundation redirect fails, at least capture streams directly
         pass
 
-    # Also redirect sys.stderr to capture any direct stderr writes
-    # Save the original for restoration later
+    # Redirect both sys.stdout and sys.stderr to capture any direct writes
+    # Save the originals for restoration later
+    if not hasattr(sys, "_original_stdout"):
+        sys._original_stdout = sys.stdout  # type: ignore[attr-defined]
     if not hasattr(sys, "_original_stderr"):
         sys._original_stderr = sys.stderr  # type: ignore[attr-defined]
+    sys.stdout = stream  # type: ignore[assignment]
     sys.stderr = stream  # type: ignore[assignment]
 
 
-def restore_stderr() -> None:
-    """Restore original stderr (call on TUI shutdown)."""
+def restore_streams() -> None:
+    """Restore original stdout and stderr (call on TUI shutdown)."""
+    if hasattr(sys, "_original_stdout"):
+        sys.stdout = sys._original_stdout  # type: ignore[attr-defined]
+        delattr(sys, "_original_stdout")
     if hasattr(sys, "_original_stderr"):
         sys.stderr = sys._original_stderr  # type: ignore[attr-defined]
         delattr(sys, "_original_stderr")
+
+
+# Backward compatibility alias
+restore_stderr = restore_streams
 
 
 class TuiLogHandler(logging.Handler):

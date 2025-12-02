@@ -15,6 +15,7 @@ from supsrc.tui.widgets.log_panel import (
     install_tui_log_handler,
     redirect_foundation_to_tui,
     restore_stderr,
+    restore_streams,
 )
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "install_tui_log_handler",
     "redirect_foundation_to_tui",
     "restore_stderr",
+    "restore_streams",
 ]
 
 # 🔼⚙️🔚
