@@ -158,6 +158,10 @@ class GlobalConfig:
     # Legacy fallback for backwards compatibility
     event_grouping_mode: str = field(default=DEFAULT_EVENT_BUFFER_GROUPING_MODE, validator=instance_of(str))
 
+    # File warning thresholds
+    large_file_threshold_bytes: int = field(default=1_000_000, validator=_validate_positive_int)
+    binary_file_warning_enabled: bool = field(default=True)
+
     # Circuit breaker configuration for safety mechanisms
     circuit_breaker: CircuitBreakerConfig = field(factory=CircuitBreakerConfig)
 
