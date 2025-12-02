@@ -179,6 +179,11 @@ class GitOperationsHelper:
     async def get_working_diff(self, working_dir: Path, max_lines: int = 500) -> str:
         """Get the diff of unstaged changes in the working directory."""
 
+        def _escape_rich_markup(text: str) -> str:
+            """Escape brackets in text to prevent Rich markup interpretation."""
+            # Replace [ with \[ to escape Rich markup
+            return text.replace("[", "\\[")
+
         def _blocking_get_diff() -> str:
             repo = self.get_repo(working_dir)
             if repo.is_empty or repo.head_is_unborn:
@@ -235,7 +240,8 @@ class GitOperationsHelper:
                             break
 
                         origin = line.origin
-                        content = line.content.rstrip("\n")
+                        # Escape brackets in content to prevent Rich markup interpretation
+                        content = _escape_rich_markup(line.content.rstrip("\n"))
 
                         if origin == "+":
                             lines.append(f"[green]+{content}[/green]")
