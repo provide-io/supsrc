@@ -86,7 +86,6 @@ class TestSetRepoRefreshingStatus:
         """Test that setting refreshing status updates display emoji."""
         repo_state = RepositoryState(repo_id="test")
         repo_state.is_refreshing = False
-        initial_emoji = repo_state.display_status_emoji
         repo_states = {"test": repo_state}
 
         manager = StatusManager(repo_states, {}, None, Mock())
@@ -181,7 +180,7 @@ class TestRefreshRepositoryStatus:
     @pytest.mark.asyncio
     async def test_refresh_repository_status_missing_config(self, setup_manager, tmp_path):
         """Test refresh when repository config is missing."""
-        manager, repo_state, repo_engine, callback = setup_manager
+        manager, _repo_state, repo_engine, _callback = setup_manager
         # Create new config without test repository
         empty_config = SupsrcConfig(
             repositories={},
@@ -197,7 +196,7 @@ class TestRefreshRepositoryStatus:
     @pytest.mark.asyncio
     async def test_refresh_repository_status_missing_engine(self, setup_manager):
         """Test refresh when repository engine is missing."""
-        manager, repo_state, _, callback = setup_manager
+        manager, _repo_state, _, _callback = setup_manager
         manager.repo_engines = {}
 
         result = await manager.refresh_repository_status("test")
@@ -207,7 +206,7 @@ class TestRefreshRepositoryStatus:
     @pytest.mark.asyncio
     async def test_refresh_repository_status_get_status_fails(self, setup_manager):
         """Test refresh when get_status returns failure."""
-        manager, repo_state, repo_engine, callback = setup_manager
+        manager, _repo_state, repo_engine, callback = setup_manager
 
         status_result = Mock()
         status_result.success = False
@@ -222,7 +221,7 @@ class TestRefreshRepositoryStatus:
     @pytest.mark.asyncio
     async def test_refresh_repository_status_exception_handling(self, setup_manager):
         """Test refresh handles exceptions gracefully."""
-        manager, repo_state, repo_engine, callback = setup_manager
+        manager, _repo_state, repo_engine, callback = setup_manager
 
         repo_engine.get_status.side_effect = Exception("Unexpected error")
 

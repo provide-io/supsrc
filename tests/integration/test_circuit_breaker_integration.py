@@ -220,7 +220,7 @@ class TestEventProcessorCircuitBreakerIntegration:
     @pytest.mark.asyncio
     async def test_events_blocked_after_circuit_breaker_triggers(self, setup_processor):
         """Test that events are blocked after circuit breaker triggers."""
-        processor, event_queue, shutdown_event, repo_state, tui, repo_path = setup_processor
+        processor, event_queue, shutdown_event, repo_state, _tui, repo_path = setup_processor
 
         # Pre-trigger circuit breaker
         repo_state.trigger_circuit_breaker(
@@ -252,7 +252,7 @@ class TestEventProcessorCircuitBreakerIntegration:
     @pytest.mark.asyncio
     async def test_under_threshold_does_not_trigger(self, setup_processor):
         """Test that circuit breaker doesn't trigger under threshold."""
-        processor, event_queue, shutdown_event, repo_state, tui, repo_path = setup_processor
+        processor, event_queue, shutdown_event, repo_state, _tui, repo_path = setup_processor
 
         processor_task = asyncio.create_task(processor.run())
 

@@ -930,13 +930,13 @@ class TestStateManager:
     async def test_start_initializes_monitor(self):
         """Test that start initializes monitor."""
         manager = StateManager()
-        with patch("supsrc.state.monitor.StateMonitor") as MockMonitor:
+        with patch("supsrc.state.monitor.StateMonitor") as mock_monitor_cls:
             mock_instance = AsyncMock()
-            MockMonitor.return_value = mock_instance
+            mock_monitor_cls.return_value = mock_instance
 
             await manager.start()
 
-            MockMonitor.assert_called_once()
+            mock_monitor_cls.assert_called_once()
             mock_instance.register_callback.assert_called_once()
             mock_instance.start.assert_called_once()
             assert manager._monitor is mock_instance
@@ -984,8 +984,8 @@ class TestStateManager:
     def test_get_state_info_no_state_file(self):
         """Test get_state_info when no state file exists."""
         manager = StateManager()
-        with patch("supsrc.state.file.StateFile") as MockStateFile:
-            MockStateFile.load.return_value = None
+        with patch("supsrc.state.file.StateFile") as mock_state_file:
+            mock_state_file.load.return_value = None
 
             info = manager.get_state_info()
 
@@ -1004,8 +1004,8 @@ class TestStateManager:
             updated_at=now,
         )
 
-        with patch("supsrc.state.file.StateFile") as MockStateFile:
-            MockStateFile.load.return_value = state_data
+        with patch("supsrc.state.file.StateFile") as mock_state_file:
+            mock_state_file.load.return_value = state_data
 
             info = manager.get_state_info()
 
@@ -1028,8 +1028,8 @@ class TestStateManager:
             updated_at=datetime.now(UTC),
         )
 
-        with patch("supsrc.state.file.StateFile") as MockStateFile:
-            MockStateFile.load.return_value = state_data
+        with patch("supsrc.state.file.StateFile") as mock_state_file:
+            mock_state_file.load.return_value = state_data
 
             info = manager.get_state_info(repo_id="repo")
 
@@ -1041,27 +1041,31 @@ class TestStateManager:
     def test_pause_context_manager(self, tmp_path):
         """Test pause context manager."""
         manager = StateManager()
-        with patch.object(manager, "pause", return_value=True) as mock_pause:
-            with patch.object(manager, "resume") as mock_resume:
-                with manager.pause_context(
-                    repo_id="test", duration=60, reason="Testing", updated_by="user"
-                ):
-                    pass
+        with (
+            patch.object(manager, "pause", return_value=True) as mock_pause,
+            patch.object(manager, "resume") as mock_resume,
+        ):
+            with manager.pause_context(
+                repo_id="test", duration=60, reason="Testing", updated_by="user"
+            ):
+                pass
 
-                mock_pause.assert_called_once_with("test", 60, "Testing", "user")
-                mock_resume.assert_called_once_with("test")
+            mock_pause.assert_called_once_with("test", 60, "Testing", "user")
+            mock_resume.assert_called_once_with("test")
 
     def test_pause_context_manager_pause_failed(self):
         """Test pause context manager when pause fails."""
         manager = StateManager()
-        with patch.object(manager, "pause", return_value=False) as mock_pause:
-            with patch.object(manager, "resume") as mock_resume:
-                with manager.pause_context():
-                    pass
+        with (
+            patch.object(manager, "pause", return_value=False) as mock_pause,
+            patch.object(manager, "resume") as mock_resume,
+        ):
+            with manager.pause_context():
+                pass
 
-                mock_pause.assert_called_once()
-                # Resume should not be called if pause failed
-                mock_resume.assert_not_called()
+            mock_pause.assert_called_once()
+            # Resume should not be called if pause failed
+            mock_resume.assert_not_called()
 
 
 # 🔼⚙️🔚
