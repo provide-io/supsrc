@@ -110,9 +110,7 @@ class TestTuiIntegration:
         tui_app._update_repo_details_tab.assert_called_once_with("test-repo")
         tui_app.event_collector.emit.assert_called_once()
 
-    def test_action_hide_detail_pane(
-        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
-    ) -> None:
+    def test_action_hide_detail_pane(self, mock_config_path: Path, mock_shutdown_event: asyncio.Event) -> None:
         """Test hiding the detail pane."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 

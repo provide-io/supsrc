@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-"""TODO: Add module docstring."""
 
 from __future__ import annotations
 
@@ -60,9 +59,7 @@ class ConsoleEventFormatter:
         if verbose_format == "compact":
             self.verbose_formatter = CompactVerboseFormatter(indent="  ")
         else:  # default to table
-            self.verbose_formatter = TableVerboseFormatter(
-                use_ascii=use_ascii, max_width=self.terminal_width
-            )
+            self.verbose_formatter = TableVerboseFormatter(use_ascii=use_ascii, max_width=self.terminal_width)
 
     def _get_terminal_width(self) -> int:
         """Get current terminal width."""
@@ -95,9 +92,7 @@ class ConsoleEventFormatter:
                 self._print_verbose_details(event, timestamp, repo_id)
 
         except Exception as e:
-            log.debug(
-                "Failed to format event for console", error=str(e), event_type=type(event).__name__
-            )
+            log.debug("Failed to format event for console", error=str(e), event_type=type(event).__name__)
 
     def _format_timestamp(self, timestamp: datetime) -> str:
         """Format timestamp as HH:MM:SS."""

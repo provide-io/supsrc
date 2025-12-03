@@ -269,11 +269,7 @@ class StateManager:
             state_data.updated_by = "state_manager"
 
             # If no active state remains, delete the file
-            if (
-                not state_data.paused
-                and not state_data.repositories
-                and not state_data.pause_reason
-            ):
+            if not state_data.paused and not state_data.repositories and not state_data.pause_reason:
                 success = StateFile.delete(repo_path=repo_path)
             else:
                 success = StateFile.save(state_data, repo_path=repo_path)
@@ -327,10 +323,7 @@ class StateManager:
         from supsrc.state.file import StateFile
 
         # Determine target path
-        if repo_id:
-            repo_path = next((p for p in self.repo_paths if p.name == repo_id), None)
-        else:
-            repo_path = None
+        repo_path = next((p for p in self.repo_paths if p.name == repo_id), None) if repo_id else None
 
         state_data = StateFile.load(repo_path=repo_path)
 
@@ -339,12 +332,8 @@ class StateManager:
 
         info = {
             "state_file_exists": True,
-            "paused": state_data.paused
-            if not repo_id
-            else state_data.is_repo_paused(repo_id or ""),
-            "paused_until": state_data.paused_until.isoformat()
-            if state_data.paused_until
-            else None,
+            "paused": state_data.paused if not repo_id else state_data.is_repo_paused(repo_id or ""),
+            "paused_until": state_data.paused_until.isoformat() if state_data.paused_until else None,
             "pause_reason": state_data.pause_reason,
             "updated_by": state_data.updated_by,
             "updated_at": state_data.updated_at.isoformat(),
