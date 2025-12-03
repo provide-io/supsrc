@@ -333,7 +333,7 @@ class TestWorkflowSteps:
         self, workflow_steps, mock_dependencies
     ):
         """Test staging is blocked when large file warnings are detected."""
-        _, repo_states, repo_engines, tui, emit_event = mock_dependencies
+        _, repo_states, repo_engines, _tui, emit_event = mock_dependencies
         repo_id = "test_repo"
 
         # Setup mocks
@@ -373,7 +373,7 @@ class TestWorkflowSteps:
         self, workflow_steps, mock_dependencies
     ):
         """Test staging is blocked when binary file warnings are detected."""
-        _, repo_states, repo_engines, tui, emit_event = mock_dependencies
+        _, repo_states, repo_engines, _tui, _emit_event = mock_dependencies
         repo_id = "test_repo"
 
         # Setup mocks
@@ -410,7 +410,7 @@ class TestWorkflowSteps:
         self, workflow_steps, mock_dependencies
     ):
         """Test staging is blocked when multiple file warnings are detected."""
-        _, repo_states, repo_engines, tui, emit_event = mock_dependencies
+        _, repo_states, repo_engines, _tui, _emit_event = mock_dependencies
         repo_id = "test_repo"
 
         # Setup mocks
@@ -431,7 +431,7 @@ class TestWorkflowSteps:
         result = await workflow_steps.execute_staging(repo_id)
 
         # Should block staging
-        success, files = result
+        success, _files = result
         assert success is False
 
         # Verify circuit breaker was triggered with both warning types
@@ -445,7 +445,7 @@ class TestWorkflowSteps:
         self, workflow_steps, mock_dependencies
     ):
         """Test status check blocks commits to protected branches."""
-        _, repo_states, repo_engines, tui, emit_event = mock_dependencies
+        _, repo_states, repo_engines, _tui, _emit_event = mock_dependencies
         repo_id = "test_repo"
 
         # Setup mocks
@@ -487,7 +487,7 @@ class TestWorkflowSteps:
         self, workflow_steps, mock_dependencies
     ):
         """Test status check allows commits to unprotected branches."""
-        _, repo_states, repo_engines, tui, _ = mock_dependencies
+        _, repo_states, repo_engines, _tui, _ = mock_dependencies
         repo_id = "test_repo"
 
         # Setup mocks
