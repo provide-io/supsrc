@@ -12,7 +12,7 @@ edit_uri: edit/main/docs/
 copyright: ©2024-2025 provide.io llc<br/>🛠️ with 💚 and 🦝 on 🌎
 
 # Development server configuration
-dev_addr: '127.0.0.1:11011'
+dev_addr: 127.0.0.1:11024
 
 # Standalone mode settings
 docs_dir: docs
