@@ -68,14 +68,14 @@ class EventHandlerMixin:
             log.debug("Repository row selected via click", repo_id=repo_id)
 
             # Update selected repo and switch to details tab
-            self.selected_repo_id = repo_id  # type: ignore[attr-defined]
+            self.selected_repo_id = repo_id
             self._update_repo_details_tab(repo_id)  # type: ignore[attr-defined]
 
             # Focus the details tab content
             try:
                 # The tab is already switched by _update_repo_details_tab
                 # Now focus the content area
-                details_content = self.query_one("#repo-details-content")  # type: ignore[attr-defined]
+                details_content = self.query_one("#repo-details-content")
                 details_content.focus()
             except Exception as focus_err:
                 log.debug("Could not focus details content", error=str(focus_err))

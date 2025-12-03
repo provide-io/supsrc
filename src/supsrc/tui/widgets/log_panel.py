@@ -166,17 +166,17 @@ def redirect_foundation_to_tui() -> None:
         sys._original_stdout = sys.stdout  # type: ignore[attr-defined]
     if not hasattr(sys, "_original_stderr"):
         sys._original_stderr = sys.stderr  # type: ignore[attr-defined]
-    sys.stdout = stream  # type: ignore[assignment]
-    sys.stderr = stream  # type: ignore[assignment]
+    sys.stdout = stream
+    sys.stderr = stream
 
 
 def restore_streams() -> None:
     """Restore original stdout and stderr (call on TUI shutdown)."""
     if hasattr(sys, "_original_stdout"):
-        sys.stdout = sys._original_stdout  # type: ignore[attr-defined]
+        sys.stdout = sys._original_stdout
         delattr(sys, "_original_stdout")
     if hasattr(sys, "_original_stderr"):
-        sys.stderr = sys._original_stderr  # type: ignore[attr-defined]
+        sys.stderr = sys._original_stderr
         delattr(sys, "_original_stderr")
 
 
