@@ -40,9 +40,7 @@ async def rapid_change_test_setup(tmp_path: Path):
     subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
     # Configure Git user for timer integration testing
     subprocess.run(["git", "config", "user.name", "Timer Test User"], cwd=repo_path, check=True)
-    subprocess.run(
-        ["git", "config", "user.email", "timer@supsrc.example.com"], cwd=repo_path, check=True
-    )
+    subprocess.run(["git", "config", "user.email", "timer@supsrc.example.com"], cwd=repo_path, check=True)
     # Disable GPG signing to prevent tests from failing
     subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo_path, check=True)
     subprocess.run(["git", "config", "gpg.program", ""], cwd=repo_path, check=True)
@@ -378,9 +376,7 @@ class TestTimerDebounceIntegration:
             repo_path.mkdir()
             subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
             subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True)
-            subprocess.run(
-                ["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True
-            )
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True)
             subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repo_path, check=True)
             subprocess.run(["git", "config", "gpg.program", ""], cwd=repo_path, check=True)
 

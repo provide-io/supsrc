@@ -18,9 +18,7 @@ from supsrc.tui.app import SupsrcTuiApp  # noqa: E402
 class TestTuiAccessibility:
     """Test TUI accessibility and usability features."""
 
-    def test_keyboard_bindings(
-        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
-    ) -> None:
+    def test_keyboard_bindings(self, mock_config_path: Path, mock_shutdown_event: asyncio.Event) -> None:
         """Test that all keyboard bindings are properly defined."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
@@ -44,9 +42,7 @@ class TestTuiAccessibility:
             assert key in bindings
             assert bindings[key] == action
 
-    def test_widget_focus_management(
-        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
-    ) -> None:
+    def test_widget_focus_management(self, mock_config_path: Path, mock_shutdown_event: asyncio.Event) -> None:
         """Test proper focus management between widgets."""
         tui_app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 

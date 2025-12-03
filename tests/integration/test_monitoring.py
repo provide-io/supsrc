@@ -32,9 +32,7 @@ async def monitoring_setup(tmp_path: Path):
     # Initialize Git repository
     subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
     # Configure Git user for integration testing (disable GPG signing to avoid issues)
-    subprocess.run(
-        ["git", "config", "user.name", "Integration Test User"], cwd=repo_path, check=True
-    )
+    subprocess.run(["git", "config", "user.name", "Integration Test User"], cwd=repo_path, check=True)
     subprocess.run(
         ["git", "config", "user.email", "integration@supsrc.example.com"], cwd=repo_path, check=True
     )
@@ -237,16 +235,11 @@ class TestMonitoringIntegration:
             start_time = asyncio.get_event_loop().time()
             while True:
                 current_repo_state = orchestrator.repo_states["test-repo"]
-                if (
-                    current_repo_state.save_count == 0
-                    and current_repo_state.status == RepositoryStatus.IDLE
-                ):
+                if current_repo_state.save_count == 0 and current_repo_state.status == RepositoryStatus.IDLE:
                     break
                 await asyncio.sleep(0.1)
                 if asyncio.get_event_loop().time() - start_time > timeout:
-                    raise TimeoutError(
-                        "Timed out waiting for action to complete and state to reset."
-                    )
+                    raise TimeoutError("Timed out waiting for action to complete and state to reset.")
 
             # Verify Git commit was created
             result = subprocess.run(

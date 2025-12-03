@@ -306,7 +306,7 @@ class TestRepositoryStateHealthScore:
         state = RepositoryState(repo_id="test-repo")
         state.changed_files = 25
 
-        score, grade, issues = state.get_health_score()
+        score, _grade, issues = state.get_health_score()
 
         assert score == 90  # 100 - 10
         assert any("uncommitted" in issue.lower() for issue in issues)
@@ -319,7 +319,7 @@ class TestRepositoryStateHealthScore:
             {"type": "binary_file", "path": "image.png"},
         ]
 
-        score, grade, issues = state.get_health_score()
+        score, _grade, issues = state.get_health_score()
 
         assert score == 85  # 100 - 15
         assert any("large" in issue.lower() or "binary" in issue.lower() for issue in issues)
@@ -348,7 +348,7 @@ class TestRepositoryStateHealthScore:
         state.changed_files = 30
         state.file_warnings = [{"type": "large_file", "path": "x.bin", "size": 999}]
 
-        score, grade, issues = state.get_health_score()
+        score, grade, _issues = state.get_health_score()
 
         # Should not go below 0
         assert score >= 0

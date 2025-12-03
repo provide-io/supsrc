@@ -24,7 +24,9 @@ class MockGitCommitEvent(BaseEvent):
     def format(self) -> str:
         """Format commit event for display."""
         time_str = self.timestamp.strftime("%H:%M:%S")
-        return f"[{time_str}] 📝 Committed {self.files_changed} files [{self.commit_hash[:7]}] on {self.branch}"
+        return (
+            f"[{time_str}] 📝 Committed {self.files_changed} files [{self.commit_hash[:7]}] on {self.branch}"
+        )
 
 
 def test_mock_git_commit_event_creation() -> None:

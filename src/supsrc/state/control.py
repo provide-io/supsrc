@@ -81,15 +81,11 @@ class StateData:
         # Parse datetime fields
         paused_until = None
         if state_section.get("paused_until"):
-            paused_until = datetime.fromisoformat(
-                state_section["paused_until"].replace("Z", "+00:00")
-            )
+            paused_until = datetime.fromisoformat(state_section["paused_until"].replace("Z", "+00:00"))
 
         updated_at = datetime.now(UTC)
         if metadata_section.get("updated_at"):
-            updated_at = datetime.fromisoformat(
-                metadata_section["updated_at"].replace("Z", "+00:00")
-            )
+            updated_at = datetime.fromisoformat(metadata_section["updated_at"].replace("Z", "+00:00"))
 
         # Parse repository overrides
         repositories = {}

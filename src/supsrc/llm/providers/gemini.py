@@ -47,9 +47,7 @@ class GeminiProvider:
         try:
             from google import genai
         except ImportError as e:
-            raise ImportError(
-                "Google GenAI library not found. Please install `supsrc[llm]`."
-            ) from e
+            raise ImportError("Google GenAI library not found. Please install `supsrc[llm]`.") from e
 
         self.client = genai.Client(api_key=api_key)  # API key can be None
         self.model_name = model
@@ -94,9 +92,7 @@ class GeminiProvider:
 
     async def generate_commit_message(self, diff: str, conventional: bool) -> str:
         log.debug("Generating commit message with Gemini", conventional=conventional)
-        prompt_template = (
-            CONVENTIONAL_COMMIT_PROMPT_TEMPLATE if conventional else BASIC_COMMIT_PROMPT_TEMPLATE
-        )
+        prompt_template = CONVENTIONAL_COMMIT_PROMPT_TEMPLATE if conventional else BASIC_COMMIT_PROMPT_TEMPLATE
         prompt = prompt_template.format(diff=diff)
         raw_response = await self._generate(prompt)
         return _clean_llm_output(raw_response)

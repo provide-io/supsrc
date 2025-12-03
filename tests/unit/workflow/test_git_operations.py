@@ -63,9 +63,7 @@ class TestGitOperationsHelper:
         commit_hash = "abc123def456"
         content = "Feature: Added new functionality\n\nThis change implements..."
 
-        await GitOperationsHelper.save_change_fragment(
-            content, repo_path, fragment_dir, commit_hash
-        )
+        await GitOperationsHelper.save_change_fragment(content, repo_path, fragment_dir, commit_hash)
 
         # Verify directory was created
         expected_dir = repo_path / fragment_dir
@@ -84,9 +82,7 @@ class TestGitOperationsHelper:
         content = "Test content"
 
         # Should not raise any errors, just return early
-        await GitOperationsHelper.save_change_fragment(
-            content, repo_path, fragment_dir, commit_hash
-        )
+        await GitOperationsHelper.save_change_fragment(content, repo_path, fragment_dir, commit_hash)
 
     async def test_save_change_fragment_io_error(self, tmp_path):
         """Test change fragment saving with IO error."""
@@ -101,9 +97,7 @@ class TestGitOperationsHelper:
         fragment_path.chmod(0o444)  # Read-only
 
         # Should handle the error gracefully without raising
-        await GitOperationsHelper.save_change_fragment(
-            content, repo_path, fragment_dir, commit_hash
-        )
+        await GitOperationsHelper.save_change_fragment(content, repo_path, fragment_dir, commit_hash)
 
         # Restore permissions for cleanup
         fragment_path.chmod(0o755)
