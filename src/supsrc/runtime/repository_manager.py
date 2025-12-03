@@ -186,7 +186,7 @@ class RepositoryManager:
                         repo_id=repo_id,
                         path=repo_config.path,
                     )
-                    self.event_collector.emit(start_event)  # type: ignore[arg-type]
+                    self.event_collector.emit(start_event)
                 elif hasattr(tui.app, "event_collector"):
                     init_log.debug("Emitting monitoring start event via TUI app", repo_id=repo_id)
                     start_event = MonitoringStartEvent(
@@ -211,7 +211,7 @@ class RepositoryManager:
                         error_type="InitializationError",
                         repo_id=repo_id,
                     )
-                    self.event_collector.emit(error_event)  # type: ignore[arg-type]
+                    self.event_collector.emit(error_event)
                 elif hasattr(tui.app, "event_collector"):
                     error_event = ErrorEvent(
                         description=f"Failed to initialize repository {repo_id}: {e}",
