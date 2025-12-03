@@ -202,7 +202,7 @@ class GitEngine(RepositoryEngine):
 
         try:
             status_dict = await asyncio.to_thread(_blocking_get_status)
-            return RepoStatusResult(**status_dict)  # type: ignore[misc]
+            return RepoStatusResult(**status_dict)
         except pygit2.GitError as e:
             self._log.error("Failed to get Git status", error=str(e), repo_id=state.repo_id)
             return RepoStatusResult(success=False, message=f"Git status error: {e}")
@@ -367,7 +367,7 @@ class GitEngine(RepositoryEngine):
 
         try:
             result_dict = await asyncio.to_thread(_blocking_stage_changes)
-            return StageResult(**result_dict)  # type: ignore[misc]
+            return StageResult(**result_dict)
         except OSError as e:
             # Handle git lock collisions specifically
             error_msg = str(e)
@@ -459,7 +459,7 @@ class GitEngine(RepositoryEngine):
 
         try:
             result_dict = await asyncio.to_thread(_blocking_perform_commit)
-            return CommitResult(**result_dict)  # type: ignore[misc]
+            return CommitResult(**result_dict)
         except OSError as e:
             # Handle git lock collisions specifically
             error_msg = str(e)
@@ -524,7 +524,7 @@ class GitEngine(RepositoryEngine):
 
         try:
             result_dict = await asyncio.to_thread(_blocking_perform_push)
-            return PushResult(**result_dict)  # type: ignore[misc]
+            return PushResult(**result_dict)
         except (ValueError, KeyError):
             message = f"Remote '{remote_name}' not found."
             self._log.warning("Push failed: remote not found.", remote_name=remote_name, repo_id=state.repo_id)
