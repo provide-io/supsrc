@@ -5,6 +5,7 @@
 
 
 from pathlib import Path
+from typing import Any
 
 import click
 from provide.foundation.cli.decorators import logging_options
@@ -25,7 +26,7 @@ log: StructLogger = get_logger(__name__)
 
 
 @click.group(name="config")
-def config_cli():
+def config_cli() -> None:
     """Commands for inspecting and validating configuration."""
     pass
 
@@ -43,7 +44,7 @@ def config_cli():
 )
 @logging_options
 @click.pass_context
-def show_config(ctx: click.Context, config_path: Path, **kwargs):
+def show_config(ctx: click.Context, config_path: Path, **kwargs: Any) -> None:
     """Load, validate, and display the configuration."""
     # Foundation's CLI framework handles logging setup via decorators
     log.info("Executing 'config show' command", config_path=str(config_path))

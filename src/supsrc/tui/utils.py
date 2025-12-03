@@ -47,7 +47,7 @@ def get_countdown_display(seconds_left: int | None) -> str:
         return "💥"  # Zero/trigger
 
 
-def format_last_commit_time(last_change_time, threshold_hours=3):
+def format_last_commit_time(last_change_time: datetime | None, threshold_hours: int = 3) -> str:
     """Format last commit time as relative or absolute based on age."""
     if not last_change_time:
         return "Never"
