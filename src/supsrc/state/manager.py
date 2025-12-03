@@ -327,10 +327,7 @@ class StateManager:
         from supsrc.state.file import StateFile
 
         # Determine target path
-        if repo_id:
-            repo_path = next((p for p in self.repo_paths if p.name == repo_id), None)
-        else:
-            repo_path = None
+        repo_path = next((p for p in self.repo_paths if p.name == repo_id), None) if repo_id else None
 
         state_data = StateFile.load(repo_path=repo_path)
 
