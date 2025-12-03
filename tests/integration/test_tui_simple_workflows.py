@@ -67,9 +67,7 @@ class TestSimpleTuiWorkflows:
             mock_event_collector.emit.assert_called()
 
     @pytest.mark.asyncio
-    async def test_dark_mode_toggle(
-        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
-    ) -> None:
+    async def test_dark_mode_toggle(self, mock_config_path: Path, mock_shutdown_event: asyncio.Event) -> None:
         """Test dark mode toggle functionality."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
@@ -86,9 +84,7 @@ class TestSimpleTuiWorkflows:
             assert current_theme != initial_theme
 
     @pytest.mark.asyncio
-    async def test_clear_log_action(
-        self, mock_config_path: Path, mock_shutdown_event: asyncio.Event
-    ) -> None:
+    async def test_clear_log_action(self, mock_config_path: Path, mock_shutdown_event: asyncio.Event) -> None:
         """Test clear log action."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 

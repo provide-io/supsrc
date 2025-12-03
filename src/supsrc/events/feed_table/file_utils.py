@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-"""TODO: Add module docstring."""
 
 from __future__ import annotations
 
@@ -109,9 +108,7 @@ class FilePathFormatter:
                 return f"{len(file_paths)} files"
 
     @staticmethod
-    def format_event_details_legacy(
-        event, file_paths: list[Path], event_count: int
-    ) -> tuple[str, str]:
+    def format_event_details_legacy(event, file_paths: list[Path], event_count: int) -> tuple[str, str]:
         """Format event count and file details (legacy method).
 
         Returns:

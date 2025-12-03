@@ -131,9 +131,7 @@ class StreamingOperationHandler:
 
         # Create unique key for per-file debouncing
         # Use first file path as key (most operations have one file)
-        primary_file = (
-            buffered_event.file_paths[0] if buffered_event.file_paths else Path("unknown")
-        )
+        primary_file = buffered_event.file_paths[0] if buffered_event.file_paths else Path("unknown")
         operation_key = f"{repo_id}:{primary_file}"
 
         # Store in pending operations (replaces any existing operation for this file)
@@ -200,9 +198,7 @@ class StreamingOperationHandler:
         """
         # First, flush any pending post-operation delays
         if self._pending_operations:
-            log.debug(
-                "Flushing pending operations on shutdown", count=len(self._pending_operations)
-            )
+            log.debug("Flushing pending operations on shutdown", count=len(self._pending_operations))
             for operation_key in list(self._pending_operations.keys()):
                 # Cancel timer and emit immediately
                 if operation_key in self._operation_timers:
