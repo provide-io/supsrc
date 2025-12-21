@@ -51,11 +51,7 @@ class GitOperationsHelper:
         """Generate a human-readable summary of changes from a diff."""
         added, modified, deleted, renamed, typechanged = [], [], [], [], []
         for delta in diff.deltas:
-            path = (
-                delta.new_file.path
-                if delta.status != pygit2.GIT_DELTA_DELETED
-                else delta.old_file.path
-            )
+            path = delta.new_file.path if delta.status != pygit2.GIT_DELTA_DELETED else delta.old_file.path
             if delta.status == pygit2.GIT_DELTA_ADDED:
                 added.append(path)
             elif delta.status == pygit2.GIT_DELTA_MODIFIED:
