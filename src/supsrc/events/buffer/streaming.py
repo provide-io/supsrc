@@ -53,6 +53,7 @@ class StreamingOperationHandler:
         # Key: f"{repo_id}:{primary_path}" for per-file debouncing
         self._pending_operations: dict[str, BufferedFileChangeEvent] = {}
         self._operation_timers: dict[str, asyncio.TimerHandle] = {}
+        self._fallback_loop: asyncio.AbstractEventLoop | None = None
 
         log.debug(
             "StreamingOperationHandler initialized",
@@ -61,6 +62,19 @@ class StreamingOperationHandler:
             temp_patterns_count=len(detector_config.temp_patterns),
             post_operation_delay_ms=post_operation_delay_ms,
         )
+
+    def _get_loop(self) -> asyncio.AbstractEventLoop:
+        """Return the running event loop or create a fallback loop.
+
+        Uses get_running_loop() first to avoid issues with stale loops in
+        pytest-xdist workers. Falls back to creating a new loop if needed.
+        """
+        try:
+            return asyncio.get_running_loop()
+        except RuntimeError:
+            if self._fallback_loop is None or self._fallback_loop.is_closed():
+                self._fallback_loop = asyncio.new_event_loop()
+            return self._fallback_loop
 
     def handle_event(self, event: FileChangeEvent) -> None:
         """Handle a file change event through streaming detection.
@@ -143,25 +157,17 @@ class StreamingOperationHandler:
             log.trace("Cancelled existing timer for operation", key=operation_key)
 
         # Schedule delayed emission
-        try:
-            # Use get_running_loop() to ensure we get the currently running loop,
-            # not a cached or stale loop (avoids issues with pytest-xdist workers)
-            loop = asyncio.get_running_loop()
-            self._operation_timers[operation_key] = loop.call_later(
-                self.post_operation_delay_ms / 1000.0,
-                self._emit_operation,
-                operation_key,
-            )
-            log.debug(
-                "Scheduled delayed operation emission",
-                key=operation_key,
-                delay_ms=self.post_operation_delay_ms,
-            )
-        except RuntimeError:
-            # No event loop running - emit immediately (e.g., in sync tests)
-            log.warning("No running event loop, emitting operation immediately")
-            if self.emit_callback:
-                self.emit_callback(buffered_event)
+        loop = self._get_loop()
+        self._operation_timers[operation_key] = loop.call_later(
+            self.post_operation_delay_ms / 1000.0,
+            self._emit_operation,
+            operation_key,
+        )
+        log.debug(
+            "Scheduled delayed operation emission",
+            key=operation_key,
+            delay_ms=self.post_operation_delay_ms,
+        )
 
     def _emit_operation(self, operation_key: str) -> None:
         """Emit a pending operation after delay (timer callback).
