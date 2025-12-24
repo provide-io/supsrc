@@ -12,6 +12,7 @@ file path, not the temporary file path."""
 from __future__ import annotations
 
 import asyncio
+import uuid
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,11 @@ from provide.testkit.mocking import Mock
 
 from supsrc.events.buffer import EventBuffer
 from supsrc.events.monitor import FileChangeEvent
+
+
+def _unique_repo_id() -> str:
+    """Generate a unique repo_id for test isolation under parallel execution (pytest-xdist)."""
+    return f"test_repo_{uuid.uuid4().hex[:8]}"
 
 
 class TestVSCodeAtomicSaveIntegration:
@@ -40,7 +46,7 @@ class TestVSCodeAtomicSaveIntegration:
         # VSCode pattern: .orchestrator.py.tmp.84 -> orchestrator.py
         temp_file = Path(".orchestrator.py.tmp.84")
         final_file = Path("orchestrator.py")
-        repo_id = "test_repo"
+        repo_id = _unique_repo_id()
 
         # Event 1: Create temp file
         buffer.add_event(
@@ -124,7 +130,7 @@ class TestVSCodeAtomicSaveIntegration:
         # File with multiple dots: test.config.py
         temp_file = Path(".test.config.py.tmp.123")
         final_file = Path("test.config.py")
-        repo_id = "test_repo"
+        repo_id = _unique_repo_id()
 
         # Simulate atomic save
         buffer.add_event(
@@ -182,7 +188,7 @@ class TestVSCodeAtomicSaveIntegration:
 
         temp_file = Path(".test.py.tmp.999")
         final_file = Path("test.py")
-        repo_id = "test_repo"
+        repo_id = _unique_repo_id()
 
         # Add only temp file creation (incomplete operation)
         buffer.add_event(
@@ -253,7 +259,7 @@ class TestVSCodeAtomicSaveIntegration:
             emit_callback=mock_callback,
         )
 
-        repo_id = "test_repo"
+        repo_id = _unique_repo_id()
 
         # First file save
         buffer.add_event(
@@ -341,7 +347,7 @@ class TestVSCodeAtomicSaveIntegration:
         # Real VSCode pattern from the bug report
         temp_file = Path(".orchestrator.py.tmp.84")
         final_file = Path("orchestrator.py")
-        repo_id = "supsrc"
+        repo_id = _unique_repo_id()
 
         # Exactly as watchdog would report it
         buffer.add_event(
