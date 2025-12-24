@@ -144,7 +144,9 @@ class StreamingOperationHandler:
 
         # Schedule delayed emission
         try:
-            loop = asyncio.get_event_loop()
+            # Use get_running_loop() to ensure we get the currently running loop,
+            # not a cached or stale loop (avoids issues with pytest-xdist workers)
+            loop = asyncio.get_running_loop()
             self._operation_timers[operation_key] = loop.call_later(
                 self.post_operation_delay_ms / 1000.0,
                 self._emit_operation,
@@ -156,8 +158,8 @@ class StreamingOperationHandler:
                 delay_ms=self.post_operation_delay_ms,
             )
         except RuntimeError:
-            # No event loop - emit immediately (e.g., in tests)
-            log.warning("No event loop available, emitting operation immediately")
+            # No event loop running - emit immediately (e.g., in sync tests)
+            log.warning("No running event loop, emitting operation immediately")
             if self.emit_callback:
                 self.emit_callback(buffered_event)
 
