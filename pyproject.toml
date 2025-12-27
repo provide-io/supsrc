@@ -149,6 +149,25 @@ line-ending = "auto"
 
 
 # --------------------------------------------------------------------------- #
+# Mypy Configuration                                                          #
+# --------------------------------------------------------------------------- #
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+strict = true
+pretty = true
+show_error_codes = true
+show_column_numbers = true
+warn_unused_ignores = true
+warn_unused_configs = true
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = ["structlog.*", "pytest.*", "pygit2.*", "watchdog.*", "sshconf.*", "aioconsole.*"]
+ignore_missing_imports = true
+
+
+# --------------------------------------------------------------------------- #
 # Pyre Configuration                                                          #
 # --------------------------------------------------------------------------- #
 [tool.pyre]
@@ -238,3 +257,10 @@ title = "Supsrc Coverage Report"
 
 [tool.coverage.xml]
 output = "coverage.xml"
+
+
+# --------------------------------------------------------------------------- #
+# Bandit Security Configuration                                               #
+# --------------------------------------------------------------------------- #
+[tool.bandit]
+exclude_dirs = [".venv", "tests", "workenv"]
