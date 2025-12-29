@@ -130,6 +130,7 @@ ignore = [
 ]
 # Example: ignore specific errors in specific files if necessary
 #[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S110", "S311", "PLR0124"]
 #"tests/*" = ["T201"] # Allow print in tests
 
 # Auto-fixable rules
