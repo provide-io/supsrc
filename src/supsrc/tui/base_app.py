@@ -27,5 +27,4 @@ class TuiAppBase(
     """Base TUI application class combining all handler mixins."""
 
 
-
 # 🔼⚙️🔚

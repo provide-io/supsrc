@@ -8,8 +8,8 @@
 import asyncio
 from pathlib import Path
 
-import pytest
 from provide.testkit.mocking import Mock
+import pytest
 from textual.worker import Worker, WorkerState
 
 pytestmark = pytest.mark.skip(reason="TUI in active development")

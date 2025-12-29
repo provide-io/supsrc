@@ -7,8 +7,8 @@
 
 from __future__ import annotations
 
-import pytest
 from provide.testkit.mocking import AsyncMock, MagicMock, patch
+import pytest
 
 from supsrc.config import LLMConfig, RepositoryConfig, SupsrcConfig
 from supsrc.protocols import RepoStatusResult

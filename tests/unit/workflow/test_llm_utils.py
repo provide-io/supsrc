@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import os
 
-import pytest
 from attrs import evolve
 from provide.testkit.mocking import MagicMock, patch
+import pytest
 
 from supsrc.config import LLMConfig
 from supsrc.runtime.workflow.llm_utils import LLMProviderManager

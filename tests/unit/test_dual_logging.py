@@ -6,8 +6,8 @@
 """Tests for the dual logging functionality (EventCollector + JSONEventLogger)."""
 
 import json
-import tempfile
 from pathlib import Path
+import tempfile
 
 import pytest
 

@@ -8,11 +8,11 @@
 from __future__ import annotations
 
 import asyncio
-import tempfile
 from pathlib import Path
+import tempfile
 
-import pytest
 from provide.testkit.mocking import Mock
+import pytest
 
 from supsrc.events.buffer import EventBuffer
 from supsrc.events.monitor import FileChangeEvent

@@ -8,8 +8,8 @@
 import asyncio
 from pathlib import Path
 
-import pytest
 from provide.testkit.mocking import Mock, PropertyMock, patch
+import pytest
 
 from supsrc.state import RepositoryState
 

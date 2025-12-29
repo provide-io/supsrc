@@ -10,8 +10,8 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-import pytest
 from provide.testkit.mocking import AsyncMock, patch
+import pytest
 
 from supsrc.runtime.workflow.test_runner import TestRunner
 
