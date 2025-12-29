@@ -103,35 +103,30 @@ line-length = 111
 target-version = "py311" # Match requires-python lower bound
 
 [tool.ruff.lint]
-# See https://docs.astral.sh/ruff/rules/ for rule codes
-select = [
-    "E",  # pycodestyle errors
-    "F",  # Pyflakes
-    "W",  # pycodestyle warnings
-    "I",  # isort
-    "UP", # pyupgrade
-    "B",  # flake8-bugbear
-    "C4", # flake8-comprehensions
-    "N",  # pep8-naming
-    "A",  # flake8-builtins
-    "SIM", # flake8-simplify
-    "TID", # flake8-tidy-imports
-    "T20", # flake8-print
-    "PT", # flake8-pytest-style
-    "Q", # flake8-quotes
-    "RUF", # Ruff-specific rules
-]
+select = ["E", "F", "W", "I", "UP", "ANN", "B", "BLE", "C90", "PIE", "PLR", "S", "SIM", "PTH", "RUF"]
 ignore = [
-    "B008", # Function call argument default is mutable
-    "B905", # `zip()` without `strict=`
-    "E501",
-    "E701",
-    "E702",
+    "ANN401",   # any-type (too restrictive)
+    "BLE001",   # blind-except (too restrictive for cleanup patterns)
+    "B008",     # function-call-in-default-argument (Click uses this pattern)
+    "E501",     # line-too-long (handled by formatter)
+    "S101",     # assert (valid in tests)
+    "S104",     # binding-to-all-interfaces (intentional for servers)
+    "S105",     # hardcoded-password-string (false positive for variable names)
+    "S108",     # hardcoded-temp-file (/tmp is fine for our use cases)
+    "S110",     # try-except-pass (legitimate for cleanup)
+    "S310",     # suspicious-url-open-for-protocol (URLs are controlled)
+    "S311",     # random (not for crypto)
+    "S603",     # subprocess-without-shell-equals-true (trusted input)
+    "S607",     # start-process-with-partial-path (trusted executables)
+    "PLR0911",  # too-many-return-statements (refactor later)
+    "PLR0912",  # too-many-branches (refactor later)
+    "PLR0913",  # too-many-arguments (common in config classes)
+    "PLR0915",  # too-many-statements (refactor later)
+    "PLR2004",  # magic-value-comparison (too noisy)
 ]
-# Example: ignore specific errors in specific files if necessary
-#[tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S110", "S311", "PLR0124"]
-#"tests/*" = ["T201"] # Allow print in tests
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PLR0124"]
 
 # Auto-fixable rules
 fixable = ["ALL"]
