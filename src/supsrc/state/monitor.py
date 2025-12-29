@@ -8,8 +8,8 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 from collections.abc import Callable
+import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 

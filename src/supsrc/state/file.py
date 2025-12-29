@@ -7,8 +7,8 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
+import tempfile
 from typing import TYPE_CHECKING
 
 from provide.foundation.file import read_json, write_json

@@ -105,9 +105,16 @@ target-version = "py311" # Match requires-python lower bound
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "ANN", "B", "BLE", "C90", "PIE", "PLR", "S", "SIM", "PTH", "RUF"]
 ignore = [
+    "ANN001",   # missing-type-function-argument (legacy code)
+    "ANN002",   # missing-type-args (legacy code)
+    "ANN003",   # missing-type-kwargs (legacy code)
+    "ANN201",   # missing-return-type-undocumented-public-function (legacy code)
+    "ANN202",   # missing-return-type-private-function (legacy code)
+    "ANN204",   # missing-return-type-special-method (legacy code)
     "ANN401",   # any-type (too restrictive)
     "BLE001",   # blind-except (too restrictive for cleanup patterns)
     "B008",     # function-call-in-default-argument (Click uses this pattern)
+    "C901",     # too-complex (refactor later)
     "E501",     # line-too-long (handled by formatter)
     "S101",     # assert (valid in tests)
     "S104",     # binding-to-all-interfaces (intentional for servers)
@@ -118,25 +125,22 @@ ignore = [
     "S311",     # random (not for crypto)
     "S603",     # subprocess-without-shell-equals-true (trusted input)
     "S607",     # start-process-with-partial-path (trusted executables)
+    "PIE810",   # single-starts-ends-with (style preference)
     "PLR0911",  # too-many-return-statements (refactor later)
     "PLR0912",  # too-many-branches (refactor later)
     "PLR0913",  # too-many-arguments (common in config classes)
     "PLR0915",  # too-many-statements (refactor later)
     "PLR2004",  # magic-value-comparison (too noisy)
+    "PTH123",   # builtin-open (legacy code)
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["PLR0124"]
 
-# Auto-fixable rules
-fixable = ["ALL"]
-unfixable = []
-
-exclude = [
-    ".bzr", ".direnv", ".eggs", ".git", ".hg", ".mypy_cache", ".nox", ".pants.d",
-    ".pyre", ".ruff_cache", ".svn", ".tox", ".venv", "__pypackages__", "_build",
-    "buck-out", "build", "dist", "node_modules", "venv",
-]
+[tool.ruff.lint.isort]
+known-first-party = ["supsrc", "tests"]
+force-sort-within-sections = true
+combine-as-imports = true
 
 [tool.ruff.format]
 quote-style = "double"

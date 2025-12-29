@@ -10,11 +10,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import pygit2
 from provide.foundation.logger import get_logger
 
 # Add Foundation resilience patterns for Git operations
 from provide.foundation.resilience import BackoffStrategy, RetryPolicy, retry
+import pygit2
 
 from supsrc.config import GlobalConfig
 from supsrc.engines.git.auth import GitAuthHandler

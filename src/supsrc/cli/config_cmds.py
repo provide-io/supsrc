@@ -28,7 +28,6 @@ log: StructLogger = get_logger(__name__)
 @click.group(name="config")
 def config_cli() -> None:
     """Commands for inspecting and validating configuration."""
-    pass
 
 
 @config_cli.command(name="show")
