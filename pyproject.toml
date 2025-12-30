@@ -47,7 +47,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/provide-io/supsrc"
+Homepage = "https://foundry.provide.io/supsrc/"
+Documentation = "https://foundry.provide.io/supsrc/"
 Repository = "https://github.com/provide-io/supsrc"
 Issues = "https://github.com/provide-io/supsrc/issues"
 
