@@ -13,9 +13,9 @@ import importlib
 import io
 import logging
 import os
+from pathlib import Path
 import signal
 import sys
-from pathlib import Path
 from typing import Protocol, cast
 
 import click
@@ -62,11 +62,9 @@ class _NullIO(io.TextIOWrapper):
 
     def writelines(self, lines: list[str]) -> None:
         """Discard all writes."""
-        pass
 
     def flush(self) -> None:
         """No-op flush."""
-        pass
 
     def close(self) -> None:
         """Close the underlying /dev/null handle."""
@@ -136,9 +134,9 @@ def _setup_tui_logging(log_file_path: Path) -> logging.FileHandler:
     """
     import json
 
-    import structlog
     from attrs import evolve
     from provide.foundation import LoggingConfig, TelemetryConfig, get_hub
+    import structlog
 
     # Ensure log directory exists
     log_file_path.parent.mkdir(parents=True, exist_ok=True)

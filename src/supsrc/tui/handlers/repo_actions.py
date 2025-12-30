@@ -39,11 +39,9 @@ class RepoActionHandlerMixin:
 
     def action_hide_detail_pane(self) -> None:
         """Legacy action - no longer used in simplified layout."""
-        pass
 
     def action_refresh_details(self) -> None:
         """Legacy action - no longer used in simplified layout."""
-        pass
 
     def _get_selected_repo_id(self) -> str | None:
         """Helper to get the ID of the currently selected repository."""

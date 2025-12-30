@@ -8,8 +8,8 @@ Properly dogfoods provide-foundation's CLI framework."""
 
 from __future__ import annotations
 
-import logging
 from importlib.metadata import PackageNotFoundError, version
+import logging
 from pathlib import Path
 
 import click

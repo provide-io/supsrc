@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import sys
 from pathlib import Path
+import sys
 from typing import Any, ClassVar
 
 from provide.foundation.logger import get_logger

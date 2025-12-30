@@ -99,13 +99,12 @@ class FilePathFormatter:
             # Show individual file names
             names = [p.name for p in file_paths]
             return ", ".join(names)
+        # Show count and common prefix or directory
+        elif common_prefix and len(common_prefix) > 1:
+            common_dir = Path(common_prefix).name or Path(common_prefix).parent.name
+            return f"{len(file_paths)} files in {common_dir}/"
         else:
-            # Show count and common prefix or directory
-            if common_prefix and len(common_prefix) > 1:
-                common_dir = Path(common_prefix).name or Path(common_prefix).parent.name
-                return f"{len(file_paths)} files in {common_dir}/"
-            else:
-                return f"{len(file_paths)} files"
+            return f"{len(file_paths)} files"
 
     @staticmethod
     def format_event_details_legacy(event, file_paths: list[Path], event_count: int) -> tuple[str, str]:
