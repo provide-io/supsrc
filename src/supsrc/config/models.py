@@ -5,9 +5,9 @@
 
 """Supsrc configuration using Foundation's config system."""
 
-import logging
 from collections.abc import Mapping
 from datetime import timedelta
+import logging
 from pathlib import Path
 from typing import Any, TypeAlias
 

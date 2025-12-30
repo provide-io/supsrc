@@ -10,9 +10,9 @@ from datetime import UTC, datetime
 from enum import Enum, auto
 from typing import Any
 
-import structlog
 from attrs import field, mutable
 from provide.foundation.logger import get_logger
+import structlog
 
 # Logger specific to state management
 log: structlog.stdlib.BoundLogger = get_logger(__name__)

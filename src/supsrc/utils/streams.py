@@ -26,7 +26,6 @@ class NoOpStream:
 
     def flush(self) -> None:
         """No-op flush operation."""
-        pass
 
     def fileno(self) -> int:
         """Raise UnsupportedOperation as NoOpStream has no file descriptor."""
@@ -50,7 +49,6 @@ class NoOpStream:
 
     def close(self) -> None:
         """No-op close operation."""
-        pass
 
     def closed(self) -> bool:
         """Return False as NoOpStream is always open."""
@@ -62,7 +60,6 @@ class NoOpStream:
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit."""
-        pass
 
 
 # 🔼⚙️🔚

@@ -7,12 +7,12 @@
 
 from __future__ import annotations
 
+from collections import deque
+from datetime import datetime
 import io
 import logging
 import re
 import sys
-from collections import deque
-from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar
 
 from textual.widgets import RichLog
