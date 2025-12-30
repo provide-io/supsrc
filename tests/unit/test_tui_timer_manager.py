@@ -5,8 +5,8 @@
 
 """Tests for the TimerManager functionality."""
 
-import pytest
 from provide.testkit.mocking import Mock, PropertyMock
+import pytest
 
 pytestmark = pytest.mark.skip(reason="TUI in active development")
 from supsrc.tui.app import TimerManager  # noqa: E402

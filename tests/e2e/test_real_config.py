@@ -14,8 +14,8 @@ import asyncio
 import logging
 from pathlib import Path
 
-import pytest
 from provide.testkit.mocking import Mock
+import pytest
 
 from supsrc.config import load_config
 from supsrc.tui.app import SupsrcTuiApp

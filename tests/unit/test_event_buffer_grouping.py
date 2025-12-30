@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from provide.testkit.mocking import Mock
+import pytest
 
 from supsrc.events.buffer import BufferedFileChangeEvent
 from supsrc.events.buffer.converters import create_single_event_group

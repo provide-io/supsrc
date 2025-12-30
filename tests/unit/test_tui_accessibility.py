@@ -8,8 +8,8 @@
 import asyncio
 from pathlib import Path
 
-import pytest
 from provide.testkit.mocking import Mock
+import pytest
 
 pytestmark = pytest.mark.skip(reason="TUI in active development")
 from supsrc.tui.app import SupsrcTuiApp  # noqa: E402

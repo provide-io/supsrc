@@ -5,8 +5,8 @@
 
 """Comprehensive tests for the Git engine implementation."""
 
-import subprocess
 from pathlib import Path
+import subprocess
 
 import pygit2
 import pytest

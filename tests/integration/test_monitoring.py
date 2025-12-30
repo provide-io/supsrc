@@ -6,13 +6,13 @@
 """Integration tests for the complete monitoring system."""
 
 import asyncio
+from pathlib import Path
 import shutil
 import subprocess
 import tempfile
-from pathlib import Path
 
-import pytest
 from provide.testkit.mocking import Mock
+import pytest
 
 # Correctly import dependencies for the test fix
 from supsrc.config import load_config

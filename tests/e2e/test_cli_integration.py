@@ -10,12 +10,12 @@ process utilities to test real-world usage scenarios from the command line."""
 
 from __future__ import annotations
 
+from pathlib import Path
 import sys
 import tempfile
-from pathlib import Path
 
-import pytest
 from provide.foundation.process import run
+import pytest
 
 from tests.helpers.config_testing import real_config_path, with_parent_cwd
 

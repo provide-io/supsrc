@@ -6,11 +6,11 @@
 """Direct test of hot reload functionality."""
 
 import asyncio
+from pathlib import Path
 
 # Ensure we can import supsrc
 import sys
 import tempfile
-from pathlib import Path
 
 from provide.testkit.mocking import AsyncMock, MagicMock
 

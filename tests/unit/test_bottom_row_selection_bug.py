@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import asyncio
 
-import pytest
 from provide.testkit.mocking import Mock
+import pytest
 from textual.widgets import DataTable
 
 from supsrc.tui.app import SupsrcTuiApp

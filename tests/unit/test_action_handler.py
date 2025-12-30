@@ -5,8 +5,8 @@
 
 """Unit tests for the ActionHandler component."""
 
-import pytest
 from provide.testkit.mocking import AsyncMock, MagicMock
+import pytest
 
 from supsrc.config import SupsrcConfig
 from supsrc.protocols import CommitResult, PushResult, RepoStatusResult, StageResult

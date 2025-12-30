@@ -13,8 +13,8 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-import pytest
 from provide.testkit.mocking import AsyncMock, Mock
+import pytest
 from textual.widgets import DataTable, TabbedContent
 
 from supsrc.state import RepositoryState

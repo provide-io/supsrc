@@ -13,36 +13,29 @@ class SupsrcError(FoundationError):
     """Base class for all supsrc application specific errors."""
 
 
-
 # Configuration exceptions - these now inherit from Foundation's config errors
 class ConfigurationError(BaseConfigurationError, SupsrcError):
     """Configuration-related errors using Foundation's error system."""
-
 
 
 class ConfigFileNotFoundError(ConfigurationError, FileNotFoundError):
     """Configuration file not found."""
 
 
-
 class ConfigParsingError(ConfigurationError):
     """Configuration file parsing errors."""
-
 
 
 class ConfigValidationError(ConfigurationError):
     """Configuration validation errors."""
 
 
-
 class PathValidationError(ConfigValidationError):
     """Path validation errors."""
 
 
-
 class DurationValidationError(ConfigValidationError):
     """Duration validation errors."""
-
 
 
 # Monitoring exceptions
@@ -50,10 +43,8 @@ class MonitoringError(SupsrcError):
     """Base class for monitoring-related errors."""
 
 
-
 class MonitoringSetupError(MonitoringError):
     """Monitoring setup errors."""
-
 
 
 # Export all exceptions for backward compatibility
