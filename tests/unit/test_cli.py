@@ -5,13 +5,13 @@
 
 """Comprehensive tests for CLI functionality."""
 
+from pathlib import Path
 import subprocess
 import tempfile
-from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
 from provide.testkit.mocking import patch
+import pytest
 
 from supsrc.cli.main import cli
 

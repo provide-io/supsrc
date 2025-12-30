@@ -8,8 +8,8 @@
 import asyncio
 from pathlib import Path
 
-import pytest
 from provide.testkit.mocking import AsyncMock, MagicMock, patch
+import pytest
 
 from supsrc.config import SupsrcConfig
 from supsrc.engines.git import GitEngine
