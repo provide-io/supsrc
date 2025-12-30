@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import asyncio
 
-import pytest
 from provide.testkit.mocking import AsyncMock, Mock
+import pytest
 
 from supsrc.config import GlobalConfig, SupsrcConfig
 from supsrc.config.defaults import (

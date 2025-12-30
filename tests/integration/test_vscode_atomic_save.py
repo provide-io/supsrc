@@ -12,11 +12,11 @@ file path, not the temporary file path."""
 from __future__ import annotations
 
 import asyncio
-import uuid
 from pathlib import Path
+import uuid
 
-import pytest
 from provide.testkit.mocking import Mock
+import pytest
 
 from supsrc.events.buffer import EventBuffer
 from supsrc.events.monitor import FileChangeEvent

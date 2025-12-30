@@ -7,8 +7,8 @@
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from provide.testkit.mocking import Mock
+import pytest
 
 from supsrc.config import (
     InactivityRuleConfig,

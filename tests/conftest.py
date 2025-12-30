@@ -8,13 +8,13 @@
 from __future__ import annotations
 
 import asyncio
-import shutil
-import subprocess
 from datetime import timedelta
 from pathlib import Path
+import shutil
+import subprocess
 
-import pytest
 from provide.testkit.mocking import Mock
+import pytest
 
 from supsrc.config import (
     GlobalConfig,
