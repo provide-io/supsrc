@@ -12,8 +12,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import pygit2
 from provide.foundation.logger import get_logger
+import pygit2
 
 log = get_logger(__name__)
 

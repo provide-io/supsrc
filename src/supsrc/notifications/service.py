@@ -8,10 +8,10 @@
 from __future__ import annotations
 
 import asyncio
+from enum import Enum, auto
 import shutil
 import subprocess
 import sys
-from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 from provide.foundation.logger import get_logger

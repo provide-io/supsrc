@@ -7,9 +7,9 @@
 import asyncio
 import contextlib
 import logging
+from pathlib import Path
 import sys
 import tempfile
-from pathlib import Path
 
 import click
 from provide.foundation.cli.decorators import logging_options

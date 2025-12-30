@@ -7,12 +7,12 @@
 
 from __future__ import annotations
 
-import getpass
 from collections.abc import Callable
+import getpass
 from typing import TYPE_CHECKING, Any
 
-import pygit2
 from provide.foundation.logger import get_logger
+import pygit2
 
 if TYPE_CHECKING:
     pass
