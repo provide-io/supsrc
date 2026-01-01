@@ -36,8 +36,10 @@ class TestMainCLI:
         result = runner.invoke(cli, ["--version"])
 
         assert result.exit_code == 0
-        # Check for version from pyproject.toml
-        assert "0.2.0" in result.output
+        # Check for version from VERSION file
+        version_file = Path(__file__).parent.parent.parent / "VERSION"
+        expected_version = version_file.read_text().strip()
+        assert expected_version in result.output
 
     def test_global_log_level_option(self) -> None:
         """Test global log level option."""
