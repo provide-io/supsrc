@@ -87,7 +87,7 @@ SupSrc includes an optional interactive Terminal UI (TUI) for real-time monitori
 
 ```bash
 # Install with TUI support
-pip install "supsrc[tui]"
+uv add supsrc[tui]
 
 # Run with TUI
 supsrc sui
@@ -103,7 +103,7 @@ supsrc sui
 **Without TUI:**
 ```bash
 # Headless monitoring mode (no TUI dependencies)
-pip install supsrc
+uv tool install supsrc
 supsrc watch
 ```
 
@@ -360,7 +360,7 @@ If you installed without TUI support:
 
 ```bash
 # Install TUI dependencies
-pip install "supsrc[tui]"
+uv add supsrc[tui]
 
 # Or use headless mode
 supsrc watch  # Instead of 'supsrc sui'

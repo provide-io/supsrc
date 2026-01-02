@@ -24,7 +24,7 @@ SupSrc provides:
 <div class="termy">
 
 ```console
-$ pip install supsrc
+$ uv tool install supsrc
 // Installing supsrc...
 Successfully installed supsrc
 
