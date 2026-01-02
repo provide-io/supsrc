@@ -43,7 +43,7 @@ If you're integrating supsrc's functionality into your project:
 
 **Using uv:**
 ```bash
-uv add supsrc
+uv tool install supsrc
 ```
 
 **In your `pyproject.toml`:**
@@ -87,7 +87,7 @@ SupSrc includes an optional interactive Terminal UI (TUI) for real-time monitori
 
 ```bash
 # Install with TUI support
-uv add supsrc[tui]
+uv tool install supsrc[tui]
 
 # Run with TUI
 supsrc sui
@@ -360,7 +360,7 @@ If you installed without TUI support:
 
 ```bash
 # Install TUI dependencies
-uv add supsrc[tui]
+uv tool install supsrc[tui]
 
 # Or use headless mode
 supsrc watch  # Instead of 'supsrc sui'
