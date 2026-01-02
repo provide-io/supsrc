@@ -28,21 +28,13 @@ uv tool install supsrc
 uv tool install "supsrc[tui]"
 ```
 
-**Using pipx (Alternative):**
+**Using uv:**
 ```bash
 # Install as isolated CLI tool
-pipx install supsrc
+uv tool install supsrc
 
 # With Terminal UI support
-pipx install "supsrc[tui]"
-```
-
-**Using pip:**
-```bash
-pip install supsrc
-
-# With Terminal UI support
-pip install "supsrc[tui]"
+uv tool install "supsrc[tui]"
 ```
 
 ### As a Library Dependency
