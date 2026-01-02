@@ -1,4 +1,4 @@
-# 🔼⚙️ `supsrc`
+# Supsrc
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -6,17 +6,11 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![CI](https://github.com/provide-io/supsrc/actions/workflows/ci.yml/badge.svg)](https://github.com/provide-io/supsrc/actions)
 
-**Keep your work safe, effortlessly.**
+**Automated Git commit/push utility based on filesystem events and rules**
 
-Automated Git commit/push utility based on filesystem events and rules.
+Never forget to commit again! supsrc watches your repositories for changes and automatically stages, commits, and pushes them according to rules you define. Perfect for frequent checkpointing, synchronizing work-in-progress, or ensuring volatile experiments are saved.
 
----
-
-**Never forget to commit again!** `supsrc` watches your specified repositories for changes and automatically stages, commits, and (optionally) pushes them according to rules you define. Perfect for frequent checkpointing, synchronizing work-in-progress, or ensuring volatile experiments are saved.
-
-</div>
-
-## ✨ Features
+## ✨ Key Features
 
 *   **📂 Directory Monitoring:** Watches specified repository directories recursively for file changes using `watchdog`.
 *   **📜 Rule-Based Triggers:**
