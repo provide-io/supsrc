@@ -25,6 +25,9 @@ class TestCLIConfigDiscovery:
 
     def test_cli_finds_config_in_parent_dir(self):
         """Test that CLI finds config when run from parent directory."""
+        # Skip if no real config available
+        real_config_path()  # This will skip if config doesn't exist
+
         with with_parent_cwd():
             # Run supsrc config show from parent directory
             result = run(
