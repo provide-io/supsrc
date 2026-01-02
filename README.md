@@ -16,13 +16,6 @@ Automated Git commit/push utility based on filesystem events and rules.
 
 </div>
 
-## 🤔 Why `supsrc`?
-
-*   **Automated Checkpoints:** Working on something complex or experimental? `supsrc` can automatically commit your changes after a period of inactivity or after a certain number of saves, creating a safety net without interrupting your flow.
-*   **Effortless Syncing:** Keep a work-in-progress branch automatically pushed to a remote for backup or collaboration, without manual `git add/commit/push` steps.
-*   **Simple Configuration:** Define your repositories and rules in a clear TOML file.
-*   **Focused:** Designed specifically for the "watch and sync" workflow, aiming to be simpler than custom scripting or more complex backup solutions for this specific task.
-
 ## ✨ Features
 
 *   **📂 Directory Monitoring:** Watches specified repository directories recursively for file changes using `watchdog`.
@@ -41,6 +34,60 @@ Automated Git commit/push utility based on filesystem events and rules.
 *   **📊 Structured Logging:** Detailed logging using `structlog` for observability (JSON or colored console output).
 *   **🖥️ Optional TUI:** An interactive Terminal User Interface (built with `textual`) for monitoring repository status and logs in real-time.
 *   **📟 Tail Mode:** A headless, non-interactive mode for monitoring repositories without terminal control issues (useful for scripts and automation).
+
+## Quick Start
+For a quick start, see [docs/index.md](docs/index.md).
+
+## Documentation
+Documentation lives in [docs/index.md](docs/index.md).
+
+## Development
+Development notes are in [CLAUDE.md](CLAUDE.md).
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to open an issue to report bugs, suggest features, or ask questions. Pull requests are greatly appreciated.
+
+### Development Setup
+
+We use `uv` for development:
+
+```bash
+# Clone the repository
+git clone https://github.com/provide-io/supsrc.git
+cd supsrc
+
+# Install uv if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create virtual environment and install dependencies
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install in development mode with all optional features
+uv pip install -e ".[tui,llm]"
+
+# Install development tools
+uv pip install pytest ruff mypy
+
+# Run tests
+uv run pytest
+
+# Run linting
+uv run ruff check .
+uv run ruff format .
+```
+
+## 📜 License
+
+This project is licensed under the **Apache License 2.0**. See the [LICENSE](LICENSE) file for details. <!-- Ensure LICENSE file exists -->
+
+## 🤔 Why `supsrc`?
+
+*   **Automated Checkpoints:** Working on something complex or experimental? `supsrc` can automatically commit your changes after a period of inactivity or after a certain number of saves, creating a safety net without interrupting your flow.
+*   **Effortless Syncing:** Keep a work-in-progress branch automatically pushed to a remote for backup or collaboration, without manual `git add/commit/push` steps.
+*   **Simple Configuration:** Define your repositories and rules in a clear TOML file.
+*   **Focused:** Designed specifically for the "watch and sync" workflow, aiming to be simpler than custom scripting or more complex backup solutions for this specific task.
 
 ## 🚀 Installation
 
@@ -286,44 +333,6 @@ If installed (`pip install 'supsrc[tui]'`) and run with `supsrc watch`, a termin
 *   A live-updating table showing the status, last change time, save count, and errors for each monitored repository.
 *   A scrolling log view displaying messages from `supsrc`.
 
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to open an issue to report bugs, suggest features, or ask questions. Pull requests are greatly appreciated.
-
-### Development Setup
-
-We use `uv` for development:
-
-```bash
-# Clone the repository
-git clone https://github.com/provide-io/supsrc.git
-cd supsrc
-
-# Install uv if you haven't already
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Create virtual environment and install dependencies
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install in development mode with all optional features
-uv pip install -e ".[tui,llm]"
-
-# Install development tools
-uv pip install pytest ruff mypy
-
-# Run tests
-uv run pytest
-
-# Run linting
-uv run ruff check .
-uv run ruff format .
-```
-
-## 📜 License
-
-This project is licensed under the **Apache License 2.0**. See the [LICENSE](LICENSE) file for details. <!-- Ensure LICENSE file exists -->
 
 ## 🙏 Acknowledgements
 
