@@ -36,7 +36,7 @@ Automated Git commit/push utility based on filesystem events and rules.
 *   **📟 Tail Mode:** A headless, non-interactive mode for monitoring repositories without terminal control issues (useful for scripts and automation).
 
 ## Quick Start
-1. Install: `pip install supsrc`
+1. Install: `uv pip install supsrc`
 2. Read the [Getting Started guide](https://github.com/provide-io/supsrc/blob/main/docs/getting-started/installation.md).
 3. Try the examples in [examples/README.md](https://github.com/provide-io/supsrc/blob/main/examples/README.md).
 
@@ -122,13 +122,13 @@ uv pip install 'supsrc[tui,llm]'
 Ensure you have Python 3.11 or later installed:
 
 ```bash
-pip install supsrc
+uv pip install supsrc
 
 # With TUI support
-pip install 'supsrc[tui]'
+uv pip install 'supsrc[tui]'
 
 # With LLM support
-pip install 'supsrc[llm]'
+uv pip install 'supsrc[llm]'
 ```
 
 ## 💡 Usage
@@ -333,7 +333,7 @@ The Git engine currently supports:
 
 ## 🖥️ Textual TUI (Optional)
 
-If installed (`pip install 'supsrc[tui]'`) and run with `supsrc watch`, a terminal user interface provides:
+If installed (`uv pip install 'supsrc[tui]'`) and run with `supsrc watch`, a terminal user interface provides:
 
 *   A live-updating table showing the status, last change time, save count, and errors for each monitored repository.
 *   A scrolling log view displaying messages from `supsrc`.
