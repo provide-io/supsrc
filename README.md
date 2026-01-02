@@ -36,13 +36,18 @@ Automated Git commit/push utility based on filesystem events and rules.
 *   **📟 Tail Mode:** A headless, non-interactive mode for monitoring repositories without terminal control issues (useful for scripts and automation).
 
 ## Quick Start
-For a quick start, see [docs/index.md](docs/index.md).
+1. Install: `pip install supsrc`
+2. Read the [Getting Started guide](docs/getting-started/index.md).
+3. Try the examples in [examples/README.md](examples/README.md).
 
 ## Documentation
-Documentation lives in [docs/index.md](docs/index.md).
+- [Documentation index](docs/index.md)
+- [API docs](docs/api/)
+- [Examples](examples/README.md)
 
 ## Development
-Development notes are in [CLAUDE.md](CLAUDE.md).
+- See [CLAUDE.md](CLAUDE.md) for local development notes.
+- Run `uv sync --extra dev` to set up the dev environment.
 
 ## 🤝 Contributing
 
