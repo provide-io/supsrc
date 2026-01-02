@@ -37,16 +37,16 @@ Automated Git commit/push utility based on filesystem events and rules.
 
 ## Quick Start
 1. Install: `pip install supsrc`
-2. Read the [Getting Started guide](docs/getting-started/index.md).
-3. Try the examples in [examples/README.md](examples/README.md).
+2. Read the [Getting Started guide](https://github.com/provide-io/supsrc/blob/main/docs/getting-started/index.md).
+3. Try the examples in [examples/README.md](https://github.com/provide-io/supsrc/blob/main/examples/README.md).
 
 ## Documentation
-- [Documentation index](docs/index.md)
-- [API docs](docs/api/)
-- [Examples](examples/README.md)
+- [Documentation index](https://github.com/provide-io/supsrc/blob/main/docs/index.md)
+- [API docs](https://github.com/provide-io/supsrc/tree/main/docs/api)
+- [Examples](https://github.com/provide-io/supsrc/blob/main/examples/README.md)
 
 ## Development
-- See [CLAUDE.md](CLAUDE.md) for local development notes.
+- See [CLAUDE.md](https://github.com/provide-io/supsrc/blob/main/CLAUDE.md) for local development notes.
 - Run `uv sync --extra dev` to set up the dev environment.
 
 ## 🤝 Contributing
@@ -85,7 +85,7 @@ uv run ruff format .
 
 ## 📜 License
 
-This project is licensed under the **Apache License 2.0**. See the [LICENSE](LICENSE) file for details. <!-- Ensure LICENSE file exists -->
+This project is licensed under the **Apache License 2.0**. See the [LICENSE](https://github.com/provide-io/supsrc/blob/main/LICENSE) file for details. <!-- Ensure LICENSE file exists -->
 
 ## 🤔 Why `supsrc`?
 
@@ -350,3 +350,5 @@ If installed (`pip install 'supsrc[tui]'`) and run with `supsrc watch`, a termin
 *   [`click`](https://click.palletsprojects.com/) for the command-line interface.
 *   [`textual`](https://github.com/Textualize/textual) for the optional TUI.
 *   [`pathspec`](https://github.com/cpburnz/python-path-specification) for `.gitignore` handling.
+
+Copyright (c) Provide.io LLC.
