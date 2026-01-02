@@ -351,4 +351,4 @@ If installed (`uv tool install 'supsrc[tui]'`) and run with `supsrc watch`, a te
 *   [`textual`](https://github.com/Textualize/textual) for the optional TUI.
 *   [`pathspec`](https://github.com/cpburnz/python-path-specification) for `.gitignore` handling.
 
-Copyright (c) Provide.io LLC.
+Copyright (c) provide.io LLC.
