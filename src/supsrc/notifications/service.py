@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 from enum import Enum, auto
 import shutil
-import subprocess
+import subprocess  # nosec B404 - subprocess used for desktop notifications
 import sys
 from typing import TYPE_CHECKING
 
