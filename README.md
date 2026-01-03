@@ -40,42 +40,25 @@ Never forget to commit again! supsrc watches your repositories for changes and a
 - [Examples](https://github.com/provide-io/supsrc/blob/main/examples/README.md)
 
 ## Development
-- See [CLAUDE.md](https://github.com/provide-io/supsrc/blob/main/CLAUDE.md) for local development notes.
-- Run `uv sync --extra dev` to set up the dev environment.
+
+### Quick Start
+
+```bash
+# Set up environment
+uv sync
+
+# Run common tasks
+we test           # Run tests
+we lint           # Check code
+we format         # Format code
+we tasks          # See all available commands
+```
+
+See [CLAUDE.md](https://github.com/provide-io/supsrc/blob/main/CLAUDE.md) for detailed development instructions and architecture information.
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to open an issue to report bugs, suggest features, or ask questions. Pull requests are greatly appreciated.
-
-### Development Setup
-
-We use `uv` for development:
-
-```bash
-# Clone the repository
-git clone https://github.com/provide-io/supsrc.git
-cd supsrc
-
-# Install uv if you haven't already
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Create virtual environment and install dependencies
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install in development mode with all optional features
-uv pip install -e ".[tui,llm]"
-
-# Install development tools
-uv add pytest ruff mypy
-
-# Run tests
-uv run pytest
-
-# Run linting
-uv run ruff check .
-uv run ruff format .
-```
 
 ## 📜 License
 
