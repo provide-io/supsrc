@@ -877,7 +877,7 @@ supsrc watch --width=60
 
 ---
 
-## Future Enhancements
+## Exploratory Enhancements
 
 ### Phase 5+ (Optional)
 
