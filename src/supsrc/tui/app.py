@@ -56,7 +56,7 @@ def _cleanup_console_handlers() -> None:
                 if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
                     named_logger.removeHandler(handler)
         except Exception:
-            pass
+            pass  # nosec B110 - intentionally silencing logger cleanup errors
 
 
 class SupsrcTuiApp(TuiAppBase):

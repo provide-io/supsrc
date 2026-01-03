@@ -36,7 +36,7 @@ Automated Git commit/push utility based on filesystem events and rules.
 *   **📟 Tail Mode:** A headless, non-interactive mode for monitoring repositories without terminal control issues (useful for scripts and automation).
 
 ## Quick Start
-1. Install: `pip install supsrc`
+1. Install: `uv tool install supsrc`
 2. Read the [Getting Started guide](https://github.com/provide-io/supsrc/blob/main/docs/getting-started/installation.md).
 3. Try the examples in [examples/README.md](https://github.com/provide-io/supsrc/blob/main/examples/README.md).
 
@@ -73,7 +73,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e ".[tui,llm]"
 
 # Install development tools
-uv pip install pytest ruff mypy
+uv add pytest ruff mypy
 
 # Run tests
 uv run pytest
@@ -105,16 +105,16 @@ This project is licensed under the **Apache License 2.0**. See the [LICENSE](htt
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install supsrc
-uv pip install supsrc
+uv tool install supsrc
 
 # Install with TUI support
-uv pip install 'supsrc[tui]'
+uv tool install 'supsrc[tui]'
 
 # Install with LLM support (Gemini and Ollama)
-uv pip install 'supsrc[llm]'
+uv tool install 'supsrc[llm]'
 
 # Install with all optional features
-uv pip install 'supsrc[tui,llm]'
+uv tool install 'supsrc[tui,llm]'
 ```
 
 ### Using pip
@@ -122,13 +122,13 @@ uv pip install 'supsrc[tui,llm]'
 Ensure you have Python 3.11 or later installed:
 
 ```bash
-pip install supsrc
+uv tool install supsrc
 
 # With TUI support
-pip install 'supsrc[tui]'
+uv tool install 'supsrc[tui]'
 
 # With LLM support
-pip install 'supsrc[llm]'
+uv tool install 'supsrc[llm]'
 ```
 
 ## 💡 Usage
@@ -333,7 +333,7 @@ The Git engine currently supports:
 
 ## 🖥️ Textual TUI (Optional)
 
-If installed (`pip install 'supsrc[tui]'`) and run with `supsrc watch`, a terminal user interface provides:
+If installed (`uv tool install 'supsrc[tui]'`) and run with `supsrc watch`, a terminal user interface provides:
 
 *   A live-updating table showing the status, last change time, save count, and errors for each monitored repository.
 *   A scrolling log view displaying messages from `supsrc`.
@@ -351,4 +351,4 @@ If installed (`pip install 'supsrc[tui]'`) and run with `supsrc watch`, a termin
 *   [`textual`](https://github.com/Textualize/textual) for the optional TUI.
 *   [`pathspec`](https://github.com/cpburnz/python-path-specification) for `.gitignore` handling.
 
-Copyright (c) Provide.io LLC.
+Copyright (c) provide.io LLC.
