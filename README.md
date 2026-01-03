@@ -16,13 +16,6 @@ Automated Git commit/push utility based on filesystem events and rules.
 
 </div>
 
-## 🤔 Why `supsrc`?
-
-*   **Automated Checkpoints:** Working on something complex or experimental? `supsrc` can automatically commit your changes after a period of inactivity or after a certain number of saves, creating a safety net without interrupting your flow.
-*   **Effortless Syncing:** Keep a work-in-progress branch automatically pushed to a remote for backup or collaboration, without manual `git add/commit/push` steps.
-*   **Simple Configuration:** Define your repositories and rules in a clear TOML file.
-*   **Focused:** Designed specifically for the "watch and sync" workflow, aiming to be simpler than custom scripting or more complex backup solutions for this specific task.
-
 ## ✨ Features
 
 *   **📂 Directory Monitoring:** Watches specified repository directories recursively for file changes using `watchdog`.
@@ -41,6 +34,65 @@ Automated Git commit/push utility based on filesystem events and rules.
 *   **📊 Structured Logging:** Detailed logging using `structlog` for observability (JSON or colored console output).
 *   **🖥️ Optional TUI:** An interactive Terminal User Interface (built with `textual`) for monitoring repository status and logs in real-time.
 *   **📟 Tail Mode:** A headless, non-interactive mode for monitoring repositories without terminal control issues (useful for scripts and automation).
+
+## Quick Start
+1. Install: `pip install supsrc`
+2. Read the [Getting Started guide](https://github.com/provide-io/supsrc/blob/main/docs/getting-started/index.md).
+3. Try the examples in [examples/README.md](https://github.com/provide-io/supsrc/blob/main/examples/README.md).
+
+## Documentation
+- [Documentation index](https://github.com/provide-io/supsrc/blob/main/docs/index.md)
+- [API docs](https://github.com/provide-io/supsrc/tree/main/docs/api)
+- [Examples](https://github.com/provide-io/supsrc/blob/main/examples/README.md)
+
+## Development
+- See [CLAUDE.md](https://github.com/provide-io/supsrc/blob/main/CLAUDE.md) for local development notes.
+- Run `uv sync --extra dev` to set up the dev environment.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to open an issue to report bugs, suggest features, or ask questions. Pull requests are greatly appreciated.
+
+### Development Setup
+
+We use `uv` for development:
+
+```bash
+# Clone the repository
+git clone https://github.com/provide-io/supsrc.git
+cd supsrc
+
+# Install uv if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create virtual environment and install dependencies
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install in development mode with all optional features
+uv pip install -e ".[tui,llm]"
+
+# Install development tools
+uv pip install pytest ruff mypy
+
+# Run tests
+uv run pytest
+
+# Run linting
+uv run ruff check .
+uv run ruff format .
+```
+
+## 📜 License
+
+This project is licensed under the **Apache License 2.0**. See the [LICENSE](https://github.com/provide-io/supsrc/blob/main/LICENSE) file for details. <!-- Ensure LICENSE file exists -->
+
+## 🤔 Why `supsrc`?
+
+*   **Automated Checkpoints:** Working on something complex or experimental? `supsrc` can automatically commit your changes after a period of inactivity or after a certain number of saves, creating a safety net without interrupting your flow.
+*   **Effortless Syncing:** Keep a work-in-progress branch automatically pushed to a remote for backup or collaboration, without manual `git add/commit/push` steps.
+*   **Simple Configuration:** Define your repositories and rules in a clear TOML file.
+*   **Focused:** Designed specifically for the "watch and sync" workflow, aiming to be simpler than custom scripting or more complex backup solutions for this specific task.
 
 ## 🚀 Installation
 
@@ -287,44 +339,6 @@ If installed (`pip install 'supsrc[tui]'`) and run with `supsrc watch`, a termin
 *   A scrolling log view displaying messages from `supsrc`.
 
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to open an issue to report bugs, suggest features, or ask questions. Pull requests are greatly appreciated.
-
-### Development Setup
-
-We use `uv` for development:
-
-```bash
-# Clone the repository
-git clone https://github.com/provide-io/supsrc.git
-cd supsrc
-
-# Install uv if you haven't already
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Create virtual environment and install dependencies
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install in development mode with all optional features
-uv pip install -e ".[tui,llm]"
-
-# Install development tools
-uv pip install pytest ruff mypy
-
-# Run tests
-uv run pytest
-
-# Run linting
-uv run ruff check .
-uv run ruff format .
-```
-
-## 📜 License
-
-This project is licensed under the **Apache License 2.0**. See the [LICENSE](LICENSE) file for details. <!-- Ensure LICENSE file exists -->
-
 ## 🙏 Acknowledgements
 
 `supsrc` builds upon several fantastic open-source libraries, including:
@@ -336,3 +350,5 @@ This project is licensed under the **Apache License 2.0**. See the [LICENSE](LIC
 *   [`click`](https://click.palletsprojects.com/) for the command-line interface.
 *   [`textual`](https://github.com/Textualize/textual) for the optional TUI.
 *   [`pathspec`](https://github.com/cpburnz/python-path-specification) for `.gitignore` handling.
+
+Copyright (c) Provide.io LLC.
