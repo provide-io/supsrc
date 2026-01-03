@@ -28,21 +28,13 @@ uv tool install supsrc
 uv tool install "supsrc[tui]"
 ```
 
-**Using pipx (Alternative):**
+**Using uv:**
 ```bash
 # Install as isolated CLI tool
-pipx install supsrc
+uv tool install supsrc
 
 # With Terminal UI support
-pipx install "supsrc[tui]"
-```
-
-**Using pip:**
-```bash
-pip install supsrc
-
-# With Terminal UI support
-pip install "supsrc[tui]"
+uv tool install "supsrc[tui]"
 ```
 
 ### As a Library Dependency
@@ -51,7 +43,7 @@ If you're integrating supsrc's functionality into your project:
 
 **Using uv:**
 ```bash
-uv add supsrc
+uv tool install supsrc
 ```
 
 **In your `pyproject.toml`:**
@@ -95,7 +87,7 @@ SupSrc includes an optional interactive Terminal UI (TUI) for real-time monitori
 
 ```bash
 # Install with TUI support
-pip install "supsrc[tui]"
+uv tool install supsrc[tui]
 
 # Run with TUI
 supsrc sui
@@ -111,7 +103,7 @@ supsrc sui
 **Without TUI:**
 ```bash
 # Headless monitoring mode (no TUI dependencies)
-pip install supsrc
+uv tool install supsrc
 supsrc watch
 ```
 
@@ -368,7 +360,7 @@ If you installed without TUI support:
 
 ```bash
 # Install TUI dependencies
-pip install "supsrc[tui]"
+uv tool install supsrc[tui]
 
 # Or use headless mode
 supsrc watch  # Instead of 'supsrc sui'

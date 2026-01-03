@@ -215,7 +215,7 @@ The provided Security Scanners Guide was reviewed for accuracy against the curre
    - Issue: GHSA-pqhf-p39g-3x64 - ZIP archive parsing differentials
    - Commands:
      ```bash
-     uv pip install --upgrade uv
+     uv curl -LsSf https://astral.sh/uv/install.sh | sh
      # Or reinstall uv via curl
      curl -LsSf https://astral.sh/uv/install.sh | sh
      ```
