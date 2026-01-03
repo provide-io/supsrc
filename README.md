@@ -37,7 +37,7 @@ Automated Git commit/push utility based on filesystem events and rules.
 
 ## Quick Start
 1. Install: `pip install supsrc`
-2. Read the [Getting Started guide](https://github.com/provide-io/supsrc/blob/main/docs/getting-started/index.md).
+2. Read the [Getting Started guide](https://github.com/provide-io/supsrc/blob/main/docs/getting-started/installation.md).
 3. Try the examples in [examples/README.md](https://github.com/provide-io/supsrc/blob/main/examples/README.md).
 
 ## Documentation
