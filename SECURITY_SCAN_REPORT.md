@@ -190,7 +190,7 @@ The provided Security Scanners Guide was reviewed for accuracy against the curre
 
 1. **SecurityScanner (Bandit)** - Fully implemented and working
 
-**Conclusion:** The Security Scanners Guide appears to be documentation for planned features that are not yet implemented in the current release of provide-testkit. However, all underlying tools (bandit, pip-audit, safety, semgrep, gitleaks, trufflehog) are available and functional via CLI.
+**Conclusion:** The Security Scanners Guide appears to be documentation for exploratory features that are not yet implemented in the current release of provide-testkit. However, all underlying tools (bandit, pip-audit, safety, semgrep, gitleaks, trufflehog) are available and functional via CLI.
 
 ---
 
