@@ -266,3 +266,4 @@ output = "coverage.xml"
 # --------------------------------------------------------------------------- #
 [tool.bandit]
 exclude_dirs = [".venv", "tests", "workenv"]
+skips = ["B110", "B404"]  # B110: try/except/pass is intentional; B404: subprocess is needed

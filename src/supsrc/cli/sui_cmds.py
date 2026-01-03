@@ -121,7 +121,7 @@ def _remove_all_console_handlers() -> None:
                 if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
                     named_logger.removeHandler(handler)
         except Exception:
-            pass
+            pass  # nosec B110 - intentionally silencing logger cleanup errors
 
 
 def _setup_tui_logging(log_file_path: Path) -> logging.FileHandler:
@@ -167,7 +167,7 @@ def _setup_tui_logging(log_file_path: Path) -> logging.FileHandler:
 
         register_event_set(SUPSRC_EVENT_SET)
     except Exception:
-        pass
+        pass  # nosec B110 - optional event set registration
 
     # CRITICAL: Force ALL logging to file only - remove console handlers first
     _remove_all_console_handlers()
