@@ -49,7 +49,7 @@ uv run pytest tests/unit/test_orchestrator.py
 uv run pytest tests/unit/test_orchestrator.py::test_specific_function
 
 # Or using wrknv
-we test
+we run test
 ```
 
 ### Running the Application
@@ -83,9 +83,9 @@ uv run ruff format .     # Auto-format code
 uv run pyre check        # Run Pyre type checker
 
 # Or using wrknv
-we format
-we lint
-we typecheck
+we run format
+we run lint
+we run typecheck
 ```
 
 ### Code Style

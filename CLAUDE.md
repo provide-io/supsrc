@@ -280,7 +280,7 @@ The event buffering system demonstrates modular organization:
 - TUI is optional and requires separate installation (`supsrc[tui]`)
 - "import annotations" is okay so I can use the unquoted types.
 - After writing each Python file, run the code quality tools:
-  - If `we` commands available: `we format`, `we lint`, `we typecheck`
+  - If `we` commands available: `we run format`, `we run lint`, `we run typecheck`
   - Otherwise: `ruff format`, `ruff check --fix`, `mypy`
 - never use structlog/logging directly unless I approve it. always use provide-foundation logger using the public API.
 - never use relative imports. only absolute imports always.
