@@ -1,7 +1,7 @@
 # SupSrc Documentation
 
 !!! warning "Pre-release"
-    This documentation covers a pre-release. APIs and features may change, and some documented or roadmap items are exploratory and may change or be removed.
+    This documentation covers a pre-release. APIs and features may change, and some documented items are exploratory and may change or be removed.
 
 
 Welcome to SupSrc - Automated Git workflow and commit management for intelligent source code operations.
