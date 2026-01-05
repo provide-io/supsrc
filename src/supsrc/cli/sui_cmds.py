@@ -264,7 +264,7 @@ def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
             "Error: The 'sui' command requires the 'textual' library, provided by the 'tui' extra.",
             err=True,
         )
-        click.echo("Hint: pip install 'supsrc[tui]' or uv pip install 'supsrc[tui]'", err=True)
+        click.echo("Hint: uv add 'supsrc[tui]'", err=True)
         ctx.exit(1)
         return
 
