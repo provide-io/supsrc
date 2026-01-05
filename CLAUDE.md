@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install dependencies using uv (fast Python package manager)
 uv venv
 source .venv/bin/activate
-uv pip install -e ".[tui]"  # Install in dev mode with TUI support
+uv add --editable ".[tui]"  # Install in dev mode with TUI support
 
 # Setup development environment (comprehensive setup)
 uv sync
