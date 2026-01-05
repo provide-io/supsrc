@@ -28,22 +28,13 @@ uv tool install supsrc
 uv tool install "supsrc[tui]"
 ```
 
-**Using uv:**
-```bash
-# Install as isolated CLI tool
-uv tool install supsrc
-
-# With Terminal UI support
-uv tool install "supsrc[tui]"
-```
-
 ### As a Library Dependency
 
 If you're integrating supsrc's functionality into your project:
 
 **Using uv:**
 ```bash
-uv tool install supsrc
+uv add supsrc
 ```
 
 **In your `pyproject.toml`:**
