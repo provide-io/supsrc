@@ -28,22 +28,13 @@ uv tool install supsrc
 uv tool install "supsrc[tui]"
 ```
 
-**Using uv:**
-```bash
-# Install as isolated CLI tool
-uv tool install supsrc
-
-# With Terminal UI support
-uv tool install "supsrc[tui]"
-```
-
 ### As a Library Dependency
 
 If you're integrating supsrc's functionality into your project:
 
 **Using uv:**
 ```bash
-uv tool install supsrc
+uv add supsrc
 ```
 
 **In your `pyproject.toml`:**
@@ -434,14 +425,13 @@ If you encounter issues:
 
 ### Quick Start
 
-1. **[Quick Start Guide](quick-start/)** - Set up your first monitored repository
-2. **[Configuration Guide](../user-guide/configuration/)** - Learn about all configuration options
-3. **[Rule Types](../user-guide/rules/)** - Understand inactivity, save count, and manual rules
+1. **[Installation Guide](installation.md)** - Set up your first monitored repository
+2. **[Configuration Guide](../configuration.md)** - Learn about all configuration options
+3. **[Rule Types](../configuration.md#rules-explained)** - Understand inactivity, save count, and manual rules
 
 ### Advanced Topics
 
-- **[Event Buffering](../user-guide/buffering/)** - Understanding buffering modes and atomic operation detection
-- **[TUI Interface](../user-guide/tui/)** - Using the interactive Terminal UI
-- **[Development Guide](../development/contributing/)** - Contributing to SupSrc
+- **[API Reference](../api/index.md)** - CLI and configuration reference
+- **[Development Guide](../../CONTRIBUTING.md)** - Contributing to SupSrc
 
-Ready to automate your Git workflow? Start with the [Quick Start Guide](quick-start/)!
+Ready to automate your Git workflow? Start with the [installation guide](installation.md)!
