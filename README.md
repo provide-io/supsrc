@@ -94,20 +94,6 @@ uv tool install 'supsrc[llm]'
 uv tool install 'supsrc[tui,llm]'
 ```
 
-### Using pip
-
-Ensure you have Python 3.11 or later installed:
-
-```bash
-uv tool install supsrc
-
-# With TUI support
-uv tool install 'supsrc[tui]'
-
-# With LLM support
-uv tool install 'supsrc[llm]'
-```
-
 ## 💡 Usage
 
 1.  **Create a Configuration File:** By default, `supsrc` looks for `supsrc.conf` in the current directory. See the [Configuration](#-configuration) section below for details.
