@@ -267,3 +267,16 @@ output = "coverage.xml"
 [tool.bandit]
 exclude_dirs = [".venv", "tests", "workenv"]
 skips = ["B110", "B404"]  # B110: try/except/pass is intentional; B404: subprocess is needed
+
+################################################################################
+# Security Scanning Allowlist
+################################################################################
+
+[tool.security]
+# Paths to exclude from secret scanning (TruffleHog, GitGuardian, Gitleaks)
+# Run: we security generate (via wrknv) to regenerate tool configs
+description = "HTML test reports - intentionally committed"
+allowed_paths = [
+    # Snapshot HTML report with encoded content
+    "snapshot_report.html",
+]
