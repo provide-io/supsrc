@@ -79,7 +79,7 @@ class TestSuiCommand:
 
         assert result.exit_code == 1
         assert "textual" in result.output.lower()
-        assert "install" in result.output.lower()
+        assert "tui" in result.output.lower()  # Check for hint about [tui] extra
 
     def test_sui_with_invalid_config(self) -> None:
         """Test sui command with invalid config path."""
