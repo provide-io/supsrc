@@ -275,8 +275,10 @@ skips = ["B110", "B404"]  # B110: try/except/pass is intentional; B404: subproce
 [tool.security]
 # Paths to exclude from secret scanning (TruffleHog, GitGuardian, Gitleaks)
 # Run: we security generate (via wrknv) to regenerate tool configs
-description = "HTML test reports - intentionally committed"
+description = "HTML test reports and legacy artifacts - intentionally committed"
 allowed_paths = [
     # Snapshot HTML report with encoded content
     "snapshot_report.html",
+    # Legacy test signing keys (in git history)
+    "keys/**",
 ]
