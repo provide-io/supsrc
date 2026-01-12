@@ -1,0 +1,22 @@
+name: ⚙️ Continuous Integration
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  ci:
+    uses: provide-io/ci-tooling/.github/workflows/python-ci.yml@v0
+    with:
+      python-version: '3.11'
+      coverage-threshold: 0
+      run-security: true
+      run-secret-scan: true
+    secrets: inherit
