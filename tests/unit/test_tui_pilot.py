@@ -11,6 +11,8 @@ with it using the Pilot object, providing a "virtual browser" experience."""
 from __future__ import annotations
 
 import asyncio
+import platform
+import sys
 from pathlib import Path
 import platform
 import sys
@@ -18,6 +20,9 @@ import sys
 from provide.testkit.mocking import Mock
 import pytest
 from textual.widgets import DataTable
+
+# Detect darwin_amd64 (macOS Intel) for platform-specific xfail markers
+IS_DARWIN_AMD64 = sys.platform == "darwin" and platform.machine() == "x86_64"
 
 from supsrc.state import RepositoryState
 from supsrc.tui.app import SupsrcTuiApp
