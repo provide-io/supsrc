@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: Copyright (c) 2026 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # Enhanced setup script for supsrc example repositories
 # Usage: ./setup_examples.sh [number_of_repos]
