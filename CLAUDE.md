@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Build and Development Setup
+
 ```bash
 # Install dependencies using uv (fast Python package manager)
 uv venv
@@ -20,6 +21,7 @@ uv sync
 ```
 
 ### Testing
+
 ```bash
 # Run all tests
 uv run pytest
@@ -40,6 +42,7 @@ uv run pytest tests/unit/test_orchestrator.py::test_specific_function
 ```
 
 ### Code Quality
+
 ```bash
 # Linting and formatting (using ruff)
 uv run ruff check .      # Check for linting issues
@@ -50,6 +53,7 @@ uv run pyre check        # Run Pyre type checker
 ```
 
 ### Running the Application
+
 ```bash
 # Start monitoring repositories
 uv run supsrc watch              # Headless mode (non-interactive)
@@ -67,10 +71,12 @@ uv run supsrc watch -c path/to/config.toml  # Use specific config file
 The codebase follows a clean layered architecture with clear separation of concerns:
 
 1. **CLI Layer** (`src/supsrc/cli/`) - Command-line interface and entry points
+
    - Entry point: `main.py:cli()` function
    - Commands: `watch_cmds.py`, `tail_cmds.py`, `config_cmds.py`
 
-2. **Runtime Layer** (`src/supsrc/runtime/`) - Core application orchestration
+1. **Runtime Layer** (`src/supsrc/runtime/`) - Core application orchestration
+
    - `orchestrator.py` - Main coordination logic for file monitoring and Git operations
    - `action_handler.py` - Executes Git actions (stage, commit, push)
    - `event_processor.py` - Processes filesystem events through rule engine
@@ -78,16 +84,19 @@ The codebase follows a clean layered architecture with clear separation of conce
    - `monitoring_coordinator.py` - Filesystem monitoring coordination
    - `tui_interface.py` - Optional Terminal UI integration
 
-3. **Engine Layer** (`src/supsrc/engines/`) - Pluggable repository engines
+1. **Engine Layer** (`src/supsrc/engines/`) - Pluggable repository engines
+
    - Protocol-based design allowing different VCS backends
    - `git/` subdirectory contains modular Git engine implementation
    - Components: `client.py`, `operations.py`, `staging.py`, `status.py`
 
-4. **Configuration Layer** (`src/supsrc/config/`) - Strongly-typed configuration
+1. **Configuration Layer** (`src/supsrc/config/`) - Strongly-typed configuration
+
    - `models.py` - Attrs-based data models for configuration
    - `loader.py` - TOML configuration loading and validation with cattrs
 
-5. **Event System Layer** (`src/supsrc/events/`) - Event processing and buffering
+1. **Event System Layer** (`src/supsrc/events/`) - Event processing and buffering
+
    - `buffer/` - Modular event buffering system with atomic operation detection
      - `core.py` - EventBuffer orchestration (off/simple/smart modes)
      - `grouping.py` - Simple file-based grouping strategy
@@ -97,7 +106,8 @@ The codebase follows a clean layered architecture with clear separation of conce
    - `processor.py` - Event processing orchestrator with rule evaluation
    - `monitor.py` - File change event definitions
 
-6. **Monitoring Layer** (`src/supsrc/monitor/`) - Filesystem event monitoring
+1. **Monitoring Layer** (`src/supsrc/monitor/`) - Filesystem event monitoring
+
    - `service.py` - Watchdog-based file monitoring service
    - `events.py` - Event type definitions
    - `handler.py` - Event handling and routing logic
@@ -113,6 +123,7 @@ The codebase follows a clean layered architecture with clear separation of conce
 - **Structured Logging**: JSON-structured logging via Foundation's logger for observability
 
 ### Core Flow
+
 ```
 File Changes → Watchdog → Event Queue → Event Buffer → Event Processor
                               ↓            (optional)         ↓
@@ -124,16 +135,18 @@ File Changes → Watchdog → Event Queue → Event Buffer → Event Processor
 ```
 
 **Event Flow Details:**
+
 1. Filesystem changes detected by Watchdog
-2. Events queued for processing
-3. Optional buffering with atomic operation detection (smart mode)
-4. Rule evaluation (inactivity/save count triggers)
-5. Git operations (stage → commit → push)
-6. State updates propagated to TUI
+1. Events queued for processing
+1. Optional buffering with atomic operation detection (smart mode)
+1. Rule evaluation (inactivity/save count triggers)
+1. Git operations (stage → commit → push)
+1. State updates propagated to TUI
 
 ### Rule System Architecture
 
 Rules determine when to trigger Git operations:
+
 - **Inactivity Rules**: Trigger after configurable periods of no file changes
 - **Save Count Rules**: Trigger after specified number of save events
 - **Manual Rules**: Disable automatic triggers for external control
@@ -163,12 +176,14 @@ Rules determine when to trigger Git operations:
 Split a file into modules when it contains **multiple independent concerns** that can work separately:
 
 **Indicators for splitting:**
+
 - File has 400+ lines with distinct, unrelated responsibilities
 - Multiple concerns that don't need to coordinate with each other
 - Pure functions or utilities that could be imported independently
 - Different grouping strategies or algorithms that don't share state
 
 **Example: `events/buffer_legacy.py` (546 lines) → Split into:**
+
 - `buffer/core.py` - Main EventBuffer orchestration
 - `buffer/grouping.py` - Simple file-based grouping strategy
 - `buffer/streaming.py` - Foundation OperationDetector integration
@@ -176,6 +191,7 @@ Split a file into modules when it contains **multiple independent concerns** tha
 - `buffer/__init__.py` - Public API re-exports
 
 **Benefits of this split:**
+
 - Each module has single, focused responsibility
 - Easier testing (test grouping logic independently from streaming detection)
 - Clear dependency graph
@@ -186,6 +202,7 @@ Split a file into modules when it contains **multiple independent concerns** tha
 Keep files together when they implement the **orchestrator pattern** with interdependent concerns:
 
 **Indicators for keeping together:**
+
 - Single class coordinating multiple related async operations
 - Methods that must work together in coordinated flow
 - Shared state management across lifecycle
@@ -193,12 +210,14 @@ Keep files together when they implement the **orchestrator pattern** with interd
 - Main coordination logic for subsystem
 
 **Examples of appropriate large files:**
+
 - `runtime/orchestrator.py` (441 lines) - Main watch coordinator
 - `events/processor.py` (443 lines) - Event processing orchestrator
 - `engines/git/base.py` (482 lines) - Git engine coordinator
 - `runtime/repository_manager.py` (432 lines) - Repository lifecycle manager
 
 **Why these stay together:**
+
 - All methods coordinate through shared async state
 - Lifecycle management requires centralized control
 - Breaking apart would create circular dependencies
@@ -209,6 +228,7 @@ Keep files together when they implement the **orchestrator pattern** with interd
 When refactoring, follow these patterns:
 
 1. **Create package directories** for related modules:
+
    ```
    events/buffer/
    ├── __init__.py      # Public API re-exports only
@@ -218,25 +238,29 @@ When refactoring, follow these patterns:
    └── converters.py    # Pure conversion functions
    ```
 
-2. **Public API in `__init__.py`**:
+1. **Public API in `__init__.py`**:
+
    ```python
    from module.core import MainClass
    from module.events import EventType
    __all__ = ["MainClass", "EventType"]
    ```
 
-3. **Update all imports** after refactoring:
+1. **Update all imports** after refactoring:
+
    - Search for old imports: `from old_module import X`
    - Update to new location: `from new_package import X`
    - Use absolute imports always, never relative
 
-4. **Test requirements**:
+1. **Test requirements**:
+
    - All existing tests must pass without modification to test logic
    - May need to update import statements in tests
    - Add tests for new modules if exposing new APIs
    - Verify integration tests still work end-to-end
 
-5. **Async patterns** when splitting:
+1. **Async patterns** when splitting:
+
    - Keep async coordination in orchestrator classes
    - Extract pure, synchronous logic to separate modules
    - Use callbacks for streaming detection (Foundation pattern)
@@ -247,17 +271,20 @@ When refactoring, follow these patterns:
 The event buffering system demonstrates modular organization:
 
 **Components:**
+
 - `EventBuffer` (core.py) - Routes events to appropriate handlers based on mode
 - `group_events_simple()` (grouping.py) - Groups events by file path
 - `StreamingOperationHandler` (streaming.py) - Integrates Foundation's OperationDetector
 - Converter functions (converters.py) - Transform between event types
 
 **Modes:**
+
 - `off` - Pass-through, no buffering
 - `simple` - Basic file-path grouping
 - `smart` - Streaming atomic operation detection via Foundation
 
 **Atomic Save Detection:**
+
 - Uses `provide.foundation.file.operations.OperationDetector`
 - Detects patterns: create temp → write → move (atomic rewrite)
 - Configurable temp file patterns (`.tmp`, `~`, `.swp`, hidden files)
@@ -265,6 +292,7 @@ The event buffering system demonstrates modular organization:
 - Time-window based detection (default: 100ms)
 
 **Testing Patterns:**
+
 - Complete event sequences required (create → modify → move)
 - Wait times must account for: window + post-delay + margin
 - Always call `flush_all()` before assertions in tests

@@ -68,10 +68,10 @@ log_level = "INFO" # DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 The following environment variables can override configuration settings:
 
-*   `SUPSRC_CONF`: Path to the configuration file.
-*   `SUPSRC_LOG_LEVEL`: Sets the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
-*   `SUPSRC_LOG_FILE`: Path to write JSON logs to a file.
-*   `SUPSRC_JSON_LOGS`: Set to `true`, `1`, `yes`, or `on` to output console logs as JSON.
+- `SUPSRC_CONF`: Path to the configuration file.
+- `SUPSRC_LOG_LEVEL`: Sets the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+- `SUPSRC_LOG_FILE`: Path to write JSON logs to a file.
+- `SUPSRC_JSON_LOGS`: Set to `true`, `1`, `yes`, or `on` to output console logs as JSON.
 
 ## LLM Configuration (Optional)
 
@@ -128,20 +128,20 @@ To enable LLM features for a specific repository, add an `[repositories.<repo_id
 
 #### Gemini (`provider = "gemini"`)
 
-*   Uses the Google Gemini API.
-*   Requires an API key. By default, it looks for the key in the `GEMINI_API_KEY` environment variable. You can change the variable name with `api_key_env_var`.
-*   **Setup:**
-    1.  Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-    2.  Set the environment variable: `export GEMINI_API_KEY="your-api-key-here"`
+- Uses the Google Gemini API.
+- Requires an API key. By default, it looks for the key in the `GEMINI_API_KEY` environment variable. You can change the variable name with `api_key_env_var`.
+- **Setup:**
+  1. Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+  1. Set the environment variable: `export GEMINI_API_KEY="your-api-key-here"`
 
 #### Ollama (`provider = "ollama"`)
 
-*   Connects to a local [Ollama](https://ollama.ai/) instance.
-*   Does not require an API key.
-*   **Setup:**
-    1.  Install and run Ollama on your machine.
-    2.  Pull a model you want to use, e.g., `ollama pull llama3`.
-    3.  Set `provider = "ollama"` and `model = "llama3"` (or your chosen model) in the config.
+- Connects to a local [Ollama](https://ollama.ai/) instance.
+- Does not require an API key.
+- **Setup:**
+  1. Install and run Ollama on your machine.
+  1. Pull a model you want to use, e.g., `ollama pull llama3`.
+  1. Set `provider = "ollama"` and `model = "llama3"` (or your chosen model) in the config.
 
 ## Rules Explained
 
@@ -154,6 +154,7 @@ The `[repositories.*.rule]` section defines when `supsrc` should trigger its act
 Triggers when no filesystem changes have been detected in the repository for the duration specified by `period`.
 
 **Configuration:**
+
 ```toml
 [repositories.my-repo.rule]
   type = "supsrc.rules.inactivity"
@@ -161,6 +162,7 @@ Triggers when no filesystem changes have been detected in the repository for the
 ```
 
 **Examples:**
+
 - `"30s"` - 30 seconds
 - `"5m"` - 5 minutes
 - `"1h5m"` - 1 hour and 5 minutes
@@ -172,6 +174,7 @@ Triggers when no filesystem changes have been detected in the repository for the
 Triggers when the number of detected save events reaches the specified `count`. The count resets after a successful action sequence.
 
 **Configuration:**
+
 ```toml
 [repositories.my-repo.rule]
   type = "supsrc.rules.save_count"
@@ -179,6 +182,7 @@ Triggers when the number of detected save events reaches the specified `count`. 
 ```
 
 **Use Cases:**
+
 - Checkpoint every N file modifications
 - Create commits at specific intervals of work
 
@@ -189,6 +193,7 @@ Triggers when the number of detected save events reaches the specified `count`. 
 Disables automatic triggering by `supsrc`. Actions would need to be initiated externally if this rule is used (primarily for testing or advanced scenarios).
 
 **Configuration:**
+
 ```toml
 [repositories.my-repo.rule]
   type = "supsrc.rules.manual"
@@ -205,11 +210,12 @@ Disables automatic triggering by `supsrc`. Actions would need to be initiated ex
 The primary engine for interacting with Git repositories.
 
 **Features:**
-*   Uses the `pygit2` library
-*   Supports status checks
-*   Staging (respecting `.gitignore`)
-*   Committing
-*   Pushing
+
+- Uses the `pygit2` library
+- Supports status checks
+- Staging (respecting `.gitignore`)
+- Committing
+- Pushing
 
 **Configuration Options:**
 
@@ -238,10 +244,12 @@ The Git engine currently supports:
 #### 1. SSH Agent
 
 For SSH-based remote URLs (e.g., `git@github.com:...`):
+
 - `supsrc` will attempt to use `pygit2.KeypairFromAgent` to authenticate via a running SSH agent
 - Ensure your agent is running and the correct key is loaded
 
 **Setup:**
+
 ```bash
 # Start SSH agent
 eval "$(ssh-agent -s)"
@@ -253,11 +261,13 @@ ssh-add ~/.ssh/id_rsa
 #### 2. HTTPS (Environment Variables)
 
 For HTTPS URLs (e.g., `https://github.com/...`):
+
 - `supsrc` will look for the following environment variables:
-    *   `GIT_USERNAME`: Your Git username.
-    *   `GIT_PASSWORD`: Your Git password **or preferably a Personal Access Token (PAT)**.
+  - `GIT_USERNAME`: Your Git username.
+  - `GIT_PASSWORD`: Your Git password **or preferably a Personal Access Token (PAT)**.
 
 **Setup:**
+
 ```bash
 export GIT_USERNAME="your-username"
 export GIT_PASSWORD="your-token-or-password"
@@ -269,10 +279,11 @@ export GIT_PASSWORD="your-token-or-password"
 
 If installed (`uv tool install 'supsrc[tui]'`) and run with `supsrc sui`, a terminal user interface provides:
 
-*   A live-updating table showing the status, last change time, save count, and errors for each monitored repository.
-*   A scrolling log view displaying messages from `supsrc`.
+- A live-updating table showing the status, last change time, save count, and errors for each monitored repository.
+- A scrolling log view displaying messages from `supsrc`.
 
 **Running the TUI:**
+
 ```bash
 # Interactive dashboard
 supsrc sui
@@ -282,6 +293,7 @@ supsrc sui -c /path/to/config.toml
 ```
 
 **TUI Features:**
+
 - Real-time repository status
 - Live log streaming
 - Save count tracking
@@ -301,6 +313,7 @@ supsrc config show -c path/to/config.toml
 ```
 
 This command displays:
+
 - Loaded configuration values
 - Environment variable overrides
 - Repository monitoring settings
@@ -310,9 +323,9 @@ This command displays:
 ## Best Practices
 
 1. **Start with simple rules**: Use inactivity rules with reasonable periods (e.g., 5-10 minutes)
-2. **Test auto_push carefully**: Consider starting with `auto_push = false` until you're confident
-3. **Use descriptive repo_ids**: Name repositories clearly in the configuration
-4. **Leverage commit templates**: Customize commit messages with placeholders
-5. **Monitor logs**: Use DEBUG level logging during setup to troubleshoot
-6. **Secure credentials**: Prefer SSH agent over environment variables for authentication
-7. **Use .gitignore**: Ensure your repositories have proper `.gitignore` files to avoid committing unwanted files
+1. **Test auto_push carefully**: Consider starting with `auto_push = false` until you're confident
+1. **Use descriptive repo_ids**: Name repositories clearly in the configuration
+1. **Leverage commit templates**: Customize commit messages with placeholders
+1. **Monitor logs**: Use DEBUG level logging during setup to troubleshoot
+1. **Secure credentials**: Prefer SSH agent over environment variables for authentication
+1. **Use .gitignore**: Ensure your repositories have proper `.gitignore` files to avoid committing unwanted files

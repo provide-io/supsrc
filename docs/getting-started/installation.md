@@ -4,11 +4,11 @@ Get started with SupSrc, an automated Git workflow and commit management tool th
 
 ## Prerequisites
 
---8<-- ".provide/foundry/docs/_partials/python-requirements.md"
+--8\<-- ".provide/foundry/docs/\_partials/python-requirements.md"
 
---8<-- ".provide/foundry/docs/_partials/uv-installation.md"
+--8\<-- ".provide/foundry/docs/\_partials/uv-installation.md"
 
---8<-- ".provide/foundry/docs/_partials/python-version-setup.md"
+--8\<-- ".provide/foundry/docs/\_partials/python-version-setup.md"
 
 ## Installation Methods
 
@@ -17,6 +17,7 @@ Get started with SupSrc, an automated Git workflow and commit management tool th
 If you want to use supsrc to monitor and automate your Git workflows:
 
 **Using uv (Recommended):**
+
 ```bash
 # Install supsrc globally with uv
 uvx supsrc --help
@@ -33,11 +34,13 @@ uv tool install "supsrc[tui]"
 If you're integrating supsrc's functionality into your project:
 
 **Using uv:**
+
 ```bash
 uv add supsrc
 ```
 
 **In your `pyproject.toml`:**
+
 ```toml
 [project]
 dependencies = [
@@ -66,9 +69,9 @@ uv run supsrc --version
 
 This creates a `.venv/` virtual environment with all dependencies installed.
 
---8<-- ".provide/foundry/docs/_partials/virtual-env-setup.md"
+--8\<-- ".provide/foundry/docs/\_partials/virtual-env-setup.md"
 
---8<-- ".provide/foundry/docs/_partials/platform-specific-macos.md"
+--8\<-- ".provide/foundry/docs/\_partials/platform-specific-macos.md"
 
 ## Optional Features
 
@@ -85,6 +88,7 @@ supsrc sui
 ```
 
 **TUI Features:**
+
 - Real-time event monitoring dashboard
 - Repository status display
 - Interactive controls for pause/resume
@@ -92,6 +96,7 @@ supsrc sui
 - Configuration display
 
 **Without TUI:**
+
 ```bash
 # Headless monitoring mode (no TUI dependencies)
 uv tool install supsrc
@@ -110,6 +115,7 @@ from supsrc.runtime import orchestrator
 ```
 
 **Operation Detection:**
+
 - Atomic save pattern detection (temp file → move)
 - Streaming event processing
 - Debouncing and buffering
@@ -118,14 +124,14 @@ from supsrc.runtime import orchestrator
 
 ### Basic Verification
 
---8<-- ".provide/foundry/docs/_partials/verification-commands.md"
+--8\<-- ".provide/foundry/docs/\_partials/verification-commands.md"
 
-!!! note "Package and Command Names"
-    Replace `{{PACKAGE_NAME}}` with `supsrc` and `{{COMMAND_NAME}}` with `supsrc` in the verification commands above.
+!!! note "Package and Command Names" Replace `{{PACKAGE_NAME}}` with `supsrc` and `{{COMMAND_NAME}}` with `supsrc` in the verification commands above.
 
 ### SupSrc-Specific Verification
 
 **1. Test Core Imports:**
+
 ```python
 import supsrc
 from supsrc.cli import main
@@ -137,6 +143,7 @@ print("Installation successful!")
 ```
 
 **2. Test Configuration Loading:**
+
 ```python
 from supsrc.config.loader import load_config
 from pathlib import Path
@@ -161,6 +168,7 @@ config_path.unlink()  # Clean up
 ```
 
 **3. Test CLI Commands:**
+
 ```bash
 # Display help
 supsrc --help
@@ -173,6 +181,7 @@ supsrc watch --help
 ```
 
 **4. Run Tests:**
+
 ```bash
 # Run all tests (152 test cases)
 uv run pytest
@@ -218,14 +227,14 @@ EOF
 
 **Configuration Options:**
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `log_level` | Logging verbosity (DEBUG, INFO, WARNING) | INFO |
-| `buffer_mode` | Event buffering (off, simple, smart) | smart |
-| `rule_type` | Trigger type (inactivity, save_count, manual) | inactivity |
-| `trigger_seconds` | Inactivity timeout (seconds) | 300 |
-| `trigger_count` | Save count threshold | 10 |
-| `auto_push` | Automatically push commits | false |
+| Option            | Description                                   | Default    |
+| ----------------- | --------------------------------------------- | ---------- |
+| `log_level`       | Logging verbosity (DEBUG, INFO, WARNING)      | INFO       |
+| `buffer_mode`     | Event buffering (off, simple, smart)          | smart      |
+| `rule_type`       | Trigger type (inactivity, save_count, manual) | inactivity |
+| `trigger_seconds` | Inactivity timeout (seconds)                  | 300        |
+| `trigger_count`   | Save count threshold                          | 10         |
+| `auto_push`       | Automatically push commits                    | false      |
 
 ### Environment Variables
 
@@ -244,9 +253,10 @@ supsrc watch
 
 ## Development Workflow
 
---8<-- ".provide/foundry/docs/_partials/testing-setup.md"
+--8\<-- ".provide/foundry/docs/\_partials/testing-setup.md"
 
 **Additional Testing Options:**
+
 ```bash
 # Skip slow tests
 uv run pytest -m "not slow"
@@ -261,6 +271,7 @@ uv run pytest tests/unit/test_orchestrator.py -v
 **Important Testing Note:**
 
 SupSrc uses Foundation's OperationDetector for atomic save detection. Tests require:
+
 - Complete event sequences (create → modify → move)
 - Proper wait times for detection windows
 - Always call `flush_all()` before assertions
@@ -284,9 +295,10 @@ async def test_atomic_detection():
     assert len(groups) == 1
 ```
 
---8<-- ".provide/foundry/docs/_partials/code-quality-setup.md"
+--8\<-- ".provide/foundry/docs/\_partials/code-quality-setup.md"
 
 **Additional Type Checking:**
+
 ```bash
 # Run Pyre (primary type checker for this project)
 pyre check
@@ -341,7 +353,7 @@ supsrc watch
 
 ## Troubleshooting
 
---8<-- ".provide/foundry/docs/_partials/troubleshooting-common.md"
+--8\<-- ".provide/foundry/docs/\_partials/troubleshooting-common.md"
 
 ### SupSrc-Specific Issues
 
@@ -417,17 +429,17 @@ trigger_seconds = 600  # 10 minutes instead of 5
 If you encounter issues:
 
 1. **Check logs** - Run with `SUPSRC_LOG_LEVEL=DEBUG`
-2. **Verify Python version** - Ensure you're using Python 3.11+
-3. **Check configuration** - Validate TOML syntax with `supsrc config show`
-4. **Report issues** - [GitHub Issues](https://github.com/provide-io/supsrc/issues)
+1. **Verify Python version** - Ensure you're using Python 3.11+
+1. **Check configuration** - Validate TOML syntax with `supsrc config show`
+1. **Report issues** - [GitHub Issues](https://github.com/provide-io/supsrc/issues)
 
 ## Next Steps
 
 ### Quick Start
 
 1. **[Installation Guide](installation.md)** - Set up your first monitored repository
-2. **[Configuration Guide](../configuration.md)** - Learn about all configuration options
-3. **[Rule Types](../configuration.md#rules-explained)** - Understand inactivity, save count, and manual rules
+1. **[Configuration Guide](../configuration.md)** - Learn about all configuration options
+1. **[Rule Types](../configuration.md#rules-explained)** - Understand inactivity, save count, and manual rules
 
 ### Advanced Topics
 

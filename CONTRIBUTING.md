@@ -14,12 +14,14 @@ Thank you for your interest in contributing to supsrc! This document provides gu
 ### Development Setup
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/provide-io/supsrc.git
    cd supsrc
    ```
 
-2. Set up the development environment:
+1. Set up the development environment:
+
    ```bash
    uv sync
    ```
@@ -106,30 +108,36 @@ logger.error("Push failed", repo=repo_name, error=str(e))
 The codebase follows a clean layered architecture:
 
 1. **CLI Layer** (`src/supsrc/cli/`)
+
    - Command-line interface and entry points
    - Commands: `watch`, `sui` (TUI), `config`
 
-2. **Runtime Layer** (`src/supsrc/runtime/`)
+1. **Runtime Layer** (`src/supsrc/runtime/`)
+
    - `orchestrator.py` - Main coordination logic
    - `action_handler.py` - Executes Git actions
    - `event_processor.py` - Processes filesystem events
    - `repository_manager.py` - Repository lifecycle management
    - `monitoring_coordinator.py` - Filesystem monitoring coordination
 
-3. **Engine Layer** (`src/supsrc/engines/`)
+1. **Engine Layer** (`src/supsrc/engines/`)
+
    - Protocol-based design for pluggable VCS backends
    - `git/` - Modular Git engine implementation
 
-4. **Configuration Layer** (`src/supsrc/config/`)
+1. **Configuration Layer** (`src/supsrc/config/`)
+
    - `models.py` - Attrs-based configuration data models
    - `loader.py` - TOML configuration loading and validation
 
-5. **Event System Layer** (`src/supsrc/events/`)
+1. **Event System Layer** (`src/supsrc/events/`)
+
    - `buffer/` - Modular event buffering system
    - `collector.py` - Event collection and subscription
    - `processor.py` - Event processing orchestrator
 
-6. **Monitoring Layer** (`src/supsrc/monitor/`)
+1. **Monitoring Layer** (`src/supsrc/monitor/`)
+
    - `service.py` - Watchdog-based file monitoring
    - `events.py` - Event type definitions
    - `handler.py` - Event handling and routing
@@ -188,27 +196,27 @@ supsrc/
 ### Adding a New Rule Type
 
 1. Define the rule protocol in `src/supsrc/engines/protocol.py`
-2. Implement the rule class in `src/supsrc/engines/git/rules.py`
-3. Add configuration support in `src/supsrc/config/models.py`
-4. Update the rule factory in `src/supsrc/runtime/orchestrator.py`
-5. Add tests in `tests/unit/test_rules.py`
-6. Update configuration documentation
+1. Implement the rule class in `src/supsrc/engines/git/rules.py`
+1. Add configuration support in `src/supsrc/config/models.py`
+1. Update the rule factory in `src/supsrc/runtime/orchestrator.py`
+1. Add tests in `tests/unit/test_rules.py`
+1. Update configuration documentation
 
 ### Adding a New Git Operation
 
 1. Implement the operation in `src/supsrc/engines/git/operations.py`
-2. Update the Git engine protocol if needed
-3. Add tests in `tests/integration/test_git_operations.py`
-4. Update the action handler if needed
-5. Document the operation
+1. Update the Git engine protocol if needed
+1. Add tests in `tests/integration/test_git_operations.py`
+1. Update the action handler if needed
+1. Document the operation
 
 ### Modifying the Event System
 
 1. Update event types in `src/supsrc/monitor/events.py`
-2. Modify event processing in `src/supsrc/events/processor.py`
-3. Update event buffering if needed in `src/supsrc/events/buffer/`
-4. Add comprehensive tests for event flow
-5. Update documentation
+1. Modify event processing in `src/supsrc/events/processor.py`
+1. Update event buffering if needed in `src/supsrc/events/buffer/`
+1. Add comprehensive tests for event flow
+1. Update documentation
 
 ## Testing Guidelines
 
@@ -283,10 +291,10 @@ async def process_event(self, event: FileEvent) -> ProcessResult:
 When adding new features or changing APIs:
 
 1. Update relevant docstrings in the code
-2. Update `README.md` for user-facing changes
-3. Update `docs/configuration.md` for configuration changes
-4. Update `docs/index.md` for major features
-5. Add examples in `examples/` directory
+1. Update `README.md` for user-facing changes
+1. Update `docs/configuration.md` for configuration changes
+1. Update `docs/index.md` for major features
+1. Add examples in `examples/` directory
 
 ## Configuration
 
@@ -320,13 +328,15 @@ See `docs/configuration.md` for complete documentation.
 ### Pull Request Process
 
 1. Create a feature branch from `main`:
+
    ```bash
    git checkout -b feature/your-feature-name main
    ```
 
-2. Make your changes following the guidelines
+1. Make your changes following the guidelines
 
-3. Ensure all tests pass and code quality checks pass:
+1. Ensure all tests pass and code quality checks pass:
+
    ```bash
    uv run pytest
    uv run ruff check .
@@ -334,19 +344,22 @@ See `docs/configuration.md` for complete documentation.
    uv run pyre check
    ```
 
-4. Commit your changes:
+1. Commit your changes:
+
    ```bash
    git commit -m "Add feature: description of what was added"
    ```
 
-5. Push to the branch:
+1. Push to the branch:
+
    ```bash
    git push origin feature/your-feature-name
    ```
 
-6. Open a Pull Request
+1. Open a Pull Request
 
-7. Ensure your PR:
+1. Ensure your PR:
+
    - Has a clear title and description
    - References any related issues
    - Includes tests for new functionality
@@ -362,6 +375,7 @@ See `docs/configuration.md` for complete documentation.
 - Reference issues and pull requests when relevant
 
 Examples:
+
 - `Add support for LLM-generated commit messages`
 - `Fix event buffering for atomic file operations`
 - `Update configuration documentation with new rule types`
