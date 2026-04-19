@@ -21,10 +21,10 @@ uv sync
 
 ### Testing
 ```bash
-# Run all tests (152 test cases)
+# Run all tests
 uv run pytest
 
-# Run tests with coverage (target: 85% minimum)
+# Run tests with coverage (gate: pyproject `fail_under` — see [tool.coverage.report])
 uv run pytest --cov
 
 # Run specific test categories
