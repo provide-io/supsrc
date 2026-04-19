@@ -47,9 +47,6 @@ uv run pytest tests/unit/test_orchestrator.py
 
 # Run a specific test
 uv run pytest tests/unit/test_orchestrator.py::test_specific_function
-
-# Or using wrknv
-we run test
 ```
 
 ### Running the Application
@@ -64,10 +61,6 @@ uv run supsrc sui
 # Configuration commands
 uv run supsrc config show                    # Display current configuration
 uv run supsrc watch -c path/to/config.toml  # Use specific config file
-
-# Or using wrknv
-we run watch
-we run sui
 ```
 
 ### Code Quality
@@ -81,11 +74,6 @@ uv run ruff format .     # Auto-format code
 
 # Type checking
 uv run pyre check        # Run Pyre type checker
-
-# Or using wrknv
-we run format
-we run lint
-we run typecheck
 ```
 
 ### Code Style
