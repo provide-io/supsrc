@@ -45,17 +45,20 @@ Use the debug monitor to analyze what's happening:
 ### Scripts
 
 - **`setup_examples.sh`** - Enhanced repository setup script
+
   - Creates configurable number of test repositories
   - Adds realistic Python files, configs, and test data
   - Each repository has different content and structure
 
 - **`test_tui.sh`** - Comprehensive TUI test runner
+
   - Redirects output to prevent terminal corruption
   - Creates detailed log files for analysis
   - Includes file change simulation
   - Configurable timeout and repository count
 
 - **`debug_monitor.sh`** - Interactive debug tool
+
   - Real-time log monitoring with color coding
   - Repository status checking
   - Error analysis and reporting
@@ -64,6 +67,7 @@ Use the debug monitor to analyze what's happening:
 ### Configuration Files
 
 - **`supsrc_test.conf`** - Enhanced test configuration
+
   - Multiple repositories with staggered timers (5s, 7s, 10s, etc.)
   - Debug logging enabled
   - Different commit message templates
@@ -154,10 +158,10 @@ The test runner includes automatic file change simulation:
 ### Debug Monitor Options
 
 1. **Log Analysis** - Shows line counts, errors, warnings for each log file
-2. **Repository Status** - Git status, commit counts, recent changes
-3. **Real-time Monitoring** - Color-coded live log streaming
-4. **Debug Report** - Comprehensive analysis saved to file
-5. **Error Focus** - Shows only recent errors across all logs
+1. **Repository Status** - Git status, commit counts, recent changes
+1. **Real-time Monitoring** - Color-coded live log streaming
+1. **Debug Report** - Comprehensive analysis saved to file
+1. **Error Focus** - Shows only recent errors across all logs
 
 ### Color Coding
 
@@ -171,13 +175,11 @@ The test runner includes automatic file change simulation:
 
 ### Terminal Corruption
 
-**Problem**: Running supsrc TUI directly corrupts the terminal
-**Solution**: Always use `test_tui.sh` which redirects output properly
+**Problem**: Running supsrc TUI directly corrupts the terminal **Solution**: Always use `test_tui.sh` which redirects output properly
 
 ### Cursor Jumping
 
-**Problem**: Cursor jumps when navigating to bottom of repository list
-**Solution**: Use the debug monitor to track state update patterns:
+**Problem**: Cursor jumps when navigating to bottom of repository list **Solution**: Use the debug monitor to track state update patterns:
 
 ```bash
 ./debug_monitor.sh
@@ -187,8 +189,7 @@ The test runner includes automatic file change simulation:
 
 ### Log Analysis
 
-**Problem**: Need to understand what's happening during monitoring
-**Solution**: Use log analysis features:
+**Problem**: Need to understand what's happening during monitoring **Solution**: Use log analysis features:
 
 ```bash
 ./debug_monitor.sh
@@ -244,29 +245,29 @@ tail -f /tmp/manual_test.log
 ### No Repositories Loading
 
 1. Check repository paths exist: `ls /tmp/supsrc-example-repo*`
-2. Verify configuration: `cat supsrc_test.conf`
-3. Check logs for setup errors: `./debug_monitor.sh`
+1. Verify configuration: `cat supsrc_test.conf`
+1. Check logs for setup errors: `./debug_monitor.sh`
 
 ### TUI Not Starting
 
 1. Check Python path and dependencies
-2. Verify configuration file syntax
-3. Check error logs: `./debug_monitor.sh` → option 5
+1. Verify configuration file syntax
+1. Check error logs: `./debug_monitor.sh` → option 5
 
 ### File Changes Not Detected
 
 1. Verify file change simulation is running
-2. Check repository paths in config
-3. Monitor change logs: `tail -f /tmp/supsrc_logs_*/changes.log`
+1. Check repository paths in config
+1. Monitor change logs: `tail -f /tmp/supsrc_logs_*/changes.log`
 
 ## Contributing
 
 When adding new test scenarios or debugging features:
 
 1. Update this README with new functionality
-2. Add clear usage examples
-3. Include troubleshooting information
-4. Test with various repository counts (3, 5, 8, 15)
+1. Add clear usage examples
+1. Include troubleshooting information
+1. Test with various repository counts (3, 5, 8, 15)
 
 ## Tips
 
