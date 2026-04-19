@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 provide.io llc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Baseline pre-commit config — safe set of hooks that validate without
+# surprising rewrites. Ruff is included but NOT with --fix so it only reports.
+# Contributors can opt into auto-fix locally with `pre-commit run ruff-check --args=--fix`.
+#
+# Install:
+#   uv tool install pre-commit
+#   pre-commit install
+#
+# Run manually:
+#   pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.8
+    hooks:
+      - id: ruff-check
+        types_or: [python, pyi]
+      - id: ruff-format
+        types_or: [python, pyi]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1000]
