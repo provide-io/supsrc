@@ -54,13 +54,13 @@ def test_config_reload_event_format_with_path() -> None:
     """Test ConfigReloadEvent formatting with config path."""
     event = ConfigReloadEvent(
         description="Config updated",
-        config_path="/REDACTED_ABS_PATH",
+        config_path="/home/user/.supsrc.toml",
     )
 
     formatted = event.format()
     assert "\U0001f504" in formatted  # COUNTERCLOCKWISE ARROWS
     assert "Configuration reloaded" in formatted
-    assert "/REDACTED_ABS_PATH" in formatted
+    assert "/home/user/.supsrc.toml" in formatted
 
 
 def test_config_reload_event_format_no_path() -> None:

@@ -125,14 +125,14 @@ def test_monitoring_start_event_format() -> None:
     event = MonitoringStartEvent(
         description="Started watching",
         repo_id="web-service",
-        path=Path("/REDACTED_ABS_PATH"),
+        path=Path("/home/user/projects/web-service"),
     )
 
     formatted = event.format()
     assert "\U0001f441\ufe0f" in formatted  # EYE
     assert "Started monitoring" in formatted
     assert "[web-service]" in formatted
-    assert "/REDACTED_ABS_PATH" in formatted
+    assert "/home/user/projects/web-service" in formatted
 
 
 def test_monitoring_stop_event_creation() -> None:

@@ -1,6 +1,4 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2026 provide.io llc. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
 
 # Enhanced TUI test runner with output redirection to prevent terminal corruption
 # Usage: ./test_tui.sh [number_of_repos] [timeout_seconds]

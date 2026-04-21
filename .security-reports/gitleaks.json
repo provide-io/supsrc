@@ -1,0 +1,22 @@
+[
+ {
+  "Description": "Private Key",
+  "StartLine": 1,
+  "EndLine": 3,
+  "StartColumn": 1,
+  "EndColumn": 25,
+  "Match": "REDACTED",
+  "Secret": "REDACTED",
+  "File": "keys/flavor-private.key",
+  "SymlinkFile": "",
+  "Commit": "2b3972ab115d5951d1f7a9db10e93d7d1c04c778",
+  "Entropy": 4.919429,
+  "Author": "Tim",
+  "Email": "code@tim.life",
+  "Date": "2025-11-18T08:05:30Z",
+  "Message": "Initial commit",
+  "Tags": [],
+  "RuleID": "private-key",
+  "Fingerprint": "2b3972ab115d5951d1f7a9db10e93d7d1c04c778:keys/flavor-private.key:private-key:1"
+ }
+]

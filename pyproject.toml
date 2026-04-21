@@ -46,7 +46,7 @@ classifiers = [
 
 # --- Core Dependencies ---
 dependencies = [
-    "provide-foundation[all]",
+    "provide-foundation[all]>=0.4.0",
     "cattrs>=24.1.3",
     "pygit2>=1.18.0",
     "watchdog>=6.0.0",
@@ -65,11 +65,11 @@ Issues = "https://github.com/provide-io/supsrc/issues"
 
 [dependency-groups]
 dev = [
-    "provide-testkit[standard,advanced-testing,build,utils]",
+    "provide-testkit[standard,advanced-testing,build,utils]>=0.4.0",
     "supsrc[tui,llm]",
 ]
 docs = [
-    "provide-testkit[docs]",
+    "provide-testkit[docs]>=0.4.0",
 ]
 
 # --- Optional Features (Extras) ---
@@ -109,12 +109,6 @@ target-version = "py311" # Match requires-python lower bound
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "ANN", "B", "BLE", "C90", "PIE", "PLR", "S", "SIM", "PTH", "RUF"]
 ignore = [
-    "ANN001",   # missing-type-function-argument (legacy code)
-    "ANN002",   # missing-type-args (legacy code)
-    "ANN003",   # missing-type-kwargs (legacy code)
-    "ANN201",   # missing-return-type-undocumented-public-function (legacy code)
-    "ANN202",   # missing-return-type-private-function (legacy code)
-    "ANN204",   # missing-return-type-special-method (legacy code)
     "ANN401",   # any-type (too restrictive)
     "BLE001",   # blind-except (too restrictive for cleanup patterns)
     "B008",     # function-call-in-default-argument (Click uses this pattern)
@@ -170,26 +164,6 @@ disallow_untyped_decorators = false
 [[tool.mypy.overrides]]
 module = ["structlog.*", "pytest.*", "pygit2.*", "watchdog.*", "sshconf.*", "aioconsole.*"]
 ignore_missing_imports = true
-
-
-# --------------------------------------------------------------------------- #
-# Pyre Configuration                                                          #
-# --------------------------------------------------------------------------- #
-[tool.pyre]
-# Location of source code Pyre should analyze
-source_directories = ["src", "tests"]
-# Location of external libraries or stubs
-# search_path = ["stubs", "path/to/library"] # Add paths if needed
-# Can specify python version if different from environment
-# python_version = "3.11"
-# Ignore specific error codes if necessary
-# errors = [
-#     {"code": 16, "paths": ["path/to/specific_file.py"]}, # Example: Ignore Undefined attribute
-# ]
-# Optional: Specify binary location if not in PATH
-# binary = "/path/to/pyre.bin"
-# Optional: Specify typeshed location if custom needed
-# typeshed = "/path/to/typeshed"
 
 
 # --------------------------------------------------------------------------- #

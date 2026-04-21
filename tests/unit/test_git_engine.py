@@ -6,7 +6,7 @@
 """Comprehensive tests for the Git engine implementation."""
 
 from pathlib import Path
-import subprocess
+import subprocess  # nosec
 
 import pygit2
 import pytest
