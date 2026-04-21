@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-import subprocess
+import subprocess  # nosec
 import tempfile
 
 from provide.testkit.mocking import Mock

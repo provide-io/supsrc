@@ -1,6 +1,4 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2026 provide.io llc. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
 
 # Debug monitoring script for supsrc testing
 # Usage: ./debug_monitor.sh [log_directory]

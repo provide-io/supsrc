@@ -1,0 +1,6 @@
+Bandit Security Scan Results
+================================================================================
+Files scanned: 103
+Issues found: 17
+Score: 51.0%
+Status: FAILED

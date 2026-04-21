@@ -35,7 +35,7 @@ supsrc, version 0.1.0
 ```console
 $ supsrc watch
 // Starting repository monitoring...
-✓ Watching: /REDACTED_ABS_PATH
+✓ Watching: /home/user/my-project
 ✓ Auto-commit enabled (after 60s inactivity)
 ✓ Auto-push enabled
 

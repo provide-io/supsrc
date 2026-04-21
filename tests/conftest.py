@@ -11,7 +11,7 @@ import asyncio
 from datetime import timedelta
 from pathlib import Path
 import shutil
-import subprocess
+import subprocess  # nosec
 
 from provide.testkit.mocking import Mock
 import pytest

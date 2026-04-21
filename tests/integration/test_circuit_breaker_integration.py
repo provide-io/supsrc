@@ -284,7 +284,7 @@ class TestCircuitBreakerWithRealGitRepo:
     @pytest.fixture
     def git_repo(self, tmp_path):
         """Create a real git repository for testing."""
-        import subprocess
+        import subprocess  # nosec
 
         repo_path = tmp_path / "test_git_repo"
         repo_path.mkdir()
@@ -348,7 +348,7 @@ class TestCircuitBreakerWithRealGitRepo:
 
     def test_branch_switch_triggers_warning(self, git_repo):
         """Test that switching branches triggers warning."""
-        import subprocess
+        import subprocess  # nosec
 
         from supsrc.services.circuit_breaker import CircuitBreakerService
 
@@ -388,7 +388,7 @@ class TestCircuitBreakerWithRealGitRepo:
 
     def test_branch_switch_with_bulk_changes_triggers_error(self, git_repo):
         """Test branch switch with bulk changes triggers ERROR state."""
-        import subprocess
+        import subprocess  # nosec
 
         from supsrc.services.circuit_breaker import CircuitBreakerService
 
@@ -639,11 +639,6 @@ class TestCircuitBreakerVisibilityTUI:
         """Create a mock repository state."""
         return RepositoryState(repo_id="test-repo")
 
-    @pytest.mark.xfail(
-        reason="TUI-mode stdout routing bug: provide-foundation logger still emits "
-        "to stdout when a TUI mock is present; fix requires a TUI-aware logger sink.",
-        strict=False,
-    )
     @pytest.mark.asyncio
     async def test_bulk_change_logs_in_tui_mode(
         self,

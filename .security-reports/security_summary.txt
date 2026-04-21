@@ -1,0 +1,18 @@
+Security Analysis Report - security
+==================================================
+Status: ❌ FAILED
+Security Score: 51.0%
+Files Scanned: 103
+Total Issues: 17
+
+Severity Breakdown:
+  HIGH: 0
+  MEDIUM: 8
+  LOW: 9
+
+Confidence Breakdown:
+  HIGH: 9
+  MEDIUM: 8
+  LOW: 0
+
+Execution Time: 0.91s

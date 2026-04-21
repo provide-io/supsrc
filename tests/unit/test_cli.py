@@ -6,7 +6,7 @@
 """Comprehensive tests for CLI functionality."""
 
 from pathlib import Path
-import subprocess
+import subprocess  # nosec
 import tempfile
 
 from click.testing import CliRunner
