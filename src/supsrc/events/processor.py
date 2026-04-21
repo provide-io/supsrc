@@ -126,42 +126,34 @@ class EventProcessor:
         message_lines.extend([action_line, footer])
         full_message = "\n".join(message_lines)
 
-        log.debug(
-            "Preparing circuit breaker notification",
-            repo_id=repo_id,
-            is_tui_mode=is_tui_mode,
-            file_count=file_count,
-        )
-
-        # Print to console in headless mode, post to TUI in TUI mode
         if not is_tui_mode:
+            log.debug(
+                "Preparing circuit breaker notification",
+                repo_id=repo_id,
+                is_tui_mode=is_tui_mode,
+                file_count=file_count,
+            )
             # Headless mode: print directly to stdout for visibility
             print(full_message)
             log.debug("Circuit breaker notification printed to console (headless mode)", repo_id=repo_id)
-        else:
-            # TUI mode: log and rely on status update (TUI will show the emoji/status)
-            # We can't print to stdout in TUI mode as it corrupts the display
+
+            # Always log warning for file-based logging (important event)
             log.warning(
-                "Circuit breaker triggered (TUI mode - check status display)",
+                "Circuit breaker triggered",
                 repo_id=repo_id,
                 status=repo_state.status.name,
                 reason=reason,
+                file_count=file_count,
+                bulk_files_sample=list(repo_state.bulk_change_files)[:10] if file_count > 0 else [],
             )
-            log.debug(
-                "Circuit breaker notification sent to TUI status update",
-                repo_id=repo_id,
-                status_emoji=status_emoji,
-            )
-
-        # Always log warning for file-based logging (important event)
-        log.warning(
-            "Circuit breaker triggered",
-            repo_id=repo_id,
-            status=repo_state.status.name,
-            reason=reason,
-            file_count=file_count,
-            bulk_files_sample=list(repo_state.bulk_change_files)[:10] if file_count > 0 else [],
-        )
+        else:
+            # TUI mode: rely on status update (TUI will show the emoji/status)
+            # We can't print to stdout in TUI mode as it corrupts the display
+            if self.tui and hasattr(self.tui, "update_status"):
+                self.tui.update_status(
+                    repo_id=repo_id,
+                    status_emoji=status_emoji,
+                )
 
     def _emit_event(self, event: Any) -> None:
         """Emit event to all available event collectors (TUI and global).

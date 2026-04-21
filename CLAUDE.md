@@ -23,10 +23,10 @@ uv sync
 ### Testing
 
 ```bash
-# Run all tests
+# Run all tests (152 test cases)
 uv run pytest
 
-# Run tests with coverage (gate: pyproject `fail_under` — see [tool.coverage.report])
+# Run tests with coverage (target: 85% minimum)
 uv run pytest --cov
 
 # Run specific test categories
@@ -302,10 +302,13 @@ The event buffering system demonstrates modular organization:
 
 - Requires Python 3.11+ for modern Python features
 - Uses `uv` as the primary package manager for fast dependency resolution
+- Local dependency on `wrknv` package at `../wrknv`
 - Configuration files use TOML format (`supsrc.conf`)
 - Environment variables can override configuration (prefix: `SUPSRC_`)
 - TUI is optional and requires separate installation (`supsrc[tui]`)
 - "import annotations" is okay so I can use the unquoted types.
-- After writing each Python file, run the code quality tools: `ruff format`, `ruff check --fix`, `mypy`
+- After writing each Python file, run the code quality tools:
+  - If `we` commands available: `we run format`, `we run lint`, `we run typecheck`
+  - Otherwise: `ruff format`, `ruff check --fix`, `mypy`
 - never use structlog/logging directly unless I approve it. always use provide-foundation logger using the public API.
 - never use relative imports. only absolute imports always.
