@@ -28,7 +28,7 @@ from supsrc.state.runtime import RepositoryState, RepositoryStatus
 class TestCircuitBreakerConfigLoading:
     """Test that CircuitBreakerConfig loads correctly from TOML files."""
 
-    def test_load_config_with_default_circuit_breaker(self, tmp_path):
+    def test_load_config_with_default_circuit_breaker(self, tmp_path) -> None:
         """Test that default circuit breaker config is used when not specified."""
         config_file = tmp_path / "supsrc.conf"
         config_file.write_text("""
@@ -50,7 +50,7 @@ rule.type = "supsrc.rules.manual"
         assert config.global_config.circuit_breaker.bulk_change_window_ms == 5000
         assert config.global_config.circuit_breaker.branch_change_detection_enabled is True
 
-    def test_load_config_with_custom_circuit_breaker(self, tmp_path):
+    def test_load_config_with_custom_circuit_breaker(self, tmp_path) -> None:
         """Test that custom circuit breaker config is loaded from TOML."""
         config_file = tmp_path / "supsrc.conf"
         config_file.write_text("""
@@ -87,7 +87,7 @@ rule.type = "supsrc.rules.manual"
         assert cb.auto_resume_after_bulk_pause_seconds == 60
         assert cb.require_manual_acknowledgment is True
 
-    def test_load_config_with_partial_circuit_breaker(self, tmp_path):
+    def test_load_config_with_partial_circuit_breaker(self, tmp_path) -> None:
         """Test that partial circuit breaker config merges with defaults."""
         config_file = tmp_path / "supsrc.conf"
         config_file.write_text("""
@@ -112,7 +112,7 @@ rule.type = "supsrc.rules.manual"
         assert cb.bulk_change_window_ms == 5000
         assert cb.branch_change_detection_enabled is True
 
-    def test_load_config_circuit_breaker_disabled_with_zero(self, tmp_path):
+    def test_load_config_circuit_breaker_disabled_with_zero(self, tmp_path) -> None:
         """Test that threshold of 0 properly disables bulk change detection."""
         config_file = tmp_path / "supsrc.conf"
         config_file.write_text("""
@@ -183,7 +183,7 @@ class TestEventProcessorCircuitBreakerIntegration:
         return processor, event_queue, shutdown_event, repo_state, tui, repo_path
 
     @pytest.mark.asyncio
-    async def test_bulk_change_triggers_after_threshold(self, setup_processor):
+    async def test_bulk_change_triggers_after_threshold(self, setup_processor) -> None:
         """Test that circuit breaker triggers after bulk change threshold."""
         processor, event_queue, shutdown_event, repo_state, tui, repo_path = setup_processor
 
@@ -218,7 +218,7 @@ class TestEventProcessorCircuitBreakerIntegration:
         await asyncio.wait_for(processor_task, timeout=2.0)
 
     @pytest.mark.asyncio
-    async def test_events_blocked_after_circuit_breaker_triggers(self, setup_processor):
+    async def test_events_blocked_after_circuit_breaker_triggers(self, setup_processor) -> None:
         """Test that events are blocked after circuit breaker triggers."""
         processor, event_queue, shutdown_event, repo_state, _tui, repo_path = setup_processor
 
@@ -248,7 +248,7 @@ class TestEventProcessorCircuitBreakerIntegration:
         await asyncio.wait_for(processor_task, timeout=2.0)
 
     @pytest.mark.asyncio
-    async def test_under_threshold_does_not_trigger(self, setup_processor):
+    async def test_under_threshold_does_not_trigger(self, setup_processor) -> None:
         """Test that circuit breaker doesn't trigger under threshold."""
         processor, event_queue, shutdown_event, repo_state, _tui, repo_path = setup_processor
 
@@ -323,7 +323,7 @@ class TestCircuitBreakerWithRealGitRepo:
 
         return repo_path
 
-    def test_bulk_file_creation_triggers_breaker(self, git_repo):
+    def test_bulk_file_creation_triggers_breaker(self, git_repo) -> None:
         """Test that creating many files triggers the circuit breaker."""
         from supsrc.services.circuit_breaker import CircuitBreakerService
 
@@ -346,7 +346,7 @@ class TestCircuitBreakerWithRealGitRepo:
         assert state.status == RepositoryStatus.BULK_CHANGE_PAUSED
         assert state.circuit_breaker_triggered is True
 
-    def test_branch_switch_triggers_warning(self, git_repo):
+    def test_branch_switch_triggers_warning(self, git_repo) -> None:
         """Test that switching branches triggers warning."""
         import subprocess  # nosec
 
@@ -386,7 +386,7 @@ class TestCircuitBreakerWithRealGitRepo:
         assert initial_branch in state.circuit_breaker_reason
         assert "feature-branch" in state.circuit_breaker_reason
 
-    def test_branch_switch_with_bulk_changes_triggers_error(self, git_repo):
+    def test_branch_switch_with_bulk_changes_triggers_error(self, git_repo) -> None:
         """Test branch switch with bulk changes triggers ERROR state."""
         import subprocess  # nosec
 
@@ -432,7 +432,7 @@ class TestCircuitBreakerWindowExpiry:
     """Test that bulk change window properly expires."""
 
     @pytest.mark.asyncio
-    async def test_window_expires_and_resets_count(self):
+    async def test_window_expires_and_resets_count(self) -> None:
         """Test that window expiry resets the bulk change count."""
         from datetime import UTC, datetime, timedelta
 
@@ -466,7 +466,7 @@ class TestCircuitBreakerWindowExpiry:
 class TestCircuitBreakerRecovery:
     """Test circuit breaker acknowledgment and recovery."""
 
-    def test_acknowledge_resets_state_to_idle(self):
+    def test_acknowledge_resets_state_to_idle(self) -> None:
         """Test that acknowledgment resets state properly."""
         from supsrc.services.circuit_breaker import CircuitBreakerService
 
@@ -511,7 +511,7 @@ class TestCircuitBreakerVisibilityHeadless:
         tmp_path: Path,
         temp_state_file: Path,
         mock_repo_state: RepositoryState,
-    ):
+    ) -> None:
         """Test that bulk change circuit breaker prints visible notification to console."""
         from supsrc.services.circuit_breaker import CircuitBreakerService
 
@@ -574,7 +574,7 @@ class TestCircuitBreakerVisibilityHeadless:
         self,
         tmp_path: Path,
         mock_repo_state: RepositoryState,
-    ):
+    ) -> None:
         """Test that branch change circuit breaker prints visible notification."""
         from supsrc.services.circuit_breaker import CircuitBreakerService
 
@@ -646,7 +646,7 @@ class TestCircuitBreakerVisibilityTUI:
         temp_state_file: Path,
         mock_repo_state: RepositoryState,
         caplog,
-    ):
+    ) -> None:
         """Test that circuit breaker logs appropriately in TUI mode (no stdout pollution)."""
         from supsrc.services.circuit_breaker import CircuitBreakerService
 
@@ -711,7 +711,7 @@ class TestCircuitBreakerVisibilityTUI:
     async def test_status_emoji_shows_circuit_breaker(
         self,
         mock_repo_state: RepositoryState,
-    ):
+    ) -> None:
         """Test that status emoji reflects circuit breaker state in TUI."""
         from supsrc.services.circuit_breaker import CircuitBreakerService
 
@@ -749,7 +749,7 @@ class TestCircuitBreakerCLICommands:
         tmp_path: Path,
         temp_state_file: Path,
         mock_repo_state: RepositoryState,
-    ):
+    ) -> None:
         """Test that 'supsrc cb ack' command successfully resets circuit breaker."""
         from supsrc.services.circuit_breaker import CircuitBreakerService
 
@@ -778,7 +778,7 @@ class TestCircuitBreakerCLICommands:
         tmp_path: Path,
         temp_state_file: Path,
         mock_repo_state: RepositoryState,
-    ):
+    ) -> None:
         """Test acknowledging circuit breaker clears bulk change tracking."""
         from supsrc.services.circuit_breaker import CircuitBreakerService
 
@@ -820,7 +820,7 @@ class TestCircuitBreakerLogging:
         tmp_path: Path,
         mock_repo_state: RepositoryState,
         caplog,
-    ):
+    ) -> None:
         """Test that debug logs are generated during notification preparation."""
         from supsrc.services.circuit_breaker import CircuitBreakerService
 
@@ -872,7 +872,7 @@ class TestCircuitBreakerLogging:
         tmp_path: Path,
         mock_repo_state: RepositoryState,
         caplog,
-    ):
+    ) -> None:
         """Test that warning logs are generated for circuit breaker trigger events."""
         from supsrc.services.circuit_breaker import CircuitBreakerService
 

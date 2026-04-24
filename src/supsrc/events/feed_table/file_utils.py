@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 """Utilities for formatting file paths in the event feed table."""
 
@@ -108,7 +109,7 @@ class FilePathFormatter:
             return f"{len(file_paths)} files"
 
     @staticmethod
-    def format_event_details_legacy(event, file_paths: list[Path], event_count: int) -> tuple[str, str]:
+    def format_event_details_legacy(event: Any, file_paths: list[Path], event_count: int) -> tuple[str, str]:
         """Format event count and file details (legacy method).
 
         Returns:
