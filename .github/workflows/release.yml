@@ -16,6 +16,9 @@ jobs:
       contents: write
     with:
       create-github-release: false
+      # supsrc's TUI pilot tests use shared Mock state that breaks under pytest-xdist.
+      # Disable parallel test execution for release runs until the tests are isolated.
+      parallel-tests: false
     secrets: inherit
 
   # TestPyPI publish runs in the caller so PyPI Trusted Publishing matches the
