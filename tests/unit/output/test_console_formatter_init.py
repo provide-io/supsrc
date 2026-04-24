@@ -17,7 +17,7 @@ from supsrc.output.console_formatter import ConsoleEventFormatter
 class TestConsoleEventFormatterInit:
     """Unit tests for ConsoleEventFormatter initialization."""
 
-    def test_init_with_defaults(self):
+    def test_init_with_defaults(self) -> None:
         """Test formatter initialization with default parameters."""
         formatter = ConsoleEventFormatter()
 
@@ -27,14 +27,14 @@ class TestConsoleEventFormatterInit:
         assert formatter.verbose is False
         assert formatter.terminal_width > 0
 
-    def test_init_with_custom_console(self):
+    def test_init_with_custom_console(self) -> None:
         """Test formatter initialization with custom console."""
         custom_console = Console(file=StringIO())
         formatter = ConsoleEventFormatter(console=custom_console)
 
         assert formatter.console is custom_console
 
-    def test_init_with_custom_flags(self):
+    def test_init_with_custom_flags(self) -> None:
         """Test formatter initialization with custom flags."""
         formatter = ConsoleEventFormatter(
             use_color=False,

@@ -14,7 +14,7 @@ import io
 import logging
 import re
 import sys
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from textual.widgets import RichLog
 
@@ -266,7 +266,7 @@ class LogPanel(RichLog):
         "CRITICAL": "[/bold red]",
     }
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the log panel."""
         super().__init__(*args, highlight=True, markup=True, **kwargs)
         self._entry_count = 0

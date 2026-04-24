@@ -86,7 +86,7 @@ class CircuitBreakerMetrics:
 class CircuitBreakerError(Exception):
     """Base exception for circuit breaker errors."""
 
-    def __init__(self, message: str, repo_id: str, trigger_type: str):
+    def __init__(self, message: str, repo_id: str, trigger_type: str) -> None:
         self.repo_id = repo_id
         self.trigger_type = trigger_type
         super().__init__(message)
@@ -95,7 +95,7 @@ class CircuitBreakerError(Exception):
 class BulkChangeError(CircuitBreakerError):
     """Raised when bulk change threshold is exceeded."""
 
-    def __init__(self, repo_id: str, file_count: int, threshold: int, window_ms: int):
+    def __init__(self, repo_id: str, file_count: int, threshold: int, window_ms: int) -> None:
         self.file_count = file_count
         self.threshold = threshold
         self.window_ms = window_ms
@@ -111,7 +111,7 @@ class BulkChangeError(CircuitBreakerError):
 class BranchChangeError(CircuitBreakerError):
     """Raised when branch change with bulk modifications is detected."""
 
-    def __init__(self, repo_id: str, old_branch: str, new_branch: str, file_count: int):
+    def __init__(self, repo_id: str, old_branch: str, new_branch: str, file_count: int) -> None:
         self.old_branch = old_branch
         self.new_branch = new_branch
         self.file_count = file_count
@@ -142,7 +142,7 @@ class CircuitBreakerService:
     4. **Metrics Collection**: Tracks trigger counts, recovery rates, and patterns.
     """
 
-    def __init__(self, config: CircuitBreakerConfig):
+    def __init__(self, config: CircuitBreakerConfig) -> None:
         """Initialize circuit breaker service with configuration.
 
         Args:

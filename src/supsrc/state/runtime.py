@@ -151,7 +151,7 @@ class RepositoryState:
     _timer_total_seconds: int | None = field(default=None, init=False)
     _timer_start_time: float | None = field(default=None, init=False)
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         """Log the initial state upon creation and set initial emoji."""
         self._update_display_emoji()
         # Initialize session start time

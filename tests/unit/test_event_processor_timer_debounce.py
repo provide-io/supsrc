@@ -86,7 +86,7 @@ def event_processor_with_timer(
 class TestEventProcessorTimerDebounce:
     """Test cases for EventProcessor timer debouncing."""
 
-    def test_timer_debounce_initialization(self, event_processor_with_timer: EventProcessor):
+    def test_timer_debounce_initialization(self, event_processor_with_timer: EventProcessor) -> None:
         """Test that timer debounce is properly initialized."""
         processor = event_processor_with_timer
 
@@ -100,7 +100,7 @@ class TestEventProcessorTimerDebounce:
         self,
         event_processor_with_timer: EventProcessor,
         temp_git_repo: Path,
-    ):
+    ) -> None:
         """Test that a single event triggers a debounced timer check."""
         processor = event_processor_with_timer
         repo_id = "test_repo"
@@ -136,7 +136,7 @@ class TestEventProcessorTimerDebounce:
     async def test_debounce_scheduler_directly(
         self,
         event_processor_with_timer: EventProcessor,
-    ):
+    ) -> None:
         """Test that the debounce scheduler works correctly when called multiple times."""
         processor = event_processor_with_timer
         repo_id = "test_repo"
@@ -144,7 +144,7 @@ class TestEventProcessorTimerDebounce:
         # Track timer check calls
         timer_check_calls = []
 
-        async def mock_timer_check(repo_id_arg):
+        async def mock_timer_check(repo_id_arg) -> None:
             timer_check_calls.append(repo_id_arg)
 
         # Mock the actual timer check method
@@ -177,13 +177,13 @@ class TestEventProcessorTimerDebounce:
     async def test_cancellation_behavior_directly(
         self,
         event_processor_with_timer: EventProcessor,
-    ):
+    ) -> None:
         """Test that scheduling new timer checks cancels pending ones."""
         processor = event_processor_with_timer
         repo_id = "test_repo"
 
         # Mock the actual timer check method to take a long time
-        async def slow_timer_check(repo_id_arg):
+        async def slow_timer_check(repo_id_arg) -> None:
             await asyncio.sleep(2)  # Long enough to be cancelled
 
         # Mock the actual timer check method
@@ -216,7 +216,7 @@ class TestEventProcessorTimerDebounce:
         temp_git_repo: Path,
         mock_action_handler: AsyncMock,
         mock_tui: MagicMock,
-    ):
+    ) -> None:
         """Test that multiple repos have independent timer debouncing."""
         from datetime import timedelta
 
@@ -296,13 +296,13 @@ class TestEventProcessorTimerDebounce:
         self,
         event_processor_with_timer: EventProcessor,
         temp_git_repo: Path,
-    ):
+    ) -> None:
         """Test that stopping the processor cancels pending timer checks."""
         processor = event_processor_with_timer
         repo_id = "test_repo"
 
         # Mock the timer check method to never complete
-        async def long_running_timer_check(repo_id):
+        async def long_running_timer_check(repo_id) -> None:
             await asyncio.sleep(10)  # Long delay
 
         with patch.object(
@@ -335,7 +335,9 @@ class TestEventProcessorTimerDebounce:
             await asyncio.gather(run_task, return_exceptions=True)
 
     @pytest.mark.asyncio
-    async def test_schedule_debounced_timer_check_method(self, event_processor_with_timer: EventProcessor):
+    async def test_schedule_debounced_timer_check_method(
+        self, event_processor_with_timer: EventProcessor
+    ) -> None:
         """Test the _schedule_debounced_timer_check method directly."""
         processor = event_processor_with_timer
         repo_id = "test_repo"
