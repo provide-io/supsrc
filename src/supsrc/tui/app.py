@@ -416,9 +416,10 @@ class SupsrcTuiApp(TuiAppBase):
             try:
                 self._event_feed = self.query_one("#event-feed", EventFeedTable)
                 self.event_collector.subscribe(self._event_feed.add_event)
+                handler_count = getattr(getattr(self.event_collector, "_handlers", None), "__len__", lambda: 0)()
                 log.info(
                     "Event feed widget found and subscribed to event collector",
-                    handler_count=len(self.event_collector._handlers),
+                    handler_count=handler_count,
                 )
 
                 # Create a welcome event
