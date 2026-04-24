@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 import signal
 import sys
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 import click
 from provide.foundation.cli.decorators import logging_options
@@ -73,7 +73,7 @@ class _NullIO(io.TextIOWrapper):
             self._devnull.close()
 
 
-async def _handle_signal_async(sig: int):
+async def _handle_signal_async(sig: int) -> None:
     signame = signal.Signals(sig).name
     base_log = get_logger(__name__)
     base_log.warning("Received shutdown signal", signal=signame, signal_num=sig)
@@ -252,7 +252,7 @@ def _setup_tui_logging(log_file_path: Path) -> logging.FileHandler:
 )
 @logging_options
 @click.pass_context
-def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs):
+def sui_cli(ctx: click.Context, config_path: Path | str, **kwargs: Any) -> None:
     """Supsrc User Interface - Interactive dashboard for monitoring repositories."""
     config_path = Path(config_path)
     log_file_path = _get_tui_log_path()

@@ -43,7 +43,7 @@ class EventProcessor:
         tui: "TUIInterface",
         config_reload_callback: "Any",
         event_collector: "EventCollector | None" = None,
-    ):
+    ) -> None:
         self.config = config
         self.event_queue = event_queue
         self.shutdown_event = shutdown_event
@@ -146,14 +146,13 @@ class EventProcessor:
                 file_count=file_count,
                 bulk_files_sample=list(repo_state.bulk_change_files)[:10] if file_count > 0 else [],
             )
-        else:
-            # TUI mode: rely on status update (TUI will show the emoji/status)
-            # We can't print to stdout in TUI mode as it corrupts the display
-            if self.tui and hasattr(self.tui, "update_status"):
-                self.tui.update_status(
-                    repo_id=repo_id,
-                    status_emoji=status_emoji,
-                )
+        # TUI mode: rely on status update (TUI will show the emoji/status)
+        # We can't print to stdout in TUI mode as it corrupts the display
+        elif self.tui and hasattr(self.tui, "update_status"):
+            self.tui.update_status(
+                repo_id=repo_id,
+                status_emoji=status_emoji,
+            )
 
     def _emit_event(self, event: Any) -> None:
         """Emit event to all available event collectors (TUI and global).
@@ -354,7 +353,7 @@ class EventProcessor:
         await self.stop()
         log.info("Event processor has stopped.")
 
-    def _debounce_trigger_check(self, repo_id: str):
+    def _debounce_trigger_check(self, repo_id: str) -> None:
         """Schedules a trigger check to run after a short delay, canceling any pending one."""
         repo_state = self.repo_states.get(repo_id)
         if not repo_state:
@@ -366,7 +365,7 @@ class EventProcessor:
         repo_state.set_debounce_timer(handle)
         log.debug("Debounce timer set", repo_id=repo_id, delay=DEFAULT_DEBOUNCE_DELAY)
 
-    def _execute_trigger_check(self, repo_id: str):
+    def _execute_trigger_check(self, repo_id: str) -> None:
         """Called by the debounce timer. Checks rules and triggers the appropriate action."""
         repo_state = self.repo_states.get(repo_id)
         repo_config = self.config.repositories.get(repo_id)
@@ -531,7 +530,7 @@ class EventProcessor:
             self._pending_timer_checks[repo_id].cancel()
 
         # Schedule new timer check after debounce delay
-        async def debounced_timer_check():
+        async def debounced_timer_check() -> None:
             try:
                 await asyncio.sleep(self._timer_check_delay)
                 # Remove from pending checks since we're about to execute

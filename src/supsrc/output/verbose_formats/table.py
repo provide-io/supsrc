@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class TableVerboseFormatter:
     """Formats verbose event details in a structured table with box drawing."""
 
-    def __init__(self, use_ascii: bool = False, max_width: int = 80):
+    def __init__(self, use_ascii: bool = False, max_width: int = 80) -> None:
         """Initialize table formatter.
 
         Args:
@@ -132,7 +132,7 @@ class TableVerboseFormatter:
 
         return sections
 
-    def _format_buffered_event(self, event) -> list[tuple[str, list[tuple[str, str]]]]:
+    def _format_buffered_event(self, event: Event) -> list[tuple[str, list[tuple[str, str]]]]:
         """Format BufferedFileChangeEvent sections."""
         sections = []
 
@@ -181,7 +181,7 @@ class TableVerboseFormatter:
 
         return sections
 
-    def _format_git_commit(self, event) -> list[tuple[str, list[tuple[str, str]]]]:
+    def _format_git_commit(self, event: Event) -> list[tuple[str, list[tuple[str, str]]]]:
         """Format GitCommitEvent sections."""
         fields = []
 
@@ -197,7 +197,7 @@ class TableVerboseFormatter:
 
         return [("Git Commit", fields)] if fields else []
 
-    def _format_git_push(self, event) -> list[tuple[str, list[tuple[str, str]]]]:
+    def _format_git_push(self, event: Event) -> list[tuple[str, list[tuple[str, str]]]]:
         """Format GitPushEvent sections."""
         fields = []
 
@@ -212,7 +212,7 @@ class TableVerboseFormatter:
 
         return [("Git Push", fields)] if fields else []
 
-    def _format_git_stage(self, event) -> list[tuple[str, list[tuple[str, str]]]]:
+    def _format_git_stage(self, event: Event) -> list[tuple[str, list[tuple[str, str]]]]:
         """Format GitStageEvent sections."""
         sections = []
 
@@ -227,7 +227,7 @@ class TableVerboseFormatter:
 
         return sections
 
-    def _format_timer_update(self, event) -> list[tuple[str, list[tuple[str, str]]]]:
+    def _format_timer_update(self, event: Event) -> list[tuple[str, list[tuple[str, str]]]]:
         """Format TimerUpdateEvent sections."""
         fields = []
 
@@ -247,7 +247,7 @@ class TableVerboseFormatter:
 
         return [("Timer", fields)] if fields else []
 
-    def _format_file_change(self, event) -> list[tuple[str, list[tuple[str, str]]]]:
+    def _format_file_change(self, event: Event) -> list[tuple[str, list[tuple[str, str]]]]:
         """Format FileChangeEvent sections."""
         fields = []
 
@@ -262,7 +262,7 @@ class TableVerboseFormatter:
 
         return [("File Change", fields)] if fields else []
 
-    def _format_error_event(self, event) -> list[tuple[str, list[tuple[str, str]]]]:
+    def _format_error_event(self, event: Event) -> list[tuple[str, list[tuple[str, str]]]]:
         """Format ErrorEvent sections."""
         fields = []
 

@@ -31,13 +31,13 @@ from tests.helpers.config_testing import (
 class TestRealConfigValidation:
     """Test real configuration file validation and structure."""
 
-    def test_real_config_exists_and_valid(self):
+    def test_real_config_exists_and_valid(self) -> None:
         """Test that the real config file exists and has valid structure."""
         config_path = real_config_path()
         assert config_path.exists(), f"Real config file not found at {config_path}"
         assert verify_config_structure(config_path), "Real config has invalid structure"
 
-    def test_real_config_loads_successfully(self):
+    def test_real_config_loads_successfully(self) -> None:
         """Test that the real config loads without errors."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -49,7 +49,7 @@ class TestRealConfigValidation:
             assert hasattr(config, "repositories")
             assert len(config.repositories) > 0
 
-    def test_real_repos_exist(self):
+    def test_real_repos_exist(self) -> None:
         """Test that repositories referenced in config actually exist."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -82,7 +82,7 @@ class TestRealConfigTUIIntegration:
     """Test TUI integration with real configuration."""
 
     @pytest.mark.asyncio
-    async def test_tui_initializes_with_real_config(self):
+    async def test_tui_initializes_with_real_config(self) -> None:
         """Test that TUI initializes successfully with real config."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -111,7 +111,7 @@ class TestRealConfigTUIIntegration:
                 await pilot.pause()
 
     @pytest.mark.asyncio
-    async def test_tui_discovers_real_repositories(self):
+    async def test_tui_discovers_real_repositories(self) -> None:
         """Test that TUI discovers and displays real repositories."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -145,7 +145,7 @@ class TestRealConfigTUIIntegration:
                 assert app.event_collector.emit.called
 
     @pytest.mark.asyncio
-    async def test_tui_keyboard_shortcuts_with_real_config(self):
+    async def test_tui_keyboard_shortcuts_with_real_config(self) -> None:
         """Test keyboard shortcuts work with real config."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -182,7 +182,7 @@ class TestRealConfigTUIIntegration:
 class TestRealConfigDirectoryContext:
     """Test behavior when running from different directory contexts."""
 
-    def test_config_discovery_from_parent_dir(self):
+    def test_config_discovery_from_parent_dir(self) -> None:
         """Test that config is found when running from parent directory."""
         with with_parent_cwd():
             # Should be able to find config from parent directory
@@ -194,7 +194,7 @@ class TestRealConfigDirectoryContext:
             config = load_config(config_path)
             assert config is not None
 
-    def test_repository_paths_relative_to_parent(self):
+    def test_repository_paths_relative_to_parent(self) -> None:
         """Test that repository paths work when relative to parent directory."""
         with with_parent_cwd():
             config_path = Path("supsrc.conf")
@@ -228,7 +228,7 @@ class TestRealConfigErrorHandling:
     """Test error handling with real configuration scenarios."""
 
     @pytest.mark.asyncio
-    async def test_tui_handles_missing_repos_gracefully(self):
+    async def test_tui_handles_missing_repos_gracefully(self) -> None:
         """Test TUI handles missing repositories gracefully."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -256,7 +256,7 @@ class TestRealConfigErrorHandling:
                     assert app.event_collector.emit.call_count > 0
 
     @pytest.mark.asyncio
-    async def test_tui_shutdown_cleanup_with_real_config(self):
+    async def test_tui_shutdown_cleanup_with_real_config(self) -> None:
         """Test proper shutdown and cleanup with real config."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -282,7 +282,7 @@ class TestRealConfigPerformance:
     """Test performance characteristics with real configuration."""
 
     @pytest.mark.asyncio
-    async def test_tui_startup_time_acceptable(self):
+    async def test_tui_startup_time_acceptable(self) -> None:
         """Test that TUI starts up within reasonable time with real config."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -304,7 +304,7 @@ class TestRealConfigPerformance:
                 assert startup_time < 5.0, f"TUI startup too slow: {startup_time:.2f}s"
 
     @pytest.mark.asyncio
-    async def test_rapid_interactions_stability_real_config(self):
+    async def test_rapid_interactions_stability_real_config(self) -> None:
         """Test stability under rapid interactions with real config."""
         with with_parent_cwd():
             config_path = real_config_path()

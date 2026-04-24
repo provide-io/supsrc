@@ -25,7 +25,7 @@ class TestEventFeedTable:
     """Test EventFeedTable widget."""
 
     @pytest.mark.asyncio
-    async def test_event_feed_table_initialization(self):
+    async def test_event_feed_table_initialization(self) -> None:
         """Test that EventFeedTable initializes properly."""
         table = EventFeedTable()
 
@@ -47,7 +47,7 @@ class TestEventFeedTable:
             assert table.row_count >= 2  # Ready message + mounted message
 
     @pytest.mark.asyncio
-    async def test_add_simple_event(self):
+    async def test_add_simple_event(self) -> None:
         """Test adding a simple event to the table."""
         table = EventFeedTable()
 
@@ -75,7 +75,7 @@ class TestEventFeedTable:
             assert table.row_count >= 3  # 2 initial + 1 new event
 
     @pytest.mark.asyncio
-    async def test_add_buffered_file_change_event(self):
+    async def test_add_buffered_file_change_event(self) -> None:
         """Test adding a BufferedFileChangeEvent to the table."""
         table = EventFeedTable()
 
@@ -104,7 +104,7 @@ class TestEventFeedTable:
             # Should have added a new row
             assert table.row_count >= 3  # 2 initial + 1 new event
 
-    def test_extract_repo_id(self):
+    def test_extract_repo_id(self) -> None:
         """Test repository ID extraction."""
         table = EventFeedTable()
 
@@ -129,7 +129,7 @@ class TestEventFeedTable:
         mock_event2.source = "git"
         assert table._extract_repo_id(mock_event2) == "git"
 
-    def test_get_event_emoji(self):
+    def test_get_event_emoji(self) -> None:
         """Test emoji selection for different event types."""
         table = EventFeedTable()
 
@@ -163,7 +163,7 @@ class TestEventFeedTable:
         mock_event = Mock(spec=[])  # Empty spec to prevent auto-attributes
         mock_event.source = "git"
 
-    def test_format_event_details_v2(self):
+    def test_format_event_details_v2(self) -> None:
         """Test new event details formatting."""
         table = EventFeedTable()
 
@@ -199,7 +199,7 @@ class TestEventFeedTable:
         assert file_str in ["test.py", "-"]  # Should extract file or use default
         assert len(message) > 0  # Should have extracted message
 
-    def test_format_event_details(self):
+    def test_format_event_details(self) -> None:
         """Test legacy event details formatting (kept for compatibility)."""
         table = EventFeedTable()
 
@@ -232,7 +232,7 @@ class TestEventFeedTable:
         assert count == "1"
         assert "File committed successfully" in files
 
-    def test_get_files_summary_short(self):
+    def test_get_files_summary_short(self) -> None:
         """Test short file summary generation for the File column."""
         table = EventFeedTable()
 
@@ -255,7 +255,7 @@ class TestEventFeedTable:
         summary = table._get_files_summary_short(many_files)
         assert "components/" in summary or "3 files" in summary
 
-    def test_get_files_summary(self):
+    def test_get_files_summary(self) -> None:
         """Test original file summary generation (kept for compatibility)."""
         table = EventFeedTable()
 
@@ -278,7 +278,7 @@ class TestEventFeedTable:
         summary = table._get_files_summary(many_files)
         assert "10 files" in summary
 
-    def test_parse_description(self):
+    def test_parse_description(self) -> None:
         """Test description parsing for file and message extraction."""
         table = EventFeedTable()
 
@@ -292,7 +292,7 @@ class TestEventFeedTable:
         assert file_str == "-"
         assert "Commit successful" in message
 
-    def test_extract_message(self):
+    def test_extract_message(self) -> None:
         """Test message extraction from events."""
         table = EventFeedTable()
 
@@ -313,7 +313,7 @@ class TestEventFeedTable:
         assert "File committed" in message
 
     @pytest.mark.asyncio
-    async def test_clear_functionality(self):
+    async def test_clear_functionality(self) -> None:
         """Test clearing the event feed table."""
         table = EventFeedTable()
 

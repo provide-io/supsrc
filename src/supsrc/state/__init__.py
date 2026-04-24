@@ -27,6 +27,7 @@ Usage:
 from __future__ import annotations
 
 from pathlib import Path
+from types import TracebackType
 from typing import Any
 
 # Import main classes
@@ -208,7 +209,7 @@ class PauseContext:
         duration: int | None = None,
         reason: str | None = None,
         updated_by: str | None = None,
-    ):
+    ) -> None:
         self.repo_path = Path(repo_path) if repo_path else None
         self.duration = duration
         self.reason = reason
@@ -222,7 +223,9 @@ class PauseContext:
         else:
             self._paused = pause_global(self.duration, self.reason, self.updated_by)
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None
+    ) -> None:
         """Exit the pause context and resume."""
         if self._paused:
             if self.repo_path:

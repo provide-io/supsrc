@@ -59,7 +59,7 @@ def batch_operation_events():
 class TestEventBufferGrouping:
     """Test cases for EventBuffer grouping algorithms."""
 
-    def test_simple_grouping_single_file(self, mock_emit_callback):
+    def test_simple_grouping_single_file(self, mock_emit_callback) -> None:
         """Test simple grouping with multiple events on same file."""
         file_path = Path("/test/file.py")
         events = [
@@ -89,7 +89,7 @@ class TestEventBufferGrouping:
         assert buffered_event.event_count == 2
         assert buffered_event.primary_change_type == "modified"  # Most recent
 
-    def test_simple_grouping_multiple_files(self, mock_emit_callback):
+    def test_simple_grouping_multiple_files(self, mock_emit_callback) -> None:
         """Test simple grouping with events on different files."""
         events = [
             FileChangeEvent(
@@ -114,7 +114,7 @@ class TestEventBufferGrouping:
             assert buffered_event.operation_type == "single_file"
             assert buffered_event.event_count == 1
 
-    def test_smart_grouping_single_event(self, mock_emit_callback):
+    def test_smart_grouping_single_event(self, mock_emit_callback) -> None:
         """Test smart grouping with single event - now uses streaming handler."""
         # Smart mode uses streaming detection, not batch grouping
         # Test the converter function instead
@@ -130,7 +130,7 @@ class TestEventBufferGrouping:
         assert buffered_event.operation_type == "single_file"
         assert buffered_event.event_count == 1
 
-    def test_smart_grouping_batch_operation(self, mock_emit_callback, batch_operation_events):
+    def test_smart_grouping_batch_operation(self, mock_emit_callback, batch_operation_events) -> None:
         """Test smart grouping via simple grouping fallback."""
         # Smart mode uses streaming detection via Foundation
         # Test simple grouping as a representative of the non-streaming path
@@ -156,7 +156,7 @@ class TestEventBufferGrouping:
     # test_most_common_change_type removed - _get_most_common_change_type no longer exists
     # This helper was moved to foundation's operation detector
 
-    def test_create_single_event_group(self, mock_emit_callback):
+    def test_create_single_event_group(self, mock_emit_callback) -> None:
         """Test creating a single event group via converter."""
         event = FileChangeEvent(
             description="Test event",
@@ -176,7 +176,7 @@ class TestEventBufferGrouping:
     # test_create_batch_operation_group removed - _create_batch_operation_group no longer exists
     # Batch operation grouping is now handled by foundation's OperationDetector
 
-    def test_buffered_event_formatting(self):
+    def test_buffered_event_formatting(self) -> None:
         """Test formatting of buffered events."""
         # Test single file event
         single_event = BufferedFileChangeEvent(

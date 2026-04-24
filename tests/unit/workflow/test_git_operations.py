@@ -20,7 +20,7 @@ from supsrc.runtime.workflow.git_operations import GitOperationsHelper
 class TestGitOperationsHelper:
     """Test suite for GitOperationsHelper class."""
 
-    async def test_get_staged_diff_success(self):
+    async def test_get_staged_diff_success(self) -> None:
         """Test successful staged diff retrieval."""
         workdir = Path("/test/repo")
         expected_diff = "diff --git a/file.txt b/file.txt\n+new content"
@@ -41,7 +41,7 @@ class TestGitOperationsHelper:
                 cwd=workdir,
             )
 
-    async def test_get_staged_diff_failure(self):
+    async def test_get_staged_diff_failure(self) -> None:
         """Test staged diff retrieval failure."""
         workdir = Path("/test/repo")
         error_message = "fatal: not a git repository"
@@ -56,7 +56,7 @@ class TestGitOperationsHelper:
 
             assert result == ""
 
-    async def test_save_change_fragment_success(self, tmp_path):
+    async def test_save_change_fragment_success(self, tmp_path) -> None:
         """Test successful change fragment saving."""
         repo_path = tmp_path
         fragment_dir = "fragments"
@@ -74,7 +74,7 @@ class TestGitOperationsHelper:
         assert expected_file.exists()
         assert expected_file.read_text(encoding="utf-8") == content
 
-    async def test_save_change_fragment_no_dir(self):
+    async def test_save_change_fragment_no_dir(self) -> None:
         """Test change fragment saving with no directory specified."""
         repo_path = Path("/test/repo")
         fragment_dir = None
@@ -84,7 +84,7 @@ class TestGitOperationsHelper:
         # Should not raise any errors, just return early
         await GitOperationsHelper.save_change_fragment(content, repo_path, fragment_dir, commit_hash)
 
-    async def test_save_change_fragment_io_error(self, tmp_path):
+    async def test_save_change_fragment_io_error(self, tmp_path) -> None:
         """Test change fragment saving with IO error."""
         repo_path = tmp_path
         fragment_dir = "fragments"
@@ -102,7 +102,7 @@ class TestGitOperationsHelper:
         # Restore permissions for cleanup
         fragment_path.chmod(0o755)
 
-    async def test_get_staged_diff_empty_output(self):
+    async def test_get_staged_diff_empty_output(self) -> None:
         """Test staged diff with empty output."""
         workdir = Path("/test/repo")
 

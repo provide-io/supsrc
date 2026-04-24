@@ -48,7 +48,7 @@ class GitEngine(RepositoryEngine):
     async def get_summary(self, working_dir: Path) -> GitRepoSummary:
         """Gets a summary of the repository's HEAD state."""
 
-        def _blocking_get_summary():
+        def _blocking_get_summary() -> GitRepoSummary:
             repo = self.operations.get_repo(working_dir)
             if repo.is_empty:
                 return {"is_empty": True}
@@ -85,7 +85,7 @@ class GitEngine(RepositoryEngine):
         global_config: GlobalConfig,
         working_dir: Path,
     ) -> RepoStatusResult:
-        def _blocking_get_status():
+        def _blocking_get_status() -> RepoStatusResult:
             status_log = self._log.bind(repo_id=state.repo_id, path=str(working_dir))
             repo = self.operations.get_repo(working_dir)
             current_branch = "UNBORN" if repo.head_is_unborn else repo.head.shorthand
@@ -331,7 +331,7 @@ class GitEngine(RepositoryEngine):
         global_config: GlobalConfig,
         working_dir: Path,
     ) -> StageResult:
-        def _blocking_stage_changes():
+        def _blocking_stage_changes() -> StageResult:
             repo = self.operations.get_repo(working_dir)
             index = repo.index
             staged_list = []
@@ -408,7 +408,7 @@ class GitEngine(RepositoryEngine):
         global_config: GlobalConfig,
         working_dir: Path,
     ) -> CommitResult:
-        def _blocking_perform_commit():
+        def _blocking_perform_commit() -> CommitResult:
             repo = self.operations.get_repo(working_dir)
             repo.index.read(force=True)  # Ensure index is fresh from disk
 
@@ -511,7 +511,7 @@ class GitEngine(RepositoryEngine):
 
         remote_name = self.operations.get_config_value("remote", config, "origin")
 
-        def _blocking_perform_push():
+        def _blocking_perform_push() -> PushResult:
             repo = self.operations.get_repo(working_dir)
 
             if remote_name not in repo.remotes:

@@ -65,7 +65,7 @@ class TestSupsrcTuiApp:
 
         _dark_value = False
 
-        def _setter(value):
+        def _setter(value) -> None:
             nonlocal _dark_value
             _dark_value = value
 

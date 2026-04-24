@@ -38,7 +38,7 @@ class ConsoleEventFormatter:
         use_ascii: bool = False,
         verbose: bool = False,
         verbose_format: str = "table",
-    ):
+    ) -> None:
         """Initialize console formatter.
 
         Args:

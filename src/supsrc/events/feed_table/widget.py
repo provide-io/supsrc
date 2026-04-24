@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from provide.foundation.logger import get_logger
 from textual.widgets import DataTable
@@ -30,7 +30,7 @@ class EventFeedTable(DataTable):
     # Enable focus for keyboard navigation
     can_focus = True
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize the EventFeedTable with columns."""
         super().__init__(
             cursor_type="row",

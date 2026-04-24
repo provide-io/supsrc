@@ -97,7 +97,7 @@ def _initialize_logging(cli_context: CLIContext) -> None:
                 import json
 
                 class JSONFileFormatter(logging.Formatter):
-                    def format(self, record):
+                    def format(self, record: logging.LogRecord) -> str:
                         log_data = {
                             "timestamp": self.formatTime(record),
                             "level": record.levelname,
@@ -132,7 +132,7 @@ def cli(
     log_level: str | None,
     log_file: Path | None,
     log_format: str,
-):
+) -> None:
     """
     Supsrc: Automated Git commit/push utility.
 

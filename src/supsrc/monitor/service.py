@@ -27,7 +27,7 @@ class MonitoringService:
     watchdog observer in a separate thread.
     """
 
-    def __init__(self, event_queue: asyncio.Queue[MonitoredEvent]):
+    def __init__(self, event_queue: asyncio.Queue[MonitoredEvent]) -> None:
         """
         Initializes the MonitoringService.
 
@@ -144,7 +144,7 @@ class MonitoringService:
 
         self._logger.info("Stopping monitoring service...")
 
-        def _blocking_shutdown():
+        def _blocking_shutdown() -> None:
             """The blocking part of the shutdown to be run in a thread."""
             if not self._observer.is_alive():
                 return

@@ -21,7 +21,7 @@ from supsrc.output.console_formatter import ConsoleEventFormatter
 class TestConsoleEventFormatterEvents:
     """Unit tests for ConsoleEventFormatter event formatting."""
 
-    def test_format_event_details_strips_markup(self):
+    def test_format_event_details_strips_markup(self) -> None:
         """Test that format_event_details strips Rich markup."""
         formatter = ConsoleEventFormatter()
 
@@ -42,7 +42,7 @@ class TestConsoleEventFormatterEvents:
             or not any(tag in message for tag in ["bold", "cyan", "dim", "blue"])
         )
 
-    def test_format_and_print_file_change_event(self):
+    def test_format_and_print_file_change_event(self) -> None:
         """Test formatting and printing a file change event."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)
@@ -62,7 +62,7 @@ class TestConsoleEventFormatterEvents:
         # FileChangeEvent shows description, may not always show filename
         assert len(output_text) > 0, "Should produce output"
 
-    def test_format_and_print_buffered_event(self):
+    def test_format_and_print_buffered_event(self) -> None:
         """Test formatting and printing a buffered file change event."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)
@@ -83,7 +83,7 @@ class TestConsoleEventFormatterEvents:
         assert "test-repo" in output_text
         assert "config.py" in output_text
 
-    def test_format_and_print_git_commit_event(self):
+    def test_format_and_print_git_commit_event(self) -> None:
         """Test formatting and printing a git commit event."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)
@@ -103,7 +103,7 @@ class TestConsoleEventFormatterEvents:
         assert "test-repo" in output_text
         assert "2" in output_text or "files" in output_text.lower()
 
-    def test_verbose_details_for_git_push_event(self):
+    def test_verbose_details_for_git_push_event(self) -> None:
         """Test verbose details for GitPushEvent."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)

@@ -30,7 +30,7 @@ class TestEventBufferPatterns:
     """Test cases for atomic pattern detection in EventBuffer."""
 
     @pytest.mark.asyncio
-    async def test_atomic_rewrite_pattern_detection(self, mock_emit_callback):
+    async def test_atomic_rewrite_pattern_detection(self, mock_emit_callback) -> None:
         """Test detection of atomic rewrite patterns."""
         buffer = EventBuffer(
             window_ms=10,
@@ -94,7 +94,7 @@ class TestEventBufferPatterns:
         )
 
     @pytest.mark.asyncio
-    async def test_temp_file_pattern_detection_tilde(self, mock_emit_callback):
+    async def test_temp_file_pattern_detection_tilde(self, mock_emit_callback) -> None:
         """Test detection of temp files with tilde suffix."""
         buffer = EventBuffer(
             window_ms=10,
@@ -146,7 +146,7 @@ class TestEventBufferPatterns:
         assert original_path in file_paths_emitted
 
     @pytest.mark.asyncio
-    async def test_temp_file_pattern_detection_hidden(self, mock_emit_callback):
+    async def test_temp_file_pattern_detection_hidden(self, mock_emit_callback) -> None:
         """Test detection of hidden temp files."""
         buffer = EventBuffer(
             window_ms=10,
@@ -208,7 +208,7 @@ class TestEventBufferPatterns:
         assert original_path in file_paths_emitted
 
     @pytest.mark.asyncio
-    async def test_detect_atomic_rewrites_with_patterns(self, mock_emit_callback):
+    async def test_detect_atomic_rewrites_with_patterns(self, mock_emit_callback) -> None:
         """Test atomic rewrite detection with realistic patterns."""
         buffer = EventBuffer(
             window_ms=10,
@@ -274,7 +274,7 @@ class TestEventBufferPatterns:
             assert atomic_event.event_count >= 2  # At least 2 events grouped
 
     @pytest.mark.asyncio
-    async def test_temp_file_pattern_recognition_real_world(self, mock_emit_callback):
+    async def test_temp_file_pattern_recognition_real_world(self, mock_emit_callback) -> None:
         """Test recognition of real-world temporary file patterns."""
         buffer = EventBuffer(
             window_ms=100,
@@ -349,7 +349,7 @@ class TestEventBufferPatterns:
             )
 
     @pytest.mark.asyncio
-    async def test_atomic_rewrite_fallback_to_simple(self, mock_emit_callback):
+    async def test_atomic_rewrite_fallback_to_simple(self, mock_emit_callback) -> None:
         """Test that streaming detector emits regular file modifications."""
         buffer = EventBuffer(
             window_ms=10,
@@ -411,7 +411,7 @@ class TestEventBufferPatterns:
                 ]
 
     @pytest.mark.asyncio
-    async def test_smart_grouping_with_mixed_patterns(self, mock_emit_callback):
+    async def test_smart_grouping_with_mixed_patterns(self, mock_emit_callback) -> None:
         """Test smart grouping with a mix of atomic and regular events."""
         buffer = EventBuffer(
             window_ms=10,

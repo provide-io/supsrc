@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
+from typing import Any
 
 import click
 from provide.foundation.cli.decorators import logging_options
@@ -24,7 +25,7 @@ log: StructLogger = get_logger(__name__)
 
 
 @click.group(name="cb")
-def circuit_breaker_cli():
+def circuit_breaker_cli() -> None:
     """Circuit breaker management commands."""
 
 
@@ -46,8 +47,8 @@ def acknowledge_circuit_breaker(
     ctx: click.Context,
     repo_id: str,
     config_path: Path,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> None:
     """Acknowledge and reset a triggered circuit breaker for a repository.
 
     REPO_ID: The repository identifier to acknowledge
@@ -123,7 +124,7 @@ def acknowledge_circuit_breaker(
 )
 @logging_options
 @click.pass_context
-def circuit_breaker_status(ctx: click.Context, config_path: Path, **kwargs):
+def circuit_breaker_status(ctx: click.Context, config_path: Path, **kwargs: Any) -> None:
     """Show circuit breaker status for all repositories."""
     try:
         # Load configuration

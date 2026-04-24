@@ -23,7 +23,7 @@ from tests.helpers.config_testing import real_config_path, with_parent_cwd
 class TestCLIConfigDiscovery:
     """Test CLI configuration discovery and loading."""
 
-    def test_cli_finds_config_in_parent_dir(self):
+    def test_cli_finds_config_in_parent_dir(self) -> None:
         """Test that CLI finds config when run from parent directory."""
         # Skip if no real config available
         real_config_path()  # This will skip if config doesn't exist
@@ -40,7 +40,7 @@ class TestCLIConfigDiscovery:
             assert result.returncode == 0, f"CLI failed: {result.stderr}"
             assert "repositories" in result.stdout.lower()
 
-    def test_cli_validates_real_config(self):
+    def test_cli_validates_real_config(self) -> None:
         """Test that CLI validates real config successfully."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -53,7 +53,7 @@ class TestCLIConfigDiscovery:
 
             assert result.returncode == 0, f"Config validation failed: {result.stderr}"
 
-    def test_cli_handles_missing_config_gracefully(self):
+    def test_cli_handles_missing_config_gracefully(self) -> None:
         """Test CLI error handling when config is missing."""
         result = run(
             [
@@ -78,7 +78,7 @@ class TestCLIWatchCommand:
     """Test the watch command CLI integration."""
 
     @pytest.mark.slow
-    def test_watch_command_dry_run(self):
+    def test_watch_command_dry_run(self) -> None:
         """Test watch command validation with real config."""
         with with_parent_cwd():
             # Test that watch command validates configuration successfully
@@ -94,7 +94,7 @@ class TestCLIWatchCommand:
             assert "watch" in result.stdout.lower()
 
     @pytest.mark.slow
-    def test_watch_command_with_explicit_config(self):
+    def test_watch_command_with_explicit_config(self) -> None:
         """Test watch command with explicitly specified config."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -123,7 +123,7 @@ class TestCLITUICommand:
     """Test the TUI command CLI integration."""
 
     @pytest.mark.slow
-    def test_sui_command_help(self):
+    def test_sui_command_help(self) -> None:
         """Test that sui command shows help correctly."""
         result = run(
             [sys.executable, "-m", "supsrc.cli.main", "sui", "--help"],
@@ -136,7 +136,7 @@ class TestCLITUICommand:
         assert "user interface" in result.stdout.lower() or "interface" in result.stdout.lower()
 
     @pytest.mark.slow
-    def test_sui_command_validation_only(self):
+    def test_sui_command_validation_only(self) -> None:
         """Test sui command help with config path option."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -164,7 +164,7 @@ class TestCLITUICommand:
 class TestCLIErrorHandling:
     """Test CLI error handling and edge cases."""
 
-    def test_invalid_command_handling(self):
+    def test_invalid_command_handling(self) -> None:
         """Test handling of invalid commands."""
         result = run(
             [sys.executable, "-m", "supsrc.cli.main", "nonexistent-command"],
@@ -175,7 +175,7 @@ class TestCLIErrorHandling:
         assert result.returncode != 0
         assert "usage" in result.stderr.lower() or "error" in result.stderr.lower()
 
-    def test_version_command(self):
+    def test_version_command(self) -> None:
         """Test version command works."""
         result = run(
             [sys.executable, "-m", "supsrc.cli.main", "--version"],
@@ -186,7 +186,7 @@ class TestCLIErrorHandling:
         # Should show version (exact format may vary)
         assert result.returncode == 0 or "version" in result.stdout.lower()
 
-    def test_help_command(self):
+    def test_help_command(self) -> None:
         """Test help command works."""
         result = run(
             [sys.executable, "-m", "supsrc.cli.main", "--help"],
@@ -202,7 +202,7 @@ class TestCLIErrorHandling:
 class TestCLIEnvironmentIntegration:
     """Test CLI integration with different environments."""
 
-    def test_cli_respects_working_directory(self):
+    def test_cli_respects_working_directory(self) -> None:
         """Test that CLI respects current working directory."""
         # Test from supsrc directory
         supsrc_dir = Path(__file__).parent.parent.parent
@@ -229,7 +229,7 @@ class TestCLIEnvironmentIntegration:
             # Should find config from parent directory
             assert result.returncode == 0 or "config" in result.stderr.lower()
 
-    def test_cli_python_path_handling(self):
+    def test_cli_python_path_handling(self) -> None:
         """Test that CLI works with Python module path."""
         with with_parent_cwd():
             # Test running as module
@@ -243,7 +243,7 @@ class TestCLIEnvironmentIntegration:
             assert "supsrc" in result.stdout.lower()
 
     @pytest.mark.slow
-    def test_cli_signal_handling(self):
+    def test_cli_signal_handling(self) -> None:
         """Test that CLI handles basic process lifecycle."""
         with with_parent_cwd():
             # Test basic CLI command execution
@@ -261,7 +261,7 @@ class TestCLIEnvironmentIntegration:
 class TestCLIConfigIntegration:
     """Test CLI integration with various config scenarios."""
 
-    def test_config_show_formats_output_properly(self):
+    def test_config_show_formats_output_properly(self) -> None:
         """Test that config show command formats output readably."""
         with with_parent_cwd():
             result = run(
@@ -277,7 +277,7 @@ class TestCLIConfigIntegration:
                 lines = result.stdout.split("\n")
                 assert len(lines) > 1
 
-    def test_config_validation_error_reporting(self):
+    def test_config_validation_error_reporting(self) -> None:
         """Test config validation provides useful error messages."""
         # Create a temporary invalid config
         with tempfile.NamedTemporaryFile(mode="w", suffix=".conf", delete=False) as f:

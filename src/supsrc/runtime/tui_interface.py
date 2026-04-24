@@ -34,7 +34,7 @@ log = get_logger("runtime.tui_interface")
 class TUIInterface:
     """A thread-safe bridge for communicating with the Textual UI."""
 
-    def __init__(self, app: SupsrcTuiApp | None):
+    def __init__(self, app: SupsrcTuiApp | None) -> None:
         self.app = app
         self.is_active = bool(app and TEXTUAL_AVAILABLE)
         if self.is_active:

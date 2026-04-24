@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from provide.foundation.errors import resilient
 from provide.foundation.logger import get_logger
@@ -19,9 +19,9 @@ from supsrc.runtime.workflow.steps import WorkflowSteps
 from supsrc.state import RepositoryStatus
 
 if TYPE_CHECKING:
-    from supsrc.config import SupsrcConfig
+    from supsrc.config import LLMConfig, RepositoryConfig, SupsrcConfig
     from supsrc.events.collector import EventCollector
-    from supsrc.protocols import RepositoryEngine
+    from supsrc.protocols import CommitResult, RepositoryEngine
     from supsrc.runtime.tui_interface import TUIInterface
     from supsrc.state import RepositoryState
 
@@ -38,7 +38,7 @@ class RuntimeWorkflow:
         repo_engines: dict[str, RepositoryEngine],
         tui: TUIInterface,
         event_collector: EventCollector | None = None,
-    ):
+    ) -> None:
         """Initialize the RuntimeWorkflow.
 
         Args:
@@ -58,7 +58,7 @@ class RuntimeWorkflow:
         self._background_tasks: set[asyncio.Task[None]] = set()
         log.debug("RuntimeWorkflow initialized.")
 
-    def _emit_event(self, event) -> None:
+    def _emit_event(self, event: Any) -> None:
         """Emit event to available event collector (TUI or standalone)."""
         # Try standalone event collector first (headless mode)
         if self.event_collector:
@@ -176,9 +176,9 @@ class RuntimeWorkflow:
     async def _execute_commit_step(
         self,
         repo_id: str,
-        repo_state,
-        repo_config,
-        repo_engine,
+        repo_state: RepositoryState,
+        repo_config: RepositoryConfig,
+        repo_engine: RepositoryEngine,
         commit_message: str,
         staged_files: list[str] | None,
     ) -> None:
@@ -213,7 +213,9 @@ class RuntimeWorkflow:
 
         self.tui.post_state_update(self.repo_states)
 
-    async def _handle_commit_failure(self, repo_id: str, repo_state, commit_result) -> None:
+    async def _handle_commit_failure(
+        self, repo_id: str, repo_state: RepositoryState, commit_result: CommitResult
+    ) -> None:
         """Handle commit failure."""
         repo_state.update_status(RepositoryStatus.ERROR, f"Commit failed: {commit_result.message}")
         repo_state.action_description = "Commit operation failed."
@@ -232,11 +234,11 @@ class RuntimeWorkflow:
     async def _handle_commit_success(
         self,
         repo_id: str,
-        repo_state,
-        repo_config,
-        repo_engine,
-        commit_result,
-        action_log,
+        repo_state: RepositoryState,
+        repo_config: RepositoryConfig,
+        repo_engine: RepositoryEngine,
+        commit_result: CommitResult,
+        action_log: Any,
         staged_files: list[str] | None,
     ) -> None:
         """Handle successful commit and execute push."""
@@ -280,7 +282,14 @@ class RuntimeWorkflow:
         # Refresh repository statistics
         await self._refresh_repository_statistics(repo_id, repo_state, repo_config, repo_engine, action_log)
 
-    async def _execute_push_step(self, repo_id: str, repo_state, repo_config, repo_engine, action_log) -> None:
+    async def _execute_push_step(
+        self,
+        repo_id: str,
+        repo_state: RepositoryState,
+        repo_config: RepositoryConfig,
+        repo_engine: RepositoryEngine,
+        action_log: Any,
+    ) -> None:
         """Execute the push workflow step."""
         action_log.info("Commit successful", commit_hash=repo_state.last_commit_short_hash)
 
@@ -364,7 +373,12 @@ class RuntimeWorkflow:
             repo_state.record_session_push()
 
     async def _generate_change_fragment(
-        self, repo_id: str, repo_config, repo_engine, llm_config, commit_hash: str
+        self,
+        repo_id: str,
+        repo_config: RepositoryConfig,
+        repo_engine: RepositoryEngine,
+        llm_config: LLMConfig,
+        commit_hash: str,
     ) -> None:
         """Generate and save change fragment using LLM."""
         llm_provider = self._llm_manager.get_llm_provider(llm_config)
@@ -383,7 +397,12 @@ class RuntimeWorkflow:
         )
 
     async def _refresh_repository_statistics(
-        self, repo_id: str, repo_state, repo_config, repo_engine, action_log
+        self,
+        repo_id: str,
+        repo_state: RepositoryState,
+        repo_config: RepositoryConfig,
+        repo_engine: RepositoryEngine,
+        action_log: Any,
     ) -> None:
         """Refresh repository statistics after successful commit."""
         try:
@@ -406,7 +425,9 @@ class RuntimeWorkflow:
         except Exception as e:
             action_log.warning("Failed to refresh repository statistics after commit", error=str(e))
 
-    async def _handle_unexpected_error(self, repo_id: str, repo_state, action_log, error: Exception) -> None:
+    async def _handle_unexpected_error(
+        self, repo_id: str, repo_state: RepositoryState, action_log: Any, error: Exception
+    ) -> None:
         """Handle unexpected errors during workflow execution."""
         action_log.critical("Unexpected error in action sequence", error=str(error), exc_info=True)
         if repo_state:

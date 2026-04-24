@@ -17,7 +17,7 @@ from supsrc.output.console_formatter import ConsoleEventFormatter
 class TestConsoleEventFormatterUtilities:
     """Unit tests for ConsoleEventFormatter utility methods."""
 
-    def test_format_timestamp(self):
+    def test_format_timestamp(self) -> None:
         """Test timestamp formatting."""
         formatter = ConsoleEventFormatter()
         timestamp = datetime(2025, 10, 9, 14, 30, 45)
@@ -26,7 +26,7 @@ class TestConsoleEventFormatterUtilities:
 
         assert result == "14:30:45"
 
-    def test_strip_rich_markup_simple(self):
+    def test_strip_rich_markup_simple(self) -> None:
         """Test Rich markup stripping with simple tags."""
         formatter = ConsoleEventFormatter()
 
@@ -35,7 +35,7 @@ class TestConsoleEventFormatterUtilities:
 
         assert result == "Hello World"
 
-    def test_strip_rich_markup_complex(self):
+    def test_strip_rich_markup_complex(self) -> None:
         """Test Rich markup stripping with complex tags."""
         formatter = ConsoleEventFormatter()
 
@@ -44,7 +44,7 @@ class TestConsoleEventFormatterUtilities:
 
         assert result == "2 files modified in test.py"
 
-    def test_strip_rich_markup_nested(self):
+    def test_strip_rich_markup_nested(self) -> None:
         """Test Rich markup stripping with nested tags."""
         formatter = ConsoleEventFormatter()
 
@@ -53,7 +53,7 @@ class TestConsoleEventFormatterUtilities:
 
         assert result == "Text"
 
-    def test_strip_rich_markup_no_markup(self):
+    def test_strip_rich_markup_no_markup(self) -> None:
         """Test Rich markup stripping with plain text."""
         formatter = ConsoleEventFormatter()
 
@@ -62,7 +62,7 @@ class TestConsoleEventFormatterUtilities:
 
         assert result == text
 
-    def test_truncate_short_text(self):
+    def test_truncate_short_text(self) -> None:
         """Test truncation with text shorter than max width."""
         formatter = ConsoleEventFormatter()
 
@@ -70,7 +70,7 @@ class TestConsoleEventFormatterUtilities:
 
         assert result == "short"
 
-    def test_truncate_exact_length(self):
+    def test_truncate_exact_length(self) -> None:
         """Test truncation with text exactly at max width."""
         formatter = ConsoleEventFormatter()
 
@@ -78,7 +78,7 @@ class TestConsoleEventFormatterUtilities:
 
         assert result == "exactly10!"
 
-    def test_truncate_long_text(self):
+    def test_truncate_long_text(self) -> None:
         """Test truncation with text longer than max width."""
         formatter = ConsoleEventFormatter()
 
@@ -87,7 +87,7 @@ class TestConsoleEventFormatterUtilities:
         assert result == "this is..."
         assert len(result) == 10
 
-    def test_truncate_very_short_width(self):
+    def test_truncate_very_short_width(self) -> None:
         """Test truncation with very small max width."""
         formatter = ConsoleEventFormatter()
 
@@ -95,7 +95,7 @@ class TestConsoleEventFormatterUtilities:
 
         assert result == "..."
 
-    def test_truncate_zero_width(self):
+    def test_truncate_zero_width(self) -> None:
         """Test truncation with zero width."""
         formatter = ConsoleEventFormatter()
 
@@ -103,7 +103,7 @@ class TestConsoleEventFormatterUtilities:
 
         assert result == ""
 
-    def test_extract_repo_id(self):
+    def test_extract_repo_id(self) -> None:
         """Test repository ID extraction from event."""
         formatter = ConsoleEventFormatter()
 
@@ -118,7 +118,7 @@ class TestConsoleEventFormatterUtilities:
 
         assert result == "test-repo"
 
-    def test_get_terminal_width_fallback(self):
+    def test_get_terminal_width_fallback(self) -> None:
         """Test that terminal width detection has a fallback."""
         formatter = ConsoleEventFormatter()
 

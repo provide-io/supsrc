@@ -34,7 +34,7 @@ def mock_emit_callback():
 class TestAtomicFileOperations:
     """Test event buffering with realistic atomic file operations."""
 
-    def simulate_atomic_rewrite(self, file_path: Path, content: str = "test content"):
+    def simulate_atomic_rewrite(self, file_path: Path, content: str = "test content") -> None:
         """Simulate an atomic file rewrite operation."""
         temp_file = file_path.with_suffix(file_path.suffix + ".tmp")
 
@@ -100,7 +100,7 @@ class TestAtomicFileOperations:
         ]
 
     @pytest.mark.asyncio
-    async def test_atomic_rewrite_buffering(self, temp_directory, mock_emit_callback):
+    async def test_atomic_rewrite_buffering(self, temp_directory, mock_emit_callback) -> None:
         """Test that atomic rewrite operations are properly buffered and grouped."""
         buffer = EventBuffer(
             window_ms=100,
@@ -138,7 +138,7 @@ class TestAtomicFileOperations:
         assert test_file in file_paths_emitted
 
     @pytest.mark.asyncio
-    async def test_editor_save_buffering(self, temp_directory, mock_emit_callback):
+    async def test_editor_save_buffering(self, temp_directory, mock_emit_callback) -> None:
         """Test that editor save operations (with backup files) are properly grouped."""
         buffer = EventBuffer(
             window_ms=100,
@@ -168,7 +168,7 @@ class TestAtomicFileOperations:
         assert main_file_included
 
     @pytest.mark.asyncio
-    async def test_mixed_operations_buffering(self, temp_directory, mock_emit_callback):
+    async def test_mixed_operations_buffering(self, temp_directory, mock_emit_callback) -> None:
         """Test buffering with mixed file operations."""
         buffer = EventBuffer(
             window_ms=100,
@@ -223,7 +223,7 @@ class TestAtomicFileOperations:
 
         assert atomic_detected or batch_detected
 
-    def test_no_buffering_mode(self, temp_directory, mock_emit_callback):
+    def test_no_buffering_mode(self, temp_directory, mock_emit_callback) -> None:
         """Test that 'off' mode passes through events immediately."""
         buffer = EventBuffer(
             window_ms=100,
@@ -247,7 +247,7 @@ class TestAtomicFileOperations:
             assert hasattr(emitted_event, "change_type")  # Original FileChangeEvent
 
     @pytest.mark.asyncio
-    async def test_simple_mode_grouping(self, temp_directory, mock_emit_callback):
+    async def test_simple_mode_grouping(self, temp_directory, mock_emit_callback) -> None:
         """Test simple mode grouping behavior."""
         buffer = EventBuffer(
             window_ms=100,
@@ -294,7 +294,7 @@ class TestAtomicFileOperations:
         assert emitted_event.primary_change_type == "modified"  # Most recent
 
     @pytest.mark.asyncio
-    async def test_multiple_repos_isolation(self, temp_directory, mock_emit_callback):
+    async def test_multiple_repos_isolation(self, temp_directory, mock_emit_callback) -> None:
         """Test that events from different repos are handled separately."""
         buffer = EventBuffer(
             window_ms=100,
@@ -342,7 +342,7 @@ class TestAtomicFileOperations:
         assert emitted_repo_ids == {"repo1", "repo2"}
 
     @pytest.mark.asyncio
-    async def test_temp_file_pattern_recognition_real_world(self, temp_directory):
+    async def test_temp_file_pattern_recognition_real_world(self, temp_directory) -> None:
         """Test recognition of real-world temporary file patterns."""
         mock_callback = Mock()
         buffer = EventBuffer(

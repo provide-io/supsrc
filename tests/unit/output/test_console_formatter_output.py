@@ -17,7 +17,7 @@ from supsrc.output.console_formatter import ConsoleEventFormatter
 class TestConsoleEventFormatterOutput:
     """Unit tests for ConsoleEventFormatter output line building."""
 
-    def test_build_output_line_standard_layout(self):
+    def test_build_output_line_standard_layout(self) -> None:
         """Test output line building with standard terminal width."""
         output = StringIO()
         console = Console(file=output, width=120)
@@ -46,7 +46,7 @@ class TestConsoleEventFormatterOutput:
         assert "test.py" in text_str
         assert "File modified" in text_str
 
-    def test_build_output_line_narrow_layout(self):
+    def test_build_output_line_narrow_layout(self) -> None:
         """Test output line building with narrow terminal width."""
         output = StringIO()
         console = Console(file=output, width=60)

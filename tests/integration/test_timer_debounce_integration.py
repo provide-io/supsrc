@@ -91,7 +91,7 @@ class TestTimerDebounceIntegration:
     """Integration tests for timer debounce behavior."""
 
     @pytest.mark.asyncio
-    async def test_rapid_file_changes_debounce_timer_resets(self, rapid_change_test_setup):
+    async def test_rapid_file_changes_debounce_timer_resets(self, rapid_change_test_setup) -> None:
         """Test that rapid file changes are debounced and timer only resets once."""
         setup = rapid_change_test_setup
         repo_path = setup["repo_path"]
@@ -123,7 +123,7 @@ class TestTimerDebounceIntegration:
         # Track timer check calls
         timer_check_calls = []
 
-        async def mock_timer_check(repo_id):
+        async def mock_timer_check(repo_id) -> None:
             timer_check_calls.append(repo_id)
             # Don't actually perform the check to avoid complexity
 
@@ -160,7 +160,7 @@ class TestTimerDebounceIntegration:
             await asyncio.gather(processor_task, return_exceptions=True)
 
     @pytest.mark.asyncio
-    async def test_spaced_events_trigger_multiple_timer_checks(self, rapid_change_test_setup):
+    async def test_spaced_events_trigger_multiple_timer_checks(self, rapid_change_test_setup) -> None:
         """Test that events spaced apart trigger separate timer checks."""
         setup = rapid_change_test_setup
         repo_path = setup["repo_path"]
@@ -190,7 +190,7 @@ class TestTimerDebounceIntegration:
         # Track timer check calls
         timer_check_calls = []
 
-        async def mock_timer_check(repo_id):
+        async def mock_timer_check(repo_id) -> None:
             timer_check_calls.append(repo_id)
 
         processor._check_repo_status_and_handle_timer = mock_timer_check
@@ -222,7 +222,7 @@ class TestTimerDebounceIntegration:
             await asyncio.gather(processor_task, return_exceptions=True)
 
     @pytest.mark.asyncio
-    async def test_atomic_file_operations_with_timer_debounce(self, rapid_change_test_setup):
+    async def test_atomic_file_operations_with_timer_debounce(self, rapid_change_test_setup) -> None:
         """Test that atomic file operations work correctly with timer debouncing."""
         setup = rapid_change_test_setup
         repo_path = setup["repo_path"]
@@ -252,7 +252,7 @@ class TestTimerDebounceIntegration:
         # Track timer check calls
         timer_check_calls = []
 
-        async def mock_timer_check(repo_id):
+        async def mock_timer_check(repo_id) -> None:
             timer_check_calls.append(repo_id)
 
         processor._check_repo_status_and_handle_timer = mock_timer_check
@@ -286,7 +286,7 @@ class TestTimerDebounceIntegration:
             await asyncio.gather(processor_task, return_exceptions=True)
 
     @pytest.mark.asyncio
-    async def test_processor_shutdown_cancels_pending_timer_checks(self, rapid_change_test_setup):
+    async def test_processor_shutdown_cancels_pending_timer_checks(self, rapid_change_test_setup) -> None:
         """Test that processor shutdown properly cancels pending timer checks."""
         setup = rapid_change_test_setup
         repo_path = setup["repo_path"]
@@ -340,7 +340,7 @@ class TestTimerDebounceIntegration:
             shutdown_event.set()
             await asyncio.gather(processor_task, return_exceptions=True)
 
-    def test_debounce_delay_configuration(self, rapid_change_test_setup):
+    def test_debounce_delay_configuration(self, rapid_change_test_setup) -> None:
         """Test that debounce delay is configurable."""
         setup = rapid_change_test_setup
         config = setup["config"]
@@ -366,7 +366,7 @@ class TestTimerDebounceIntegration:
         assert hasattr(processor, "_timer_check_delay")
 
     @pytest.mark.asyncio
-    async def test_rapid_changes_different_repos_independent_debouncing(self, tmp_path: Path):
+    async def test_rapid_changes_different_repos_independent_debouncing(self, tmp_path: Path) -> None:
         """Test that rapid changes to different repos have independent debouncing."""
         # Create two separate test repos
         repo1_path = tmp_path / "repo1"
@@ -428,7 +428,7 @@ class TestTimerDebounceIntegration:
         # Track timer checks per repo
         timer_check_calls = []
 
-        async def mock_timer_check(repo_id):
+        async def mock_timer_check(repo_id) -> None:
             timer_check_calls.append(repo_id)
 
         processor._check_repo_status_and_handle_timer = mock_timer_check

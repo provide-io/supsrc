@@ -45,7 +45,7 @@ class TestOrchestratorLifecycle:
         mock_action_handler: MagicMock,
         mock_tui_interface: MagicMock,
         minimal_config: SupsrcConfig,
-    ):
+    ) -> None:
         """Verify that run() instantiates all runtime components."""
         mock_processor_instance = AsyncMock()
         mock_processor_instance.run.return_value = None
@@ -62,7 +62,7 @@ class TestOrchestratorLifecycle:
             shutdown_event = asyncio.Event()
             orchestrator = WatchOrchestrator(Path("fake.conf"), shutdown_event)
 
-            async def run_and_shutdown():
+            async def run_and_shutdown() -> None:
                 run_task = asyncio.create_task(orchestrator.run())
                 await asyncio.sleep(0.01)
                 shutdown_event.set()
@@ -79,7 +79,7 @@ class TestOrchestratorLifecycle:
         mock_processor_instance.run.assert_called_once()
         mock_monitor_instance.stop_services.assert_called_once()
 
-    async def test_initialize_repositories_success(self, mock_orchestrator: WatchOrchestrator):
+    async def test_initialize_repositories_success(self, mock_orchestrator: WatchOrchestrator) -> None:
         """Test that repositories are initialized correctly from config."""
         mock_tui = MagicMock()
         # Use real repository manager but mock the git operations
@@ -116,7 +116,7 @@ class TestOrchestratorLifecycle:
         state = mock_orchestrator.repo_states["test_repo_1"]
         assert state.repo_id == "test_repo_1"
 
-    async def test_get_repository_details(self, mock_orchestrator: WatchOrchestrator):
+    async def test_get_repository_details(self, mock_orchestrator: WatchOrchestrator) -> None:
         """Test the public API for retrieving repo details for the TUI."""
         repo_id = "test_repo_1"
         mock_engine = AsyncMock(spec=GitEngine)
@@ -141,7 +141,7 @@ class TestOrchestratorLifecycle:
 class TestOrchestratorFeatures:
     """Tests for specific orchestrator features like pausing."""
 
-    def test_toggle_repository_pause(self, mock_orchestrator: WatchOrchestrator):
+    def test_toggle_repository_pause(self, mock_orchestrator: WatchOrchestrator) -> None:
         """Verify that toggling a repository's pause state works correctly."""
         repo_id = "test_repo_1"
         # Ensure the repo exists in the orchestrator's state

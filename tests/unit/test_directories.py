@@ -15,7 +15,7 @@ from supsrc.utils.directories import SupsrcDirectories
 class TestSupsrcDirectories:
     """Test cases for SupsrcDirectories class."""
 
-    def test_ensure_structure_creates_all_directories(self, tmp_path: Path):
+    def test_ensure_structure_creates_all_directories(self, tmp_path: Path) -> None:
         """Test that ensure_structure creates all expected directories."""
         repo_path = tmp_path / "test_repo"
         repo_path.mkdir()
@@ -41,7 +41,7 @@ class TestSupsrcDirectories:
         assert result["state_file"] == repo_path / ".supsrc/state.json"
         assert result["local_state_file"] == repo_path / ".supsrc/local/state.local.json"
 
-    def test_ensure_structure_idempotent(self, tmp_path: Path):
+    def test_ensure_structure_idempotent(self, tmp_path: Path) -> None:
         """Test that ensure_structure can be called multiple times safely."""
         repo_path = tmp_path / "test_repo"
         repo_path.mkdir()
@@ -58,7 +58,7 @@ class TestSupsrcDirectories:
         assert result2["local_dir"].exists()
         assert result2["logs_dir"].exists()
 
-    def test_get_log_dir_creates_directory(self, tmp_path: Path):
+    def test_get_log_dir_creates_directory(self, tmp_path: Path) -> None:
         """Test that get_log_dir creates the log directory."""
         repo_path = tmp_path / "test_repo"
         repo_path.mkdir()
@@ -69,7 +69,7 @@ class TestSupsrcDirectories:
         assert log_dir.is_dir()
         assert log_dir == repo_path / ".supsrc/local/logs"
 
-    def test_get_state_file_shared(self, tmp_path: Path):
+    def test_get_state_file_shared(self, tmp_path: Path) -> None:
         """Test that get_state_file returns correct path for shared state."""
         repo_path = tmp_path / "test_repo"
         repo_path.mkdir()
@@ -80,7 +80,7 @@ class TestSupsrcDirectories:
         # Parent directory should be created
         assert state_file.parent.exists()
 
-    def test_get_state_file_local(self, tmp_path: Path):
+    def test_get_state_file_local(self, tmp_path: Path) -> None:
         """Test that get_state_file returns correct path for local state."""
         repo_path = tmp_path / "test_repo"
         repo_path.mkdir()
@@ -91,7 +91,7 @@ class TestSupsrcDirectories:
         # Parent directory should be created
         assert state_file.parent.exists()
 
-    def test_get_config_file(self, tmp_path: Path):
+    def test_get_config_file(self, tmp_path: Path) -> None:
         """Test that get_config_file returns correct path."""
         repo_path = tmp_path / "test_repo"
         repo_path.mkdir()
@@ -102,7 +102,7 @@ class TestSupsrcDirectories:
         # Parent directory should be created
         assert config_file.parent.exists()
 
-    def test_directory_permissions(self, tmp_path: Path):
+    def test_directory_permissions(self, tmp_path: Path) -> None:
         """Test that created directories have appropriate permissions."""
         repo_path = tmp_path / "test_repo"
         repo_path.mkdir()
@@ -119,7 +119,7 @@ class TestSupsrcDirectories:
             assert test_file.exists()
             test_file.unlink()
 
-    def test_nonexistent_repo_path(self, tmp_path: Path):
+    def test_nonexistent_repo_path(self, tmp_path: Path) -> None:
         """Test behavior with nonexistent repository path."""
         repo_path = tmp_path / "nonexistent_repo"
 
@@ -130,7 +130,7 @@ class TestSupsrcDirectories:
         assert repo_path.exists()
         assert result["config_dir"].exists()
 
-    def test_existing_directories_preserved(self, tmp_path: Path):
+    def test_existing_directories_preserved(self, tmp_path: Path) -> None:
         """Test that existing directories and files are preserved."""
         repo_path = tmp_path / "test_repo"
         repo_path.mkdir()

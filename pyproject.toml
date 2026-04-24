@@ -133,7 +133,9 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["PLR0124"]
+# Tests often receive pytest fixtures (tmp_path, caplog, etc.) and assertion
+# helpers with implicit types — strict annotations add noise without value.
+"tests/**" = ["PLR0124", "ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "ANN204"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["supsrc", "tests"]

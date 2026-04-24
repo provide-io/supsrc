@@ -3,14 +3,13 @@
 # SPDX-FileCopyrightText: Copyright (c) provide.io llc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
-
-
 import asyncio
 import contextlib
 import logging
 from pathlib import Path
 import sys
 import tempfile
+from typing import Any
 
 import click
 from provide.foundation.cli.decorators import logging_options
@@ -210,8 +209,8 @@ def watch_cli(
     use_ascii: bool,
     verbose: bool,
     verbose_format: str,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> None:
     """Watch repository changes and trigger actions (non-interactive mode)."""
     # The shutdown event is still necessary to signal between async components.
     # asyncio.run() will manage propagating the initial cancellation.

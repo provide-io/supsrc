@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from textual.events import MouseDown, MouseMove, MouseUp
 from textual.reactive import reactive
 from textual.widgets import Static
@@ -19,7 +21,7 @@ class DraggableSplitter(Static):
     # Reactive for tracking drag state
     is_dragging: bool = reactive(False, init=False)
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__("═══", **kwargs)
         self._drag_start_y = 0
         self._initial_repo_height = 60

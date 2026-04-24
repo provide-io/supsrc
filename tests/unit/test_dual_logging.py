@@ -8,6 +8,7 @@
 import json
 from pathlib import Path
 import tempfile
+from typing import Never
 
 import pytest
 
@@ -36,19 +37,19 @@ class DummyEvent(BaseEvent):
 class TestDualLogging:
     """Test the dual logging system (EventCollector + JSONEventLogger)."""
 
-    def test_event_collector_initialization(self):
+    def test_event_collector_initialization(self) -> None:
         """Test EventCollector can be initialized."""
         collector = EventCollector()
         assert collector._handlers == []
 
-    def test_json_logger_initialization(self, temp_json_file):
+    def test_json_logger_initialization(self, temp_json_file) -> None:
         """Test JSONEventLogger can be initialized."""
         logger = JSONEventLogger(temp_json_file)
         assert logger.file_path == temp_json_file
         assert logger._file_handle is not None
         logger.close()
 
-    def test_event_collector_subscription(self, temp_json_file):
+    def test_event_collector_subscription(self, temp_json_file) -> None:
         """Test EventCollector subscription mechanism."""
         collector = EventCollector()
         json_logger = JSONEventLogger(temp_json_file)
@@ -58,7 +59,7 @@ class TestDualLogging:
 
         json_logger.close()
 
-    def test_event_emission_and_logging(self, temp_json_file):
+    def test_event_emission_and_logging(self, temp_json_file) -> None:
         """Test complete dual logging flow."""
         collector = EventCollector()
         json_logger = JSONEventLogger(temp_json_file)
@@ -85,7 +86,7 @@ class TestDualLogging:
         assert "timestamp" in event_data
         assert "metadata" in event_data
 
-    def test_multiple_events_logging(self, temp_json_file):
+    def test_multiple_events_logging(self, temp_json_file) -> None:
         """Test logging multiple events."""
         collector = EventCollector()
         json_logger = JSONEventLogger(temp_json_file)
@@ -113,14 +114,14 @@ class TestDualLogging:
             event_data = json.loads(line.strip())
             assert event_data["description"] == f"{['First', 'Second', 'Third'][i]} event"
 
-    def test_event_collector_error_handling(self, temp_json_file):
+    def test_event_collector_error_handling(self, temp_json_file) -> None:
         """Test EventCollector handles handler errors gracefully."""
         collector = EventCollector()
 
-        def failing_handler(event):
+        def failing_handler(event) -> Never:
             raise Exception("Handler failed")
 
-        def working_handler(event):
+        def working_handler(event) -> None:
             pass
 
         collector.subscribe(failing_handler)
@@ -133,7 +134,7 @@ class TestDualLogging:
         # Verify both handlers are still subscribed
         assert len(collector._handlers) == 2
 
-    def test_json_logger_handles_path_objects(self, temp_json_file):
+    def test_json_logger_handles_path_objects(self, temp_json_file) -> None:
         """Test JSONEventLogger handles Path objects in event metadata."""
         collector = EventCollector()
         json_logger = JSONEventLogger(temp_json_file)

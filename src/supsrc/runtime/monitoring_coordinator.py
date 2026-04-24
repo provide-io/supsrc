@@ -108,11 +108,11 @@ class MonitoringCoordinator:
         loop = asyncio.get_running_loop()
 
         class ConfigChangeHandler(FileSystemEventHandler):
-            def __init__(self, coordinator_ref: MonitoringCoordinator):
+            def __init__(self, coordinator_ref: MonitoringCoordinator) -> None:
                 self._coordinator = coordinator_ref
                 self._config_path_str = str(self._coordinator.config_path.resolve())
 
-            def on_modified(self, event: FileSystemEvent):
+            def on_modified(self, event: FileSystemEvent) -> None:
                 if str(Path(event.src_path).resolve()) == self._config_path_str:
                     log.info("Configuration file modified, queueing reload event.")
                     monitored_event = MonitoredEvent(
