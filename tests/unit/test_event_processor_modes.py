@@ -72,7 +72,7 @@ class TestModeDetection:
 
     def test_tui_mode_detected_when_app_present(
         self, mock_config, mock_action_handler, mock_tui_interface_with_app
-    ):
+    ) -> None:
         """Test that TUI mode is detected when app is present."""
         event_queue = asyncio.Queue()
         shutdown_event = asyncio.Event()
@@ -94,7 +94,7 @@ class TestModeDetection:
 
     def test_headless_mode_detected_when_app_none(
         self, mock_config, mock_action_handler, mock_tui_interface_without_app
-    ):
+    ) -> None:
         """Test that headless mode is detected when app is None."""
         event_queue = asyncio.Queue()
         shutdown_event = asyncio.Event()
@@ -114,7 +114,9 @@ class TestModeDetection:
         assert processor._event_buffer is not None
         assert processor._event_buffer.grouping_mode == "simple"
 
-    def test_headless_mode_detected_when_tui_has_no_app_attribute(self, mock_config, mock_action_handler):
+    def test_headless_mode_detected_when_tui_has_no_app_attribute(
+        self, mock_config, mock_action_handler
+    ) -> None:
         """Test that headless mode is detected when TUI has no app attribute."""
         event_queue = asyncio.Queue()
         shutdown_event = asyncio.Event()
@@ -138,7 +140,7 @@ class TestModeDetection:
         assert processor._event_buffer is not None
         assert processor._event_buffer.grouping_mode == "simple"
 
-    def test_uses_default_tui_mode_from_config(self, mock_action_handler, mock_tui_interface_with_app):
+    def test_uses_default_tui_mode_from_config(self, mock_action_handler, mock_tui_interface_with_app) -> None:
         """Test that default TUI mode from config is used."""
         config = SupsrcConfig(
             repositories={},
@@ -167,7 +169,9 @@ class TestModeDetection:
 
         assert processor._event_buffer.grouping_mode == DEFAULT_EVENT_BUFFER_GROUPING_MODE_TUI
 
-    def test_uses_default_headless_mode_from_config(self, mock_action_handler, mock_tui_interface_without_app):
+    def test_uses_default_headless_mode_from_config(
+        self, mock_action_handler, mock_tui_interface_without_app
+    ) -> None:
         """Test that default headless mode from config is used."""
         config = SupsrcConfig(
             repositories={},
@@ -196,7 +200,9 @@ class TestModeDetection:
 
         assert processor._event_buffer.grouping_mode == DEFAULT_EVENT_BUFFER_GROUPING_MODE_HEADLESS
 
-    def test_buffering_disabled_creates_no_buffer(self, mock_action_handler, mock_tui_interface_with_app):
+    def test_buffering_disabled_creates_no_buffer(
+        self, mock_action_handler, mock_tui_interface_with_app
+    ) -> None:
         """Test that no buffer is created when buffering is disabled."""
         config = SupsrcConfig(
             repositories={},
@@ -229,7 +235,9 @@ class TestModeDetection:
 class TestModeSpecificBehavior:
     """Test suite for mode-specific buffering behavior."""
 
-    def test_tui_mode_uses_smart_grouping(self, mock_config, mock_action_handler, mock_tui_interface_with_app):
+    def test_tui_mode_uses_smart_grouping(
+        self, mock_config, mock_action_handler, mock_tui_interface_with_app
+    ) -> None:
         """Test that TUI mode uses smart grouping by default."""
         event_queue = asyncio.Queue()
         shutdown_event = asyncio.Event()
@@ -249,7 +257,7 @@ class TestModeSpecificBehavior:
 
     def test_headless_mode_uses_simple_grouping(
         self, mock_config, mock_action_handler, mock_tui_interface_without_app
-    ):
+    ) -> None:
         """Test that headless mode uses simple grouping by default."""
         event_queue = asyncio.Queue()
         shutdown_event = asyncio.Event()
@@ -267,7 +275,7 @@ class TestModeSpecificBehavior:
 
         assert processor._event_buffer.grouping_mode == "simple"
 
-    def test_config_override_works_for_tui(self, mock_action_handler, mock_tui_interface_with_app):
+    def test_config_override_works_for_tui(self, mock_action_handler, mock_tui_interface_with_app) -> None:
         """Test that config can override TUI mode grouping."""
         config = SupsrcConfig(
             repositories={},
@@ -296,7 +304,9 @@ class TestModeSpecificBehavior:
 
         assert processor._event_buffer.grouping_mode == "off"
 
-    def test_config_override_works_for_headless(self, mock_action_handler, mock_tui_interface_without_app):
+    def test_config_override_works_for_headless(
+        self, mock_action_handler, mock_tui_interface_without_app
+    ) -> None:
         """Test that config can override headless mode grouping."""
         config = SupsrcConfig(
             repositories={},

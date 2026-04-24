@@ -20,7 +20,7 @@ from supsrc.output.verbose_formats.table import TableVerboseFormatter
 class TestTableVerboseFormatter:
     """Test table-style verbose formatter."""
 
-    def test_buffered_event_formatting(self):
+    def test_buffered_event_formatting(self) -> None:
         """Test formatting of BufferedFileChangeEvent with table format."""
         formatter = TableVerboseFormatter(use_ascii=True, max_width=80)
 
@@ -50,7 +50,7 @@ class TestTableVerboseFormatter:
         assert "atomic_rewrite" in "".join(lines)
         assert "3 raw events" in "".join(lines)
 
-    def test_git_commit_formatting(self):
+    def test_git_commit_formatting(self) -> None:
         """Test formatting of GitCommitEvent with table format."""
         formatter = TableVerboseFormatter(use_ascii=True, max_width=80)
 
@@ -71,7 +71,7 @@ class TestTableVerboseFormatter:
         assert "main" in "".join(lines)
         assert "5" in "".join(lines)
 
-    def test_timer_update_formatting(self):
+    def test_timer_update_formatting(self) -> None:
         """Test formatting of TimerUpdateEvent with table format."""
         formatter = TableVerboseFormatter(use_ascii=True, max_width=80)
 
@@ -96,7 +96,7 @@ class TestTableVerboseFormatter:
 class TestCompactVerboseFormatter:
     """Test compact key=value verbose formatter."""
 
-    def test_buffered_event_formatting(self):
+    def test_buffered_event_formatting(self) -> None:
         """Test formatting of BufferedFileChangeEvent with compact format."""
         formatter = CompactVerboseFormatter(indent="  ")
 
@@ -129,7 +129,7 @@ class TestCompactVerboseFormatter:
         assert "files: test.py" in full_output
         assert "seq:" in full_output
 
-    def test_git_commit_formatting(self):
+    def test_git_commit_formatting(self) -> None:
         """Test formatting of GitCommitEvent with compact format."""
         formatter = CompactVerboseFormatter(indent="  ")
 
@@ -151,7 +151,7 @@ class TestCompactVerboseFormatter:
         assert "branch=main" in full_output
         assert "files=5" in full_output
 
-    def test_git_push_formatting(self):
+    def test_git_push_formatting(self) -> None:
         """Test formatting of GitPushEvent with compact format."""
         formatter = CompactVerboseFormatter(indent="  ")
 
@@ -173,7 +173,7 @@ class TestCompactVerboseFormatter:
         assert "branch=main" in full_output
         assert "commits=2" in full_output
 
-    def test_file_change_formatting(self):
+    def test_file_change_formatting(self) -> None:
         """Test formatting of FileChangeEvent with compact format."""
         formatter = CompactVerboseFormatter(indent="  ")
 

@@ -46,7 +46,7 @@ class EventBuffer:
         window_ms: int = DEFAULT_BUFFER_WINDOW_MS,
         grouping_mode: str = DEFAULT_GROUPING_MODE,
         emit_callback: Any = None,
-    ):
+    ) -> None:
         """Initialize the event buffer.
 
         Args:

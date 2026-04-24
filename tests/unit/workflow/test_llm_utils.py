@@ -39,14 +39,14 @@ def llm_config():
 class TestLLMProviderManager:
     """Test suite for LLMProviderManager class."""
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test LLMProviderManager initialization."""
         manager = LLMProviderManager()
         assert manager._llm_providers == {}
 
     @patch("supsrc.runtime.workflow.llm_utils.LLM_AVAILABLE", True)
     @patch("supsrc.runtime.workflow.llm_utils.GeminiProvider")
-    def test_get_llm_provider_success(self, mock_gemini_provider, llm_config):
+    def test_get_llm_provider_success(self, mock_gemini_provider, llm_config) -> None:
         """Test successful LLM provider creation."""
         mock_provider_instance = MagicMock()
         mock_gemini_provider.return_value = mock_provider_instance
@@ -61,7 +61,7 @@ class TestLLMProviderManager:
 
     @patch("supsrc.runtime.workflow.llm_utils.LLM_AVAILABLE", True)
     @patch("supsrc.runtime.workflow.llm_utils.GeminiProvider")
-    def test_get_llm_provider_cached(self, mock_gemini_provider, llm_config):
+    def test_get_llm_provider_cached(self, mock_gemini_provider, llm_config) -> None:
         """Test that LLM provider is cached after first creation."""
         mock_provider_instance = MagicMock()
         mock_gemini_provider.return_value = mock_provider_instance
@@ -77,7 +77,7 @@ class TestLLMProviderManager:
         mock_gemini_provider.assert_called_once()
 
     @patch("supsrc.runtime.workflow.llm_utils.LLM_AVAILABLE", False)
-    def test_get_llm_provider_unavailable(self, llm_config):
+    def test_get_llm_provider_unavailable(self, llm_config) -> None:
         """Test LLM provider when LLM is not available."""
         manager = LLMProviderManager()
         provider = manager.get_llm_provider(llm_config)
@@ -85,7 +85,7 @@ class TestLLMProviderManager:
         assert provider is None
 
     @patch("supsrc.runtime.workflow.llm_utils.LLM_AVAILABLE", True)
-    def test_get_llm_provider_unsupported_provider(self, llm_config):
+    def test_get_llm_provider_unsupported_provider(self, llm_config) -> None:
         """Test LLM provider with unsupported provider."""
         # Use evolve() to modify frozen dataclass
         llm_config = evolve(llm_config, provider="unsupported_provider")
@@ -97,7 +97,7 @@ class TestLLMProviderManager:
 
     @patch("supsrc.runtime.workflow.llm_utils.LLM_AVAILABLE", True)
     @patch("supsrc.runtime.workflow.llm_utils.OllamaProvider")
-    def test_get_llm_provider_ollama(self, mock_ollama_provider, llm_config):
+    def test_get_llm_provider_ollama(self, mock_ollama_provider, llm_config) -> None:
         """Test LLM provider creation for Ollama."""
         # Use evolve() to modify frozen dataclass
         llm_config = evolve(llm_config, provider="ollama", model="llama2", api_key_env_var=None)
@@ -113,7 +113,7 @@ class TestLLMProviderManager:
 
     @patch("supsrc.runtime.workflow.llm_utils.LLM_AVAILABLE", True)
     @patch("supsrc.runtime.workflow.llm_utils.GeminiProvider")
-    def test_get_llm_provider_no_api_key_env(self, mock_gemini_provider, llm_config):
+    def test_get_llm_provider_no_api_key_env(self, mock_gemini_provider, llm_config) -> None:
         """Test LLM provider creation without API key environment variable."""
         # Use evolve() to modify frozen dataclass
         llm_config = evolve(llm_config, api_key_env_var=None)
@@ -128,7 +128,7 @@ class TestLLMProviderManager:
 
     @patch("supsrc.runtime.workflow.llm_utils.LLM_AVAILABLE", True)
     @patch("supsrc.runtime.workflow.llm_utils.GeminiProvider")
-    def test_get_llm_provider_import_error(self, mock_gemini_provider, llm_config):
+    def test_get_llm_provider_import_error(self, mock_gemini_provider, llm_config) -> None:
         """Test LLM provider creation with ImportError."""
         mock_gemini_provider.side_effect = ImportError("Module not found")
 
@@ -141,7 +141,7 @@ class TestLLMProviderManager:
 
     @patch("supsrc.runtime.workflow.llm_utils.LLM_AVAILABLE", True)
     @patch("supsrc.runtime.workflow.llm_utils.GeminiProvider")
-    def test_get_llm_provider_value_error(self, mock_gemini_provider, llm_config):
+    def test_get_llm_provider_value_error(self, mock_gemini_provider, llm_config) -> None:
         """Test LLM provider creation with ValueError."""
         mock_gemini_provider.side_effect = ValueError("Invalid configuration")
 
@@ -154,7 +154,7 @@ class TestLLMProviderManager:
 
     @patch("supsrc.runtime.workflow.llm_utils.LLM_AVAILABLE", True)
     @patch("supsrc.runtime.workflow.llm_utils.GeminiProvider")
-    def test_get_llm_provider_different_configs(self, mock_gemini_provider, llm_config):
+    def test_get_llm_provider_different_configs(self, mock_gemini_provider, llm_config) -> None:
         """Test that different configs create different cached providers."""
         mock_provider1 = MagicMock()
         mock_provider2 = MagicMock()

@@ -21,7 +21,7 @@ from supsrc.monitor import MonitoredEvent, MonitoringService
 from supsrc.runtime.orchestrator import WatchOrchestrator
 
 
-async def test_hot_reload():
+async def test_hot_reload() -> None:
     """Tests both direct invocation and event-driven invocation of config reload."""
 
     # --- Setup ---
@@ -120,7 +120,7 @@ type = "supsrc.engines.git"
         # We'll re-use the same orchestrator but mock its reload method
         # This time, we'll run the event processor loop to consume the event
 
-        async def consume_one_event():
+        async def consume_one_event() -> None:
             event = await orchestrator.event_queue.get()
             if event.repo_id == "__config__":
                 await orchestrator.reload_config()

@@ -100,7 +100,7 @@ class ActionHandlerMixin:
         )
         self.event_collector.emit(start_event)
 
-        async def _reload():
+        async def _reload() -> None:
             if self._orchestrator:
                 try:
                     success = await self._orchestrator.reload_config()

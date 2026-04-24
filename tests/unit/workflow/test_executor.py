@@ -57,7 +57,7 @@ class TestRuntimeWorkflow:
     @pytest.mark.asyncio
     async def test_execute_full_sequence_success(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Verify all engine methods are called in a successful workflow."""
         repo_id = "test_repo_1"
         await runtime_workflow.execute_action_sequence(repo_id)
@@ -72,7 +72,7 @@ class TestRuntimeWorkflow:
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.last_commit_short_hash == "abc1234"
 
-    async def test_execute_sequence_missing_dependencies(self, runtime_workflow: RuntimeWorkflow):
+    async def test_execute_sequence_missing_dependencies(self, runtime_workflow: RuntimeWorkflow) -> None:
         """Test handling of missing repository dependencies."""
         repo_id = "nonexistent_repo"
         await runtime_workflow.execute_action_sequence(repo_id)
@@ -84,7 +84,7 @@ class TestRuntimeWorkflow:
 
     async def test_execute_sequence_status_failure(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Test workflow stops when status check fails."""
         repo_id = "test_repo_1"
 
@@ -107,7 +107,7 @@ class TestRuntimeWorkflow:
     @pytest.mark.asyncio
     async def test_execute_sequence_external_commit_detected(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Test workflow handles external commit detection."""
         repo_id = "test_repo_1"
 
@@ -128,7 +128,7 @@ class TestRuntimeWorkflow:
 
     async def test_execute_sequence_staging_failure(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Test workflow stops when staging fails."""
         repo_id = "test_repo_1"
 
@@ -148,7 +148,7 @@ class TestRuntimeWorkflow:
     @pytest.mark.asyncio
     async def test_execute_sequence_commit_failure(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Test workflow handles commit failure."""
         repo_id = "test_repo_1"
 
@@ -168,7 +168,7 @@ class TestRuntimeWorkflow:
     @pytest.mark.asyncio
     async def test_execute_sequence_push_failure(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Test workflow handles push failure gracefully."""
         repo_id = "test_repo_1"
 
@@ -186,7 +186,7 @@ class TestRuntimeWorkflow:
 
     async def test_execute_sequence_no_commit_hash(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Test workflow handles commit with no hash (e.g., no changes)."""
         repo_id = "test_repo_1"
 
@@ -202,7 +202,7 @@ class TestRuntimeWorkflow:
         repo_state = runtime_workflow.repo_states[repo_id]
         assert repo_state.last_commit_short_hash is None
 
-    def test_emit_event_with_event_collector(self, runtime_workflow: RuntimeWorkflow):
+    def test_emit_event_with_event_collector(self, runtime_workflow: RuntimeWorkflow) -> None:
         """Test event emission with standalone event collector."""
         mock_event_collector = MagicMock()
         runtime_workflow.event_collector = mock_event_collector
@@ -212,7 +212,7 @@ class TestRuntimeWorkflow:
 
         mock_event_collector.emit.assert_called_once_with(test_event)
 
-    def test_emit_event_with_tui_event_collector(self, runtime_workflow: RuntimeWorkflow):
+    def test_emit_event_with_tui_event_collector(self, runtime_workflow: RuntimeWorkflow) -> None:
         """Test event emission with TUI event collector."""
         mock_tui_event_collector = MagicMock()
         runtime_workflow.tui.app.event_collector = mock_tui_event_collector
@@ -222,7 +222,7 @@ class TestRuntimeWorkflow:
 
         mock_tui_event_collector.emit.assert_called_once_with(test_event)
 
-    def test_emit_event_no_collector(self, runtime_workflow: RuntimeWorkflow):
+    def test_emit_event_no_collector(self, runtime_workflow: RuntimeWorkflow) -> None:
         """Test event emission when no event collector is available."""
         # Remove event collectors
         runtime_workflow.event_collector = None
@@ -233,7 +233,7 @@ class TestRuntimeWorkflow:
         runtime_workflow._emit_event(test_event)
 
     @pytest.mark.asyncio
-    async def test_delayed_reset_after_external_commit(self, runtime_workflow: RuntimeWorkflow):
+    async def test_delayed_reset_after_external_commit(self, runtime_workflow: RuntimeWorkflow) -> None:
         """Test delayed reset after external commit detection."""
         repo_state = runtime_workflow.repo_states["test_repo_1"]
 
@@ -247,7 +247,7 @@ class TestRuntimeWorkflow:
     @pytest.mark.asyncio
     async def test_execute_sequence_with_exception(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Test workflow handles unexpected exceptions gracefully."""
         repo_id = "test_repo_1"
 
@@ -263,7 +263,7 @@ class TestRuntimeWorkflow:
 
     async def test_llm_provider_failure_handling(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Test workflow handles LLM provider initialization failure."""
         repo_id = "test_repo_1"
 
@@ -285,7 +285,7 @@ class TestRuntimeWorkflow:
     @pytest.mark.asyncio
     async def test_push_blocked_on_merge_conflict_detection(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Test push is blocked when merge conflicts are detected with upstream."""
         repo_id = "test_repo_1"
 
@@ -314,7 +314,7 @@ class TestRuntimeWorkflow:
     @pytest.mark.asyncio
     async def test_push_blocked_on_branch_divergence(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Test push is blocked when branch has diverged from upstream."""
         repo_id = "test_repo_1"
 
@@ -344,7 +344,7 @@ class TestRuntimeWorkflow:
     @pytest.mark.asyncio
     async def test_push_proceeds_when_no_conflicts(
         self, runtime_workflow: RuntimeWorkflow, mock_repo_engine: AsyncMock
-    ):
+    ) -> None:
         """Test push proceeds normally when no conflicts or divergence detected."""
         repo_id = "test_repo_1"
 

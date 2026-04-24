@@ -29,7 +29,7 @@ class TestConsoleVerboseOutput:
 
     @pytest.mark.skip(reason="EventBuffer async timing - covered by test_vscode_atomic_save.py")
     @pytest.mark.asyncio
-    async def test_vscode_atomic_save_verbose_output(self):
+    async def test_vscode_atomic_save_verbose_output(self) -> None:
         """Test verbose output shows atomic save operation sequence."""
         # Capture console output
         output = StringIO()
@@ -45,7 +45,7 @@ class TestConsoleVerboseOutput:
         # Create mock callback to capture emitted events
         emitted_events = []
 
-        def capture_event(event):
+        def capture_event(event) -> None:
             emitted_events.append(event)
             formatter.format_and_print(event)
 
@@ -125,7 +125,7 @@ class TestConsoleVerboseOutput:
 
     @pytest.mark.skip(reason="EventBuffer async timing - covered by test_vscode_atomic_save.py")
     @pytest.mark.asyncio
-    async def test_batch_operation_verbose_output(self):
+    async def test_batch_operation_verbose_output(self) -> None:
         """Test verbose output for batch file operations."""
         output = StringIO()
         console = Console(file=output, width=120, force_terminal=True)
@@ -139,7 +139,7 @@ class TestConsoleVerboseOutput:
 
         emitted_events = []
 
-        def capture_event(event):
+        def capture_event(event) -> None:
             emitted_events.append(event)
             formatter.format_and_print(event)
 
@@ -180,7 +180,7 @@ class TestConsoleVerboseOutput:
             "Verbose output should show file names or ellipsis for many files"
         )
 
-    def test_git_commit_event_verbose_output(self):
+    def test_git_commit_event_verbose_output(self) -> None:
         """Test verbose output for git commit events."""
         output = StringIO()
         console = Console(file=output, width=120, force_terminal=True)
@@ -217,7 +217,7 @@ class TestConsoleVerboseOutput:
         # Should show event type
         assert "GitCommitEvent" in output_text, "Verbose output should show event type"
 
-    def test_git_push_event_verbose_output(self):
+    def test_git_push_event_verbose_output(self) -> None:
         """Test verbose output for git push events."""
         output = StringIO()
         console = Console(file=output, width=120, force_terminal=True)
@@ -256,7 +256,7 @@ class TestConsoleVerboseOutput:
 
     @pytest.mark.skip(reason="EventBuffer async timing - covered by test_vscode_atomic_save.py")
     @pytest.mark.asyncio
-    async def test_operation_history_displays_sequence(self):
+    async def test_operation_history_displays_sequence(self) -> None:
         """Test that verbose output shows the complete operation sequence."""
         output = StringIO()
         console = Console(file=output, width=120, force_terminal=True)
@@ -270,7 +270,7 @@ class TestConsoleVerboseOutput:
 
         emitted_events = []
 
-        def capture_event(event):
+        def capture_event(event) -> None:
             emitted_events.append(event)
             formatter.format_and_print(event)
 
@@ -328,7 +328,7 @@ class TestConsoleVerboseOutput:
         # Should show final file (not temp file) in main event line
         assert "document.txt" in output_text, "Should show final file name"
 
-    def test_verbose_mode_disabled_shows_compact_output(self):
+    def test_verbose_mode_disabled_shows_compact_output(self) -> None:
         """Test that non-verbose mode doesn't show detailed operation info."""
         output = StringIO()
         console = Console(file=output, width=120, force_terminal=True)
@@ -372,7 +372,7 @@ class TestConsoleVerboseOutput:
         # Should still show the basic event
         assert "test.py" in output_text, "Should show the file name"
 
-    def test_startup_banner_formatting(self):
+    def test_startup_banner_formatting(self) -> None:
         """Test that startup banner displays correctly."""
         output = StringIO()
         console = Console(file=output, width=120, force_terminal=True)

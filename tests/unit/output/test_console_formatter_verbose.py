@@ -21,7 +21,7 @@ from supsrc.output.console_formatter import ConsoleEventFormatter
 class TestConsoleEventFormatterVerbose:
     """Unit tests for ConsoleEventFormatter verbose mode and startup banner."""
 
-    def test_format_and_print_with_verbose_disabled(self):
+    def test_format_and_print_with_verbose_disabled(self) -> None:
         """Test that verbose details are not shown when verbose=False."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)
@@ -55,7 +55,7 @@ class TestConsoleEventFormatterVerbose:
         assert "Sequence" not in output_text
         assert "Operation:" not in output_text
 
-    def test_format_and_print_with_verbose_enabled(self):
+    def test_format_and_print_with_verbose_enabled(self) -> None:
         """Test that verbose details are shown when verbose=True."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)
@@ -89,7 +89,7 @@ class TestConsoleEventFormatterVerbose:
         assert "atomic_rewrite" in output_text
         assert "Sequence" in output_text or "Operation" in output_text
 
-    def test_format_and_print_handles_exceptions_gracefully(self):
+    def test_format_and_print_handles_exceptions_gracefully(self) -> None:
         """Test that format_and_print handles errors without crashing."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)
@@ -104,7 +104,7 @@ class TestConsoleEventFormatterVerbose:
 
         # Should log debug message, but not crash
 
-    def test_print_startup_banner_basic(self):
+    def test_print_startup_banner_basic(self) -> None:
         """Test printing startup banner with basic info."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)
@@ -121,7 +121,7 @@ class TestConsoleEventFormatterVerbose:
         assert "3 repositories" in output_text or "3" in output_text
         assert "Supsrc Watch" in output_text or "supsrc" in output_text.lower()
 
-    def test_print_startup_banner_with_log_paths(self):
+    def test_print_startup_banner_with_log_paths(self) -> None:
         """Test printing startup banner with log paths."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)
@@ -139,7 +139,7 @@ class TestConsoleEventFormatterVerbose:
         assert "events.jsonl" in output_text
         assert "app.log" in output_text
 
-    def test_print_startup_banner_verbose_mode(self):
+    def test_print_startup_banner_verbose_mode(self) -> None:
         """Test startup banner shows verbose mode indicator."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)
@@ -159,7 +159,7 @@ class TestConsoleEventFormatterVerbose:
 
         assert "Verbose" in output_text or "verbose" in output_text.lower()
 
-    def test_verbose_details_shows_operation_history(self):
+    def test_verbose_details_shows_operation_history(self) -> None:
         """Test that verbose mode shows operation history sequence."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)
@@ -200,7 +200,7 @@ class TestConsoleEventFormatterVerbose:
         # Should show the arrow (→) indicating a move operation
         assert "→" in output_text or "->" in output_text
 
-    def test_verbose_details_shows_file_list(self):
+    def test_verbose_details_shows_file_list(self) -> None:
         """Test that verbose mode shows list of files for multi-file events."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)
@@ -235,7 +235,7 @@ class TestConsoleEventFormatterVerbose:
         # Should show "and X more" for remaining files
         assert "more" in output_text.lower()
 
-    def test_use_ascii_mode(self):
+    def test_use_ascii_mode(self) -> None:
         """Test that ASCII mode is used when enabled."""
         output = StringIO()
         console = Console(file=output, force_terminal=True)

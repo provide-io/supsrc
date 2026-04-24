@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from provide.foundation.logger import get_logger
 
@@ -23,7 +23,9 @@ from supsrc.runtime.workflow.test_runner import TestRunner
 from supsrc.state import RepositoryStatus
 
 if TYPE_CHECKING:
-    from supsrc.config import LLMConfig, SupsrcConfig
+    from collections.abc import Callable
+
+    from supsrc.config import LLMConfig, RepositoryConfig, SupsrcConfig
     from supsrc.llm.providers.base import LLMProvider
     from supsrc.protocols import RepositoryEngine
     from supsrc.runtime.tui_interface import TUIInterface
@@ -41,7 +43,7 @@ class WorkflowSteps:
         repo_states: dict[str, RepositoryState],
         repo_engines: dict[str, RepositoryEngine],
         tui: TUIInterface,
-        emit_event_callback,
+        emit_event_callback: Callable[[Any], None],
     ) -> None:
         """Initialize workflow steps with dependencies.
 
@@ -285,7 +287,9 @@ class WorkflowSteps:
 
         return True, commit_message
 
-    async def _handle_status_check_failure(self, repo_id: str, repo_state, status_result, action_log):
+    async def _handle_status_check_failure(
+        self, repo_id: str, repo_state: RepositoryState, status_result: Any, action_log: Any
+    ) -> None:
         """Handle status check failure."""
         action_log.warning(
             "Git status check failed during action",
@@ -306,7 +310,7 @@ class WorkflowSteps:
         )
         self._emit_event(status_error_event)
 
-    async def _handle_conflict_detected(self, repo_id: str, repo_state):
+    async def _handle_conflict_detected(self, repo_id: str, repo_state: RepositoryState) -> None:
         """Handle merge conflict detection."""
         repo_state.update_status(RepositoryStatus.CONFLICT_DETECTED, "Repo has conflicts.")
         repo_state.action_description = "Merge conflict detected."
@@ -329,7 +333,9 @@ class WorkflowSteps:
         )
         self._emit_event(frozen_event)
 
-    async def _handle_external_commit_detected(self, repo_id: str, repo_state, action_log):
+    async def _handle_external_commit_detected(
+        self, repo_id: str, repo_state: RepositoryState, action_log: Any
+    ) -> None:
         """Handle external commit detection."""
         # Log the detection for debugging
         action_log.info("Repository is clean during action - external commit detected")
@@ -346,7 +352,9 @@ class WorkflowSteps:
         )
         self._emit_event(external_commit_event)
 
-    async def _handle_special_git_state_detected(self, repo_id: str, repo_state, status_result):
+    async def _handle_special_git_state_detected(
+        self, repo_id: str, repo_state: RepositoryState, status_result: Any
+    ) -> None:
         """Handle special Git state detection (merge, rebase, cherry-pick, revert)."""
         # Determine which state is active
         state_type = None
@@ -388,7 +396,9 @@ class WorkflowSteps:
             )
             self._emit_event(frozen_event)
 
-    async def _check_branch_protection(self, repo_id: str, repo_state, repo_config) -> bool:
+    async def _check_branch_protection(
+        self, repo_id: str, repo_state: RepositoryState, repo_config: RepositoryConfig
+    ) -> bool:
         """Check if current branch is protected and handle accordingly.
 
         Args:

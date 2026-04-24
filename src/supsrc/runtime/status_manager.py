@@ -31,7 +31,7 @@ class StatusManager:
         repo_engines: dict[str, RepositoryEngine],
         config: SupsrcConfig,
         state_update_callback: callable,
-    ):
+    ) -> None:
         self.repo_states = repo_states
         self.repo_engines = repo_engines
         self.config = config
