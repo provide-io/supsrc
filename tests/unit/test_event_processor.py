@@ -64,7 +64,7 @@ class TestEventProcessor:
 
     async def test_event_triggers_action_when_rule_met(
         self, event_processor: EventProcessor, mock_action_handler: AsyncMock, temp_git_repo: Path
-    ):
+    ) -> None:
         """Verify an event triggers an action when the rule condition is true."""
         repo_id = "test_repo_1"
         event = MonitoredEvent(repo_id, "modified", temp_git_repo / "f.txt", False)
@@ -83,7 +83,7 @@ class TestEventProcessor:
 
     async def test_event_starts_timer_when_rule_not_met(
         self, event_processor: EventProcessor, mock_action_handler: AsyncMock, temp_git_repo: Path
-    ):
+    ) -> None:
         """Verify an event starts a timer for inactivity rules when the condition is false."""
         repo_id = "test_repo_1"
         event = MonitoredEvent(repo_id, "modified", temp_git_repo / "f.txt", False)
@@ -106,7 +106,7 @@ class TestEventProcessor:
 
     async def test_new_event_cancels_previous_timer(
         self, event_processor: EventProcessor, temp_git_repo: Path
-    ):
+    ) -> None:
         """Verify that a new event cancels any pending inactivity timer."""
         repo_id = "test_repo_1"
         state = event_processor.repo_states[repo_id]
@@ -126,7 +126,7 @@ class TestEventProcessor:
 
     async def test_timer_callback_schedules_action(
         self, event_processor: EventProcessor, mock_action_handler: AsyncMock
-    ):
+    ) -> None:
         """Verify the function called by the timer schedules an action."""
         repo_id = "test_repo_1"
 
@@ -138,7 +138,7 @@ class TestEventProcessor:
 
         mock_action_handler.execute_action_sequence.assert_called_once_with(repo_id)
 
-    async def test_shutdown_event_stops_loop(self, event_processor: EventProcessor):
+    async def test_shutdown_event_stops_loop(self, event_processor: EventProcessor) -> None:
         """Verify the run loop terminates when the shutdown event is set."""
         event_processor.shutdown_event.set()
         task = asyncio.create_task(event_processor.run())
@@ -148,7 +148,7 @@ class TestEventProcessor:
 
     async def test_event_consumption_for_paused_repository(
         self, event_processor: EventProcessor, temp_git_repo: Path
-    ):
+    ) -> None:
         """
         Verify that the event consumer skips processing for a paused repository.
         The current implementation ignores (drops) the event.

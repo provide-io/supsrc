@@ -87,7 +87,7 @@ class TestTuiSnapshots:
         """Test the visual layout with repository data displayed."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def setup_data(pilot):
+        async def setup_data(pilot) -> None:
             """Setup the app with test data."""
             # Add repository data to the app
             from supsrc.tui.messages import StateUpdate
@@ -105,7 +105,7 @@ class TestTuiSnapshots:
         """Test the visual layout with events tab active."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def add_log_messages(pilot):
+        async def add_log_messages(pilot) -> None:
             """Add some log messages to the event feed."""
             from supsrc.tui.messages import LogMessageUpdate
 
@@ -131,7 +131,7 @@ class TestTuiSnapshots:
         """Test the visual layout with details tab active and a repository selected."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def select_repository(pilot):
+        async def select_repository(pilot) -> None:
             """Setup data and select a repository."""
             from supsrc.tui.messages import StateUpdate
 
@@ -157,7 +157,7 @@ class TestTuiSnapshots:
         """Test the visual layout with about tab active."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def switch_to_about(pilot):
+        async def switch_to_about(pilot) -> None:
             """Switch to the about tab."""
             tabbed_content = app.query_one("TabbedContent")
             tabbed_content.active = "about-tab"
@@ -190,7 +190,7 @@ class TestTuiSnapshots:
         """Test the visual layout with many repositories to test scrolling."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def add_many_repositories(pilot):
+        async def add_many_repositories(pilot) -> None:
             """Add many repositories to test table scrolling."""
             states = {}
             for i in range(10):
@@ -218,7 +218,7 @@ class TestTuiSnapshots:
         """Test the visual appearance after toggling dark mode."""
         app = SupsrcTuiApp(mock_config_path, mock_shutdown_event)
 
-        async def toggle_dark_mode(pilot):
+        async def toggle_dark_mode(pilot) -> None:
             """Toggle dark mode and add some data."""
             # Toggle dark mode (this simulates pressing 'd')
             app.action_toggle_dark()

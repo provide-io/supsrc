@@ -37,7 +37,7 @@ def sample_file_change_event():
 class TestEventBufferCore:
     """Test cases for EventBuffer core functionality."""
 
-    def test_init_with_defaults(self, mock_emit_callback):
+    def test_init_with_defaults(self, mock_emit_callback) -> None:
         """Test EventBuffer initialization with default parameters."""
         buffer = EventBuffer(emit_callback=mock_emit_callback)
 
@@ -47,7 +47,7 @@ class TestEventBufferCore:
         assert buffer._buffers == {}
         assert buffer._timers == {}
 
-    def test_init_with_custom_params(self, mock_emit_callback):
+    def test_init_with_custom_params(self, mock_emit_callback) -> None:
         """Test EventBuffer initialization with custom parameters."""
         buffer = EventBuffer(
             window_ms=500,
@@ -59,7 +59,7 @@ class TestEventBufferCore:
         assert buffer.grouping_mode == "simple"
         assert buffer.emit_callback == mock_emit_callback
 
-    def test_passthrough_mode(self, mock_emit_callback, sample_file_change_event):
+    def test_passthrough_mode(self, mock_emit_callback, sample_file_change_event) -> None:
         """Test that 'off' mode passes events through immediately."""
         buffer = EventBuffer(
             grouping_mode="off",
@@ -73,7 +73,7 @@ class TestEventBufferCore:
         assert len(buffer._buffers) == 0
 
     @pytest.mark.asyncio
-    async def test_basic_buffering(self, mock_emit_callback, sample_file_change_event):
+    async def test_basic_buffering(self, mock_emit_callback, sample_file_change_event) -> None:
         """Test basic event buffering with timer."""
         buffer = EventBuffer(
             window_ms=50,  # Short window for testing
@@ -95,7 +95,7 @@ class TestEventBufferCore:
         mock_emit_callback.assert_called_once()
         assert len(buffer._buffers) == 0  # Buffer should be cleared
 
-    def test_timer_reset_on_multiple_events(self, mock_emit_callback):
+    def test_timer_reset_on_multiple_events(self, mock_emit_callback) -> None:
         """Test that timer resets when multiple events are added quickly."""
         buffer = EventBuffer(
             window_ms=100,
@@ -127,7 +127,7 @@ class TestEventBufferCore:
         # Should have one active timer
         assert "test_repo" in buffer._timers
 
-    def test_flush_all(self, mock_emit_callback):
+    def test_flush_all(self, mock_emit_callback) -> None:
         """Test flushing all pending buffers."""
         buffer = EventBuffer(
             window_ms=1000,  # Long window to prevent automatic flushing
@@ -165,7 +165,7 @@ class TestEventBufferCore:
         assert len(buffer._timers) == 0
 
     @pytest.mark.asyncio
-    async def test_event_loop_integration(self, mock_emit_callback):
+    async def test_event_loop_integration(self, mock_emit_callback) -> None:
         """Test EventBuffer integration with asyncio event loop."""
         buffer = EventBuffer(
             window_ms=50,
@@ -196,7 +196,7 @@ class TestEventBufferCore:
         # Should have emitted
         mock_emit_callback.assert_called_once()
 
-    def test_empty_events_list(self, mock_emit_callback):
+    def test_empty_events_list(self, mock_emit_callback) -> None:
         """Test handling of empty events list - now tested via grouping module."""
         from supsrc.events.buffer.grouping import group_events_simple
 
@@ -210,7 +210,7 @@ class TestEventBufferCore:
         grouped = group_events_simple([])
         assert grouped == []
 
-    def test_no_callback_handling(self):
+    def test_no_callback_handling(self) -> None:
         """Test EventBuffer behavior when no callback is provided."""
         buffer = EventBuffer(
             window_ms=10,
@@ -228,7 +228,7 @@ class TestEventBufferCore:
         # Should not raise an exception
         buffer.add_event(event)
 
-    def test_multiple_repos_isolation(self, mock_emit_callback):
+    def test_multiple_repos_isolation(self, mock_emit_callback) -> None:
         """Test that events from different repos are handled separately."""
         buffer = EventBuffer(
             window_ms=10,

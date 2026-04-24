@@ -31,7 +31,7 @@ class TestVSCodeAtomicSaveIntegration:
     """Test VSCode atomic save pattern through the EventBuffer."""
 
     @pytest.mark.asyncio
-    async def test_vscode_atomic_save_shows_final_file(self):
+    async def test_vscode_atomic_save_shows_final_file(self) -> None:
         """Test that VSCode atomic save shows final file path, not temp file path."""
         mock_callback = Mock()
 
@@ -117,7 +117,7 @@ class TestVSCodeAtomicSaveIntegration:
         )
 
     @pytest.mark.asyncio
-    async def test_vscode_pattern_with_nested_dots(self):
+    async def test_vscode_pattern_with_nested_dots(self) -> None:
         """Test VSCode pattern with filename containing multiple dots."""
         mock_callback = Mock()
 
@@ -176,7 +176,7 @@ class TestVSCodeAtomicSaveIntegration:
         )
 
     @pytest.mark.asyncio
-    async def test_temp_file_hidden_until_operation_complete(self):
+    async def test_temp_file_hidden_until_operation_complete(self) -> None:
         """Test that temp file events are hidden until the operation completes."""
         mock_callback = Mock()
 
@@ -249,7 +249,7 @@ class TestVSCodeAtomicSaveIntegration:
         assert final_file in emitted_files
 
     @pytest.mark.asyncio
-    async def test_multiple_vscode_saves_in_sequence(self):
+    async def test_multiple_vscode_saves_in_sequence(self) -> None:
         """Test multiple VSCode atomic saves in sequence."""
         mock_callback = Mock()
 
@@ -334,7 +334,7 @@ class TestVSCodeAtomicSaveIntegration:
             assert temp_file not in emitted_files, f"Temp file {temp_file} should not be emitted"
 
     @pytest.mark.asyncio
-    async def test_vscode_pattern_matches_real_world_behavior(self):
+    async def test_vscode_pattern_matches_real_world_behavior(self) -> None:
         """Test with pattern exactly as VSCode generates it."""
         mock_callback = Mock()
 

@@ -26,7 +26,7 @@ class TestBottomRowSelectionBug:
     """Test the bottom row selection bug fix."""
 
     @pytest.mark.asyncio
-    async def test_bottom_row_selection_with_real_config(self):
+    async def test_bottom_row_selection_with_real_config(self) -> None:
         """Test that the bottom row can be selected without issues."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -75,7 +75,7 @@ class TestBottomRowSelectionBug:
                 assert hasattr(app, "selected_repo_id")
 
     @pytest.mark.asyncio
-    async def test_cursor_row_vs_cursor_coordinate_consistency(self):
+    async def test_cursor_row_vs_cursor_coordinate_consistency(self) -> None:
         """Test that cursor_row and cursor_coordinate.row are consistent."""
         with with_parent_cwd():
             config_path = real_config_path()
@@ -113,7 +113,7 @@ class TestBottomRowSelectionBug:
                         # These should be consistent
                         assert table.cursor_row == table.cursor_coordinate.row == pos
 
-    def test_bounds_checking_logic(self):
+    def test_bounds_checking_logic(self) -> None:
         """Test the bounds checking logic used in the fix."""
         # Mock a DataTable
         mock_table = Mock()
@@ -134,7 +134,7 @@ class TestBottomRowSelectionBug:
         mock_table.cursor_row = 10
         assert mock_table.cursor_row < mock_table.row_count
 
-    def test_cursor_position_saving_bounds_check(self):
+    def test_cursor_position_saving_bounds_check(self) -> None:
         """Test the bounds checking used for cursor position saving in events.py."""
         # Mock a DataTable to simulate the events.py logic
         mock_table = Mock()

@@ -23,7 +23,7 @@ from supsrc.events.monitor import FileChangeEvent
 class TestFileChangeEventDisplay:
     """Test FileChangeEvent formatting with dest_path."""
 
-    def test_created_event_format(self):
+    def test_created_event_format(self) -> None:
         """Created events should not show destination."""
         event = FileChangeEvent(
             description="File created",
@@ -37,7 +37,7 @@ class TestFileChangeEventDisplay:
         assert "created" in formatted
         assert "→" not in formatted
 
-    def test_modified_event_format(self):
+    def test_modified_event_format(self) -> None:
         """Modified events should not show destination."""
         event = FileChangeEvent(
             description="File modified",
@@ -51,7 +51,7 @@ class TestFileChangeEventDisplay:
         assert "modified" in formatted
         assert "→" not in formatted
 
-    def test_deleted_event_format(self):
+    def test_deleted_event_format(self) -> None:
         """Deleted events should not show destination."""
         event = FileChangeEvent(
             description="File deleted",
@@ -65,7 +65,7 @@ class TestFileChangeEventDisplay:
         assert "deleted" in formatted
         assert "→" not in formatted
 
-    def test_simple_move_event_format(self):
+    def test_simple_move_event_format(self) -> None:
         """Move events should show source → destination."""
         event = FileChangeEvent(
             description="File moved",
@@ -79,7 +79,7 @@ class TestFileChangeEventDisplay:
         assert "bar.py → foo.py" in formatted
         assert "→" in formatted
 
-    def test_move_without_dest_path(self):
+    def test_move_without_dest_path(self) -> None:
         """Move events without dest_path should fall back to simple format."""
         event = FileChangeEvent(
             description="File moved",
@@ -97,7 +97,7 @@ class TestFileChangeEventDisplay:
 class TestBufferedFileChangeEventMoveChains:
     """Test BufferedFileChangeEvent move chain reconstruction."""
 
-    def test_simple_move_display(self):
+    def test_simple_move_display(self) -> None:
         """Single move should show source → dest."""
         operation_history = [
             {
@@ -123,7 +123,7 @@ class TestBufferedFileChangeEventMoveChains:
         # Simple move should NOT show count
         assert "moves)" not in formatted
 
-    def test_move_chain_display(self):
+    def test_move_chain_display(self) -> None:
         """Multiple sequential moves should show full chain."""
         # Simulate: bar → bar.2 → foo → foo2
         operation_history = [
@@ -163,7 +163,7 @@ class TestBufferedFileChangeEventMoveChains:
         assert "bar → bar.2 → foo → foo2" in formatted
         assert "(3 moves)" in formatted
 
-    def test_move_chain_reconstruction_helper(self):
+    def test_move_chain_reconstruction_helper(self) -> None:
         """Test _reconstruct_move_chain helper method."""
         operation_history = [
             {
@@ -194,7 +194,7 @@ class TestBufferedFileChangeEventMoveChains:
         chain = event._reconstruct_move_chain()
         assert chain == ["a", "b", "c"]
 
-    def test_move_chain_empty_history(self):
+    def test_move_chain_empty_history(self) -> None:
         """Empty history should return empty chain."""
         event = BufferedFileChangeEvent(
             repo_id="test_repo",
@@ -208,7 +208,7 @@ class TestBufferedFileChangeEventMoveChains:
         chain = event._reconstruct_move_chain()
         assert chain == []
 
-    def test_move_chain_missing_dest_paths(self):
+    def test_move_chain_missing_dest_paths(self) -> None:
         """Move events without dest_path should be skipped."""
         operation_history = [
             {
@@ -232,7 +232,7 @@ class TestBufferedFileChangeEventMoveChains:
         chain = event._reconstruct_move_chain()
         assert chain == []
 
-    def test_non_move_events_ignored(self):
+    def test_non_move_events_ignored(self) -> None:
         """Non-move events should not be included in chain."""
         operation_history = [
             {
@@ -268,7 +268,7 @@ class TestBufferedFileChangeEventMoveChains:
 class TestMoveOperationHistoryStorage:
     """Test that dest_path is properly stored in operation_history."""
 
-    def test_operation_history_includes_dest_path(self):
+    def test_operation_history_includes_dest_path(self) -> None:
         """Verify dest_path is stored in operation history."""
         operation_history = [
             {
@@ -294,7 +294,7 @@ class TestMoveOperationHistoryStorage:
         assert history[0]["dest_path"] == Path("/repo/dest.py")
         assert history[0]["change_type"] == "moved"
 
-    def test_non_move_events_have_none_dest_path(self):
+    def test_non_move_events_have_none_dest_path(self) -> None:
         """Non-move events should have None for dest_path."""
         operation_history = [
             {
@@ -322,7 +322,7 @@ class TestMoveOperationHistoryStorage:
 class TestEdgeCases:
     """Test edge cases and error handling."""
 
-    def test_atomic_rewrite_shows_files(self):
+    def test_atomic_rewrite_shows_files(self) -> None:
         """Atomic rewrite should show which files were updated."""
         event = BufferedFileChangeEvent(
             repo_id="test_repo",
@@ -338,7 +338,7 @@ class TestEdgeCases:
         assert "modified" in formatted
         assert "→" not in formatted  # Should not show move arrow
 
-    def test_batch_operation_shows_file_list(self):
+    def test_batch_operation_shows_file_list(self) -> None:
         """Batch operations should show which files changed, not just 'Batch operation'."""
         event = BufferedFileChangeEvent(
             repo_id="test_repo",
@@ -358,7 +358,7 @@ class TestEdgeCases:
         assert "Batch" not in formatted
         assert "→" not in formatted
 
-    def test_multiple_files_display(self):
+    def test_multiple_files_display(self) -> None:
         """Multiple files should be shown as comma-separated list."""
         event = BufferedFileChangeEvent(
             repo_id="test_repo",
@@ -377,7 +377,7 @@ class TestEdgeCases:
         assert "a.py, b.py, c.py" in formatted
         assert "modified" in formatted
 
-    def test_many_files_truncated(self):
+    def test_many_files_truncated(self) -> None:
         """When too many files, should truncate with '+N more'."""
         event = BufferedFileChangeEvent(
             repo_id="test_repo",
@@ -403,7 +403,7 @@ class TestEdgeCases:
         assert "+2 more" in formatted
         assert "modified" in formatted
 
-    def test_path_as_string_in_history(self):
+    def test_path_as_string_in_history(self) -> None:
         """Handle paths stored as strings instead of Path objects."""
         operation_history = [
             {
@@ -431,7 +431,7 @@ class TestEdgeCases:
 class TestIntegrationScenarios:
     """Test realistic integration scenarios."""
 
-    def test_user_scenario_bar_to_foo2(self):
+    def test_user_scenario_bar_to_foo2(self) -> None:
         """Test the exact user scenario: mv bar bar.2; mv bar.2 foo; mv foo foo2"""
         # Simulate the exact sequence from the user's example
         operation_history = [

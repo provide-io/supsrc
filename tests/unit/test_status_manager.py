@@ -23,7 +23,7 @@ from supsrc.state.runtime import RepositoryState
 class TestStatusManagerInitialization:
     """Tests for StatusManager initialization."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test StatusManager initializes with required dependencies."""
         repo_states = {}
         repo_engines = {}
@@ -37,7 +37,7 @@ class TestStatusManagerInitialization:
         assert manager.config is config
         assert manager.state_update_callback is callback
 
-    def test_initialization_with_empty_dependencies(self):
+    def test_initialization_with_empty_dependencies(self) -> None:
         """Test StatusManager with empty dicts."""
         manager = StatusManager({}, {}, None, Mock())
         assert manager.repo_states == {}
@@ -48,7 +48,7 @@ class TestStatusManagerInitialization:
 class TestSetRepoRefreshingStatus:
     """Tests for set_repo_refreshing_status method."""
 
-    def test_set_refreshing_status_true(self):
+    def test_set_refreshing_status_true(self) -> None:
         """Test setting refreshing status to True."""
         repo_state = RepositoryState(repo_id="test")
         repo_states = {"test": repo_state}
@@ -60,7 +60,7 @@ class TestSetRepoRefreshingStatus:
         assert repo_state.is_refreshing is True
         callback.assert_called_once()
 
-    def test_set_refreshing_status_false(self):
+    def test_set_refreshing_status_false(self) -> None:
         """Test setting refreshing status to False."""
         repo_state = RepositoryState(repo_id="test")
         repo_state.is_refreshing = True
@@ -73,7 +73,7 @@ class TestSetRepoRefreshingStatus:
         assert repo_state.is_refreshing is False
         callback.assert_called_once()
 
-    def test_set_refreshing_status_nonexistent_repo(self):
+    def test_set_refreshing_status_nonexistent_repo(self) -> None:
         """Test setting refreshing status for nonexistent repository."""
         callback = Mock()
         manager = StatusManager({}, {}, None, callback)
@@ -82,7 +82,7 @@ class TestSetRepoRefreshingStatus:
         manager.set_repo_refreshing_status("nonexistent", True)
         callback.assert_not_called()
 
-    def test_set_refreshing_status_updates_emoji(self):
+    def test_set_refreshing_status_updates_emoji(self) -> None:
         """Test that setting refreshing status updates display emoji."""
         repo_state = RepositoryState(repo_id="test")
         repo_state.is_refreshing = False
@@ -128,7 +128,7 @@ class TestRefreshRepositoryStatus:
         return manager, repo_state, repo_engine, callback
 
     @pytest.mark.asyncio
-    async def test_refresh_repository_status_success(self, setup_manager):
+    async def test_refresh_repository_status_success(self, setup_manager) -> None:
         """Test successful repository status refresh."""
         manager, repo_state, repo_engine, callback = setup_manager
 
@@ -166,7 +166,7 @@ class TestRefreshRepositoryStatus:
         callback.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_refresh_repository_status_missing_state(self, setup_manager):
+    async def test_refresh_repository_status_missing_state(self, setup_manager) -> None:
         """Test refresh when repository state is missing."""
         manager, _, repo_engine, callback = setup_manager
         manager.repo_states = {}
@@ -178,7 +178,7 @@ class TestRefreshRepositoryStatus:
         callback.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_refresh_repository_status_missing_config(self, setup_manager, tmp_path):
+    async def test_refresh_repository_status_missing_config(self, setup_manager, tmp_path) -> None:
         """Test refresh when repository config is missing."""
         manager, _repo_state, repo_engine, _callback = setup_manager
         # Create new config without test repository
@@ -194,7 +194,7 @@ class TestRefreshRepositoryStatus:
         repo_engine.get_status.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_refresh_repository_status_missing_engine(self, setup_manager):
+    async def test_refresh_repository_status_missing_engine(self, setup_manager) -> None:
         """Test refresh when repository engine is missing."""
         manager, _repo_state, _, _callback = setup_manager
         manager.repo_engines = {}
@@ -204,7 +204,7 @@ class TestRefreshRepositoryStatus:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_refresh_repository_status_get_status_fails(self, setup_manager):
+    async def test_refresh_repository_status_get_status_fails(self, setup_manager) -> None:
         """Test refresh when get_status returns failure."""
         manager, _repo_state, repo_engine, callback = setup_manager
 
@@ -219,7 +219,7 @@ class TestRefreshRepositoryStatus:
         callback.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_refresh_repository_status_exception_handling(self, setup_manager):
+    async def test_refresh_repository_status_exception_handling(self, setup_manager) -> None:
         """Test refresh handles exceptions gracefully."""
         manager, _repo_state, repo_engine, callback = setup_manager
 
@@ -231,7 +231,7 @@ class TestRefreshRepositoryStatus:
         callback.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_refresh_repository_status_no_summary_attributes(self, setup_manager):
+    async def test_refresh_repository_status_no_summary_attributes(self, setup_manager) -> None:
         """Test refresh when summary lacks optional attributes."""
         manager, repo_state, repo_engine, callback = setup_manager
 
@@ -286,7 +286,7 @@ class TestUpdateRepositoryStatistics:
         return manager, repo_state, repo_engine
 
     @pytest.mark.asyncio
-    async def test_update_repository_statistics_success(self, setup_update):
+    async def test_update_repository_statistics_success(self, setup_update) -> None:
         """Test successful statistics update."""
         manager, repo_state, repo_engine = setup_update
 
@@ -313,7 +313,7 @@ class TestUpdateRepositoryStatistics:
         assert repo_state.current_branch == "feature"
 
     @pytest.mark.asyncio
-    async def test_update_repository_statistics_missing_config(self, setup_update):
+    async def test_update_repository_statistics_missing_config(self, setup_update) -> None:
         """Test update when repository config is missing."""
         manager, repo_state, repo_engine = setup_update
         # Create new config without test repository
@@ -329,7 +329,7 @@ class TestUpdateRepositoryStatistics:
         repo_engine.get_status.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_update_repository_statistics_no_config_object(self, setup_update):
+    async def test_update_repository_statistics_no_config_object(self, setup_update) -> None:
         """Test update when config object is None."""
         manager, repo_state, repo_engine = setup_update
         manager.config = None
@@ -339,7 +339,7 @@ class TestUpdateRepositoryStatistics:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_update_repository_statistics_get_status_fails(self, setup_update):
+    async def test_update_repository_statistics_get_status_fails(self, setup_update) -> None:
         """Test update when get_status returns failure."""
         manager, repo_state, repo_engine = setup_update
 
@@ -352,7 +352,7 @@ class TestUpdateRepositoryStatistics:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_update_repository_statistics_exception(self, setup_update):
+    async def test_update_repository_statistics_exception(self, setup_update) -> None:
         """Test update handles exceptions gracefully."""
         manager, repo_state, repo_engine = setup_update
 
@@ -363,7 +363,7 @@ class TestUpdateRepositoryStatistics:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_update_repository_statistics_clean_repo(self, setup_update):
+    async def test_update_repository_statistics_clean_repo(self, setup_update) -> None:
         """Test update for a clean repository."""
         manager, repo_state, repo_engine = setup_update
 
@@ -386,7 +386,7 @@ class TestUpdateRepositoryStatistics:
         assert repo_state.has_uncommitted_changes is False
 
     @pytest.mark.asyncio
-    async def test_update_repository_statistics_none_values(self, setup_update):
+    async def test_update_repository_statistics_none_values(self, setup_update) -> None:
         """Test update when status result has None values."""
         manager, repo_state, repo_engine = setup_update
 

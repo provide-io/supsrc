@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class CompactVerboseFormatter:
     """Formats verbose event details in compact key=value style."""
 
-    def __init__(self, indent: str = "  "):
+    def __init__(self, indent: str = "  ") -> None:
         """Initialize compact formatter.
 
         Args:
@@ -127,7 +127,9 @@ class CompactVerboseFormatter:
         """
         return " ".join(f"{k}={v}" for k, v in pairs)
 
-    def _format_buffered_event_compact(self, event, pairs: dict[str, list[tuple[str, str]]]) -> list[str]:
+    def _format_buffered_event_compact(
+        self, event: Event, pairs: dict[str, list[tuple[str, str]]]
+    ) -> list[str]:
         """Format BufferedFileChangeEvent in compact style."""
         lines = []
 
@@ -181,7 +183,7 @@ class CompactVerboseFormatter:
         git_line = self._format_pairs(pairs.get("git", []))
         return [f"{self.indent}{git_line}"] if git_line else []
 
-    def _format_git_stage_compact(self, event) -> list[str]:
+    def _format_git_stage_compact(self, event: Event) -> list[str]:
         """Format GitStageEvent in compact style."""
         lines = []
 

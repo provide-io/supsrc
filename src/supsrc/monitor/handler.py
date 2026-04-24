@@ -73,7 +73,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
         repo_path: Path,
         event_queue: asyncio.Queue[MonitoredEvent],
         loop: "AbstractEventLoop",
-    ):
+    ) -> None:
         """
         Initializes the event handler for a specific repository.
         """
@@ -134,7 +134,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
 
         return False
 
-    def _queue_event_threadsafe(self, monitored_event: MonitoredEvent):
+    def _queue_event_threadsafe(self, monitored_event: MonitoredEvent) -> None:
         """Target function for call_soon_threadsafe to put item in queue."""
         try:
             self.event_queue.put_nowait(monitored_event)
@@ -148,7 +148,7 @@ class SupsrcEventHandler(FileSystemEventHandler):
         except Exception as e:
             self.logger.error("Unexpected error queuing event", error=str(e), exc_info=True)
 
-    def _process_and_queue_event(self, event: FileSystemEvent):
+    def _process_and_queue_event(self, event: FileSystemEvent) -> None:
         """Processes, filters, and queues a watchdog event."""
         # Ignore noisy directory modification events
         if event.is_directory and event.event_type == "modified":
@@ -193,16 +193,16 @@ class SupsrcEventHandler(FileSystemEventHandler):
         if self.loop.is_running():
             self.loop.call_soon_threadsafe(self._queue_event_threadsafe, monitored_event)
 
-    def on_created(self, event: FileSystemEvent):
+    def on_created(self, event: FileSystemEvent) -> None:
         self._process_and_queue_event(event)
 
-    def on_modified(self, event: FileSystemEvent):
+    def on_modified(self, event: FileSystemEvent) -> None:
         self._process_and_queue_event(event)
 
-    def on_deleted(self, event: FileSystemEvent):
+    def on_deleted(self, event: FileSystemEvent) -> None:
         self._process_and_queue_event(event)
 
-    def on_moved(self, event: FileSystemEvent):
+    def on_moved(self, event: FileSystemEvent) -> None:
         self._process_and_queue_event(event)
 
 

@@ -69,7 +69,7 @@ class WatchOrchestrator:
         verbose: bool = False,
         verbose_format: str = "table",
         app_log_path: Path | None = None,
-    ):
+    ) -> None:
         self.config_path = config_path
         self.shutdown_event = shutdown_event
         self.app = app
@@ -324,7 +324,7 @@ class WatchOrchestrator:
         log.warning("Cannot acknowledge circuit breaker: event processor not available")
         return False
 
-    def _post_tui_state_update(self):
+    def _post_tui_state_update(self) -> None:
         if self.app:
             tui = TUIInterface(self.app)
             tui.post_state_update(self.repo_states)

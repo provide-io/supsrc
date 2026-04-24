@@ -33,7 +33,7 @@ class BufferedFileChangeEvent(Event):
     description: str = attrs.field(init=False)
     timestamp: datetime = attrs.field(factory=datetime.now, init=False)
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         """Set description after initialization."""
         if self.operation_type == "atomic_rewrite":
             desc = f"Atomic rewrite of {len(self.file_paths)} file(s)"
