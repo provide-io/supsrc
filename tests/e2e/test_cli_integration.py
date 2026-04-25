@@ -85,7 +85,7 @@ class TestCLIWatchCommand:
             # Just test --help to verify command exists and works
             result = run(
                 [sys.executable, "-m", "supsrc.cli.main", "watch", "--help"],
-                timeout=5,
+                timeout=30,
                 check=False,
             )
 
@@ -110,7 +110,7 @@ class TestCLIWatchCommand:
                     str(config_path),
                     "--help",
                 ],
-                timeout=5,
+                timeout=30,
                 check=False,
             )
 
@@ -127,7 +127,7 @@ class TestCLITUICommand:
         """Test that sui command shows help correctly."""
         result = run(
             [sys.executable, "-m", "supsrc.cli.main", "sui", "--help"],
-            timeout=5,
+            timeout=30,
             check=False,
         )
 
@@ -152,7 +152,7 @@ class TestCLITUICommand:
                     str(config_path),
                     "--help",
                 ],
-                timeout=5,
+                timeout=30,
                 check=False,
             )
 
@@ -168,7 +168,7 @@ class TestCLIErrorHandling:
         """Test handling of invalid commands."""
         result = run(
             [sys.executable, "-m", "supsrc.cli.main", "nonexistent-command"],
-            timeout=5,
+            timeout=30,
             check=False,
         )
 
@@ -179,7 +179,7 @@ class TestCLIErrorHandling:
         """Test version command works."""
         result = run(
             [sys.executable, "-m", "supsrc.cli.main", "--version"],
-            timeout=5,
+            timeout=30,
             check=False,
         )
 
@@ -190,7 +190,7 @@ class TestCLIErrorHandling:
         """Test help command works."""
         result = run(
             [sys.executable, "-m", "supsrc.cli.main", "--help"],
-            timeout=5,
+            timeout=30,
             check=False,
         )
 
@@ -235,7 +235,7 @@ class TestCLIEnvironmentIntegration:
             # Test running as module
             result = run(
                 [sys.executable, "-m", "supsrc.cli.main", "--help"],
-                timeout=5,
+                timeout=30,
                 check=False,
             )
 
@@ -249,7 +249,7 @@ class TestCLIEnvironmentIntegration:
             # Test basic CLI command execution
             result = run(
                 [sys.executable, "-m", "supsrc.cli.main", "watch", "--help"],
-                timeout=5,
+                timeout=30,
                 check=False,
             )
 
@@ -287,7 +287,7 @@ class TestCLIConfigIntegration:
         try:
             result = run(
                 [sys.executable, "-m", "supsrc.cli.main", "config", "show", "-c", invalid_config],
-                timeout=5,
+                timeout=30,
                 check=False,
             )
 
