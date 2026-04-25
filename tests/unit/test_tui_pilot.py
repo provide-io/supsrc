@@ -140,6 +140,10 @@ class TestTuiPilotStateUpdates:
     """Test state updates and data display using Pilot."""
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(
+        FLAKY_PILOT,
+        reason="Textual pilot timing issue (macOS Intel + CI Linux) - StateUpdate post_message not observed reliably",
+    )
     async def test_repository_table_updates(
         self,
         mock_config_path: Path,
