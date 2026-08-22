@@ -331,3 +331,10 @@ docs/.shared-theme/
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
+
+# flavorpack generates a fresh signing keypair per build (see
+# flavor/packaging/keys.py); nothing verifies against a committed one. They are
+# build artifacts, and committing them is how private keys reached five public
+# repositories in this suite.
+keys/
+*.private-key.pem
