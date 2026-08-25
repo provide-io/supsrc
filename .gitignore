@@ -281,6 +281,10 @@ pyrightconfig.json
 [Ll]ib64
 [Ll]ocal
 [Ss]cripts
+# ...but this repo's own scripts/ is source, not a Windows venv bin dir.
+# The pattern above comes from a virtualenv template and was swallowing it.
+!scripts/
+!scripts/**
 pyvenv.cfg
 pip-selfcheck.json
 
