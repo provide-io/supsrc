@@ -16,7 +16,7 @@ jobs:
   # Delegate tests + build + (optional) GH release to the ci-tooling reusable.
   # GH release creation is suppressed because `release: published` means one already exists.
   release:
-    uses: provide-io/ci-tooling/.github/workflows/python-release.yml@v0.4.2
+    uses: provide-io/ci-tooling/.github/workflows/python-release.yml@v0.4.3
     permissions:
       contents: write
     with:
