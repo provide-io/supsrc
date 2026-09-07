@@ -36,7 +36,7 @@ class TestConfigLoading:
         log_level = "DEBUG"
 
         [repositories.test-repo]
-        path = "{repo_path}"
+        path = '{repo_path}'
         enabled = true
 
         [repositories.test-repo.rule]

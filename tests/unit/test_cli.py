@@ -185,7 +185,7 @@ class TestCLIIntegration:
         [global]
         log_level = "DEBUG"
         [repositories.integration-test]
-        path = "{repo_path}"
+        path = '{repo_path}'
         enabled = true
         [repositories.integration-test.rule]
         type = "supsrc.rules.inactivity"
