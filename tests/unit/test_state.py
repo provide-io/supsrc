@@ -42,7 +42,10 @@ class TestRepositoryState:
         state.record_change()
 
         assert state.save_count == 2
-        assert state.last_change_time > first_time
+        # Windows' clock ticks about every 15.6ms, so two calls this close
+        # together read the same instant. What matters is that the timestamp
+        # was refreshed rather than moved backwards.
+        assert state.last_change_time >= first_time
 
     def test_update_status(self) -> None:
         """Test status updates and emoji changes."""

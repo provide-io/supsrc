@@ -250,6 +250,9 @@ class TestMonitoringIntegration:
                 text=True,
                 check=True,
             )
+            # capture_output=True cannot yield None, yet Windows CI reports it.
+            # Carry the whole result into the failure until that is understood.
+            assert result.stdout is not None, f"git log returned no captured stdout: {result!r}"
             assert len(result.stdout.splitlines()) == 2
 
         finally:
