@@ -20,6 +20,7 @@ from supsrc.monitor import MonitoredEvent, MonitoringService
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.runtime.tui_interface import TUIInterface  # Import the TUI interface
 from supsrc.state import RepositoryStatus
+from tests.helpers.filesystem import remove_tree
 
 
 @pytest.fixture
@@ -317,7 +318,7 @@ class TestErrorHandling:
         # Corrupt the Git repository
         git_dir = repo_path / ".git"
         if git_dir.exists():
-            shutil.rmtree(git_dir)
+            remove_tree(git_dir)
 
         config_file = monitoring_setup["config_file"]
 
