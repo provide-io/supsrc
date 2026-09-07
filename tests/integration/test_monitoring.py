@@ -64,7 +64,7 @@ async def monitoring_setup(tmp_path: Path):
     log_level = \"DEBUG\"
 
     [repositories.test-repo]
-    path = \"{repo_path}\"
+    path = '{repo_path}'
     enabled = true
 
     [repositories.test-repo.rule]
@@ -395,7 +395,7 @@ class TestConcurrency:
         for repo_id, repo_path in repos.items():
             config_content += f"""
             [repositories.{repo_id}]
-            path = \"{repo_path}\"
+            path = '{repo_path}'
             enabled = true
 
             [repositories.{repo_id}.rule]
