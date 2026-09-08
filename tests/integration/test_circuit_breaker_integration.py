@@ -30,17 +30,17 @@ class TestCircuitBreakerConfigLoading:
 
     def test_load_config_with_default_circuit_breaker(self, tmp_path) -> None:
         """Test that default circuit breaker config is used when not specified."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
         config_file = tmp_path / "supsrc.conf"
-        config_file.write_text("""
+        config_file.write_text(f"""
 [global]
 log_level = "INFO"
 
 [repositories.test_repo]
-path = "/tmp/test"
+path = '{repo_path}'
 rule.type = "supsrc.rules.manual"
 """)
-        # Create the directory so config loading doesn't fail
-        Path("/tmp/test").mkdir(exist_ok=True)
 
         config = load_config(config_file)
 
@@ -52,8 +52,10 @@ rule.type = "supsrc.rules.manual"
 
     def test_load_config_with_custom_circuit_breaker(self, tmp_path) -> None:
         """Test that custom circuit breaker config is loaded from TOML."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
         config_file = tmp_path / "supsrc.conf"
-        config_file.write_text("""
+        config_file.write_text(f"""
 [global]
 log_level = "DEBUG"
 
@@ -69,10 +71,9 @@ auto_resume_after_bulk_pause_seconds = 60
 require_manual_acknowledgment = true
 
 [repositories.test_repo]
-path = "/tmp/test"
+path = '{repo_path}'
 rule.type = "supsrc.rules.manual"
 """)
-        Path("/tmp/test").mkdir(exist_ok=True)
 
         config = load_config(config_file)
 
@@ -89,8 +90,10 @@ rule.type = "supsrc.rules.manual"
 
     def test_load_config_with_partial_circuit_breaker(self, tmp_path) -> None:
         """Test that partial circuit breaker config merges with defaults."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
         config_file = tmp_path / "supsrc.conf"
-        config_file.write_text("""
+        config_file.write_text(f"""
 [global]
 log_level = "INFO"
 
@@ -98,10 +101,9 @@ log_level = "INFO"
 bulk_change_threshold = 100
 
 [repositories.test_repo]
-path = "/tmp/test"
+path = '{repo_path}'
 rule.type = "supsrc.rules.manual"
 """)
-        Path("/tmp/test").mkdir(exist_ok=True)
 
         config = load_config(config_file)
 
@@ -114,8 +116,10 @@ rule.type = "supsrc.rules.manual"
 
     def test_load_config_circuit_breaker_disabled_with_zero(self, tmp_path) -> None:
         """Test that threshold of 0 properly disables bulk change detection."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
         config_file = tmp_path / "supsrc.conf"
-        config_file.write_text("""
+        config_file.write_text(f"""
 [global]
 log_level = "INFO"
 
@@ -123,10 +127,9 @@ log_level = "INFO"
 bulk_change_threshold = 0
 
 [repositories.test_repo]
-path = "/tmp/test"
+path = '{repo_path}'
 rule.type = "supsrc.rules.manual"
 """)
-        Path("/tmp/test").mkdir(exist_ok=True)
 
         config = load_config(config_file)
 
@@ -361,7 +364,7 @@ class TestCircuitBreakerWithRealGitRepo:
             ["git", "branch", "--show-current"],
             cwd=git_repo,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         initial_branch = result.stdout.strip() or "master"
 
@@ -401,7 +404,7 @@ class TestCircuitBreakerWithRealGitRepo:
             ["git", "branch", "--show-current"],
             cwd=git_repo,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         initial_branch = result.stdout.strip() or "master"
 

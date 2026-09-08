@@ -20,6 +20,7 @@ from supsrc.monitor import MonitoredEvent, MonitoringService
 from supsrc.runtime.orchestrator import WatchOrchestrator
 from supsrc.runtime.tui_interface import TUIInterface  # Import the TUI interface
 from supsrc.state import RepositoryStatus
+from tests.helpers.filesystem import remove_tree
 
 
 @pytest.fixture
@@ -64,7 +65,7 @@ async def monitoring_setup(tmp_path: Path):
     log_level = \"DEBUG\"
 
     [repositories.test-repo]
-    path = \"{repo_path}\"
+    path = '{repo_path}'
     enabled = true
 
     [repositories.test-repo.rule]
@@ -246,7 +247,7 @@ class TestMonitoringIntegration:
                 ["git", "log", "--oneline", "-n", "2"],
                 cwd=repo_path,
                 capture_output=True,
-                text=True,
+                encoding="utf-8",
                 check=True,
             )
             assert len(result.stdout.splitlines()) == 2
@@ -317,7 +318,7 @@ class TestErrorHandling:
         # Corrupt the Git repository
         git_dir = repo_path / ".git"
         if git_dir.exists():
-            shutil.rmtree(git_dir)
+            remove_tree(git_dir)
 
         config_file = monitoring_setup["config_file"]
 
@@ -395,7 +396,7 @@ class TestConcurrency:
         for repo_id, repo_path in repos.items():
             config_content += f"""
             [repositories.{repo_id}]
-            path = \"{repo_path}\"
+            path = '{repo_path}'
             enabled = true
 
             [repositories.{repo_id}.rule]

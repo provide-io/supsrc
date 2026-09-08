@@ -59,7 +59,7 @@ async def rapid_change_test_setup(tmp_path: Path):
     log_level = "DEBUG"
 
     [repositories.timer-repo]
-    path = "{repo_path}"
+    path = '{repo_path}'
     enabled = true
 
     [repositories.timer-repo.rule]
