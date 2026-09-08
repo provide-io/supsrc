@@ -2516,7 +2516,7 @@ wheels = [
 
 [[package]]
 name = "provide-foundation"
-version = "0.4.8"
+version = "0.4.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -2524,9 +2524,9 @@ dependencies = [
     { name = "tomli-w" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c2/e1/243eb13670cad19c58ebe9cf92dd5883cf9bc597bd80a58aae96981f6de3/provide_foundation-0.4.8.tar.gz", hash = "sha256:0be3fd6b6b4cf4f67dc9c5323a7f8530ac2dbcd8b2d69c05e57c022e574dbc6c", size = 424182, upload-time = "2026-09-07T22:34:37.335Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/67/e3/6968621dc33735f8884d9717fc135e4300aa44ba9c06ad9661ff2d9c0971/provide_foundation-0.4.10.tar.gz", hash = "sha256:41641ce5218b6114c9e9f26323ffb30e2e261100ae304222dfdab51a175d977b", size = 425426, upload-time = "2026-09-08T04:18:29.108Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/6d/7e0b162a44481fe53fe8de73dfd857df6459b5f1e6f7d747b5334ffd176c/provide_foundation-0.4.8-py3-none-any.whl", hash = "sha256:cd98d2e682cc24e75cacd616c1c86003c59c3ed8c6ec435dff918276cc799177", size = 621310, upload-time = "2026-09-07T22:34:35.764Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/af/2fb25b64b9d63b99204dd0654dadbc9cbd859af3163d0bcb54b962f9b223/provide_foundation-0.4.10-py3-none-any.whl", hash = "sha256:166114924e7c1b6aa0c0ede3692a1b91fa0e03366c47bd82ac543986effaa6af", size = 622327, upload-time = "2026-09-08T04:18:27.104Z" },
 ]
 
 [package.optional-dependencies]
@@ -3573,7 +3573,7 @@ requires-dist = [
     { name = "ollama", marker = "extra == 'llm'", specifier = ">=0.2.0" },
     { name = "packaging", specifier = ">=24.0" },
     { name = "pathspec", specifier = ">=0.12.1" },
-    { name = "provide-foundation", extras = ["all"], specifier = ">=0.4.8" },
+    { name = "provide-foundation", extras = ["all"], specifier = ">=0.4.10" },
     { name = "pygit2", specifier = ">=1.18.0" },
     { name = "rich", specifier = ">=14.0.0" },
     { name = "sshconf", specifier = ">=0.2.7" },
