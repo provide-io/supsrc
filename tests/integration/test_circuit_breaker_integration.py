@@ -364,7 +364,7 @@ class TestCircuitBreakerWithRealGitRepo:
             ["git", "branch", "--show-current"],
             cwd=git_repo,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         initial_branch = result.stdout.strip() or "master"
 
@@ -404,7 +404,7 @@ class TestCircuitBreakerWithRealGitRepo:
             ["git", "branch", "--show-current"],
             cwd=git_repo,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         initial_branch = result.stdout.strip() or "master"
 
