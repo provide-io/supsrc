@@ -135,7 +135,7 @@ class TestConsoleEventFormatterVerbose:
 
         output_text = output.getvalue()
 
-        assert "5 repositories" in output_text or "5" in output_text
+        assert "5 repositories" in output_text
         assert "events.jsonl" in output_text
         assert "app.log" in output_text
 

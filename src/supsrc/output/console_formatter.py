@@ -237,6 +237,11 @@ class ConsoleEventFormatter:
         self.console.print(separator, style="bold blue")
         self.console.print("🚀 Supsrc Watch - Event Stream Mode", style="bold cyan")
 
+        # highlight=False keeps rich from wrapping the count in its own style codes,
+        # which would split the digits away from the noun.
+        noun = "repository" if repo_count == 1 else "repositories"
+        self.console.print(f"📁 Monitoring {repo_count} {noun}", style="cyan", highlight=False)
+
         if event_log_path:
             self.console.print(f"📝 Event Log: {event_log_path}", style="dim")
 

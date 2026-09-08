@@ -16,6 +16,11 @@ jobs:
     uses: provide-io/ci-tooling/.github/workflows/python-ci.yml@v0
     with:
       python-version: '3.11'
+      # Windows amd64 is where this org's platform bugs land -- a scrubbed
+      # environment a process cannot start in, ntpath.expanduser ignoring HOME,
+      # a TCP-only transport default -- and none is reachable from linux or
+      # macos. arm64 stays off: it has no grpcio or cryptography wheels.
+      include-windows: true
       coverage-threshold: 0
       run-security: true
       # A known vulnerability in the lock reddens this build rather

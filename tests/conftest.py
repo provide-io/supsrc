@@ -41,7 +41,7 @@ def temp_git_repo(tmp_path: Path) -> Path:
     repo_path.mkdir()
 
     try:
-        subprocess.run(["git", "--version"], check=True, capture_output=True, text=True)
+        subprocess.run(["git", "--version"], check=True, capture_output=True, encoding="utf-8")
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         pytest.skip(f"Git is not available or `git --version` failed: {e}")
 

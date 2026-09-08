@@ -46,7 +46,7 @@ classifiers = [
 
 # --- Core Dependencies ---
 dependencies = [
-    "provide-foundation[all]>=0.4.0",
+    "provide-foundation[all]>=0.4.8",
     "cattrs>=24.1.3",
     "pygit2>=1.18.0",
     "watchdog>=6.0.0",
@@ -65,11 +65,11 @@ Issues = "https://github.com/provide-io/supsrc/issues"
 
 [dependency-groups]
 dev = [
-    "provide-testkit[standard,advanced-testing,build,utils]>=0.4.0",
+    "provide-testkit[standard,advanced-testing,build,utils]>=0.5.1",
     "supsrc[tui,llm]",
 ]
 docs = [
-    "provide-testkit[docs]>=0.4.0",
+    "provide-testkit[docs]>=0.5.1",
 ]
 
 # --- Optional Features (Extras) ---

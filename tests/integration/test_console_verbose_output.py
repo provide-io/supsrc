@@ -394,9 +394,7 @@ class TestConsoleVerboseOutput:
         output_text = output.getvalue()
 
         # Should show repository count
-        assert "5 repositories" in output_text or "5" in output_text, (
-            "Startup banner should show repository count"
-        )
+        assert "5 repositories" in output_text, "Startup banner should show repository count"
 
         # Should show log paths (may have ANSI codes, so check for components)
         assert "events.jsonl" in output_text, "Should show event log path"
